@@ -891,11 +891,24 @@ void init_weapon_entry(int weap_info_index)
 	wip->turn_time = 1.0f;
 	wip->fov = 0;				//should be cos(pi), not pi
 	
+	wip->target_restrict = LR_CURRENT_TARGET;
+	wip->multi_lock = false;
+	wip->trigger_lock = false;
+	wip->launch_reset_locks = false;
+
+	wip->max_seeking = 1;
+	wip->max_seekers_per_target = 1;
+	wip->ship_type_restrict.clear();
+	wip->ship_type_restrict_temp.clear();
+
+	wip->acquire_method = WLOCK_PIXEL;
+
 	wip->min_lock_time = 0.0f;
 	wip->lock_pixels_per_sec = 50;
 	wip->catchup_pixels_per_sec = 50;
 	wip->catchup_pixel_penalty = 50;
 	wip->seeker_strength = 1.0f;
+	wip->lock_fov = 0.85f;
 
 	wip->swarm_count = -1;
 	// *Default is 150  -Et1
@@ -1648,6 +1661,44 @@ int parse_weapon(int subtype, bool replace)
 					wip->wi_flags2 |= WIF2_VARIABLE_LEAD_HOMING;
 					wi_flags2 |= WIF2_VARIABLE_LEAD_HOMING;
 				}
+			}
+
+			if ( optional_string("+Target Lock Restriction:") ) {
+				if ( optional_string("current target, any subsystem") ) {
+					wip->target_restrict = LR_CURRENT_TARGET_SUBSYS;
+				} else if ( optional_string("any target") ) {
+					wip->target_restrict = LR_ANY_TARGETS;
+				} else if ( optional_string("current target only") ) {
+					wip->target_restrict = LR_CURRENT_TARGET;
+				} else {
+					wip->target_restrict = LR_CURRENT_TARGET;
+				}
+			} else {
+				wip->target_restrict = LR_CURRENT_TARGET;
+			}
+
+			if ( optional_string("+Independent Seekers:") ) {
+				stuff_boolean(&wip->multi_lock);
+			}
+
+			if ( optional_string("+Trigger Hold:") ) {
+				stuff_boolean(&wip->trigger_lock);
+			}
+
+			if ( optional_string("+Reset On Launch:") ) {
+				stuff_boolean(&wip->launch_reset_locks);
+			}
+
+			if ( optional_string("+Max Seekers Per Target:") ) {
+				stuff_int(&wip->max_seekers_per_target);
+			}
+
+			if ( optional_string("+Max Active Seekers:") ) {
+				stuff_int(&wip->max_seeking);
+			}
+
+			if ( optional_string("+Ship Types:") ) {
+				stuff_string_list(wip->ship_type_restrict_temp);
 			}
 
 			if (wip->wi_flags & WIF_LOCKED_HOMING) {
@@ -3415,7 +3466,7 @@ void weapon_expl_info_init()
 
 void weapon_reset_info()
 {
-	memset( Weapon_info, 0, sizeof(weapon_info) * MAX_WEAPON_TYPES );
+	//memset( Weapon_info, 0, sizeof(weapon_info) * MAX_WEAPON_TYPES );
 
 	for (int i = 0; i < MAX_WEAPON_TYPES; i++)
 		init_weapon_entry(i);
@@ -3493,6 +3544,7 @@ void weapon_close()
 void weapon_level_init()
 {
 	int i;
+	extern int ships_inited;
 
 	// Reset everything between levels
 	Num_weapons = 0;
@@ -3504,6 +3556,19 @@ void weapon_level_init()
 	for (i=0; i<MAX_WEAPON_TYPES; i++)	{
 		Weapon_info[i].damage_type_idx = Weapon_info[i].damage_type_idx_sav;
 		Weapon_info[i].shockwave.damage_type_idx = Weapon_info[i].shockwave.damage_type_idx_sav;
+
+		if ( ships_inited ) {
+			// populate ship type lock restrictions
+			for ( int j = 0; j < (int)Weapon_info[i].ship_type_restrict_temp.size(); ++j ) {
+				int idx = ship_type_name_lookup((char*)Weapon_info[i].ship_type_restrict_temp[j].c_str());
+
+				if ( idx >= 0 ) {
+					Weapon_info[i].ship_type_restrict.push_back(idx);
+				}
+			}
+
+			Weapon_info[i].ship_type_restrict_temp.clear();
+		}
 	}
 
 	trail_level_init();		// reset all missile trails
@@ -7054,4 +7119,41 @@ void weapon_unpause_sounds()
 {
 	// Pause all beam sounds
 	beam_unpause_sounds();
+}
+
+// Given a weapon, figure out how many independent locks we can have with it.
+int weapon_get_max_missile_seekers(weapon_info *wip)
+{
+	int max_target_locks;
+
+	if ( wip->multi_lock ) {
+		if ( wip->wi_flags & WIF_SWARM ) {
+			max_target_locks = wip->swarm_count;
+		} else if ( wip->wi_flags & WIF_CORKSCREW ) {
+			max_target_locks = wip->cs_num_fired;
+		} else {
+			max_target_locks = 1;
+		}
+	} else {
+		max_target_locks = 1;
+	}
+
+	return max_target_locks;
+}
+
+bool weapon_can_lock_on_ship_type(weapon_info *wip, int ship_type)
+{
+	if ( wip->ship_type_restrict.size() == 0 ) {
+		// no restrictions since this list wasn't even populated
+		return true; 
+	}
+
+	for ( size_t i = 0; i < wip->ship_type_restrict.size(); ++i ) {
+		if ( wip->ship_type_restrict[i] == ship_type ) {
+			return true; 
+		}
+	}
+
+	// can't lock this weapon on this ship type
+	return false; 
 }
