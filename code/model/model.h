@@ -98,9 +98,7 @@ typedef struct submodel_instance {
 // Data specific to a particular instance of a model.
 typedef struct polymodel_instance {
 	int model_num;					// global model num index, same as polymodel->id
-	int root_submodel_num;			// unused?
 	submodel_instance *submodel;	// array of submodel instances; mirrors the polymodel->submodel array
-	submodel_instance *submodel_render; // array of submodel instances for the rendering system; mirrors the polymodel->submodel array
 } polymodel_instance;
 
 #define MAX_MODEL_SUBSYSTEMS		200				// used in ships.cpp (only place?) for local stack variable DTP; bumped to 200
