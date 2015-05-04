@@ -1174,8 +1174,10 @@ NoHit:
 		// or if it's set to no collision
 		if ( !blown_off && !collision_checked && !csm->no_collisions )	{
 			if ( Mc_pmi ) {
-				Mc_orient = Mc_pmi->submodel[i].mc_orient;
-				Mc_base = Mc_pmi->submodel[i].mc_base;
+				//Mc_orient = Mc_pmi->submodel[i].mc_orient;
+				vm_matrix_x_matrix(&Mc_orient, Mc->orient, &Mc_pmi->submodel[i].local_orient);
+				//Mc_base = Mc_pmi->submodel[i].mc_base;
+				vm_vec_unrotate(&Mc_base, &Mc_pmi->submodel[i].local_pos, Mc->orient);
 				vm_vec_add2(&Mc_base, Mc->pos);
 			} else {
 				//instance for this subobject
@@ -1336,46 +1338,42 @@ int model_collide(mc_info * mc_info)
 
 }
 
-void model_collide_preprocess_subobj(vec3d *pos, matrix *orient, polymodel *pm,  polymodel_instance *pmi, int subobj_num)
+void model_collide_preprocess_submodel(vec3d *world_pos, matrix *world_orient, vec3d *parent_pos, matrix *parent_orient, polymodel *pm, polymodel_instance *pmi, int subobj_num)
 {
 	submodel_instance *smi = &pmi->submodel[subobj_num];
+	angles angs = pmi->submodel[subobj_num].angs;
+	bsp_info * csm = &pm->submodel[subobj_num];
 
-	smi->mc_base = *pos;
-	smi->mc_orient = *orient;
+	matrix tm = IDENTITY_MATRIX;
+
+	vm_vec_unrotate(&smi->local_pos, &csm->offset, parent_orient);
+	vm_vec_add2(&smi->local_pos, parent_pos);
+
+	if (vm_matrix_same(&tm, &csm->orientation)) {
+		// if submodel orientation matrix is identity matrix then don't bother with matrix ops
+		vm_angles_2_matrix(&tm, &angs);
+	} else {
+		matrix rotation_matrix = csm->orientation;
+		vm_rotate_matrix_by_angles(&rotation_matrix, &angs);
+
+		matrix inv_orientation;
+		vm_copy_transpose_matrix(&inv_orientation, &csm->orientation);
+
+		vm_matrix_x_matrix(&tm, &rotation_matrix, &inv_orientation);
+	}
+
+	vm_matrix_x_matrix(&smi->local_orient, parent_orient, &tm);
 
 	int i = pm->submodel[subobj_num].first_child;
 
 	while ( i >= 0 ) {
-		angles angs = pmi->submodel[i].angs;
-		bsp_info * csm = &pm->submodel[i];
+		model_collide_preprocess_submodel(world_pos, world_orient, &smi->local_pos, &smi->local_orient, pm, pmi, i);
 
-		matrix tm = IDENTITY_MATRIX;
-
-		vm_vec_unrotate(pos, &csm->offset, &smi->mc_orient );
-		vm_vec_add2(pos, &smi->mc_base);
-
-		if( vm_matrix_same(&tm, &csm->orientation)) {
-			// if submodel orientation matrix is identity matrix then don't bother with matrix ops
-			vm_angles_2_matrix(&tm, &angs);
-		} else {
-			matrix rotation_matrix = csm->orientation;
-			vm_rotate_matrix_by_angles(&rotation_matrix, &angs);
-
-			matrix inv_orientation;
-			vm_copy_transpose_matrix(&inv_orientation, &csm->orientation);
-
-			vm_matrix_x_matrix(&tm, &rotation_matrix, &inv_orientation);
-		}
-
-		vm_matrix_x_matrix(orient, &smi->mc_orient, &tm);
-
-		model_collide_preprocess_subobj(pos, orient, pm, pmi, i);
-
-		i = csm->next_sibling;
+		i = pm->submodel[i].next_sibling;
 	}
 }
 
-void model_collide_preprocess(matrix *orient, int model_instance_num, int detail_num)
+void model_collide_preprocess(vec3d *pos, matrix *orient, int model_instance_num, int detail_num /*= 0*/)
 {
 	polymodel_instance	*pmi;
 	polymodel *pm;
@@ -1383,12 +1381,5 @@ void model_collide_preprocess(matrix *orient, int model_instance_num, int detail
 	pmi = model_get_instance(model_instance_num);
 	pm = model_get(pmi->model_num);
 
-	matrix current_orient;
-	vec3d current_pos;
-
-	current_orient = *orient;
-
-	vm_vec_zero(&current_pos);
-
-	model_collide_preprocess_subobj(&current_pos, &current_orient, pm, pmi, pm->detail[detail_num]);
+	model_collide_preprocess_submodel(pos, orient, &vmd_zero_vector, &vmd_identity_matrix, pm, pmi, pm->detail[detail_num]);
 }

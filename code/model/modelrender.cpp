@@ -63,7 +63,8 @@ model_render_params::model_render_params():
 	Clip_plane_set(false),
 	Animated_effect(-1),
 	Animated_timer(0.0f),
-	Thruster_info()
+	Thruster_info(),
+	model_instance(NULL)
 {
 	Warp_scale.xyz.x = 1.0f;
 	Warp_scale.xyz.y = 1.0f;
@@ -255,6 +256,10 @@ void model_render_params::set_debug_flags(uint flags)
 void model_render_params::set_object_number(int num)
 {
 	Objnum = num;
+
+	if ( Objnum >= 0 && Objects[num].type == OBJ_SHIP && Ships[Objects[num].instance].model_instance_num >= 0 ) {
+		model_instance = model_get_instance(Ships[Objects[num].instance].model_instance_num);
+	}
 }
 
 void model_render_params::set_flags(uint flags)
@@ -277,6 +282,11 @@ void model_render_params::set_thruster_info(mst_info &info)
 const mst_info& model_render_params::get_thruster_info()
 {
 	return Thruster_info;
+}
+
+polymodel_instance* model_render_params::get_model_instance()
+{
+	return model_instance;
 }
 
 void model_batch_buffer::reset()
@@ -1446,16 +1456,23 @@ void model_render_children_buffers(draw_list* scene, model_render_params* interp
 	// By using this kind of computation, the rotational angles can always
 	// be computed relative to the submodel itself, instead of relative
 	// to the parent
-	matrix rotation_matrix = model->orientation;
-	vm_rotate_matrix_by_angles(&rotation_matrix, &ang);
 
-	matrix inv_orientation;
-	vm_copy_transpose_matrix(&inv_orientation, &model->orientation);
+	polymodel_instance *pmi = interp->get_model_instance();
 
-	matrix submodel_matrix;
-	vm_matrix_x_matrix(&submodel_matrix, &rotation_matrix, &inv_orientation);
+	if ( pmi != NULL ) {
+		scene->push_transform(&pmi->submodel[mn].local_pos, &pmi->submodel[mn].local_orient);
+	} else {
+		matrix rotation_matrix = model->orientation;
+		vm_rotate_matrix_by_angles(&rotation_matrix, &ang);
 
-	scene->push_transform(&model->offset, &submodel_matrix);
+		matrix inv_orientation;
+		vm_copy_transpose_matrix(&inv_orientation, &model->orientation);
+
+		matrix submodel_matrix;
+		vm_matrix_x_matrix(&submodel_matrix, &rotation_matrix, &inv_orientation);
+
+		scene->push_transform(&model->offset, &submodel_matrix);
+	}
 	
 	if ( (model_flags & MR_SHOW_OUTLINE || model_flags & MR_SHOW_OUTLINE_HTL || model_flags & MR_SHOW_OUTLINE_PRESET) && 
 		pm->submodel[mn].outline_buffer != NULL ) {
@@ -1473,6 +1490,10 @@ void model_render_children_buffers(draw_list* scene, model_render_params* interp
 		model_render_add_lightning( scene, interp, pm, &pm->submodel[mn] );
 	}
 
+	if ( pmi != NULL ) {
+		scene->pop_transform();
+	}
+
 	i = model->first_child;
 
 	while ( i >= 0 ) {
@@ -1487,7 +1508,9 @@ void model_render_children_buffers(draw_list* scene, model_render_params* interp
 		scene->set_lighting(true);
 	}
 
-	scene->pop_transform();
+	if ( pmi == NULL ) {
+		scene->pop_transform();
+	}
 }
 
 float model_render_determine_light_factor(model_render_params* interp, vec3d *pos, uint flags)

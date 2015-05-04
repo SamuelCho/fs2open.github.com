@@ -96,6 +96,8 @@ class model_render_params
 	float Animated_timer;
 
 	mst_info Thruster_info;
+
+	polymodel_instance *model_instance;
 public:
 	model_render_params();
 
@@ -139,6 +141,7 @@ public:
 	int get_animated_effect_num();
 	float get_animated_effect_timer();
 	const mst_info& get_thruster_info();
+	polymodel_instance* get_model_instance();
 };
 
 struct clip_plane_state

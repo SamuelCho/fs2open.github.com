@@ -12242,7 +12242,7 @@ void ship_model_update_instance(object *objp)
 
 
 	// preprocess subobject orientations for collision detection
-	model_collide_preprocess(&objp->orient, model_instance_num);
+	model_collide_preprocess(&objp->pos, &objp->orient, model_instance_num);
 }
 
 /**

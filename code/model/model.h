@@ -86,8 +86,10 @@ typedef struct submodel_instance_info {
 typedef struct submodel_instance {
 	angles angs;
 	angles prev_angs;
-	vec3d mc_base;
-	matrix mc_orient;
+
+	vec3d local_pos;
+	matrix local_orient;
+
 	bool collision_checked;
 	bool blown_off;
 	bool moved_this_frame;
@@ -1221,7 +1223,7 @@ bsp_collision_tree *model_get_bsp_collision_tree(int tree_index);
 void model_remove_bsp_collision_tree(int tree_index);
 int model_create_bsp_collision_tree();
 
-void model_collide_preprocess(matrix *orient, int model_instance_num, int detail = 0);
+void model_collide_preprocess(vec3d *pos, matrix *orient, int model_instance_num, int detail_num = 0);
 
 // Sets the submodel instance data in a submodel
 // If show_damaged is true it shows only damaged submodels.
