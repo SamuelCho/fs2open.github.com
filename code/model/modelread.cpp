@@ -4625,7 +4625,6 @@ void model_clear_submodel_instance( submodel_instance *sm_instance )
 	sm_instance->angs.h = 0.0f;
 	sm_instance->blown_off = false;
 	sm_instance->collision_checked = false;
-	sm_instance->moved_this_frame = false;
 }
 
 void model_clear_submodel_instances( int model_instance_num )
@@ -4772,8 +4771,6 @@ void model_update_instance(int model_instance_num, int sub_model_num, submodel_i
 	// Set the angles
 	smi->angs = sii->angs;
 	smi->prev_angs = sii->prev_angs;
-
-	smi->moved_this_frame = true;
 
 	// For all the detail levels of this submodel, set them also.
 	for (i=0; i<sm->num_details; i++ )	{

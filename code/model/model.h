@@ -92,7 +92,6 @@ typedef struct submodel_instance {
 
 	bool collision_checked;
 	bool blown_off;
-	bool moved_this_frame;
 } submodel_instance;
 
 // Data specific to a particular instance of a model.
