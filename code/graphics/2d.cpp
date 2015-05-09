@@ -103,10 +103,6 @@ float Gr_save_menu_zoomed_offset_X = 0.0f, Gr_save_menu_zoomed_offset_Y = 0.0f;
 
 bool Save_custom_screen_size;
 
-vertex_layout Point_particle_vertex_layout;
-vertex_layout Effect_vertex_layout;
-vertex_layout Trail_vertex_layout;
-
 void gr_set_screen_scale(int w, int h, int zoom_w, int zoom_h, int max_w, int max_h, bool force_stretch)
 {
 	bool do_zoom = zoom_w > 0 && zoom_h > 0 && (zoom_w != w || zoom_h != h);
@@ -1711,7 +1707,7 @@ void poly_list::make_index_buffer(SCP_vector<int> &vertex_list)
 
 	t1 = timer_get_milliseconds();
 
-	mprintf(("Index Buffer created in %d milliseconds\n", t1-t0));
+	//mprintf(("Index Buffer created in %d milliseconds\n", t1-t0));
 
 	// if there is nothig to change then bail
 	if (n_verts == nverts) {
@@ -1780,7 +1776,7 @@ poly_list& poly_list::operator = (poly_list &other_list)
 
 void poly_list::generate_sorted_index_list()
 {
-	for ( uint j = 0; j < n_verts; ++j) {
+	for ( int j = 0; j < n_verts; ++j) {
 		sorted_indices[j] = j;
 	}
 
@@ -1796,7 +1792,7 @@ bool poly_list::finder::operator()(const uint a, const uint b)
 
 	Assert(search_list != NULL);
 
-	if ( a == search_list->n_verts ) {
+	if ( a == (uint)search_list->n_verts ) {
 		Assert(vert_to_find != NULL);
 		Assert(norm_to_find != NULL);
 		Assert(a != b);
@@ -1808,7 +1804,7 @@ bool poly_list::finder::operator()(const uint a, const uint b)
 		norm_a = &search_list->norm[a];
 	}
 	
-	if ( b == search_list->n_verts ) {
+	if ( b == (uint)search_list->n_verts ) {
 		Assert(vert_to_find != NULL);
 		Assert(norm_to_find != NULL);
 		Assert(a != b);
@@ -2037,59 +2033,4 @@ uint gr_determine_model_shader_flags(
 	}
 
 	return shader_flags;
-}
-
-void gr_build_vertex_layouts()
-{
-	// build vertex definition for geometry shader particles
-	ubyte* ptr = NULL;
-	int offset = 0;
-	int size = 0;
-
-	size = sizeof(particle_pnt);
-	offset = 0;
-
-	Point_particle_vertex_layout.add_vertex_component(vertex_format_data::POSITION3, size, ptr + offset);
-	offset += sizeof(vec3d);
-
-	Point_particle_vertex_layout.add_vertex_component(vertex_format_data::RADIUS, size, ptr + offset);
-	offset += sizeof(float);
-
-	Point_particle_vertex_layout.add_vertex_component(vertex_format_data::UVEC, size, ptr + offset);
-	offset += sizeof(vec3d);
-
-	size = sizeof(effect_vertex);
-	offset = 0;
-
-	// build vertex definition for general shader drawn billboards
-	Effect_vertex_layout.add_vertex_component(vertex_format_data::POSITION3, size, ptr + offset);
-	offset += sizeof(vec3d);
-
-	Effect_vertex_layout.add_vertex_component(vertex_format_data::TEX_COORD, size, ptr + offset);
-	offset += sizeof(uv_pair);
-
-	Effect_vertex_layout.add_vertex_component(vertex_format_data::RADIUS, size, ptr + offset);
-	offset += sizeof(float);
-
-	Effect_vertex_layout.add_vertex_component(vertex_format_data::COLOR4, size, ptr + offset);
-	offset += sizeof(float);
-
-	size = sizeof(trail_shader_info);
-	offset = 0;
-
-	// build vertex definition for geometry shader generated trails
-	Trail_vertex_layout.add_vertex_component(vertex_format_data::POSITION3, size, ptr + offset);
-	offset += sizeof(vec3d);
-
-	Trail_vertex_layout.add_vertex_component(vertex_format_data::FVEC, size, ptr + offset);
-	offset += sizeof(vec3d);
-
-	Trail_vertex_layout.add_vertex_component(vertex_format_data::INTENSITY, size, ptr + offset);
-	offset += sizeof(float);
-
-	Trail_vertex_layout.add_vertex_component(vertex_format_data::RADIUS, size, ptr + offset);
-	offset += sizeof(float);
-
-	Trail_vertex_layout.add_vertex_component(vertex_format_data::TEX_COORD, size, ptr + offset);
-	offset += sizeof(uv_pair);
 }
