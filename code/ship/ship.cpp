@@ -9626,8 +9626,12 @@ int ship_launch_countermeasure(object *objp, int rand_val)
 		// if we have a player ship, then send the fired packet anyway so that the player
 		// who fired will get his 'out of countermeasures' sound
 		cmeasure_count = 0;
-		if ( objp->flags & OF_PLAYER_SHIP ){
-			goto send_countermeasure_fired;
+		if (objp->flags & OF_PLAYER_SHIP){
+			// the new way of doing things
+			if (Game_mode & GM_MULTIPLAYER){
+				send_NEW_countermeasure_fired_packet(objp, cmeasure_count, -1);
+			}
+			return 0;
 		}
 
 		return 0;
@@ -9650,10 +9654,9 @@ int ship_launch_countermeasure(object *objp, int rand_val)
 			snd_play_3d( &Snds[Weapon_info[shipp->current_cmeasure].launch_snd], &pos, &View_position );
 		}
 
-send_countermeasure_fired:
 		// the new way of doing things
 		if(Game_mode & GM_MULTIPLAYER){
-			send_NEW_countermeasure_fired_packet( objp, cmeasure_count, /*arand*/Objects[cobjnum].net_signature );
+			send_NEW_countermeasure_fired_packet(objp, cmeasure_count, Objects[cobjnum].net_signature);
 		}
 	}
 
@@ -17931,7 +17934,6 @@ void ship_render_batch_thrusters(object *obj)
 	int num = obj->instance;
 	ship *shipp = &Ships[num];
 	ship_info *sip = &Ship_info[Ships[num].ship_info_index];
-	bool show_thrusters = ((shipp->flags2 & SF2_NO_THRUSTERS) == 0) && !Rendering_to_shadow_map;
 
 	if ( Rendering_to_shadow_map ) return;
 

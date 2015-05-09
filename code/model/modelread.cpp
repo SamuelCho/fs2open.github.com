@@ -729,8 +729,6 @@ void create_family_tree(polymodel *obj)
 	}
 }
 
-IBX ibuffer_info;
-
 void create_vertex_buffer(polymodel *pm)
 {
 	if (Cmdline_nohtl || Is_standalone) {
@@ -746,105 +744,10 @@ void create_vertex_buffer(polymodel *pm)
 		Error(LOCATION, "Could not generate vertex buffer for '%s'!", pm->filename);
 	}
 
-	// clear struct and prepare for IBX usage
-	memset( &ibuffer_info, 0, sizeof(IBX) );
-
-	// Begin IBX code
-	if ( !Cmdline_noibx ) {
-		// use the same filename as the POF but with an .bx extension
-		strcpy_s( ibuffer_info.name, pm->filename );
-		char *pb = strchr( ibuffer_info.name, '.' );
-		if ( pb ) *pb = 0;
-		strcat_s( ibuffer_info.name, NOX(".bx") );
-
-		ibuffer_info.read = cfopen( ibuffer_info.name, "rb", CFILE_NORMAL, CF_TYPE_CACHE );
-
-		// check if it's a zero size file and if so bail out to create a new one
-		if ( (ibuffer_info.read != NULL) && !cfilelength(ibuffer_info.read) ) {
-			cfclose( ibuffer_info.read );
-			ibuffer_info.read = NULL;
-		}
-
-		if (ibuffer_info.read != NULL) {
-			bool ibx_valid = false;
-
-			// grab a checksum of the IBX, for debugging purposes
-			uint ibx_checksum = 0;
-			cfseek(ibuffer_info.read, 0, SEEK_SET);
-			cf_chksum_long(ibuffer_info.read, &ibx_checksum);
-			cfseek(ibuffer_info.read, 0, SEEK_SET);
-
-			// get the file size that we use to safety check with.
-			// be sure to subtract from this when we read something out
-			ibuffer_info.size = cfilelength( ibuffer_info.read );
-
-			// file id
-			int ibx = cfread_int( ibuffer_info.read );
-			ibuffer_info.size -= sizeof(int); // subtract
-
-			// make sure the file is valid
-			switch (ibx) {
-				// "XB  " - ("  BX" in file)
-				case 0x58422020:
-					ibx_valid = true;
-					break;
-			}
-
-			if (ibx_valid) {
-				// file is valid so grab the checksum out of the .bx and verify it matches the POF
-				uint ibx_sum = cfread_uint( ibuffer_info.read );
-				ibuffer_info.size -= sizeof(uint); // subtract
-
-				if (ibx_sum != Global_checksum) {
-					// bah, it's invalid for this POF
-					ibx_valid = false;
-
-					mprintf(("IBX:  Warning!  Found invalid IBX file: '%s'\n", ibuffer_info.name));
-				}
-			}
-
-
-			if ( !ibx_valid ) {
-				cfclose( ibuffer_info.read );
-				ibuffer_info.read = NULL;
-				ibuffer_info.size = 0;
-			} else {
-				mprintf(("IBX: Found a good IBX to read for '%s'.\n", pm->filename));
-				mprintf(("IBX-DEBUG => POF checksum: 0x%08x, IBX checksum: 0x%08x -- \"%s\"\n", Global_checksum, ibx_checksum, pm->filename));
-			}
-		}
-
-		// if the read file is absent or invalid then write out the new info
-		if (ibuffer_info.read == NULL) {
-			ibuffer_info.write = cfopen( ibuffer_info.name, "wb", CFILE_NORMAL, CF_TYPE_CACHE );
-
-			if (ibuffer_info.write != NULL) {
-				mprintf(("IBX: Starting a new IBX for '%s'.\n", pm->filename));
-
-				// file id, default to version 1
-				cfwrite_int( 0x58422020, ibuffer_info.write ); // "XB  " - ("  BX" in file)
-
-				// POF checksum
-				cfwrite_uint( Global_checksum, ibuffer_info.write );
-			}
-		}
-	} // End IBX code
-
 	// determine the size and configuration of each buffer segment
 	for (i = 0; i < pm->n_models; i++) {
 		interp_configure_vertex_buffers(pm, i);
 	}
-	
-	// these must be reset to NULL for the tests to work correctly later
-	if (ibuffer_info.read != NULL) {
-		cfclose( ibuffer_info.read );
-	}
-
-	if (ibuffer_info.write != NULL) {
-		cfclose( ibuffer_info.write );
-	}
-
-	memset( &ibuffer_info, 0, sizeof(IBX) );
 
 	// figure out which vertices are transparent
 	for ( i = 0; i < pm->n_models; i++ ) {
@@ -856,7 +759,6 @@ void create_vertex_buffer(polymodel *pm)
 	bool use_batched_rendering = true;
 
 	if ( Use_GLSL >= 3 && !Cmdline_no_batching ) {
-		bool unequal_stride = false;
 		uint stride = 0;
 
 		// figure out if the vertex stride of this entire model matches. if not, turn off batched rendering for this model
@@ -1291,7 +1193,7 @@ int read_model_file(polymodel * pm, char *filename, int n_subsystems, model_subs
 				// Check for unrealistic radii
 				if ( pm->submodel[n].rad <= 0.1f )
 				{
-					//Warning(LOCATION, "Submodel <%s> in model <%s> has a radius <= 0.1f\n", pm->submodel[n].name, filename);
+					Warning(LOCATION, "Submodel <%s> in model <%s> has a radius <= 0.1f\n", pm->submodel[n].name, filename);
 				}
 				
 				// sanity first!
@@ -2827,21 +2729,12 @@ int model_create_instance(int model_num, int submodel_num)
 	polymodel *pm = model_get(model_num);
 
 	pmi->submodel = (submodel_instance*)vm_malloc( sizeof(submodel_instance)*pm->n_models );
-	pmi->submodel_render = (submodel_instance*)vm_malloc( sizeof(submodel_instance)*pm->n_models );
 
 	for ( i = 0; i < pm->n_models; i++ ) {
 		model_clear_submodel_instance( &pmi->submodel[i] );
-		model_clear_submodel_instance( &pmi->submodel_render[i] );
 	}
 
 	pmi->model_num = model_num;
-
-	if ( submodel_num < 0 ) {
-		// if using default arguments, use detail0 as the root submodel
-		pmi->root_submodel_num = pm->detail[0];
-	} else {
-		pmi->root_submodel_num = submodel_num;
-	}
 
 	return open_slot;
 }
@@ -2856,10 +2749,6 @@ void model_delete_instance(int model_instance_num)
 
 	if ( pmi->submodel ) {
 		vm_free(pmi->submodel);
-	}
-
-	if ( pmi->submodel_render ) {
-		vm_free(pmi->submodel_render);
 	}
 
 	vm_free(pmi);
@@ -4648,7 +4537,6 @@ void model_clear_submodel_instance( submodel_instance *sm_instance )
 	sm_instance->angs.h = 0.0f;
 	sm_instance->blown_off = false;
 	sm_instance->collision_checked = false;
-	sm_instance->moved_this_frame = false;
 }
 
 void model_clear_submodel_instances( int model_instance_num )
@@ -4773,7 +4661,6 @@ void model_update_instance(int model_instance_num, int sub_model_num, submodel_i
 	if ( sub_model_num >= pm->n_models ) return;
 
 	submodel_instance *smi = &pmi->submodel[sub_model_num];
-	submodel_instance *smi_r = &pmi->submodel_render[sub_model_num];
 	bsp_info *sm = &pm->submodel[sub_model_num];
 
 	// Set the "blown out" flags	
@@ -4784,28 +4671,18 @@ void model_update_instance(int model_instance_num, int sub_model_num, submodel_i
 			pmi->submodel[sm->my_replacement].blown_off = false;
 			pmi->submodel[sm->my_replacement].angs = sii->angs;
 			pmi->submodel[sm->my_replacement].prev_angs = sii->prev_angs;
-
-			pmi->submodel_render[sm->my_replacement].blown_off = false;
-			pmi->submodel_render[sm->my_replacement].angs = sii->angs;
-			pmi->submodel_render[sm->my_replacement].prev_angs = sii->prev_angs;
 		}
 	} else {
 		// If submodel isn't yet blown off and has a -destroyed replacement model, we prevent
 		// the replacement model from being drawn by marking it as having been blown off
 		if ( sm->my_replacement > -1 && sm->my_replacement != sub_model_num)	{
 			pmi->submodel[sm->my_replacement].blown_off = true;
-			pmi->submodel_render[sm->my_replacement].blown_off = true;
 		}
 	}
 
 	// Set the angles
 	smi->angs = sii->angs;
 	smi->prev_angs = sii->prev_angs;
-
-	smi_r->angs = sii->angs;
-	smi_r->prev_angs = sii->prev_angs;
-
-	smi->moved_this_frame = true;
 
 	// For all the detail levels of this submodel, set them also.
 	for (i=0; i<sm->num_details; i++ )	{
@@ -4819,30 +4696,24 @@ void model_instance_dumb_rotation_sub(polymodel_instance * pmi, polymodel *pm, i
 
 		bsp_info * sm = &pm->submodel[mn];
 		submodel_instance *smi = &pmi->submodel[mn];
-		submodel_instance *smi_r = &pmi->submodel_render[mn];
 
 		if ( sm->movement_type == MSS_FLAG_DUM_ROTATES ){
 			float *ang;
-			float *ang_r;
 			int axis = sm->movement_axis;
 			switch ( axis ) {
 			case MOVEMENT_AXIS_X:
 				ang = &smi->angs.p;
-				ang_r = &smi_r->angs.p;
 					break;
 			case MOVEMENT_AXIS_Z:
 				ang = &smi->angs.b;
-				ang_r = &smi_r->angs.b;
 					break;
 			default:
 			case MOVEMENT_AXIS_Y:
 				ang = &smi->angs.h;
-				ang_r = &smi_r->angs.h;
 					break;
 			}
 			*ang = sm->dumb_turn_rate * float(timestamp())/1000.0f;
 			*ang = ((*ang/(PI*2.0f))-float(int(*ang/(PI*2.0f))))*(PI*2.0f);
-			*ang_r = *ang;
 			//this keeps ang from getting bigger than 2PI
 		}
 

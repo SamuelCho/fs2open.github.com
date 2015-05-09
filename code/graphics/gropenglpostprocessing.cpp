@@ -650,7 +650,6 @@ void gr_opengl_post_process_set_effect(const char *name, int value)
 
 	size_t idx;
 	int sflags = 0;
-	bool need_change = true;
 
 	if(!stricmp("lightshafts",name))
 	{
@@ -680,7 +679,7 @@ void gr_opengl_post_process_set_effect(const char *name, int value)
 
 void gr_opengl_post_process_set_defaults()
 {
-	size_t idx, list_size;
+	size_t idx;
 
 	if ( !Post_initialized ) {
 		return;

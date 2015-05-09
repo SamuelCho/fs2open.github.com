@@ -1651,8 +1651,8 @@ void model_interp_subcall(polymodel * pm, int mn, int detail_level)
 
 	model_interp_sub( pm->submodel[mn].bsp_data, pm, &pm->submodel[mn], 0 );
 
-//	if (Interp_flags & MR_SHOW_PIVOTS )
-//		model_draw_debug_points( pm, &pm->submodel[mn], Interp_flags );
+	if (Interp_flags & MR_DEPRECATED_SHOW_PIVOTS )
+		model_draw_debug_points( pm, &pm->submodel[mn], Interp_flags );
 
 	if ( pm->submodel[mn].num_arcs )	{
 		interp_render_lightning( pm, &pm->submodel[mn]);
@@ -1771,11 +1771,11 @@ int model_interp_sub(void *model_ptr, polymodel * pm, bsp_info *sm, int do_box_c
 				}
 			}
 
-//			if (Interp_flags & MR_SHOW_PIVOTS )	{
-//				#ifndef NDEBUG
-//				modelstats_num_boxes++;
-//				#endif
-//			}
+			if (Interp_flags & MR_DEPRECATED_SHOW_PIVOTS )	{
+				#ifndef NDEBUG
+				modelstats_num_boxes++;
+				#endif
+			}
 
 			if ( !(Interp_flags & MR_NO_LIGHTING ) )	{
 				if ( pushed )	{
@@ -3505,8 +3505,8 @@ void submodel_render_DEPRECATED(int model_num, int submodel_num, matrix *orient,
 		interp_render_lightning( pm, &pm->submodel[submodel_num]);
 	}
 
-// 	if (Interp_flags & MR_SHOW_PIVOTS )
-// 		model_draw_debug_points( pm, &pm->submodel[submodel_num], Interp_flags );
+	if (Interp_flags & MR_DEPRECATED_SHOW_PIVOTS )
+		model_draw_debug_points( pm, &pm->submodel[submodel_num], Interp_flags );
 
 	if ( !(Interp_flags & MR_NO_LIGHTING ) )	{
 		light_filter_pop();	
@@ -4419,94 +4419,10 @@ void interp_configure_vertex_buffers(polymodel *pm, int mn)
 		model_list->n_verts += polygon_list[i].n_verts;
 	}
 
-	// IBX stuff
-	extern IBX ibuffer_info;
+	// no read file so we'll have to generate
+	model_list->make_index_buffer(vertex_list);
 
-	if (ibuffer_info.read != NULL) {
-		int ibx_verts = 0;
-		int ibx_size = 0;
-
-		ibx_verts = cfread_int( ibuffer_info.read );
-		ibuffer_info.size -= sizeof(int);	// subtract
-
-		// vertex count (indexed vertex count)
-		ibx_size += ibx_verts * sizeof(int);
-		// index count (original vertex count)
-		ibx_size += model_list->n_verts * sizeof(int);
-
-		// safety check for this section
-		// ibuffer_info.size should be greater than or equal to ibx_size at this point
-		if (ibx_size > ibuffer_info.size) {
-			// AAAAAHH! not enough stored data - Abort, Retry, Fail?
-			Warning(LOCATION, "IBX: Safety Check Failure!  The file doesn't contain enough data, deleting '%s'\n", ibuffer_info.name);
-
-			cfclose( ibuffer_info.read );
-			ibuffer_info.read = NULL;
-			ibuffer_info.size = 0;
-			cf_delete( ibuffer_info.name, CF_TYPE_CACHE );
-
-			// force generate
-			model_list->make_index_buffer(vertex_list);
-
-			vertex_list.clear();	// don't actually need this now
-		} else {
-			poly_list *tlist = new(std::nothrow) poly_list;
-
-			if ( !tlist ) {
-				Error( LOCATION, "Unable to allocate memory for IBX poly_list!\n" );
-			}
-
-			tlist->allocate( ibx_verts );
-
-			// we have to generate tangent data manually for model_list
-			// (since it's otherwise done during make_index_buffer())
-			model_list->calculate_tangent();
-
-			for (i = 0; i < ibx_verts; i++) {
-				int ivert = cfread_int( ibuffer_info.read );
-
-				tlist->vert[i] = model_list->vert[ivert];
-				tlist->norm[i] = model_list->norm[ivert];
-
-				if (Cmdline_normal) {
-					tlist->tsb[i] = model_list->tsb[ivert];
-				}
-
-				if ( Use_GLSL >= 3 ) {
-					tlist->submodels[i] = mn;
-				}
-			}
-
-			tlist->n_verts = ibx_verts;
-
-			// change from old model_list to new one
-			delete model_list;
-
-			model->buffer.model_list = tlist;
-			model_list = tlist;
-
-			// subtract this block of data from the total size for next check
-			// remember that this includes the next set of reads too
-			ibuffer_info.size -= ibx_size;
-		}
-	} else {
-		// no read file so we'll have to generate
-		model_list->make_index_buffer(vertex_list);
-
-		if (ibuffer_info.write != NULL) {
-			cfwrite_int( model_list->n_verts, ibuffer_info.write );
-
-			int count = (int)vertex_list.size();
-			Assert( model_list->n_verts == count );
-
-			for (i = 0; i < count; i++) {
-				cfwrite_int( vertex_list[i], ibuffer_info.write );
-			}
-		}
-
-		vertex_list.clear();	// done
-	}
-	// end IBX stuff
+	vertex_list.clear();	// done
 
 	int vertex_flags = (VB_FLAG_POSITION | VB_FLAG_NORMAL | VB_FLAG_UV1);
 
@@ -4531,21 +4447,10 @@ void interp_configure_vertex_buffers(polymodel *pm, int mn)
 		Verify( new_buffer.get_index() != NULL );
 
 		for (j = 0; j < polygon_list[i].n_verts; j++) {
-			if (ibuffer_info.read != NULL) {
-				first_index = cfread_int(ibuffer_info.read);
-				Assert( first_index >= 0 );
+			first_index = model_list->find_index_fast(&polygon_list[i], j);
+			Assert(first_index != -1);
 
-				new_buffer.assign(j, first_index);
-			} else {
-				first_index = model_list->find_index_fast(&polygon_list[i], j);
-				Assert(first_index != -1);
-
-				new_buffer.assign(j, first_index);
-
-				if (ibuffer_info.write != NULL) {
-					cfwrite_int(first_index, ibuffer_info.write);
-				}
-			}
+			new_buffer.assign(j, first_index);
 		}
 
 		new_buffer.texture = i;
@@ -4609,18 +4514,18 @@ void interp_fill_detail_index_buffer(SCP_vector<int> &submodel_list, polymodel *
 	buffer->vertex_offset = 0;
 	buffer->model_list = new(std::nothrow) poly_list;
 
-	size_t num_buffers;
+	int num_buffers;
 	int tex_num;
 
 	// need to first count how many indexes there are in this entire detail model hierarchy
-	for ( i = 0; i < submodel_list.size(); ++i ) {
+	for ( i = 0; i < (int)submodel_list.size(); ++i ) {
 		model_num = submodel_list[i];
 
 		if ( pm->submodel[model_num].is_thruster ) {
 			continue;
 		}
 
-		num_buffers = pm->submodel[model_num].buffer.tex_buf.size();
+		num_buffers = (int)pm->submodel[model_num].buffer.tex_buf.size();
 
 		buffer->flags |= pm->submodel[model_num].buffer.flags;
 
@@ -4644,12 +4549,12 @@ void interp_fill_detail_index_buffer(SCP_vector<int> &submodel_list, polymodel *
 		new_buffer.texture = i;
 	}
 
-	for ( i = 0; i < buffer->tex_buf.size(); ++i ) {
+	for ( i = 0; i < (int)buffer->tex_buf.size(); ++i ) {
 		buffer->tex_buf[i].n_verts = 0;
 	}
 
 	// finally copy over the indexes
-	for ( i = 0; i < submodel_list.size(); ++i ) {
+	for ( i = 0; i < (int)submodel_list.size(); ++i ) {
 		model_num = submodel_list[i];
 
 		if (pm->submodel[model_num].is_thruster) {
@@ -4660,7 +4565,7 @@ void interp_fill_detail_index_buffer(SCP_vector<int> &submodel_list, polymodel *
 	}
 
 	// check which buffers need to have the > USHORT flag
-	for ( i = 0; i < buffer->tex_buf.size(); ++i ) {
+	for ( i = 0; i < (int)buffer->tex_buf.size(); ++i ) {
 		if ( buffer->tex_buf[i].i_last >= USHRT_MAX ) {
 			buffer->tex_buf[i].flags |= VB_FLAG_LARGE_INDEX;
 		}
@@ -4669,8 +4574,6 @@ void interp_fill_detail_index_buffer(SCP_vector<int> &submodel_list, polymodel *
 
 void interp_create_detail_index_buffer(polymodel *pm, int detail_num)
 {
-	size_t i, j;
-	int model_num;
 	SCP_vector<int> submodel_list;
 
 	submodel_list.clear();
@@ -4718,7 +4621,7 @@ void interp_create_transparency_index_buffer(polymodel *pm, int mn)
 	bool transparent_tri = false;
 	int num_tris = 0;
 
-	for ( int i = 0; i < tex_buffers.size(); ++i ) {
+	for ( int i = 0; i < (int)tex_buffers.size(); ++i ) {
 		buffer_data *tex_buf = &tex_buffers[i];
 
 		if ( tex_buf->n_verts < 1 ) {
@@ -4791,7 +4694,7 @@ void interp_create_transparency_index_buffer(polymodel *pm, int mn)
 		buffer_data &new_buff = trans_buffer->tex_buf.back();
 		new_buff.texture = tex_buf->texture;
 
-		for ( int j = 0; j < transparent_indices.size(); ++j ) {
+		for ( int j = 0; j < (int)transparent_indices.size(); ++j ) {
 			new_buff.assign(j, transparent_indices[j]);
 		}
 	}
@@ -4882,8 +4785,8 @@ void model_render_children_buffers_DEPRECATED(polymodel *pm, int mn, int detail_
 	
 	model_render_buffers_DEPRECATED(pm, mn, render, true);
 
-// 	if (Interp_flags & MR_SHOW_PIVOTS)
-// 		model_draw_debug_points( pm, &pm->submodel[mn], Interp_flags );
+	if (Interp_flags & MR_DEPRECATED_SHOW_PIVOTS)
+		model_draw_debug_points( pm, &pm->submodel[mn], Interp_flags );
 
 	if (model->num_arcs)
 		interp_render_lightning( pm, &pm->submodel[mn]);
@@ -5525,7 +5428,6 @@ void bsp_polygon_data::process_defpoints(int off, ubyte* bsp_data)
 	int i, n;
 	int nverts = w(off + bsp_data + 8);
 	int offset = w(off + bsp_data + 16);
-	int next_norm = 0;
 
 	ubyte *normcount = off + bsp_data + 20;
 	vec3d *src = vp(off + bsp_data + offset);
