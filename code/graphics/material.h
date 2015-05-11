@@ -3,6 +3,7 @@
 
 #include "globalincs/pstypes.h"
 #include "math/vecmat.h"
+#include "graphics/2d.h"
 
 struct uniform_data
 {
@@ -386,10 +387,39 @@ public:
 		texture_unit(uint _slot, int _bitmap_num, texture_type _type): 
 			slot(_slot), bitmap_num(_bitmap_num), type(_type) {}
 	};
+
+	struct fog 
+	{
+		int mode;
+		int r;
+		int g;
+		int b;
+		float dist_near;
+		float dist_far;
+	};
 private:
 	int shader_handle;
 	SCP_vector<material::texture_unit> textures;
 	uniform_block uniforms;
+
+	vec3d clip_normal;
+	vec3d clip_position;
+
+	int texture_addressing;
+
+	fog fog_params;
+
+	int depth_mode;
+
+	int cull_mode;
+
+	int fill_mode;
+
+	int blend_mode;
+
+	color clr;
+
+	int zbias;
 
 	void set_texture(uint slot_num, int bitmap_num, texture_type tex_type, const SCP_string &name);
 public:
@@ -403,6 +433,22 @@ public:
 	void set_texture_transform_buffer(uint slot_num, const SCP_string &name);
 	void set_texture_effect_texture(uint slot_num, const SCP_string &name);
 	void set_texture_shadow_map(uint slot_num, const SCP_string &name);
+
+	void set_texture_addressing(int addressing);
+
+	void set_fog(int r, int g, int b, float near, float far);
+
+	void set_depth_mode(int mode);
+
+	void set_cull_mode(int mode);
+
+	void set_fill_mode(int mode);
+
+	void set_blend_mode(int mode);
+
+	void set_depth_bias(int bias);
+
+	void set_color(int r, int g, int b);
 
 	void set_uniform(const SCP_string &name, const int& val);
 	void set_uniform(const SCP_string &name, const float& val);
