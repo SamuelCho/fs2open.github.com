@@ -90,15 +90,12 @@ typedef struct submodel_instance {
 	matrix mc_orient;
 	bool collision_checked;
 	bool blown_off;
-	bool moved_this_frame;
 } submodel_instance;
 
 // Data specific to a particular instance of a model.
 typedef struct polymodel_instance {
 	int model_num;					// global model num index, same as polymodel->id
-	int root_submodel_num;			// unused?
 	submodel_instance *submodel;	// array of submodel instances; mirrors the polymodel->submodel array
-	submodel_instance *submodel_render; // array of submodel instances for the rendering system; mirrors the polymodel->submodel array
 } polymodel_instance;
 
 #define MAX_MODEL_SUBSYSTEMS		200				// used in ships.cpp (only place?) for local stack variable DTP; bumped to 200
@@ -251,16 +248,6 @@ typedef struct model_special {
 #define MARC_TYPE_EMP						1		// EMP blast type arcs
 
 #define MAX_LIVE_DEBRIS	7
-
-
-// IBX stuff
-typedef struct IBX {
-	CFILE *read;		// reads, if an IBX file already exists
-	CFILE *write;		// writes, if new file created
-	int size;			// file size used to make sure an IBX contains enough data for the whole model
-	int version;		// IBX file version to use: v1 is USHORT only, v2 can mix USHORT and UINT
-	char name[MAX_FILENAME_LEN];	// filename of the ibx, this is used in case a safety check fails and we delete the file
-} IBX;
 
 typedef struct model_tmap_vert {
 	ushort vertnum;
