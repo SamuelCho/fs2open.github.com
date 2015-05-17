@@ -1667,7 +1667,7 @@ char *Default_main_fragment_shader =
 "{\n"
 "	// Fresnel for environment lighting\n" 
 "	// Equation referenced from Dimitar Lazarov's presentation titled Physically Based Rendering in Call of Duty: Black Ops\n"
-"	return specColor + (vec3(1.0) - specColor) * pow(1.0 - clamp(dot(view, normal), 0.0, 1.0), 5.0) * (4.0 - 3.0 * gloss);\n"
+"	return specColor + (vec3(1.0) - specColor) * pow(1.0 - clamp(dot(view, normal), 0.0, 1.0), 5.0) / (4.0 - 3.0 * gloss);\n"
 "}\n"
 "vec3 SpecularBlinnPhong(vec3 specColor, vec3 light, vec3 normal, vec3 halfVec, float specPower, float dotNL)\n"
 "{\n"
