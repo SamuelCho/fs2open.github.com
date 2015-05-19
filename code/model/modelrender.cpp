@@ -47,6 +47,113 @@ draw_list *draw_list::Target = NULL;
 
 model_batch_buffer TransformBufferHandler;
 
+gr_alpha_blend model_material_builder::determine_blend_mode(int base_bitmap, bool is_transparent)
+{
+	gr_alpha_blend alpha_blend;
+
+	if ( is_transparent ) {
+		if ( base_bitmap >= 0 && bm_has_alpha_channel(base_bitmap) ) {
+			return ALPHA_BLEND_ALPHA_BLEND_ALPHA;
+		}
+			
+		return ALPHA_BLEND_ADDITIVE;
+	}
+	
+	return ALPHA_BLEND_ALPHA_BLEND_ALPHA;
+}
+
+void model_material_builder::determine_color(ubyte &r, ubyte &g, ubyte &b, ubyte &a, gr_alpha_blend blend_mode, bool texturing)
+{
+	if ( blend_mode == ALPHA_BLEND_ADDITIVE ) {
+		r = g = b = (ubyte)(alpha * 255.0f);
+		a = 255;
+	} else {
+		if ( texturing ) {
+			r = g = b = 255;
+		} else {
+			r = clr.red;
+			g = clr.green;
+			b = clr.blue;
+		}
+
+		a = (ubyte)(alpha * 255.0f);
+	}
+}
+
+gr_zbuffer_type determine_depth_mode(bool using_depth_test, bool is_transparent)
+{
+	if ( using_depth_test ) {
+		if ( is_transparent ) {
+			return ZBUFFER_TYPE_READ;
+		}
+		
+		return ZBUFFER_TYPE_FULL;
+	}
+
+	return ZBUFFER_TYPE_NONE;
+}
+
+void model_material_builder::build_material(material &model_material)
+{
+	uint shader_flags = 0;
+	int texture_slot = 0;
+	gr_alpha_blend blend_mode = determine_blend_mode(texture_maps[TM_BASE_TYPE], transparent);
+	
+	ubyte r, g, b, a;
+	determine_color(r, g, b, a, blend_mode, textured);
+
+	gr_zbuffer_type depth_mode = determine_depth_mode(depth_test, transparent);
+
+	if ( lighting ) {
+		shader_flags |= SDR_FLAG_MODEL_LIGHT;
+	}
+
+	if ( fog.mode == GR_FOGMODE_FOG ) {
+		shader_flags |= SDR_FLAG_MODEL_FOG;
+		model_material.set_fog(fog.r, fog.g, fog.b, fog.dist_near, fog.dist_far);
+	}
+
+	if ( textured ) {
+		if ( texture_maps[TM_BASE_TYPE] >= 0 && !Basemap_override ) {
+			shader_flags |= SDR_FLAG_MODEL_DIFFUSE_MAP;
+			model_material.set_texture_bitmap(texture_slot, texture_maps[TM_BASE_TYPE], "sBaseMap");
+			texture_slot++;
+		}
+
+		if ( texture_maps[TM_GLOW_TYPE] >= 0 ) {
+			shader_flags |= SDR_FLAG_MODEL_GLOW_MAP;
+			model_material.set_texture_bitmap(texture_slot, texture_maps[TM_GLOW_TYPE], "sGlowmap");
+			texture_slot++;
+		}
+
+		if ( lighting ) {
+			if ( texture_maps[TM_SPECULAR_TYPE] > 0 && !Specmap_override ) {
+				shader_flags |= SDR_FLAG_MODEL_SPEC_MAP;
+				model_material.set_texture_bitmap(texture_slot, texture_maps[TM_GLOW_TYPE], "sSpecmap");
+				texture_slot++;
+
+				if ( ENVMAP > 0 && !Envmap_override ) {
+					shader_flags |= SDR_FLAG_MODEL_ENV_MAP;
+					model_material.set_texture_bitmap(texture_slot, ENVMAP, "sEnvmap");
+
+					int alpha_spec = bm_has_alpha_channel(texture_maps[TM_SPECULAR_TYPE]);
+
+					matrix4 texture_mat;
+
+					for (int i = 0; i < 16; ++i) {
+						texture_mat.a1d[i] = GL_env_texture_matrix[i];
+					}
+
+					model_material.set_uniform("alpha_spec", alpha_spec);
+					model_material.set_uniform("envMatrix", texture_mat);
+
+					texture_slot++;
+				}
+			}
+		}
+	}
+}
+
 model_render_params::model_render_params():
 	Model_flags(MR_NORMAL),
 	Debug_flags(0),
@@ -421,11 +528,15 @@ void draw_list::add_submodel_to_batch(int model_num)
 
 void draw_list::set_depth_mode(int depth_set)
 {
+#ifdef MATERIALS
+	Material_params.set_depth_mode(depth_set);
+#else
 // 	if ( !dirty_render_state && depth_set != current_render_state.depth_mode ) {
 // 		dirty_render_state = true;
 // 	}
 
 	Current_depth_mode = depth_set;
+#endif
 }
 
 void draw_list::add_arc(vec3d *v1, vec3d *v2, color *primary, color *secondary, float arc_width)
@@ -452,11 +563,18 @@ void draw_list::set_light_filter(int objnum, vec3d *pos, float rad)
 
 void draw_list::set_light_factor(float factor)
 {
+#ifdef MATERIALS
+	Material_params.set_light_factor(factor);
+#else
 	Current_render_state.light_factor = factor;
+#endif
 }
 
 void draw_list::set_clip_plane(const vec3d &position, const vec3d &normal)
 {
+#ifdef MATERIALS
+	Material_params.set_clip_plane(position, normal);
+#else
 	clip_plane_state clip_normal;
 
 	clip_normal.point = position;
@@ -465,20 +583,54 @@ void draw_list::set_clip_plane(const vec3d &position, const vec3d &normal)
 	Clip_planes.push_back(clip_normal);
 
 	Current_render_state.clip_plane_handle = Clip_planes.size() - 1;
+#endif
 }
 
 void draw_list::set_clip_plane()
 {
+#ifdef MATERIALS
+	Material_params.set_clip_plane();
+#else
 	Current_render_state.clip_plane_handle = -1;
+#endif
 }
 
 void draw_list::set_thrust_scale(float scale)
 {
+#ifdef MATERIALS
+	if ( scale > 0.0f ) {
+		Material_params.set_thrust_scale(scale);
+	} else {
+		Material_params.set_thrust_scale();
+	}
+#else
 	Current_render_state.thrust_scale = scale;
+#endif
 }
 
 void draw_list::add_buffer_draw(vertex_buffer *buffer, int texi, uint tmap_flags, model_render_params *interp)
 {
+#ifdef MATERIALS
+	model_draw draw_data;
+
+	draw_data.buffer = buffer;
+	
+	if ( tmap_flags & TMAP_FLAG_BATCH_TRANSFORMS ) {
+		draw_data.transformation = transform();
+
+		draw_data.scale.xyz.x = 1.0f;
+		draw_data.scale.xyz.y = 1.0f;
+		draw_data.scale.xyz.z = 1.0f;
+
+		draw_data.transform_buffer_offset = TransformBufferHandler.get_buffer_offset();
+	} else {
+		draw_data.transformation = Current_transform;
+		draw_data.scale = Current_scale;
+		draw_data.transform_buffer_offset = -1;
+	}
+
+	Material_params.build_material(draw_data.mat);
+#else
 	// need to do a check to see if the top render state matches the current.
 	//if ( dirty_render_state ) {
 		Render_states.push_back(Current_render_state);
@@ -524,6 +676,7 @@ void draw_list::add_buffer_draw(vertex_buffer *buffer, int texi, uint tmap_flags
 	Render_elements.push_back(draw_data);
 
 	Render_keys.push_back(Render_elements.size() - 1);
+#endif
 }
 
 uint draw_list::determine_shader_flags(render_state *state, queued_buffer_draw *draw_info, vertex_buffer *buffer, int tmap_flags)
@@ -743,6 +896,9 @@ void draw_list::set_buffer(int buffer)
 
 void draw_list::set_blend_filter(int filter, float alpha)
 {
+#ifdef MATERIALS
+	Material_params.set_blend_filter(filter, alpha);
+#else
 // 	if ( !dirty_render_state && ( current_render_state.alpha != alpha && current_render_state.blend_filter != filter ) ) {
 // 		dirty_render_state = true;
 // 	}
@@ -752,45 +908,88 @@ void draw_list::set_blend_filter(int filter, float alpha)
 
 	Current_blend_filter = filter;
 	Current_alpha = alpha;
+#endif
 }
 
 void draw_list::set_texture(int texture_type, int texture_handle)
 {
+#ifdef MATERIALS
+	Material_params.set_texture(texture_type, texture_handle);
+#else
 	Assert(texture_type > -1);
 	Assert(texture_type < TM_NUM_TYPES);
 
 	Current_textures[texture_type] = texture_handle;
+#endif
 }
 
 void draw_list::set_cull_mode(int mode)
 {
+#ifdef MATERIALS
+	Material_params.set_cull_mode(mode);
+#else
 	Current_render_state.cull_mode = mode;
+#endif
 }
 
 void draw_list::set_zbias(int bias)
 {
+#ifdef MATERIALS
+	Material_params.set_zbias(bias);
+#else
 	Current_render_state.zbias = bias;
+#endif
 }
 
 void draw_list::set_lighting(bool lighting)
 {
+#ifdef MATERIALS
+	Material_params.set_lighting(lighting);
+#else
 	Current_render_state.lighting = lighting;
+#endif
 }
 
 void draw_list::set_team_color(const team_color &color)
 {
+#ifdef MATERIALS
+	Material_params.set_team_color(color);
+#else
 	Current_render_state.using_team_color = true;
 	Current_render_state.tm_color = color;
+#endif
 }
 
 void draw_list::set_team_color()
 {
+#ifdef MATERIALS
+	Material_params.set_team_color();
+#else
 	Current_render_state.using_team_color = false;
+#endif
 }
 
 void draw_list::set_color(const color &clr)
 {
+#ifdef MATERIALS
+	Material_params.set_color(clr);
+#else
 	Current_render_state.clr = clr;
+#endif
+}
+
+void draw_list::set_animated_effect(int effect, float time)
+{
+#ifdef MATERIALS
+	Material_params.set_animated_effect(effect, time);
+#endif
+}
+
+void draw_list::set_animated_effect()
+{
+#ifdef MATERIALS
+	Material_params.set_animated_effect();
+#endif
 }
 
 void draw_list::set_animated_timer(float time)
@@ -805,27 +1004,43 @@ void draw_list::set_animated_effect(int effect)
 
 void draw_list::set_texture_addressing(int addressing)
 {
+#ifdef MATERIALS
+	Material_params.set_texture_addressing(addressing);
+#else
 	Current_render_state.texture_addressing = addressing;
+#endif
 }
 
 void draw_list::set_fog(int fog_mode, int r, int g, int b, float fog_near, float fog_far)
 {
+#ifdef MATERIALS
+	Material_params.set_fog(fog_mode, r, g, b, fog_near, fog_far);
+#else
 	Current_render_state.fog_mode = fog_mode;
 	Current_render_state.r = r;
 	Current_render_state.g = g;
 	Current_render_state.b = b;
 	Current_render_state.fog_near = fog_near;
 	Current_render_state.fog_far = fog_far;
+#endif
 }
 
 void draw_list::set_fill_mode(int mode)
 {
+#ifdef MATERIALS
+	Material_params.set_fill_mode(mode);
+#else
 	Current_render_state.fill_mode = mode;
+#endif
 }
 
 void draw_list::set_center_alpha(int center_alpha)
 {
+#ifdef MATERIALS
+	Material_params.set_center_alpha(center_alpha);
+#else
 	Current_render_state.center_alpha = center_alpha;
+#endif
 }
 
 void draw_list::init()
@@ -2671,6 +2886,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 	const int objnum = interp->get_object_number();
 	const int model_flags = interp->get_model_flags();
 
+	model_material_builder material_params;
 	polymodel *pm = model_get(model_num);
 	polymodel_instance * pmi = NULL;
 		
@@ -2687,14 +2903,10 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 
 	if ( interp->is_clip_plane_set() ) {
 		scene->set_clip_plane(interp->get_clip_plane_pos(), interp->get_clip_plane_normal());
-	} else {
-		scene->set_clip_plane();
 	}
 
 	if ( interp->is_team_color_set() ) {
 		scene->set_team_color(interp->get_team_color());
-	} else {
-		scene->set_team_color();
 	}
 		
 	if ( model_flags & MR_FORCE_CLAMP ) {
@@ -2706,7 +2918,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 	model_render_set_glow_points(pm, objnum);
 
 	if ( !(model_flags & MR_NO_LIGHTING) ) {
-		scene->set_light_filter( objnum, pos, pm->rad );
+		scene->set_light_filter(objnum, pos, pm->rad);
 	}
 
 	ship *shipp = NULL;
@@ -2746,9 +2958,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 	}
 
 	if ( interp->get_animated_effect_num() >= 0 ) {
-		tmap_flags |= TMAP_ANIMATED_SHADER;
-		scene->set_animated_effect(interp->get_animated_effect_num());
-		scene->set_animated_timer(interp->get_animated_effect_timer());
+		scene->set_animated_effect(interp->get_animated_effect_num(), interp->get_animated_effect_timer());
 	}
 
 	bool is_outlines_only = (model_flags & MR_NO_POLYS) && ((model_flags & MR_SHOW_OUTLINE_PRESET) || (model_flags & MR_SHOW_OUTLINE));

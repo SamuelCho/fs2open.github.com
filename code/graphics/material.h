@@ -161,6 +161,15 @@ struct uniform
 
 	}
 
+	void operator=(uniform& u)
+	{
+		name = u.name;
+		type = u.type;
+		index = u.index;
+		count = u.count;
+		data_src = u.data_src;
+	}
+
 	template <class T> data_type determine_type();
 	template <> data_type determine_type<int>() { return INT; }
 	template <> data_type determine_type<float>() { return FLOAT; }
@@ -320,6 +329,18 @@ public:
 		return true;
 	}
 
+	void invalidate_value(const SCP_string& name)
+	{
+		int index = find_uniform(name);
+
+		if ( index < 0 ) {
+			return;
+		}
+
+		Uniforms[index] = Uniforms.back();
+		Uniforms.pop_back();
+	}
+
 	int num_uniforms() 
 	{ 
 		return (int)Uniforms.size(); 
@@ -457,6 +478,7 @@ public:
 	void set_uniform(const SCP_string &name, const vec4& val);
 	void set_uniform(const SCP_string &name, const matrix4& val);
 	void set_uniform(const SCP_string &name, matrix4* val, int size);
+	void remove_uniform(const SCP_string &name);
 
 	uniform_block& get_uniforms();
 };

@@ -86,6 +86,11 @@ void material::set_uniform(const SCP_string &name, matrix4* val, int size)
 	uniforms.set_values(name, val, size);
 }
 
+void material::remove_uniform(const SCP_string &name)
+{
+	uniforms.invalidate_value(name);
+}
+
 uniform_block& material::get_uniforms() 
 {
 	return uniforms;
