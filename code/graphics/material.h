@@ -423,6 +423,8 @@ private:
 	SCP_vector<material::texture_unit> textures;
 	uniform_block uniforms;
 
+	SCP_vector<uniform_block*> shared_uniforms;
+
 	vec3d clip_normal;
 	vec3d clip_position;
 
@@ -450,6 +452,8 @@ public:
 	void set_shader(int sdr_handle);
 
 	void set_texture_bitmap(uint slot_num, int bitmap_num, const SCP_string &name);
+
+	// temporary texture setting functions for textures that exist outside of bmpman
 	void set_texture_depth_buffer(uint slot_num, const SCP_string &name);
 	void set_texture_transform_buffer(uint slot_num, const SCP_string &name);
 	void set_texture_effect_texture(uint slot_num, const SCP_string &name);
@@ -471,11 +475,16 @@ public:
 
 	void set_color(int r, int g, int b);
 
+	void add_shared_uniforms(uniform_block *block);
+
 	void set_uniform(const SCP_string &name, const int& val);
 	void set_uniform(const SCP_string &name, const float& val);
 	void set_uniform(const SCP_string &name, const vec2d& val);
 	void set_uniform(const SCP_string &name, const vec3d& val);
 	void set_uniform(const SCP_string &name, const vec4& val);
+	void set_uniform(const SCP_string &name, float x, float y);
+	void set_uniform(const SCP_string &name, float x, float y, float z);
+	void set_uniform(const SCP_string &name, float x, float y, float z, float w);
 	void set_uniform(const SCP_string &name, const matrix4& val);
 	void set_uniform(const SCP_string &name, matrix4* val, int size);
 	void remove_uniform(const SCP_string &name);

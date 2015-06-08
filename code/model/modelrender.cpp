@@ -45,6 +45,10 @@ extern float Interp_thrust_scale;
 
 draw_list *draw_list::Target = NULL;
 
+uniform_block Model_render_shadow_gen_uniform_data;
+uniform_block Model_render_shadow_uniform_data;
+uniform_block Model_render_env_uniform_data;
+
 model_batch_buffer TransformBufferHandler;
 
 gr_alpha_blend model_material_builder::determine_blend_mode(int base_bitmap, bool is_transparent)
@@ -80,7 +84,7 @@ void model_material_builder::determine_color(ubyte &r, ubyte &g, ubyte &b, ubyte
 	}
 }
 
-gr_zbuffer_type determine_depth_mode(bool using_depth_test, bool is_transparent)
+gr_zbuffer_type model_material_builder::determine_depth_mode(bool using_depth_test, bool is_transparent)
 {
 	if ( using_depth_test ) {
 		if ( is_transparent ) {
@@ -93,7 +97,7 @@ gr_zbuffer_type determine_depth_mode(bool using_depth_test, bool is_transparent)
 	return ZBUFFER_TYPE_NONE;
 }
 
-void model_material_builder::build_material(material &model_material)
+void model_material_builder::generate_material(material &model_material)
 {
 	uint shader_flags = 0;
 	int texture_slot = 0;
@@ -104,24 +108,50 @@ void model_material_builder::build_material(material &model_material)
 
 	gr_zbuffer_type depth_mode = determine_depth_mode(depth_test, transparent);
 
+	if ( Rendering_to_shadow_map ) {
+		// if we're building the shadow map, we likely only need the flags here and above so bail
+		shader_flags |= SDR_FLAG_MODEL_SHADOW_MAP;
+
+		model_material.add_shared_uniforms(&Model_render_shadow_gen_uniform_data);
+	}
+
 	if ( lighting ) {
 		shader_flags |= SDR_FLAG_MODEL_LIGHT;
 	}
 
 	if ( fog.mode == GR_FOGMODE_FOG ) {
 		shader_flags |= SDR_FLAG_MODEL_FOG;
+
 		model_material.set_fog(fog.r, fog.g, fog.b, fog.dist_near, fog.dist_far);
+	}
+
+	if ( animated_effect > 0 ) {
+		shader_flags |= SDR_FLAG_MODEL_ANIMATED;
+
+		model_material.set_texture_effect_texture(texture_slot, "sFramebuffer");
+		texture_slot++;
+	}
+
+	if ( transform_buffer_offset >= 0 ) {
+		shader_flags |= SDR_FLAG_MODEL_TRANSFORM;
+
+		model_material.set_uniform("buffer_matrix_offset", transform_buffer_offset);
+
+		model_material.set_texture_transform_buffer(texture_slot, "transform_tex");
+		texture_slot++;
 	}
 
 	if ( textured ) {
 		if ( texture_maps[TM_BASE_TYPE] >= 0 && !Basemap_override ) {
 			shader_flags |= SDR_FLAG_MODEL_DIFFUSE_MAP;
+
 			model_material.set_texture_bitmap(texture_slot, texture_maps[TM_BASE_TYPE], "sBaseMap");
 			texture_slot++;
 		}
 
 		if ( texture_maps[TM_GLOW_TYPE] >= 0 ) {
 			shader_flags |= SDR_FLAG_MODEL_GLOW_MAP;
+
 			model_material.set_texture_bitmap(texture_slot, texture_maps[TM_GLOW_TYPE], "sGlowmap");
 			texture_slot++;
 		}
@@ -129,29 +159,70 @@ void model_material_builder::build_material(material &model_material)
 		if ( lighting ) {
 			if ( texture_maps[TM_SPECULAR_TYPE] > 0 && !Specmap_override ) {
 				shader_flags |= SDR_FLAG_MODEL_SPEC_MAP;
+
 				model_material.set_texture_bitmap(texture_slot, texture_maps[TM_GLOW_TYPE], "sSpecmap");
 				texture_slot++;
 
 				if ( ENVMAP > 0 && !Envmap_override ) {
 					shader_flags |= SDR_FLAG_MODEL_ENV_MAP;
-					model_material.set_texture_bitmap(texture_slot, ENVMAP, "sEnvmap");
 
 					int alpha_spec = bm_has_alpha_channel(texture_maps[TM_SPECULAR_TYPE]);
 
-					matrix4 texture_mat;
-
-					for (int i = 0; i < 16; ++i) {
-						texture_mat.a1d[i] = GL_env_texture_matrix[i];
-					}
-
-					model_material.set_uniform("alpha_spec", alpha_spec);
-					model_material.set_uniform("envMatrix", texture_mat);
-
+					model_material.set_texture_bitmap(texture_slot, ENVMAP, "sEnvmap");
 					texture_slot++;
+
+					model_material.add_shared_uniforms(&Model_render_env_uniform_data);
+					model_material.set_uniform("alpha_spec", alpha_spec);
 				}
 			}
+
+			if ( texture_maps[TM_NORMAL_TYPE] > 0 && !Normalmap_override ) {
+				shader_flags |= SDR_FLAG_MODEL_NORMAL_MAP;
+
+				model_material.set_texture_bitmap(texture_slot, texture_maps[TM_NORMAL_TYPE], "sNormalmap");
+				texture_slot++;
+			}
+
+			if ( texture_maps[TM_HEIGHT_TYPE] > 0 && !Heightmap_override )  {
+				shader_flags |= SDR_FLAG_MODEL_HEIGHT_MAP;
+
+				model_material.set_texture_bitmap(texture_slot, texture_maps[TM_HEIGHT_TYPE], "sHeightmap");
+				texture_slot++;
+			}
+
+			if ( Cmdline_shadow_quality && !Rendering_to_shadow_map && !Shadow_override ) {
+				shader_flags |= SDR_FLAG_MODEL_SHADOWS;
+
+				model_material.add_shared_uniforms(&Model_render_shadow_uniform_data);
+				model_material.set_uniform("model_matrix", transform);
+				model_material.set_texture_shadow_map(texture_slot, "shadow_map");
+				texture_slot++;
+			}
+		}
+
+		if ( texture_maps[TM_MISC_TYPE] > 0 ) {
+			shader_flags |= SDR_FLAG_MODEL_MISC_MAP;
+		}
+
+		if ( using_team_color ) {
+			shader_flags |= SDR_FLAG_MODEL_TEAMCOLOR;
+
+			model_material.set_uniform("stripe_color", tm_color.stripe.r, tm_color.stripe.g, tm_color.stripe.b);
+			model_material.set_uniform("base_color", tm_color.base.r, tm_color.base.g, tm_color.b);
 		}
 	}
+
+	if ( Deferred_lighting ) {
+		shader_flags |= SDR_FLAG_MODEL_DEFERRED;
+	}
+
+	if ( thrust_scale > 0.0f ) {
+		shader_flags |= SDR_FLAG_MODEL_THRUSTER;
+
+		model_material.set_uniform("thruster_scale", thrust_scale);
+	}
+
+	model_material.set_shader(gr_maybe_create_shader(SDR_TYPE_MODEL, shader_flags));
 }
 
 model_render_params::model_render_params():
@@ -616,7 +687,7 @@ void draw_list::add_buffer_draw(vertex_buffer *buffer, int texi, uint tmap_flags
 	draw_data.buffer = buffer;
 	
 	if ( tmap_flags & TMAP_FLAG_BATCH_TRANSFORMS ) {
-		draw_data.transformation = transform();
+		Material_params.set_transform(transform().get_matrix4());
 
 		draw_data.scale.xyz.x = 1.0f;
 		draw_data.scale.xyz.y = 1.0f;
@@ -624,12 +695,13 @@ void draw_list::add_buffer_draw(vertex_buffer *buffer, int texi, uint tmap_flags
 
 		draw_data.transform_buffer_offset = TransformBufferHandler.get_buffer_offset();
 	} else {
-		draw_data.transformation = Current_transform;
+		Material_params.set_transform(Current_transform.get_matrix4());
+
 		draw_data.scale = Current_scale;
 		draw_data.transform_buffer_offset = -1;
 	}
 
-	Material_params.build_material(draw_data.mat);
+	Material_params.generate_material(draw_data.mat);
 #else
 	// need to do a check to see if the top render state matches the current.
 	//if ( dirty_render_state ) {
@@ -1237,6 +1309,27 @@ bool draw_list::sort_draw_pair(const int a, const int b)
 	}
 
 	return render_state_a->lights.index_start < render_state_b->lights.index_start;
+}
+
+void model_render_set_environment_matrix()
+{
+
+}
+
+void model_render_set_shadow_view_matrix(matrix4 *view_matrix)
+{
+	Model_render_shadow_uniform_data.set_value("shadow_mv_matrix", *view_matrix);
+}
+
+void model_render_set_shadow_cascades(matrix4 *proj_matrices, float *distances)
+{
+	Model_render_shadow_gen_uniform_data.set_values("shadow_proj_matrix", proj_matrices, (int)MAX_SHADOW_CASCADES);
+
+	Model_render_shadow_uniform_data.set_values("shadow_proj_matrix", proj_matrices, (int)MAX_SHADOW_CASCADES);
+	Model_render_shadow_uniform_data.set_value("veryneardist", distances[0]);
+	Model_render_shadow_uniform_data.set_value("neardist", distances[1]);
+	Model_render_shadow_uniform_data.set_value("middist", distances[2]);
+	Model_render_shadow_uniform_data.set_value("fardist", distances[3]);
 }
 
 void model_render_add_lightning( draw_list *scene, model_render_params* interp, polymodel *pm, bsp_info * sm )
@@ -2957,7 +3050,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 		tmap_flags |= TMAP_FLAG_DESATURATE;
 	}
 
-	if ( interp->get_animated_effect_num() >= 0 ) {
+	if ( interp->get_animated_effect_num() > 0 ) {
 		scene->set_animated_effect(interp->get_animated_effect_num(), interp->get_animated_effect_timer());
 	}
 

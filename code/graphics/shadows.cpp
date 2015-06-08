@@ -387,6 +387,9 @@ matrix shadows_start_render(matrix *eye_orient, vec3d *eye_pos, float fov, float
 
 	gr_shadow_map_start(&Shadow_view_matrix, &light_matrix);
 
+	model_render_set_shadow_view_matrix(&Shadow_view_matrix);
+	model_render_set_shadow_cascades(Shadow_proj_matrix, Shadow_cascade_distances);
+
 	return light_matrix;
 }
 

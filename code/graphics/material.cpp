@@ -51,6 +51,11 @@ void material::set_texture_shadow_map(uint slot_num, const SCP_string &name)
 	set_texture(slot_num, -1, TEX_RESOURCE_SHADOW_MAP, name);
 }
 
+void material::add_shared_uniforms(uniform_block *block)
+{
+	shared_uniforms.push_back(block);
+}
+
 void material::set_uniform(const SCP_string &name, const int& val)
 {
 	uniforms.set_value(name, val);
@@ -61,13 +66,47 @@ void material::set_uniform(const SCP_string &name, const float& val)
 	uniforms.set_value(name, val);
 }
 
+
+void material::set_uniform(const SCP_string &name, float x, float y)
+{
+	vec2d val;
+
+	val.x = x;
+	val.y = y;
+
+	uniforms.set_value(name, val);
+}
+
 void material::set_uniform(const SCP_string &name, const vec2d& val)
 {
 	uniforms.set_value(name, val);
 }
 
+void material::set_uniform(const SCP_string &name, float x, float y, float z)
+{
+	vec3d val;
+
+	val.xyz.x = x;
+	val.xyz.y = y;
+	val.xyz.z = z;
+
+	uniforms.set_value(name, val);
+}
+
 void material::set_uniform(const SCP_string &name, const vec3d& val)
 {
+	uniforms.set_value(name, val);
+}
+
+void material::set_uniform(const SCP_string &name, float x, float y, float z, float w)
+{
+	vec4 val;
+
+	val.xyzw.x = x;
+	val.xyzw.y = y;
+	val.xyzw.z = z;
+	val.xyzw.w = w;
+
 	uniforms.set_value(name, val);
 }
 

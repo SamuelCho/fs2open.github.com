@@ -60,6 +60,21 @@ struct transform
 
 	transform(): basis(vmd_identity_matrix), origin(vmd_zero_vector) {}
 	transform(matrix *m, vec3d *v): basis(*m), origin(*v) {}
+
+	matrix4 get_matrix4()
+	{
+		matrix4 new_mat;
+
+		new_mat.a1d[0] = basis.vec.rvec.xyz.x;   new_mat.a1d[4] = basis.vec.uvec.xyz.x;   new_mat.a1d[8] = basis.vec.fvec.xyz.x;
+		new_mat.a1d[1] = basis.vec.rvec.xyz.y;   new_mat.a1d[5] = basis.vec.uvec.xyz.y;   new_mat.a1d[9] = basis.vec.fvec.xyz.y;
+		new_mat.a1d[2] = basis.vec.rvec.xyz.z;   new_mat.a1d[6] = basis.vec.uvec.xyz.z;   new_mat.a1d[10] = basis.vec.fvec.xyz.z;
+		new_mat.a1d[12] = origin.xyz.x;
+		new_mat.a1d[13] = origin.xyz.y;
+		new_mat.a1d[14] = origin.xyz.z;
+		new_mat.a1d[15] = 1.0f;
+
+		return new_mat;
+	}
 };
 
 class model_render_params
@@ -182,6 +197,8 @@ struct fog_params
 
 class model_material_builder
 {
+	matrix4 transform;
+
 	int sdr_flags;
 	bool use_shader;
 
@@ -207,18 +224,22 @@ class model_material_builder
 
 	fog_params fog;
 
-	float animated_timer;
 	int animated_effect;
+	float animated_timer;
 
 	float thrust_scale;
 
 	bool using_team_color;
 	team_color tm_color;
 
+	int transform_buffer_offset;
+
 	gr_alpha_blend determine_blend_mode(int base_bitmap, bool is_transparent);
 	void determine_color(ubyte &r, ubyte &g, ubyte &b, ubyte &a, gr_alpha_blend blend_mode, bool texturing);
 	gr_zbuffer_type determine_depth_mode(bool using_depth_test, bool is_transparent);
 public:
+	void set_transform(matrix4 &xform);
+
 	void set_texturing(bool mode);
 	void set_texture(int texture_type, int texture_handle);
 
@@ -253,8 +274,7 @@ public:
 	void set_animated_effect(int effect, float time);
 	void set_animated_effect();
 
-	// determine shader flags here
-	void build_material(material &model_material);
+	void generate_material(material &model_material);
 };
 
 struct render_state
@@ -320,11 +340,7 @@ struct render_state
 
 struct model_draw
 {
-	transform transformation;
-	vec3d scale;
-
 	vertex_buffer *buffer;
-
 	material mat;
 };
 
@@ -497,6 +513,9 @@ public:
 	static void sort(draw_list *target);
 	static int sortDrawPair(const void* a, const void* b);
 };
+
+void model_render_set_shadow_view_matrix(matrix4 *view_matrix);
+void model_render_set_shadow_cascades(matrix4 *proj_matrices, float *distances);
 
 //void model_immediate_render(int model_num, matrix *orient, vec3d * pos, uint flags = MR_NORMAL, int objnum = -1, int lighting_skip = -1, int *replacement_textures = NULL);
 void model_render_immediate(model_render_params *render_info, int model_num, matrix *orient, vec3d * pos, int render = MODEL_RENDER_ALL);

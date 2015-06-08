@@ -1495,6 +1495,11 @@ void gr_opengl_render_stream_buffer(int buffer_handle, int offset, int n_verts, 
 	GL_CHECK_FOR_ERRORS("end of render3d()");
 }
 
+void gr_opengl_set_instance_matrix(matrix4 *instance_matrix)
+{
+
+}
+
 void gr_opengl_start_instance_matrix(vec3d *offset, matrix *rotation)
 {
 	if (Cmdline_nohtl) {
