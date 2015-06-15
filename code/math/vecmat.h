@@ -52,6 +52,7 @@ extern void vm_set_identity(matrix *m);
 //Global constants
 
 extern vec3d vmd_zero_vector;
+extern vec3d vmd_scale_identity_vector;
 extern vec3d vmd_x_vector;
 extern vec3d vmd_y_vector;
 extern vec3d vmd_z_vector;
@@ -60,6 +61,7 @@ extern matrix vmd_identity_matrix;
 //Here's a handy constant
 
 #define ZERO_VECTOR { { { 0.0f, 0.0f, 0.0f } } }
+#define SCALE_IDENTITY_VECTOR { { { 1.0f, 1.0f, 1.0f } } }
 //#define IDENTITY_MATRIX {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f}
 // first set of inside braces is for union, second set is for inside union, then for a2d[3][3] (some compiler warning messages just suck)
 //#define IDENTITY_MATRIX { { { {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f} } } }

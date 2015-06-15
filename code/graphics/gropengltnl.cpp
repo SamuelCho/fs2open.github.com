@@ -96,6 +96,8 @@ bool Rendering_to_shadow_map = false;
 
 int Transform_buffer_handle = -1;
 
+transform_stack GL_model_matrix_stack;
+
 struct opengl_buffer_object {
 	GLuint buffer_id;
 	GLenum type;
@@ -104,6 +106,46 @@ struct opengl_buffer_object {
 
 	GLuint texture;	// for texture buffer objects
 };
+
+struct opengl_render_buffer {
+	GLfloat *array_list;	// interleaved array
+	GLubyte *index_list;
+
+	int vb_handle;
+	int ib_handle;
+
+	uint vbo_size;
+	uint ibo_size;
+
+	bool indexed;
+
+	opengl_render_buffer() :
+		array_list(NULL), index_list(NULL),
+		vbo_size(0), ibo_size(0), vb_handle(-1), ib_handle(-1), indexed(false)
+	{
+	}
+
+	void clear();
+};
+
+void opengl_render_buffer::clear()
+{
+	if (array_list) {
+		vm_free(array_list);
+	}
+
+	if (index_list) {
+		vm_free(index_list);
+	}
+
+	if (vb_handle >= 0) {
+		opengl_delete_buffer_object(vb_handle);
+	}
+
+	if (ib_handle >= 0) {
+		opengl_delete_buffer_object(ib_handle);
+	}
+}
 
 struct opengl_vertex_buffer {
 	GLfloat *array_list;	// interleaved array
@@ -145,8 +187,10 @@ void opengl_vertex_buffer::clear()
 
 static SCP_vector<opengl_buffer_object> GL_buffer_objects;
 static SCP_vector<opengl_vertex_buffer> GL_vertex_buffers;
+static SCP_vector<opengl_render_buffer> GL_render_buffers;
 static opengl_vertex_buffer *g_vbp = NULL;
 static int GL_vertex_buffers_in_use = 0;
+static int GL_render_buffers_in_use = 0;
 
 int opengl_create_buffer_object(GLenum type, GLenum usage)
 {
@@ -219,6 +263,97 @@ void opengl_delete_buffer_object(int handle)
 	GL_vertex_data_in -= buffer_obj.size;
 
 	vglDeleteBuffersARB(1, &buffer_obj.buffer_id);
+}
+
+int gr_opengl_create_render_buffer(bool indexed, bool dynamic)
+{
+	if ( Cmdline_nohtl || Cmdline_novbo ) {
+		return -1;
+	}
+
+	opengl_render_buffer rbuffer;
+
+	GLenum usage = GL_STATIC_DRAW_ARB;
+
+	if ( dynamic ) {
+		usage = GL_DYNAMIC_DRAW_ARB;
+	}
+
+	rbuffer.vb_handle = opengl_create_buffer_object(GL_ARRAY_BUFFER_ARB, usage);
+
+	if ( indexed ) {
+		rbuffer.indexed = true;
+		rbuffer.ib_handle = opengl_create_buffer_object(GL_ELEMENT_ARRAY_BUFFER_ARB, usage);
+	}
+
+	GL_render_buffers.push_back(rbuffer);
+	GL_render_buffers_in_use++;
+
+	return (int)(GL_render_buffers.size() - 1);
+}
+
+void gr_opengl_render_buffer_update_vertex_data(int handle, uint size, void* data)
+{
+	Assert(handle >= 0);
+	Assert((size_t)handle < GL_render_buffers.size());
+
+	opengl_render_buffer *rbuffer = &GL_render_buffers[handle];
+
+	// make sure we have one
+	if (rbuffer->vb_handle >= 0) {
+		gr_opengl_update_buffer_object(rbuffer->vb_handle, size, rbuffer->array_list);
+
+		if (!opengl_check_for_errors()) {
+			return;
+		}
+
+		opengl_delete_buffer_object(rbuffer->vb_handle);
+		rbuffer->vb_handle = -1;
+	}
+
+	if (rbuffer->vbo_size < size) {
+		if (rbuffer->array_list != NULL) {
+			vm_free(rbuffer->array_list);
+		}
+
+		rbuffer->array_list = (GLfloat*)vm_malloc(size);
+		rbuffer->vbo_size = size;
+	}
+
+	memcpy(rbuffer->array_list, data, size);
+}
+
+void gr_opengl_render_buffer_update_index_data(int handle, uint size, void* data)
+{
+	Assert(handle >= 0);
+	Assert((size_t)handle < GL_render_buffers.size());
+
+	opengl_render_buffer *rbuffer = &GL_render_buffers[handle];
+
+	Assert(rbuffer->indexed);
+
+	// make sure we have one
+	if (rbuffer->ib_handle >= 0) {
+		gr_opengl_update_buffer_object(rbuffer->ib_handle, size, rbuffer->index_list);
+
+		if (!opengl_check_for_errors()) {
+			return;
+		}
+
+		opengl_delete_buffer_object(rbuffer->ib_handle);
+		rbuffer->ib_handle = -1;
+	}
+
+	if (rbuffer->ibo_size < size) {
+		if (rbuffer->index_list != NULL) {
+			vm_free(rbuffer->index_list);
+		}
+
+		rbuffer->index_list = (GLubyte*)vm_malloc(size);
+		rbuffer->ibo_size = size;
+	}
+
+	memcpy(rbuffer->index_list, data, size);
 }
 
 int gr_opengl_create_stream_buffer_object()
@@ -1495,11 +1630,6 @@ void gr_opengl_render_stream_buffer(int buffer_handle, int offset, int n_verts, 
 	GL_CHECK_FOR_ERRORS("end of render3d()");
 }
 
-void gr_opengl_set_instance_matrix(matrix4 *instance_matrix)
-{
-
-}
-
 void gr_opengl_start_instance_matrix(vec3d *offset, matrix *rotation)
 {
 	if (Cmdline_nohtl) {
@@ -1530,6 +1660,8 @@ void gr_opengl_start_instance_matrix(vec3d *offset, matrix *rotation)
 		glRotatef( fl_degrees(ang), axis.xyz.x, axis.xyz.y, axis.xyz.z );
 	}
 
+	GL_model_matrix_stack.push(offset, rotation);
+
 	GL_CHECK_FOR_ERRORS("end of start_instance_matrix()");
 
 	GL_modelview_matrix_depth++;
@@ -1558,6 +1690,7 @@ void gr_opengl_end_instance_matrix()
 	Assert(GL_htl_view_matrix_set);
 
 	glPopMatrix();
+	GL_model_matrix_stack.pop();
 
 	GL_modelview_matrix_depth--;
 }
@@ -1704,6 +1837,7 @@ void gr_opengl_set_view_matrix(vec3d *pos, matrix *orient)
 	glTranslated(-eyex, -eyey, -eyez);
 	glScalef(1.0f, 1.0f, -1.0f);
 
+	GL_model_matrix_stack.clear();
 
 	if (Cmdline_env) {
 		GL_env_texture_matrix_set = true;
@@ -1748,6 +1882,8 @@ void gr_opengl_end_view_matrix()
 
 	glPopMatrix();
 	glLoadIdentity();
+
+	GL_model_matrix_stack.clear();
 
 	GL_modelview_matrix_depth = 1;
 	GL_htl_view_matrix_set = 0;
@@ -1838,6 +1974,8 @@ void gr_opengl_push_scale_matrix(vec3d *scale_factor)
 
 	GL_modelview_matrix_depth++;
 
+	GL_model_matrix_stack.push(NULL, NULL, scale_factor);
+
 	glScalef(scale_factor->xyz.x, scale_factor->xyz.y, scale_factor->xyz.z);
 }
 
@@ -1847,6 +1985,8 @@ void gr_opengl_pop_scale_matrix()
 		return;
 
 	glPopMatrix();
+
+	GL_model_matrix_stack.pop();
 
 	GL_modelview_matrix_depth--;
 	GL_scale_matrix_set = false;
@@ -2010,6 +2150,11 @@ void gr_opengl_shadow_map_end()
 		
 		glViewport(gr_screen.offset_x, (gr_screen.max_h - gr_screen.offset_y - gr_screen.clip_height), gr_screen.clip_width, gr_screen.clip_height);
 		glScissor(gr_screen.offset_x, (gr_screen.max_h - gr_screen.offset_y - gr_screen.clip_height), gr_screen.clip_width, gr_screen.clip_height);
+}
+
+void opengl_tnl_set_material(material* draw_material)
+{
+	
 }
 
 void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)

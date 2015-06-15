@@ -432,13 +432,13 @@ private:
 
 	fog fog_params;
 
-	int depth_mode;
+	gr_zbuffer_type depth_mode;
 
 	int cull_mode;
 
 	int fill_mode;
 
-	int blend_mode;
+	gr_alpha_blend blend_mode;
 
 	color clr;
 
@@ -450,6 +450,7 @@ public:
 	material(uniform_data* uniform_data_pool);
 
 	void set_shader(int sdr_handle);
+	int get_shader();
 
 	void set_texture_bitmap(uint slot_num, int bitmap_num, const SCP_string &name);
 
@@ -459,23 +460,34 @@ public:
 	void set_texture_effect_texture(uint slot_num, const SCP_string &name);
 	void set_texture_shadow_map(uint slot_num, const SCP_string &name);
 
+	SCP_vector<material::texture_unit>& get_textures();
+
 	void set_texture_addressing(int addressing);
+	int get_texture_addressing();
 
 	void set_fog(int r, int g, int b, float near, float far);
+	fog& get_fog();
 
-	void set_depth_mode(int mode);
+	void set_depth_mode(gr_zbuffer_type mode);
+	gr_zbuffer_type get_depth_mode();
 
-	void set_cull_mode(int mode);
+	void set_cull_mode(bool mode);
+	bool get_cull_mode();
 
 	void set_fill_mode(int mode);
+	int get_fill_mode();
 
-	void set_blend_mode(int mode);
+	void set_blend_mode(gr_alpha_blend mode);
+	gr_alpha_blend get_blend_mode();
 
 	void set_depth_bias(int bias);
+	int get_depth_bias();
 
 	void set_color(int r, int g, int b);
+	color& get_color();
 
 	void add_shared_uniforms(uniform_block *block);
+	SCP_vector<uniform_block*>& get_shared_uniforms();
 
 	void set_uniform(const SCP_string &name, const int& val);
 	void set_uniform(const SCP_string &name, const float& val);

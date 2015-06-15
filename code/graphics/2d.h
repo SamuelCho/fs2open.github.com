@@ -27,6 +27,110 @@ extern int Gr_inited;
 extern int gr_zbuffering, gr_zbuffering_mode;
 extern int gr_global_zbuffering;
 
+struct transform
+{
+	matrix basis;
+	vec3d origin;
+	vec3d scale;
+
+	transform() : basis(vmd_identity_matrix), origin(vmd_zero_vector), scale(vmd_scale_identity_vector) {}
+	transform(matrix *m, vec3d *v) : basis(*m), origin(*v) {}
+
+	matrix4 get_matrix4()
+	{
+		matrix4 new_mat;
+
+		new_mat.a1d[0] = basis.vec.rvec.xyz.x;   new_mat.a1d[4] = basis.vec.uvec.xyz.x;   new_mat.a1d[8] = basis.vec.fvec.xyz.x;
+		new_mat.a1d[1] = basis.vec.rvec.xyz.y;   new_mat.a1d[5] = basis.vec.uvec.xyz.y;   new_mat.a1d[9] = basis.vec.fvec.xyz.y;
+		new_mat.a1d[2] = basis.vec.rvec.xyz.z;   new_mat.a1d[6] = basis.vec.uvec.xyz.z;   new_mat.a1d[10] = basis.vec.fvec.xyz.z;
+		new_mat.a1d[12] = origin.xyz.x;
+		new_mat.a1d[13] = origin.xyz.y;
+		new_mat.a1d[14] = origin.xyz.z;
+		new_mat.a1d[15] = 1.0f;
+
+		return new_mat;
+	}
+};
+
+class transform_stack {
+	
+	transform Current_transform;
+	SCP_vector<transform> Stack;
+public:
+	transform_stack():
+		Current_transform()
+	{
+		Stack.clear();
+		Stack.push_back(Current_transform);
+	}
+
+	transform &get_transform()
+	{
+		return Current_transform;
+	}
+
+	void clear()
+	{
+		Current_transform = transform();
+		
+		Stack.clear();
+		Stack.push_back(Current_transform);
+	}
+
+	void push(vec3d *pos, matrix *orient, vec3d *scale = NULL)
+	{
+		matrix basis;
+		vec3d origin;
+		vec3d factor;
+
+		if (orient == NULL) {
+			basis = vmd_identity_matrix;
+		} else {
+			basis = *orient;
+		}
+
+		if (pos == NULL) {
+			origin = vmd_zero_vector;
+		} else {
+			origin = *pos;
+		}
+
+		if ( scale == NULL ) {
+			factor = vmd_scale_identity_vector
+		} else {
+			factor = *scale;
+		}
+
+		if (Stack.size() == 0) {
+			Stack.push_back(transform());
+		}
+
+		vec3d tempv;
+		transform newTransform = Current_transform;
+
+		vm_vec_unrotate(&tempv, &origin, &Current_transform.basis);
+		vm_vec_add2(&newTransform.origin, &tempv);
+
+		vm_vec_scale(&basis.vec.rvec, factor.xyz.x);
+		vm_vec_scale(&basis.vec.uvec, factor.xyz.y);
+		vm_vec_scale(&basis.vec.fvec, factor.xyz.z);
+
+		vm_matrix_x_matrix(&newTransform.basis, &Current_transform.basis, &basis);
+		
+		Current_transform = newTransform;
+		Stack.push_back(Current_transform);
+	}
+
+	void pop()
+	{
+		if ( Stack.size() > 1 ) {
+			Stack.pop_back();
+		}
+
+		Current_transform = Stack.back();
+	}
+};
+
 enum shader_type {
 	SDR_TYPE_MODEL,
 	SDR_TYPE_EFFECT_PARTICLE,
@@ -1103,6 +1207,21 @@ public:
 	}
 };
 
+class vertex_source
+{
+	vertex_layout Vert_config;
 
+	int offset;
+
+	int Vertex_buffer_handle;
+
+	int Index_buffer_handle;
+	void* Index_ptr;
+
+	int Num_verts;
+
+public:
+	vertex_source() {}
+};
 
 #endif

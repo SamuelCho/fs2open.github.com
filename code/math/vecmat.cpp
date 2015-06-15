@@ -26,6 +26,7 @@ int index_largest (float a, float b, float c);	// returns index of largest, NO_L
 
 
 vec3d vmd_zero_vector = ZERO_VECTOR;
+vec3d vmd_scale_identity_vector = SCALE_IDENTITY_VECTOR;
 vec3d vmd_x_vector = { { { 1.0f, 0.0f, 0.0f } } };
 vec3d vmd_y_vector = { { { 0.0f, 1.0f, 0.0f } } };
 vec3d vmd_z_vector = { { { 0.0f, 0.0f, 1.0f } } };

@@ -3392,7 +3392,57 @@ void gr_opengl_update_distortion()
 	GL_state.CullFace(cull);
 }
 
-void opengl_draw(vertex_layout vertex_binding, GLenum prim_type, int count, int vbuffer_handle)
+void gr_opengl_draw(matrix4 *transform, material *draw_material, vertex_layout *vert_binding)
+{
+
+}
+
+void gr_opengl_draw(matrix4 *transform, material *draw_material, vertex_layout *vert_binding, int vbuffer_handle)
+{
+
+}
+
+void opengl_draw(vertex_layout *vert_binding, GLenum mode, int start, int count)
+{
+	opengl_bind_vertex_layout(*vert_binding);
+
+	glDrawArrays(mode, start, count);
+}
+
+void opengl_draw(vertex_layout *vert_binding, int vbuffer_handle, GLenum mode, int start, int count)
+{
+	opengl_bind_buffer_object(vbuffer_handle);
+
+	opengl_draw(vert_binding, mode, start, count);
+}
+
+void opengl_indexed_draw(int count, GLenum element_type, uint first_index, uint last_index, GLubyte *ibuffer, uint index_offset, uint base_vertex)
+{
+	if ( Rendering_to_shadow_map ) {
+		vglDrawElementsInstancedBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + index_offset, 4, base_vertex);
+	} else {
+		if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+			if ( Cmdline_drawelements ) {
+				vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + index_offset, base_vertex);
+			} else {
+				vglDrawRangeElementsBaseVertex(GL_TRIANGLES, first_index, last_index, count, element_type, ibuffer + index_offset, base_vertex);
+			}
+		} else {
+			if ( Cmdline_drawelements ) {
+				glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + index_offset);
+			} else {
+				vglDrawRangeElements(GL_TRIANGLES, first_index, last_index, count, element_type, ibuffer + index_offset);
+			}
+		}
+	}
+}
+
+void gr_opengl_draw(material *draw_material, vertex_layout *layout, int vbuffer_handle, int start, int count)
+{
+
+}
+
+void gr_opengl_draw_indexed(material *draw_material, vertex_buffer *buffer, buffer_data *index_data)
 {
 
 }
