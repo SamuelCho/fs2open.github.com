@@ -394,9 +394,11 @@ public:
 	enum texture_type {
 		TEX_BITMAP_TCACHE,
 		TEX_RESOURCE_DEPTH_BUFFER,
+		TEX_RESOURCE_POSITION_BUFFER,
 		TEX_RESOURCE_TRANSFORM_BUFFER,
 		TEX_RESOURCE_EFFECT_TEXTURE,
-		TEX_RESOURCE_SHADOW_MAP
+		TEX_RESOURCE_SHADOW_MAP,
+		TEX_RESOURCE_DISTORTION
 	};
 
 	struct texture_unit
@@ -404,6 +406,8 @@ public:
 		uint slot;
 		int bitmap_num;
 		texture_type type;
+
+		int tcache_type;
 
 		texture_unit(uint _slot, int _bitmap_num, texture_type _type): 
 			slot(_slot), bitmap_num(_bitmap_num), type(_type) {}
@@ -452,7 +456,7 @@ public:
 	void set_shader(int sdr_handle);
 	int get_shader();
 
-	void set_texture_bitmap(uint slot_num, int bitmap_num, const SCP_string &name);
+	void set_texture_bitmap(uint slot_num, int bitmap_num, int tcache_type, const SCP_string &name);
 
 	// temporary texture setting functions for textures that exist outside of bmpman
 	void set_texture_depth_buffer(uint slot_num, const SCP_string &name);

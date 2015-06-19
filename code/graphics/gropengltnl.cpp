@@ -2154,7 +2154,40 @@ void gr_opengl_shadow_map_end()
 
 void opengl_tnl_set_material(material* draw_material)
 {
-	
+	SCP_vector<material::texture_unit> &textures = draw_material->get_textures();
+
+	for ( size_t i = 0; i < textures.size(); ++i ) {
+		if ( textures[i].type == material::TEX_BITMAP_TCACHE ) {
+			float u = 0.0f;
+			float v = 0.0f;
+
+			gr_opengl_tcache_set(textures[i].bitmap_num, textures[i].tcache_type, &u, &v, textures[i].slot);
+		} else if ( textures[i].type == material::TEX_RESOURCE_SHADOW_MAP ) {
+			GL_state.Texture.SetActiveUnit(textures[i].slot);
+			GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY_EXT);
+			GL_state.Texture.Enable(Shadow_map_texture);
+		} else if ( textures[i].type == material::TEX_RESOURCE_DEPTH_BUFFER ) {
+			GL_state.Texture.SetActiveUnit(textures[i].slot);
+			GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+			GL_state.Texture.Enable(Scene_position_texture);
+		} else if ( textures[i].type == material::TEX_RESOURCE_POSITION_BUFFER ) {
+			GL_state.Texture.SetActiveUnit(textures[i].slot);
+			GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+			GL_state.Texture.Enable(Scene_position_texture);
+		} else if ( textures[i].type == material::TEX_RESOURCE_TRANSFORM_BUFFER ) {
+			GL_state.Texture.SetActiveUnit(textures[i].slot);
+			GL_state.Texture.SetTarget(GL_TEXTURE_BUFFER_ARB);
+			GL_state.Texture.Enable(opengl_get_transform_buffer_texture());
+		} else if ( textures[i].type == material::TEX_RESOURCE_EFFECT_TEXTURE ) {
+			GL_state.Texture.SetActiveUnit(textures[i].slot);
+			GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+			GL_state.Texture.Enable(Scene_effect_texture);
+		} else if ( textures[i].type == material::TEX_RESOURCE_DISTORTION ) {
+			GL_state.Texture.SetActiveUnit(textures[i].slot);
+			GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+			GL_state.Texture.Enable(Distortion_texture[Distortion_switch]);
+		}
+	}
 }
 
 void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
