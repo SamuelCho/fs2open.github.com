@@ -51,180 +51,6 @@ uniform_block Model_render_env_uniform_data;
 
 model_batch_buffer TransformBufferHandler;
 
-gr_alpha_blend model_material_builder::determine_blend_mode(int base_bitmap, bool is_transparent)
-{
-	gr_alpha_blend alpha_blend;
-
-	if ( is_transparent ) {
-		if ( base_bitmap >= 0 && bm_has_alpha_channel(base_bitmap) ) {
-			return ALPHA_BLEND_ALPHA_BLEND_ALPHA;
-		}
-			
-		return ALPHA_BLEND_ADDITIVE;
-	}
-	
-	return ALPHA_BLEND_ALPHA_BLEND_ALPHA;
-}
-
-void model_material_builder::determine_color(ubyte &r, ubyte &g, ubyte &b, ubyte &a, gr_alpha_blend blend_mode, bool texturing)
-{
-	if ( blend_mode == ALPHA_BLEND_ADDITIVE ) {
-		r = g = b = (ubyte)(alpha * 255.0f);
-		a = 255;
-	} else {
-		if ( texturing ) {
-			r = g = b = 255;
-		} else {
-			r = clr.red;
-			g = clr.green;
-			b = clr.blue;
-		}
-
-		a = (ubyte)(alpha * 255.0f);
-	}
-}
-
-gr_zbuffer_type model_material_builder::determine_depth_mode(bool using_depth_test, bool is_transparent)
-{
-	if ( using_depth_test ) {
-		if ( is_transparent ) {
-			return ZBUFFER_TYPE_READ;
-		}
-		
-		return ZBUFFER_TYPE_FULL;
-	}
-
-	return ZBUFFER_TYPE_NONE;
-}
-
-void model_material_builder::generate_material(material &model_material)
-{
-	uint shader_flags = 0;
-	int texture_slot = 0;
-	gr_alpha_blend blend_mode = determine_blend_mode(texture_maps[TM_BASE_TYPE], transparent);
-	
-	ubyte r, g, b, a;
-	determine_color(r, g, b, a, blend_mode, textured);
-
-	gr_zbuffer_type depth_mode = determine_depth_mode(depth_test, transparent);
-
-	if ( Rendering_to_shadow_map ) {
-		// if we're building the shadow map, we likely only need the flags here and above so bail
-		shader_flags |= SDR_FLAG_MODEL_SHADOW_MAP;
-
-		model_material.add_shared_uniforms(&Model_render_shadow_gen_uniform_data);
-	}
-
-	if ( lighting ) {
-		shader_flags |= SDR_FLAG_MODEL_LIGHT;
-	}
-
-	if ( fog.mode == GR_FOGMODE_FOG ) {
-		shader_flags |= SDR_FLAG_MODEL_FOG;
-
-		model_material.set_fog(fog.r, fog.g, fog.b, fog.dist_near, fog.dist_far);
-	}
-
-	if ( animated_effect > 0 ) {
-		shader_flags |= SDR_FLAG_MODEL_ANIMATED;
-
-		model_material.set_texture_effect_texture(texture_slot, "sFramebuffer");
-		texture_slot++;
-	}
-
-	if ( transform_buffer_offset >= 0 ) {
-		shader_flags |= SDR_FLAG_MODEL_TRANSFORM;
-
-		model_material.set_uniform("buffer_matrix_offset", transform_buffer_offset);
-
-		model_material.set_texture_transform_buffer(texture_slot, "transform_tex");
-		texture_slot++;
-	}
-
-	if ( textured ) {
-		if ( texture_maps[TM_BASE_TYPE] >= 0 && !Basemap_override ) {
-			shader_flags |= SDR_FLAG_MODEL_DIFFUSE_MAP;
-
-			model_material.set_texture_bitmap(texture_slot, texture_maps[TM_BASE_TYPE], "sBaseMap");
-			texture_slot++;
-		}
-
-		if ( texture_maps[TM_GLOW_TYPE] >= 0 ) {
-			shader_flags |= SDR_FLAG_MODEL_GLOW_MAP;
-
-			model_material.set_texture_bitmap(texture_slot, texture_maps[TM_GLOW_TYPE], "sGlowmap");
-			texture_slot++;
-		}
-
-		if ( lighting ) {
-			if ( texture_maps[TM_SPECULAR_TYPE] > 0 && !Specmap_override ) {
-				shader_flags |= SDR_FLAG_MODEL_SPEC_MAP;
-
-				model_material.set_texture_bitmap(texture_slot, texture_maps[TM_GLOW_TYPE], "sSpecmap");
-				texture_slot++;
-
-				if ( ENVMAP > 0 && !Envmap_override ) {
-					shader_flags |= SDR_FLAG_MODEL_ENV_MAP;
-
-					int alpha_spec = bm_has_alpha_channel(texture_maps[TM_SPECULAR_TYPE]);
-
-					model_material.set_texture_bitmap(texture_slot, ENVMAP, "sEnvmap");
-					texture_slot++;
-
-					model_material.add_shared_uniforms(&Model_render_env_uniform_data);
-					model_material.set_uniform("alpha_spec", alpha_spec);
-				}
-			}
-
-			if ( texture_maps[TM_NORMAL_TYPE] > 0 && !Normalmap_override ) {
-				shader_flags |= SDR_FLAG_MODEL_NORMAL_MAP;
-
-				model_material.set_texture_bitmap(texture_slot, texture_maps[TM_NORMAL_TYPE], "sNormalmap");
-				texture_slot++;
-			}
-
-			if ( texture_maps[TM_HEIGHT_TYPE] > 0 && !Heightmap_override )  {
-				shader_flags |= SDR_FLAG_MODEL_HEIGHT_MAP;
-
-				model_material.set_texture_bitmap(texture_slot, texture_maps[TM_HEIGHT_TYPE], "sHeightmap");
-				texture_slot++;
-			}
-
-			if ( Cmdline_shadow_quality && !Rendering_to_shadow_map && !Shadow_override ) {
-				shader_flags |= SDR_FLAG_MODEL_SHADOWS;
-
-				model_material.add_shared_uniforms(&Model_render_shadow_uniform_data);
-				model_material.set_uniform("model_matrix", transform);
-				model_material.set_texture_shadow_map(texture_slot, "shadow_map");
-				texture_slot++;
-			}
-		}
-
-		if ( texture_maps[TM_MISC_TYPE] > 0 ) {
-			shader_flags |= SDR_FLAG_MODEL_MISC_MAP;
-		}
-
-		if ( using_team_color ) {
-			shader_flags |= SDR_FLAG_MODEL_TEAMCOLOR;
-
-			model_material.set_uniform("stripe_color", tm_color.stripe.r, tm_color.stripe.g, tm_color.stripe.b);
-			model_material.set_uniform("base_color", tm_color.base.r, tm_color.base.g, tm_color.b);
-		}
-	}
-
-	if ( Deferred_lighting ) {
-		shader_flags |= SDR_FLAG_MODEL_DEFERRED;
-	}
-
-	if ( thrust_scale > 0.0f ) {
-		shader_flags |= SDR_FLAG_MODEL_THRUSTER;
-
-		model_material.set_uniform("thruster_scale", thrust_scale);
-	}
-
-	model_material.set_shader(gr_maybe_create_shader(SDR_TYPE_MODEL, shader_flags));
-}
-
 model_render_params::model_render_params():
 	Model_flags(MR_NORMAL),
 	Debug_flags(0),
@@ -531,18 +357,7 @@ draw_list::draw_list()
 
 void draw_list::reset()
 {
-	Current_set_clip_plane = -1;
-
-	Dirty_render_state = true;
-
 	Current_render_state = render_state();
-
-	Current_textures[TM_BASE_TYPE] = -1;
-	Current_textures[TM_GLOW_TYPE] = -1;
-	Current_textures[TM_SPECULAR_TYPE] = -1;
-	Current_textures[TM_NORMAL_TYPE] = -1;
-	Current_textures[TM_HEIGHT_TYPE] = -1;
-	Current_textures[TM_MISC_TYPE] = -1;
 
 	Clip_planes.clear();
 	Render_states.clear();
@@ -597,19 +412,6 @@ void draw_list::add_submodel_to_batch(int model_num)
 	TransformBufferHandler.set_model_transform(transform, model_num);
 }
 
-void draw_list::set_depth_mode(int depth_set)
-{
-#ifdef MATERIALS
-	Material_params.set_depth_mode(depth_set);
-#else
-// 	if ( !dirty_render_state && depth_set != current_render_state.depth_mode ) {
-// 		dirty_render_state = true;
-// 	}
-
-	Current_depth_mode = depth_set;
-#endif
-}
-
 void draw_list::add_arc(vec3d *v1, vec3d *v2, color *primary, color *secondary, float arc_width)
 {
 	arc_effect new_arc;
@@ -641,86 +443,14 @@ void draw_list::set_light_factor(float factor)
 #endif
 }
 
-void draw_list::set_clip_plane(const vec3d &position, const vec3d &normal)
+void draw_list::add_buffer_draw(model_material *render_material, vertex_buffer *buffer, int texi, uint tmap_flags, model_render_params *interp)
 {
-#ifdef MATERIALS
-	Material_params.set_clip_plane(position, normal);
-#else
-	clip_plane_state clip_normal;
-
-	clip_normal.point = position;
-	clip_normal.normal = normal;
-
-	Clip_planes.push_back(clip_normal);
-
-	Current_render_state.clip_plane_handle = Clip_planes.size() - 1;
-#endif
-}
-
-void draw_list::set_clip_plane()
-{
-#ifdef MATERIALS
-	Material_params.set_clip_plane();
-#else
-	Current_render_state.clip_plane_handle = -1;
-#endif
-}
-
-void draw_list::set_thrust_scale(float scale)
-{
-#ifdef MATERIALS
-	if ( scale > 0.0f ) {
-		Material_params.set_thrust_scale(scale);
-	} else {
-		Material_params.set_thrust_scale();
-	}
-#else
-	Current_render_state.thrust_scale = scale;
-#endif
-}
-
-void draw_list::add_buffer_draw(vertex_buffer *buffer, int texi, uint tmap_flags, model_render_params *interp)
-{
-#ifdef MATERIALS
-	model_draw draw_data;
-
-	draw_data.buffer = buffer;
-	
-	if ( tmap_flags & TMAP_FLAG_BATCH_TRANSFORMS ) {
-		Material_params.set_transform(transform().get_matrix4());
-
-		draw_data.scale.xyz.x = 1.0f;
-		draw_data.scale.xyz.y = 1.0f;
-		draw_data.scale.xyz.z = 1.0f;
-
-		draw_data.transform_buffer_offset = TransformBufferHandler.get_buffer_offset();
-	} else {
-		Material_params.set_transform(Current_transform.get_matrix4());
-
-		draw_data.scale = Current_scale;
-		draw_data.transform_buffer_offset = -1;
-	}
-
-	Material_params.generate_material(draw_data.mat);
-#else
-	// need to do a check to see if the top render state matches the current.
-	//if ( dirty_render_state ) {
-		Render_states.push_back(Current_render_state);
-	//}
-
-	Dirty_render_state = false;
-
 	queued_buffer_draw draw_data;
 
-	draw_data.render_state_handle = Render_states.size() - 1;
+	draw_data.render_material = *render_material;
 	draw_data.buffer = buffer;
 	draw_data.texi = texi;
 	draw_data.flags = tmap_flags;
-
-	draw_data.clr = gr_screen.current_color;
-	draw_data.alpha = Current_alpha;
-	draw_data.blend_filter = Current_blend_filter;
-	draw_data.depth_mode = Current_depth_mode;
 
 	if ( tmap_flags & TMAP_FLAG_BATCH_TRANSFORMS ) {
  		draw_data.transformation = transform();
@@ -735,20 +465,12 @@ void draw_list::add_buffer_draw(vertex_buffer *buffer, int texi, uint tmap_flags
 		draw_data.scale = Current_scale;
 		draw_data.transform_buffer_offset = -1;
 	}
-	
-	draw_data.texture_maps[TM_BASE_TYPE] = Current_textures[TM_BASE_TYPE];
-	draw_data.texture_maps[TM_GLOW_TYPE] = Current_textures[TM_GLOW_TYPE];
-	draw_data.texture_maps[TM_SPECULAR_TYPE] = Current_textures[TM_SPECULAR_TYPE];
-	draw_data.texture_maps[TM_NORMAL_TYPE] = Current_textures[TM_NORMAL_TYPE];
-	draw_data.texture_maps[TM_HEIGHT_TYPE] = Current_textures[TM_HEIGHT_TYPE];
-	draw_data.texture_maps[TM_MISC_TYPE] = Current_textures[TM_MISC_TYPE];
 
 	draw_data.sdr_flags = determine_shader_flags(&Current_render_state, &draw_data, buffer, tmap_flags);
 
 	Render_elements.push_back(draw_data);
 
 	Render_keys.push_back(Render_elements.size() - 1);
-#endif
 }
 
 uint draw_list::determine_shader_flags(render_state *state, queued_buffer_draw *draw_info, vertex_buffer *buffer, int tmap_flags)
@@ -959,160 +681,7 @@ void draw_list::set_scale(vec3d *scale)
 
 void draw_list::set_buffer(int buffer)
 {
-// 	if ( !dirty_render_state && current_render_state.buffer_id != buffer) {
-// 		dirty_render_state = true;
-// 	}
-
 	Current_render_state.buffer_id = buffer;
-}
-
-void draw_list::set_blend_filter(int filter, float alpha)
-{
-#ifdef MATERIALS
-	Material_params.set_blend_filter(filter, alpha);
-#else
-// 	if ( !dirty_render_state && ( current_render_state.alpha != alpha && current_render_state.blend_filter != filter ) ) {
-// 		dirty_render_state = true;
-// 	}
-
-// 	current_blend_filter = GR_ALPHABLEND_NONE;
-// 	current_alpha = 1.0f;
-
-	Current_blend_filter = filter;
-	Current_alpha = alpha;
-#endif
-}
-
-void draw_list::set_texture(int texture_type, int texture_handle)
-{
-#ifdef MATERIALS
-	Material_params.set_texture(texture_type, texture_handle);
-#else
-	Assert(texture_type > -1);
-	Assert(texture_type < TM_NUM_TYPES);
-
-	Current_textures[texture_type] = texture_handle;
-#endif
-}
-
-void draw_list::set_cull_mode(int mode)
-{
-#ifdef MATERIALS
-	Material_params.set_cull_mode(mode);
-#else
-	Current_render_state.cull_mode = mode;
-#endif
-}
-
-void draw_list::set_zbias(int bias)
-{
-#ifdef MATERIALS
-	Material_params.set_zbias(bias);
-#else
-	Current_render_state.zbias = bias;
-#endif
-}
-
-void draw_list::set_lighting(bool lighting)
-{
-#ifdef MATERIALS
-	Material_params.set_lighting(lighting);
-#else
-	Current_render_state.lighting = lighting;
-#endif
-}
-
-void draw_list::set_team_color(const team_color &color)
-{
-#ifdef MATERIALS
-	Material_params.set_team_color(color);
-#else
-	Current_render_state.using_team_color = true;
-	Current_render_state.tm_color = color;
-#endif
-}
-
-void draw_list::set_team_color()
-{
-#ifdef MATERIALS
-	Material_params.set_team_color();
-#else
-	Current_render_state.using_team_color = false;
-#endif
-}
-
-void draw_list::set_color(const color &clr)
-{
-#ifdef MATERIALS
-	Material_params.set_color(clr);
-#else
-	Current_render_state.clr = clr;
-#endif
-}
-
-void draw_list::set_animated_effect(int effect, float time)
-{
-#ifdef MATERIALS
-	Material_params.set_animated_effect(effect, time);
-#endif
-}
-
-void draw_list::set_animated_effect()
-{
-#ifdef MATERIALS
-	Material_params.set_animated_effect();
-#endif
-}
-
-void draw_list::set_animated_timer(float time)
-{
-	Current_render_state.animated_timer = time;
-}
-
-void draw_list::set_animated_effect(int effect)
-{
-	Current_render_state.animated_effect = effect;
-}
-
-void draw_list::set_texture_addressing(int addressing)
-{
-#ifdef MATERIALS
-	Material_params.set_texture_addressing(addressing);
-#else
-	Current_render_state.texture_addressing = addressing;
-#endif
-}
-
-void draw_list::set_fog(int fog_mode, int r, int g, int b, float fog_near, float fog_far)
-{
-#ifdef MATERIALS
-	Material_params.set_fog(fog_mode, r, g, b, fog_near, fog_far);
-#else
-	Current_render_state.fog_mode = fog_mode;
-	Current_render_state.r = r;
-	Current_render_state.g = g;
-	Current_render_state.b = b;
-	Current_render_state.fog_near = fog_near;
-	Current_render_state.fog_far = fog_far;
-#endif
-}
-
-void draw_list::set_fill_mode(int mode)
-{
-#ifdef MATERIALS
-	Material_params.set_fill_mode(mode);
-#else
-	Current_render_state.fill_mode = mode;
-#endif
-}
-
-void draw_list::set_center_alpha(int center_alpha)
-{
-#ifdef MATERIALS
-	Material_params.set_center_alpha(center_alpha);
-#else
-	Current_render_state.center_alpha = center_alpha;
-#endif
 }
 
 void draw_list::init()
@@ -1477,7 +1046,7 @@ int model_render_determine_detail(float depth, int obj_num, int model_num, matri
 	}
 }
 
-void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_buffer *buffer, polymodel *pm, int mn, int detail_level, uint tmap_flags)
+void model_render_buffers(draw_list* scene, model_material *rendering_material, model_render_params* interp, vertex_buffer *buffer, polymodel *pm, int mn, int detail_level, uint tmap_flags)
 {
 	if ( pm->vertex_buffer_id < 0 ) {
 		return;
@@ -1504,14 +1073,14 @@ void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_
 
 		if ( Use_GLSL > 1 ) {
 			scale.xyz.z = 1.0f;
-			scene->set_thrust_scale(interp->get_thruster_info().length.xyz.z);
+			rendering_material->set_thrust_scale(interp->get_thruster_info().length.xyz.z);
 		} else {
 			scale.xyz.z = interp->get_thruster_info().length.xyz.z;
-			scene->set_thrust_scale();
+			rendering_material->set_thrust_scale();
 		}
 	} else {
 		scale = interp->get_warp_scale();
-		scene->set_thrust_scale();
+		rendering_material->set_thrust_scale();
 	}
 
 	scene->set_scale(&scale);
@@ -1678,32 +1247,51 @@ void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_
 			blend_filter = forced_blend_filter;
 		}
 
-		if (blend_filter != GR_ALPHABLEND_NONE ) {
-			scene->set_depth_mode(GR_ZBUFF_READ);
+		bool use_depth_test;
+		bool use_blending = blend_filter == GR_ALPHABLEND_FILTER;
+
+		if ( use_blending ) {
+			// scene->set_depth_mode(GR_ZBUFF_READ);
+			use_depth_test = true;
 			alpha_flag |= TMAP_FLAG_ALPHA;
 		} else {
 			if ( (model_flags & MR_NO_ZBUFFER) || (model_flags & MR_ALL_XPARENT) ) {
-				scene->set_depth_mode(GR_ZBUFF_NONE);
+				// scene->set_depth_mode(GR_ZBUFF_NONE);
+				use_depth_test = false;
 				alpha_flag |= TMAP_FLAG_ALPHA;
 			} else {
-				scene->set_depth_mode(GR_ZBUFF_FULL);
+				// scene->set_depth_mode(GR_ZBUFF_FULL);
+				use_depth_test = true;
 			}
 		}
 
-		scene->set_blend_filter(blend_filter, alpha);
+		rendering_material->set_depth_mode(model_render_determine_depth_mode(use_depth_test, use_blending));
 
-		scene->set_texture(TM_BASE_TYPE,	texture_maps[TM_BASE_TYPE]);
-		scene->set_texture(TM_GLOW_TYPE,	texture_maps[TM_GLOW_TYPE]);
-		scene->set_texture(TM_SPECULAR_TYPE, texture_maps[TM_SPECULAR_TYPE]);
-		scene->set_texture(TM_NORMAL_TYPE, texture_maps[TM_NORMAL_TYPE]);
-		scene->set_texture(TM_HEIGHT_TYPE, texture_maps[TM_HEIGHT_TYPE]);
-		scene->set_texture(TM_MISC_TYPE,	texture_maps[TM_MISC_TYPE]);
+		gr_alpha_blend blend_mode = model_render_determine_blend_mode(texture_maps[TM_BASE_TYPE], use_blending);
+		rendering_material->set_blend_mode(blend_mode);
 
-		scene->add_buffer_draw(buffer, i, tmap_flags | alpha_flag, interp);
+		const color &clr = interp->get_outline_color();
+		ubyte r = clr.red;
+		ubyte g = clr.green;
+		ubyte b = clr.blue;
+		ubyte a = (ubyte)alpha * 255.0f;
+
+		model_render_determine_color(r, g, b, a, blend_mode, no_texturing ? true : false);
+
+		rendering_material->set_color(r, g, b, a);
+
+		rendering_material->set_texture_map(TM_BASE_TYPE,	texture_maps[TM_BASE_TYPE]);
+		rendering_material->set_texture_map(TM_GLOW_TYPE,	texture_maps[TM_GLOW_TYPE]);
+		rendering_material->set_texture_map(TM_SPECULAR_TYPE, texture_maps[TM_SPECULAR_TYPE]);
+		rendering_material->set_texture_map(TM_NORMAL_TYPE, texture_maps[TM_NORMAL_TYPE]);
+		rendering_material->set_texture_map(TM_HEIGHT_TYPE, texture_maps[TM_HEIGHT_TYPE]);
+		rendering_material->set_texture_map(TM_MISC_TYPE,	texture_maps[TM_MISC_TYPE]);
+
+		scene->add_buffer_draw(rendering_material, buffer, i, tmap_flags | alpha_flag, interp);
 	}
 }
 
-void model_render_children_buffers(draw_list* scene, model_render_params* interp, polymodel* pm, int mn, int detail_level, uint tmap_flags, bool trans_buffer)
+void model_render_children_buffers(draw_list* scene, model_material *rendering_material, model_render_params* interp, polymodel* pm, int mn, int detail_level, uint tmap_flags, bool trans_buffer)
 {
 	int i;
 
@@ -1724,7 +1312,7 @@ void model_render_children_buffers(draw_list* scene, model_render_params* interp
 			return;
 		}
 
-		scene->set_lighting(false);
+		rendering_material->set_lighting(false);
 	}
 
 	vec3d view_pos = scene->get_view_position();
@@ -1771,9 +1359,9 @@ void model_render_children_buffers(draw_list* scene, model_render_params* interp
 		scene->add_outline(pm->submodel[mn].outline_buffer, pm->submodel[mn].n_verts_outline, &outline_color);
 	} else {
 		if ( trans_buffer && pm->submodel[mn].trans_buffer.flags & VB_FLAG_TRANS ) {
-			model_render_buffers(scene, interp, &pm->submodel[mn].trans_buffer, pm, mn, detail_level, tmap_flags);
+			model_render_buffers(scene, rendering_material, interp, &pm->submodel[mn].trans_buffer, pm, mn, detail_level, tmap_flags);
 		} else {
-			model_render_buffers(scene, interp, &pm->submodel[mn].buffer, pm, mn, detail_level, tmap_flags);
+			model_render_buffers(scene, rendering_material, interp, &pm->submodel[mn].buffer, pm, mn, detail_level, tmap_flags);
 		} 
 	}
 
@@ -1785,14 +1373,14 @@ void model_render_children_buffers(draw_list* scene, model_render_params* interp
 
 	while ( i >= 0 ) {
 		if ( !pm->submodel[i].is_thruster ) {
-			model_render_children_buffers( scene, interp, pm, i, detail_level, tmap_flags, trans_buffer );
+			model_render_children_buffers( scene, rendering_material, interp, pm, i, detail_level, tmap_flags, trans_buffer );
 		}
 
 		i = pm->submodel[i].next_sibling;
 	}
 
 	if ( model->is_thruster ) {
-		scene->set_lighting(true);
+		rendering_material->set_lighting(true);
 	}
 
 	scene->pop_transform();
@@ -1880,6 +1468,42 @@ bool model_render_determine_autocenter(vec3d *auto_back, polymodel *pm, int deta
 	}
 
 	return false;
+}
+
+gr_alpha_blend model_render_determine_blend_mode(int base_bitmap, bool is_transparent)
+{
+	if (is_transparent) {
+		if (base_bitmap >= 0 && bm_has_alpha_channel(base_bitmap)) {
+			return ALPHA_BLEND_ALPHA_BLEND_ALPHA;
+		}
+
+		return ALPHA_BLEND_ADDITIVE;
+	}
+
+	return ALPHA_BLEND_ALPHA_BLEND_ALPHA;
+}
+
+void model_render_determine_color(ubyte &r, ubyte &g, ubyte &b, ubyte &a, gr_alpha_blend blend_mode, bool texturing)
+{
+	if (blend_mode == ALPHA_BLEND_ADDITIVE) {
+		r = g = b = a;
+		a = 255;
+	} else if (texturing) {
+		r = g = b = 255;
+	}
+}
+
+gr_zbuffer_type model_render_determine_depth_mode(bool using_depth_test, bool is_transparent)
+{
+	if (using_depth_test) {
+		if (is_transparent) {
+			return ZBUFFER_TYPE_READ;
+		}
+
+		return ZBUFFER_TYPE_FULL;
+	}
+
+	return ZBUFFER_TYPE_NONE;
 }
 
 bool model_render_check_detail_box(vec3d *view_pos, polymodel *pm, int submodel_num, uint flags)
@@ -2979,7 +2603,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 	const int objnum = interp->get_object_number();
 	const int model_flags = interp->get_model_flags();
 
-	model_material_builder material_params;
+	model_material rendering_material;
 	polymodel *pm = model_get(model_num);
 	polymodel_instance * pmi = NULL;
 		
@@ -2995,17 +2619,17 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 	scene->set_light_factor(light_factor);
 
 	if ( interp->is_clip_plane_set() ) {
-		scene->set_clip_plane(interp->get_clip_plane_pos(), interp->get_clip_plane_normal());
+		rendering_material.set_clip_plane(interp->get_clip_plane_normal(), interp->get_clip_plane_pos());
 	}
 
 	if ( interp->is_team_color_set() ) {
-		scene->set_team_color(interp->get_team_color());
+		rendering_material.set_team_color(interp->get_team_color());
 	}
 		
 	if ( model_flags & MR_FORCE_CLAMP ) {
-		scene->set_texture_addressing(TMAP_ADDRESS_CLAMP);
+		rendering_material.set_texture_addressing(TMAP_ADDRESS_CLAMP);
 	} else {
-		scene->set_texture_addressing(TMAP_ADDRESS_WRAP);
+		rendering_material.set_texture_addressing(TMAP_ADDRESS_WRAP);
 	}
 
 	model_render_set_glow_points(pm, objnum);
@@ -3051,7 +2675,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 	}
 
 	if ( interp->get_animated_effect_num() > 0 ) {
-		scene->set_animated_effect(interp->get_animated_effect_num(), interp->get_animated_effect_timer());
+		rendering_material.set_animated_effect(interp->get_animated_effect_num(), interp->get_animated_effect_timer());
 	}
 
 	bool is_outlines_only = (model_flags & MR_NO_POLYS) && ((model_flags & MR_SHOW_OUTLINE_PRESET) || (model_flags & MR_SHOW_OUTLINE));
@@ -3095,9 +2719,9 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 		unsigned char r, g, b;
 		neb2_get_fog_color(&r, &g, &b);
 
-		scene->set_fog(GR_FOGMODE_FOG, r, g, b, fog_near, fog_far);
+		rendering_material.set_fog(GR_FOGMODE_FOG, r, g, b, fog_near, fog_far);
 	} else {
-		scene->set_fog(GR_FOGMODE_NONE, 0, 0, 0);
+		rendering_material.set_fog(GR_FOGMODE_NONE, 0, 0, 0);
 	}
 
 	if ( is_outlines_only_htl ) {

@@ -14,6 +14,7 @@
 #include "math/vecmat.h"
 #include "lighting/lighting.h"
 #include "graphics/gropengltnl.h"
+#include "graphics/material.h"
 
 #define MATERIALS
 
@@ -195,88 +196,6 @@ struct fog_params
 	float dist_far;
 };
 
-class model_material_builder
-{
-	matrix4 transform;
-
-	int sdr_flags;
-	bool use_shader;
-
-	bool textured;
-	int texture_maps[TM_NUM_TYPES];
-
-	bool transparent;
-	float alpha;
-
-	bool depth_test;
-
-	int texture_addressing;
-	int fill_mode;
-	int cull_mode;
-	int center_alpha;
-	int zbias;
-
-	color clr;
-
-	bool lighting;
-	float light_factor;
-	SCP_vector<int> light_indices;
-
-	fog_params fog;
-
-	int animated_effect;
-	float animated_timer;
-
-	float thrust_scale;
-
-	bool using_team_color;
-	team_color tm_color;
-
-	int transform_buffer_offset;
-
-	gr_alpha_blend determine_blend_mode(int base_bitmap, bool is_transparent);
-	void determine_color(ubyte &r, ubyte &g, ubyte &b, ubyte &a, gr_alpha_blend blend_mode, bool texturing);
-	gr_zbuffer_type determine_depth_mode(bool using_depth_test, bool is_transparent);
-public:
-	void set_transform(matrix4 &xform);
-
-	void set_texturing(bool mode);
-	void set_texture(int texture_type, int texture_handle);
-
-	void set_transparent(bool transparent);
-	void set_alpha(float alpha);
-
-	void set_depth_test(bool mode);
-	void set_blend_filter(int filter, float alpha);
-	void set_fill_mode(int mode);
-	void set_cull_mode(int mode);
-	void set_zbias(int bias);
-	void set_texture_addressing(int addressing);
-
-	void set_color(const color &clr);
-
-	void set_clip_plane(const vec3d &position, const vec3d &normal);
-	
-	void set_fog(int fog_mode, int r, int g, int b, float fog_near = -1.0f, float fog_far = -1.0f);
-
-	void set_light_factor(float factor);
-	
-	void set_lighting(bool mode);
-	void set_light_filter(int objnum, vec3d *pos, float rad);
-
-	void set_center_alpha(int center_alpha);
-
-	void set_thrust_scale(float scale = -1.0f);
-
-	void set_team_color(const team_color &color);
-	void set_team_color();
-
-	void set_animated_effect(int effect, float time);
-	void set_animated_effect();
-
-	void generate_material(material &model_material);
-};
-
 struct render_state
 {
 	int clip_plane_handle;
@@ -338,22 +257,11 @@ struct render_state
 	}
 };
 
-struct model_draw
-{
-	vertex_buffer *buffer;
-	material mat;
-};
-
 struct queued_buffer_draw
 {
-	int render_state_handle;
-	int texture_maps[TM_NUM_TYPES];
 	int transform_buffer_offset;
 
-	color clr;
-	int blend_filter;
-	float alpha;
-	int depth_mode;
+	model_material *render_material;
 
 	transform transformation;
 	vec3d scale;
@@ -363,18 +271,8 @@ struct queued_buffer_draw
 	int flags;
 	int sdr_flags;
 
-	float thrust_scale;
-
 	queued_buffer_draw()
 	{
-		depth_mode = GR_ZBUFF_FULL;
-
-		texture_maps[TM_BASE_TYPE]		= -1;
-		texture_maps[TM_GLOW_TYPE]		= -1;
-		texture_maps[TM_HEIGHT_TYPE]	= -1;
-		texture_maps[TM_MISC_TYPE]		= -1;
-		texture_maps[TM_NORMAL_TYPE]	= -1;
-		texture_maps[TM_SPECULAR_TYPE]	= -1;
 	}
 };
 
@@ -415,20 +313,8 @@ class draw_list
 	transform Current_transform;
 	vec3d Current_scale;
 	SCP_vector<transform> Transform_stack;
-#ifdef MATERIALS
-	model_material_builder Material_params;
-#endif
-	render_state Current_render_state;
-	bool Dirty_render_state;
 
 	scene_lights Scene_light_handler;
-	
-	int Current_textures[TM_NUM_TYPES];
-	int Current_blend_filter;
-	float Current_alpha;
-	int Current_depth_mode;
-
-	int Current_set_clip_plane;
 	light_indexing_info Current_lights_set;
 
 	void render_arc(arc_effect &arc);
@@ -439,9 +325,6 @@ class draw_list
 	
 	SCP_vector<clip_plane_state> Clip_planes;
 	SCP_vector<render_state> Render_states;
-#ifdef MATERIALS
-	SCP_vector<model_draw> Meshes;
-#endif
 	SCP_vector<queued_buffer_draw> Render_elements;
 	SCP_vector<int> Render_keys;
 
@@ -456,32 +339,11 @@ public:
 	draw_list();
 	void init();
 
-	void reset_state();
-	void set_clip_plane(const vec3d &position, const vec3d &normal);
-	void set_clip_plane();
-	void set_thrust_scale(float scale = -1.0f);
-	void set_texture(int texture_type, int texture_handle);
-	void set_depth_mode(int depth_set);
-	void set_blend_filter(int filter, float alpha);
-	void set_texture_addressing(int addressing);
-	void set_fog(int fog_mode, int r, int g, int b, float fog_near = -1.0f, float fog_far = -1.0f);
-	void set_fill_mode(int mode);
-	void set_cull_mode(int mode);
-	void set_zbias(int bias);
-	void set_center_alpha(int center_alpha);
-	void set_lighting(bool mode);
 	void set_buffer(int buffer);
-	void set_team_color(const team_color &color);
-	void set_team_color();
-	void set_color(const color &clr);
-	void set_animated_effect(int effect, float time);
-	void set_animated_effect();
-	void set_animated_timer(float time);
-	void set_animated_effect(int effect);
 	void add_submodel_to_batch(int model_num);
 	void start_model_batch(int n_models);
 
-	void add_buffer_draw(vertex_buffer *buffer, int texi, uint tmap_flags, model_render_params *interp);
+	void add_buffer_draw(model_material *render_material, vertex_buffer *buffer, int texi, uint tmap_flags, model_render_params *interp);
 	
 	vec3d get_view_position();
 	void clear_transforms();

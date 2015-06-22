@@ -4,6 +4,8 @@
 #include "globalincs/pstypes.h"
 #include "math/vecmat.h"
 #include "graphics/2d.h"
+#include "graphics/grinternal.h"
+#include "model/model.h"
 
 struct uniform_data
 {
@@ -391,26 +393,13 @@ public:
 class material
 {
 public:
-	enum texture_type {
-		TEX_BITMAP_TCACHE,
-		TEX_RESOURCE_DEPTH_BUFFER,
-		TEX_RESOURCE_POSITION_BUFFER,
-		TEX_RESOURCE_TRANSFORM_BUFFER,
-		TEX_RESOURCE_EFFECT_TEXTURE,
-		TEX_RESOURCE_SHADOW_MAP,
-		TEX_RESOURCE_DISTORTION
-	};
-
 	struct texture_unit
 	{
-		uint slot;
 		int bitmap_num;
-		texture_type type;
+		int bitmap_type;
 
-		int tcache_type;
-
-		texture_unit(uint _slot, int _bitmap_num, texture_type _type): 
-			slot(_slot), bitmap_num(_bitmap_num), type(_type) {}
+		texture_unit(int _bitmap_type, int _bitmap_num): 
+			bitmap_type(_bitmap_type), bitmap_num(_bitmap_num) {}
 	};
 
 	struct fog 
@@ -423,48 +412,26 @@ public:
 		float dist_far;
 	};
 private:
-	int shader_handle;
-	SCP_vector<material::texture_unit> textures;
-	uniform_block uniforms;
-
-	SCP_vector<uniform_block*> shared_uniforms;
+	int texture_maps[TM_NUM_TYPES];
 
 	vec3d clip_normal;
 	vec3d clip_position;
-
 	int texture_addressing;
-
 	fog fog_params;
-
 	gr_zbuffer_type depth_mode;
-
-	int cull_mode;
-
-	int fill_mode;
-
 	gr_alpha_blend blend_mode;
-
+	int cull_mode;
+	int fill_mode;
 	color clr;
-
 	int zbias;
 
-	void set_texture(uint slot_num, int bitmap_num, texture_type tex_type, const SCP_string &name);
 public:
 	material();
-	material(uniform_data* uniform_data_pool);
 
-	void set_shader(int sdr_handle);
-	int get_shader();
+	void set_texture_map(int texture_type, int texture_num);
+	int get_texture_map(int texture_type);
 
-	void set_texture_bitmap(uint slot_num, int bitmap_num, int tcache_type, const SCP_string &name);
-
-	// temporary texture setting functions for textures that exist outside of bmpman
-	void set_texture_depth_buffer(uint slot_num, const SCP_string &name);
-	void set_texture_transform_buffer(uint slot_num, const SCP_string &name);
-	void set_texture_effect_texture(uint slot_num, const SCP_string &name);
-	void set_texture_shadow_map(uint slot_num, const SCP_string &name);
-
-	SCP_vector<material::texture_unit>& get_textures();
+	void set_clip_plane(const vec3d &normal, const vec3d &position);
 
 	void set_texture_addressing(int addressing);
 	int get_texture_addressing();
@@ -487,25 +454,40 @@ public:
 	void set_depth_bias(int bias);
 	int get_depth_bias();
 
-	void set_color(int r, int g, int b);
+	void set_color(int r, int g, int b, int a);
 	color& get_color();
+};
 
-	void add_shared_uniforms(uniform_block *block);
-	SCP_vector<uniform_block*>& get_shared_uniforms();
+class model_material : public material
+{
+	bool textured;
 
-	void set_uniform(const SCP_string &name, const int& val);
-	void set_uniform(const SCP_string &name, const float& val);
-	void set_uniform(const SCP_string &name, const vec2d& val);
-	void set_uniform(const SCP_string &name, const vec3d& val);
-	void set_uniform(const SCP_string &name, const vec4& val);
-	void set_uniform(const SCP_string &name, float x, float y);
-	void set_uniform(const SCP_string &name, float x, float y, float z);
-	void set_uniform(const SCP_string &name, float x, float y, float z, float w);
-	void set_uniform(const SCP_string &name, const matrix4& val);
-	void set_uniform(const SCP_string &name, matrix4* val, int size);
-	void remove_uniform(const SCP_string &name);
+	bool lighting;
+	float light_factor;
 
-	uniform_block& get_uniforms();
+	int animated_effect;
+	float animated_timer;
+
+	float thrust_scale;
+
+	bool using_team_color;
+	team_color tm_color;
+
+public:
+	void set_texturing(bool mode);
+
+	void set_light_factor(float factor);
+	void set_lighting(bool mode);
+
+	void set_center_alpha(int center_alpha);
+
+	void set_thrust_scale(float scale = -1.0f);
+
+	void set_team_color(const team_color &color);
+	void set_team_color();
+
+	void set_animated_effect(int effect, float time);
+	void set_animated_effect();
 };
 
 #endif
