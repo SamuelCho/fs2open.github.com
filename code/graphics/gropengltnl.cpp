@@ -92,7 +92,7 @@ GLuint Shadow_map_texture = 0;
 GLuint Shadow_map_depth_texture = 0;
 GLuint shadow_fbo = 0;
 GLint saved_fb = 0;
-bool Rendering_to_shadow_map = false;
+bool Shadow_castingRendering_to_shadow_map = false;
 
 int Transform_buffer_handle = -1;
 
@@ -2150,44 +2150,6 @@ void gr_opengl_shadow_map_end()
 		
 		glViewport(gr_screen.offset_x, (gr_screen.max_h - gr_screen.offset_y - gr_screen.clip_height), gr_screen.clip_width, gr_screen.clip_height);
 		glScissor(gr_screen.offset_x, (gr_screen.max_h - gr_screen.offset_y - gr_screen.clip_height), gr_screen.clip_width, gr_screen.clip_height);
-}
-
-void opengl_tnl_set_material(material* draw_material)
-{
-	SCP_vector<material::texture_unit> &textures = draw_material->get_textures();
-
-	for ( size_t i = 0; i < textures.size(); ++i ) {
-		if ( textures[i].type == material::TEX_BITMAP_TCACHE ) {
-			float u = 0.0f;
-			float v = 0.0f;
-
-			gr_opengl_tcache_set(textures[i].bitmap_num, textures[i].tcache_type, &u, &v, textures[i].slot);
-		} else if ( textures[i].type == material::TEX_RESOURCE_SHADOW_MAP ) {
-			GL_state.Texture.SetActiveUnit(textures[i].slot);
-			GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY_EXT);
-			GL_state.Texture.Enable(Shadow_map_texture);
-		} else if ( textures[i].type == material::TEX_RESOURCE_DEPTH_BUFFER ) {
-			GL_state.Texture.SetActiveUnit(textures[i].slot);
-			GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-			GL_state.Texture.Enable(Scene_position_texture);
-		} else if ( textures[i].type == material::TEX_RESOURCE_POSITION_BUFFER ) {
-			GL_state.Texture.SetActiveUnit(textures[i].slot);
-			GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-			GL_state.Texture.Enable(Scene_position_texture);
-		} else if ( textures[i].type == material::TEX_RESOURCE_TRANSFORM_BUFFER ) {
-			GL_state.Texture.SetActiveUnit(textures[i].slot);
-			GL_state.Texture.SetTarget(GL_TEXTURE_BUFFER_ARB);
-			GL_state.Texture.Enable(opengl_get_transform_buffer_texture());
-		} else if ( textures[i].type == material::TEX_RESOURCE_EFFECT_TEXTURE ) {
-			GL_state.Texture.SetActiveUnit(textures[i].slot);
-			GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-			GL_state.Texture.Enable(Scene_effect_texture);
-		} else if ( textures[i].type == material::TEX_RESOURCE_DISTORTION ) {
-			GL_state.Texture.SetActiveUnit(textures[i].slot);
-			GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-			GL_state.Texture.Enable(Distortion_texture[Distortion_switch]);
-		}
-	}
 }
 
 void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)

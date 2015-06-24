@@ -393,29 +393,26 @@ public:
 class material
 {
 public:
-	struct texture_unit
-	{
-		int bitmap_num;
-		int bitmap_type;
-
-		texture_unit(int _bitmap_type, int _bitmap_num): 
-			bitmap_type(_bitmap_type), bitmap_num(_bitmap_num) {}
-	};
-
 	struct fog 
 	{
-		int mode;
+		bool enabled;
 		int r;
 		int g;
 		int b;
 		float dist_near;
 		float dist_far;
 	};
+
+	struct clip_plane
+	{
+		bool enabled;
+		vec3d normal;
+		vec3d position;
+	};
 private:
 	int texture_maps[TM_NUM_TYPES];
 
-	vec3d clip_normal;
-	vec3d clip_position;
+	clip_plane clip_params;
 	int texture_addressing;
 	fog fog_params;
 	gr_zbuffer_type depth_mode;
@@ -431,12 +428,14 @@ public:
 	void set_texture_map(int texture_type, int texture_num);
 	int get_texture_map(int texture_type);
 
+	bool is_clipped();
 	void set_clip_plane(const vec3d &normal, const vec3d &position);
 
 	void set_texture_addressing(int addressing);
 	int get_texture_addressing();
 
 	void set_fog(int r, int g, int b, float near, float far);
+	bool is_fogged();
 	fog& get_fog();
 
 	void set_depth_mode(gr_zbuffer_type mode);
@@ -460,8 +459,15 @@ public:
 
 class model_material : public material
 {
+	uint Shader_flags;
+	int Shader_handle;
+
 	bool textured;
 
+	bool Shadow_casting;
+	bool Batched;
+
+	bool Deferred;
 	bool lighting;
 	float light_factor;
 
@@ -470,14 +476,19 @@ class model_material : public material
 
 	float thrust_scale;
 
-	bool using_team_color;
+	bool team_color_set;
 	team_color tm_color;
 
 public:
+	model_material(): animated_effect(0), animated_timer(0.0f), thrust_scale(-1.0f), lighting(false), light_factor(1.0f), Batched(false), 
+		textured(false), team_color_set(false) {}
+
 	void set_texturing(bool mode);
+	void set_shadow_casting(bool enabled);
 
 	void set_light_factor(float factor);
 	void set_lighting(bool mode);
+	void set_deferred_lighting(bool enabled);
 
 	void set_center_alpha(int center_alpha);
 
@@ -488,6 +499,11 @@ public:
 
 	void set_animated_effect(int effect, float time);
 	void set_animated_effect();
+
+	void set_batching(bool enabled);
+	bool is_batched();
+
+	uint determine_shader();
 };
 
 #endif

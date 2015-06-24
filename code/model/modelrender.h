@@ -261,7 +261,7 @@ struct queued_buffer_draw
 {
 	int transform_buffer_offset;
 
-	model_material *render_material;
+	model_material render_material;
 
 	transform transformation;
 	vec3d scale;
@@ -343,7 +343,7 @@ public:
 	void add_submodel_to_batch(int model_num);
 	void start_model_batch(int n_models);
 
-	void add_buffer_draw(model_material *render_material, vertex_buffer *buffer, int texi, uint tmap_flags, model_render_params *interp);
+	void add_buffer_draw(model_material *render_material, vertex_buffer *buffer, int texi, uint tmap_flags);
 	
 	vec3d get_view_position();
 	void clear_transforms();

@@ -443,30 +443,36 @@ void draw_list::set_light_factor(float factor)
 #endif
 }
 
-void draw_list::add_buffer_draw(model_material *render_material, vertex_buffer *buffer, int texi, uint tmap_flags, model_render_params *interp)
+void draw_list::add_buffer_draw(model_material *render_material, vertex_buffer *buffer, int texi, uint tmap_flags)
 {
 	queued_buffer_draw draw_data;
 
-	draw_data.render_material = *render_material;
-	draw_data.buffer = buffer;
-	draw_data.texi = texi;
-	draw_data.flags = tmap_flags;
+	render_material->set_deferred_lighting(Deferred_lighting);
+	render_material->set_shadow_casting(Rendering_to_shadow_map ? true : false);
+	render_material->set_texturing((tmap_flags & TMAP_FLAG_TEXTURED) && (buffer->flags & VB_FLAG_UV1));
 
-	if ( tmap_flags & TMAP_FLAG_BATCH_TRANSFORMS ) {
- 		draw_data.transformation = transform();
- 
-  		draw_data.scale.xyz.x = 1.0f;
-  		draw_data.scale.xyz.y = 1.0f;
-  		draw_data.scale.xyz.z = 1.0f;
+	if (tmap_flags & TMAP_FLAG_BATCH_TRANSFORMS && buffer->flags & VB_FLAG_MODEL_ID) {
+		draw_data.transformation = transform();
+
+		draw_data.scale.xyz.x = 1.0f;
+		draw_data.scale.xyz.y = 1.0f;
+		draw_data.scale.xyz.z = 1.0f;
 
 		draw_data.transform_buffer_offset = TransformBufferHandler.get_buffer_offset();
+
+		render_material->set_batching(true);
 	} else {
 		draw_data.transformation = Current_transform;
 		draw_data.scale = Current_scale;
 		draw_data.transform_buffer_offset = -1;
+		render_material->set_batching(false);
 	}
 
-	draw_data.sdr_flags = determine_shader_flags(&Current_render_state, &draw_data, buffer, tmap_flags);
+	draw_data.sdr_flags = render_material->determine_shader();
+	draw_data.render_material = *render_material;
+	draw_data.buffer = buffer;
+	draw_data.texi = texi;
+	draw_data.flags = tmap_flags;
 
 	Render_elements.push_back(draw_data);
 
@@ -1232,40 +1238,35 @@ void model_render_buffers(draw_list* scene, model_material *rendering_material, 
 			continue;
 		}
 
-		uint alpha_flag = 0;
+		bool use_blending = false;
 
 		// trying to get transparent textures-Bobboau
 		if (tmap->is_transparent) {
 			// for special shockwave/warp map usage
 			alpha = (interp->get_warp_alpha() != -1.0f) ? interp->get_warp_alpha() : 0.8f;
-			blend_filter = GR_ALPHABLEND_FILTER;
+			blend_filter = true;
 		} else if ( buffer->flags & VB_FLAG_TRANS ) {
-			blend_filter = GR_ALPHABLEND_FILTER;
+			blend_filter = true;
 		}
 
 		if (forced_blend_filter != GR_ALPHABLEND_NONE) {
-			blend_filter = forced_blend_filter;
+			blend_filter = true;
 		}
 
 		bool use_depth_test;
-		bool use_blending = blend_filter == GR_ALPHABLEND_FILTER;
 
 		if ( use_blending ) {
-			// scene->set_depth_mode(GR_ZBUFF_READ);
 			use_depth_test = true;
-			alpha_flag |= TMAP_FLAG_ALPHA;
 		} else {
 			if ( (model_flags & MR_NO_ZBUFFER) || (model_flags & MR_ALL_XPARENT) ) {
-				// scene->set_depth_mode(GR_ZBUFF_NONE);
 				use_depth_test = false;
-				alpha_flag |= TMAP_FLAG_ALPHA;
 			} else {
-				// scene->set_depth_mode(GR_ZBUFF_FULL);
 				use_depth_test = true;
 			}
 		}
 
-		rendering_material->set_depth_mode(model_render_determine_depth_mode(use_depth_test, use_blending));
+		gr_zbuffer_type zbuff_mode = model_render_determine_depth_mode(use_depth_test, use_blending);
+		rendering_material->set_depth_mode(zbuff_mode);
 
 		gr_alpha_blend blend_mode = model_render_determine_blend_mode(texture_maps[TM_BASE_TYPE], use_blending);
 		rendering_material->set_blend_mode(blend_mode);
@@ -1287,7 +1288,7 @@ void model_render_buffers(draw_list* scene, model_material *rendering_material, 
 		rendering_material->set_texture_map(TM_HEIGHT_TYPE, texture_maps[TM_HEIGHT_TYPE]);
 		rendering_material->set_texture_map(TM_MISC_TYPE,	texture_maps[TM_MISC_TYPE]);
 
-		scene->add_buffer_draw(rendering_material, buffer, i, tmap_flags | alpha_flag, interp);
+		scene->add_buffer_draw(rendering_material, buffer, i, tmap_flags);
 	}
 }
 
@@ -1474,7 +1475,7 @@ gr_alpha_blend model_render_determine_blend_mode(int base_bitmap, bool is_transp
 {
 	if (is_transparent) {
 		if (base_bitmap >= 0 && bm_has_alpha_channel(base_bitmap)) {
-			return ALPHA_BLEND_ALPHA_BLEND_ALPHA;
+			return ALPHA_BLEND_PREMULTIPLIED;
 		}
 
 		return ALPHA_BLEND_ADDITIVE;
@@ -2616,7 +2617,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 		return;
 	}
 
-	scene->set_light_factor(light_factor);
+	rendering_material.set_light_factor(light_factor);
 
 	if ( interp->is_clip_plane_set() ) {
 		rendering_material.set_clip_plane(interp->get_clip_plane_normal(), interp->get_clip_plane_pos());
@@ -2725,34 +2726,34 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 	}
 
 	if ( is_outlines_only_htl ) {
-		scene->set_fill_mode(GR_FILL_MODE_WIRE);
+		rendering_material.set_fill_mode(GR_FILL_MODE_WIRE);
 
 		color outline_color = interp->get_outline_color();
-		scene->set_color(outline_color);
+		rendering_material.set_color(outline_color);
 
 		tmap_flags &= ~TMAP_FLAG_RGB;
 	} else {
-		scene->set_fill_mode(GR_FILL_MODE_SOLID);
+		rendering_material.set_fill_mode(GR_FILL_MODE_SOLID);
 	}
 		
 	if ( model_flags & MR_EDGE_ALPHA ) {
-		scene->set_center_alpha(-1);
+		rendering_material.set_center_alpha(-1);
 	} else if ( model_flags & MR_CENTER_ALPHA ) {
-		scene->set_center_alpha(1);
+		rendering_material.set_center_alpha(1);
 	} else {
-		scene->set_center_alpha(0);
+		rendering_material.set_center_alpha(0);
 	}
 
 	if ( ( model_flags & MR_NO_CULL ) || ( model_flags & MR_ALL_XPARENT ) || ( interp->get_warp_bitmap() >= 0 ) ) {
-		scene->set_cull_mode(0);
+		rendering_material.set_cull_mode(0);
 	} else {
-		scene->set_cull_mode(1);
+		rendering_material.set_cull_mode(1);
 	}
 
 	if ( !(model_flags & MR_NO_LIGHTING) ) {
-		scene->set_lighting(true);
+		rendering_material.set_lighting(true);
 	} else {
-		scene->set_lighting(false);
+		rendering_material.set_lighting(false);
 	}
 	
 	if (is_outlines_only_htl || (!Cmdline_nohtl && !is_outlines_only)) {
@@ -2760,9 +2761,9 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 	}
 
 	if ( Rendering_to_shadow_map ) {
-		scene->set_zbias(-1024);
+		rendering_material.set_depth_bias(-1024);
 	} else {
-		scene->set_zbias(0);
+		rendering_material.set_depth_bias(0);
 	}
 
 	if ( !Cmdline_no_batching && !(model_flags & MR_NO_BATCH) && pm->flags & PM_FLAG_BATCHED 
@@ -2783,7 +2784,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 
 	while( i >= 0 )	{
 		if ( !pm->submodel[i].is_thruster ) {
-			model_render_children_buffers( scene, interp, pm, i, detail_level, tmap_flags, trans_buffer );
+			model_render_children_buffers( scene, &rendering_material, interp, pm, i, detail_level, tmap_flags, trans_buffer );
 		} else {
 			draw_thrusters = true;
 		}
