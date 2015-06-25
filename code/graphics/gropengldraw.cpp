@@ -3444,15 +3444,5 @@ void gr_opengl_draw(material *draw_material, vertex_layout *layout, int vbuffer_
 
 void gr_opengl_draw_model(model_material *draw_material, vertex_buffer *buffer, buffer_data *index_data)
 {
-	GL_state.SetAlphaBlendMode( draw_material->get_blend_mode() );
-	GL_state.SetZbufferType( draw_material->get_depth_mode() );
-
-	color &clr = draw_material->get_color();
-	GL_state.Color(clr.red, clr.green, clr.blue, clr.alpha);
-
-	gr_set_cull( draw_material->get_cull_mode() );
 	
-	gr_zbias( draw_material->get_depth_bias() );
-
-	gr_set_fill_mode( draw_material->get_fill_mode() );
 }
