@@ -2152,6 +2152,31 @@ void gr_opengl_shadow_map_end()
 		glScissor(gr_screen.offset_x, (gr_screen.max_h - gr_screen.offset_y - gr_screen.clip_height), gr_screen.clip_width, gr_screen.clip_height);
 }
 
+void opengl_tnl_set_material(material* material_info)
+{
+	GL_state.SetAlphaBlendMode(material_info->get_blend_mode());
+	GL_state.SetZbufferType(material_info->get_depth_mode());
+
+	color &clr = material_info->get_color();
+	GL_state.Color(clr.red, clr.green, clr.blue, clr.alpha);
+
+	gr_set_cull(material_info->get_cull_mode());
+
+	gr_zbias(material_info->get_depth_bias());
+
+	gr_set_fill_mode(material_info->get_fill_mode());
+
+	material::fog &fog_params = material_info->get_fog();
+
+	if ( fog_params.enabled ) {
+		gr_fog_set(GR_FOGMODE_FOG, fog_params.r, fog_params.g, fog_params.b, fog_params.dist_near, fog_params.dist_far);
+	} else {
+		gr_fog_set(GR_FOGMODE_NONE, 0, 0, 0);
+	}
+
+	gr_set_texture_addressing(material_info->get_texture_addressing());
+}
+
 void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 {
 	float u_scale, v_scale;
