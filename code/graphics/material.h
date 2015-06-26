@@ -430,6 +430,7 @@ public:
 
 	bool is_clipped();
 	void set_clip_plane(const vec3d &normal, const vec3d &position);
+	clip_plane& get_clip_plane();
 
 	void set_texture_addressing(int addressing);
 	int get_texture_addressing();

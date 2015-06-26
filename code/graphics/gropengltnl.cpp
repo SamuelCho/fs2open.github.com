@@ -2032,6 +2032,37 @@ void gr_opengl_start_clip_plane()
 	GL_state.ClipPlane(0, GL_TRUE);
 }
 
+void gr_opengl_set_clip_plane(vec3d *clip_normal, vec3d *clip_point)
+{
+	if (Cmdline_nohtl) {
+		return;
+	}
+
+	if (Use_GLSL > 1) {
+		// bail since we're gonna clip in the shader
+		return;
+	}
+
+	if ( clip_normal == NULL || clip_point == NULL ) {
+		GL_state.ClipPlane(0, GL_FALSE);
+	} else {
+		GLdouble clip_equation[4];
+
+		clip_equation[0] = (GLdouble)clip_normal->xyz.x;
+		clip_equation[1] = (GLdouble)clip_normal->xyz.y;
+		clip_equation[2] = (GLdouble)clip_normal->xyz.z;
+
+		clip_equation[3] = (GLdouble)(clip_normal->xyz.x * clip_point->xyz.x)
+			+ (GLdouble)(clip_normal->xyz.y * clip_point->xyz.y)
+			+ (GLdouble)(clip_normal->xyz.z * clip_point->xyz.z);
+		clip_equation[3] *= -1.0;
+
+
+		glClipPlane(GL_CLIP_PLANE0, clip_equation);
+		GL_state.ClipPlane(0, GL_TRUE);
+	}
+}
+
 //************************************State blocks************************************
 
 //this is an array of reference counts for state block IDs
@@ -2175,6 +2206,14 @@ void opengl_tnl_set_material(material* material_info)
 	}
 
 	gr_set_texture_addressing(material_info->get_texture_addressing());
+
+	material::clip_plane &clip_params = material_info->get_clip_plane();
+
+	if ( clip_params.enabled ) {
+		gr_opengl_set_clip_plane(&clip_params.normal, &clip_params.position);
+	} else {
+		gr_opengl_set_clip_plane(NULL, NULL);
+	}
 }
 
 void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
