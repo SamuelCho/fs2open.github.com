@@ -469,46 +469,16 @@ void draw_list::add_buffer_draw(model_material *render_material, vertex_buffer *
 	}
 
 	draw_data.sdr_flags = render_material->determine_shader();
-	draw_data.render_material = *render_material;
+	render_material->set_shader_handle(gr_maybe_create_shader(SDR_TYPE_MODEL, draw_data.sdr_flags));
+
 	draw_data.buffer = buffer;
 	draw_data.texi = texi;
 	draw_data.flags = tmap_flags;
+	draw_data.render_material = *render_material;
 
 	Render_elements.push_back(draw_data);
 
 	Render_keys.push_back(Render_elements.size() - 1);
-}
-
-uint draw_list::determine_shader_flags(render_state *state, queued_buffer_draw *draw_info, vertex_buffer *buffer, int tmap_flags)
-{
-	bool texture = (tmap_flags & TMAP_FLAG_TEXTURED) && (buffer->flags & VB_FLAG_UV1);
-	bool fog = false;
-	bool use_thrust_scale = false;
-
-	if ( state->fog_mode == GR_FOGMODE_FOG ) {
-		fog = true;
-	}
-
-	if ( draw_info->thrust_scale > 0.0f ) {
-		use_thrust_scale = true;
-	}
-
-	return gr_determine_model_shader_flags(
-		state->lighting, 
-		fog, 
-		texture, 
-		Rendering_to_shadow_map, 
-		use_thrust_scale,
-		tmap_flags & TMAP_FLAG_BATCH_TRANSFORMS && draw_info->transform_buffer_offset >= 0 && buffer->flags & VB_FLAG_MODEL_ID,
-		state->using_team_color,
-		tmap_flags, 
-		draw_info->texture_maps[TM_SPECULAR_TYPE],
-		draw_info->texture_maps[TM_GLOW_TYPE],
-		draw_info->texture_maps[TM_NORMAL_TYPE],
-		draw_info->texture_maps[TM_HEIGHT_TYPE],
-		ENVMAP,
-		draw_info->texture_maps[TM_MISC_TYPE]
-	);
 }
 
 void draw_list::render_buffer(queued_buffer_draw &render_elements)

@@ -321,7 +321,6 @@ class draw_list
 	void render_insignia(insignia_draw_data &insignia_info);
 	void render_outline(outline_draw &outline_info);
 	void render_buffer(queued_buffer_draw &render_elements);
-	uint determine_shader_flags(render_state *state, queued_buffer_draw *draw_info, vertex_buffer *buffer, int tmap_flags);
 	
 	SCP_vector<clip_plane_state> Clip_planes;
 	SCP_vector<render_state> Render_states;

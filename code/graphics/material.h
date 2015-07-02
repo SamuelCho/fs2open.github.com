@@ -410,6 +410,7 @@ public:
 		vec3d position;
 	};
 private:
+	int shader_handle;
 	int texture_maps[TM_NUM_TYPES];
 
 	clip_plane clip_params;
@@ -423,7 +424,10 @@ private:
 	int zbias;
 
 public:
-	material();
+	material(): shader_handle(-1) {};
+
+	void set_shader_handle(int shader_handle);
+	int get_shader_handle();
 
 	void set_texture_map(int texture_type, int texture_num);
 	int get_texture_map(int texture_type);
@@ -464,6 +468,7 @@ class model_material : public material
 	int Shader_handle;
 
 	bool textured;
+	bool Desaturate;
 
 	bool Shadow_casting;
 	bool Batched;
@@ -485,6 +490,8 @@ public:
 		textured(false), team_color_set(false) {}
 
 	void set_texturing(bool mode);
+	void set_desaturation(bool enabled);
+	bool is_desaturated();
 	void set_shadow_casting(bool enabled);
 
 	void set_light_factor(float factor);
@@ -494,12 +501,16 @@ public:
 	void set_center_alpha(int center_alpha);
 
 	void set_thrust_scale(float scale = -1.0f);
+	float get_thrust_scale();
 
 	void set_team_color(const team_color &color);
 	void set_team_color();
+	team_color& get_team_color();
 
 	void set_animated_effect(int effect, float time);
 	void set_animated_effect();
+	int get_animated_effect();
+	float get_animated_effect_time();
 
 	void set_batching(bool enabled);
 	bool is_batched();

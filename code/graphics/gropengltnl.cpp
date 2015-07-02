@@ -96,6 +96,7 @@ bool Shadow_castingRendering_to_shadow_map = false;
 
 int Transform_buffer_handle = -1;
 
+matrix4 GL_view_matrix;
 transform_stack GL_model_matrix_stack;
 
 struct opengl_buffer_object {
@@ -2038,8 +2039,7 @@ void gr_opengl_set_clip_plane(vec3d *clip_normal, vec3d *clip_point)
 		return;
 	}
 
-	if (Use_GLSL > 1) {
-		// bail since we're gonna clip in the shader
+	if (Use_GLSL > 1 && Current_shader != NULL && Current_shader->shader == SDR_TYPE_MODEL) {
 		return;
 	}
 
@@ -2185,6 +2185,10 @@ void gr_opengl_shadow_map_end()
 
 void opengl_tnl_set_material(material* material_info)
 {
+	if ( material_info->get_shader_handle() >= 0 ) {
+		opengl_shader_set_current(material_info->get_shader_handle());
+	}
+
 	GL_state.SetAlphaBlendMode(material_info->get_blend_mode());
 	GL_state.SetZbufferType(material_info->get_depth_mode());
 
@@ -2213,6 +2217,207 @@ void opengl_tnl_set_material(material* material_info)
 		gr_opengl_set_clip_plane(&clip_params.normal, &clip_params.position);
 	} else {
 		gr_opengl_set_clip_plane(NULL, NULL);
+	}
+}
+
+void opengl_tnl_set_model_material(model_material *material_info)
+{
+	float u_scale, v_scale;
+	int render_pass = 0;
+
+	opengl_tnl_set_material(material_info);
+
+	Assert( Current_shader->shader == SDR_TYPE_MODEL );
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_ANIMATED ) {
+		GL_state.Uniform.setUniform("anim_timer", material_info->get_animated_effect_time());
+		GL_state.Uniform.setUniform("effect_num", material_info->get_animated_effect());
+		GL_state.Uniform.setUniform("vpwidth", 1.0f / gr_screen.max_w);
+		GL_state.Uniform.setUniform("vpheight", 1.0f / gr_screen.max_h);
+	}
+	
+	if (Current_shader->flags & SDR_FLAG_MODEL_CLIP) {
+		material::clip_plane &clip_info = material_info->get_clip_plane();
+
+		GL_state.Uniform.setUniform("clip_normal", clip_info.normal);
+		GL_state.Uniform.setUniform("clip_position", clip_info.position);
+	}
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_LIGHT ) {
+		int num_lights = MIN(Num_active_gl_lights, GL_max_lights) - 1;
+		GL_state.Uniform.setUniform("n_lights", num_lights);
+		GL_state.Uniform.setUniform("light_factor", GL_light_factor);
+	}
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_DIFFUSE_MAP) {
+		GL_state.Uniform.setUniform("sBasemap", render_pass);
+
+		if ( material_info->is_desaturated() ) {
+			color &clr = material_info->get_color();
+			GL_state.Uniform.setUniform("desaturate_clr", clr.red / 255.0f, clr.green / 255.0f, clr.blue / 255.0f);
+
+			GL_state.Uniform.setUniform("desaturate", 1);
+		} else {
+			GL_state.Uniform.setUniform("desaturate", 0);
+		}
+
+		switch ( material_info->get_blend_mode() ) {
+		case ALPHA_BLEND_PREMULTIPLIED:
+			GL_state.Uniform.setUniform("blend_alpha", 1);
+			break;
+		case ALPHA_BLEND_ALPHA_ADDITIVE:
+			GL_state.Uniform.setUniform("blend_alpha", 2);
+		default:
+			GL_state.Uniform.setUniform("blend_alpha", 0);
+		}
+
+
+		gr_opengl_tcache_set(material_info->get_texture_map(TM_BASE_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
+
+		++render_pass;
+	}
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_GLOW_MAP) {
+		GL_state.Uniform.setUniform("sGlowmap", render_pass);
+
+		gr_opengl_tcache_set(material_info->get_texture_map(TM_GLOW_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
+
+		++render_pass;
+	}
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_SPEC_MAP ) {
+		GL_state.Uniform.setUniform("sSpecmap", render_pass);
+
+		gr_opengl_tcache_set(material_info->get_texture_map(TM_SPECULAR_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
+
+		++render_pass;
+
+		if (Current_shader->flags & SDR_FLAG_MODEL_ENV_MAP) {
+			// 0 == env with non-alpha specmap, 1 == env with alpha specmap
+			int alpha_spec = bm_has_alpha_channel(material_info->get_texture_map(TM_SPECULAR_TYPE));
+
+			matrix4 texture_mat;
+
+			for (int i = 0; i < 16; ++i) {
+				texture_mat.a1d[i] = GL_env_texture_matrix[i];
+			}
+
+			GL_state.Uniform.setUniform("alpha_spec", alpha_spec);
+			GL_state.Uniform.setUniform("envMatrix", texture_mat);
+			GL_state.Uniform.setUniform("sEnvmap", render_pass);
+
+			gr_opengl_tcache_set(ENVMAP, TCACHE_TYPE_CUBEMAP, &u_scale, &v_scale, render_pass);
+
+			++render_pass;
+		}
+	}
+
+	if (Current_shader->flags & SDR_FLAG_MODEL_NORMAL_MAP) {
+		GL_state.Uniform.setUniform("sNormalmap", render_pass);
+
+		gr_opengl_tcache_set(material_info->get_texture_map(TM_NORMAL_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
+
+		++render_pass;
+	}
+
+	if (Current_shader->flags & SDR_FLAG_MODEL_HEIGHT_MAP) {
+		GL_state.Uniform.setUniform("sHeightmap", render_pass);
+
+		gr_opengl_tcache_set(material_info->get_texture_map(TM_HEIGHT_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
+
+		++render_pass;
+	}
+
+	if (Current_shader->flags & SDR_FLAG_MODEL_MISC_MAP) {
+		GL_state.Uniform.setUniform("sMiscmap", render_pass);
+
+		gr_opengl_tcache_set(material_info->get_texture_map(TM_MISC_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
+
+		++render_pass;
+	}
+
+	if (Current_shader->flags & SDR_FLAG_MODEL_SHADOWS) {
+		matrix4 model_matrix;
+		memset(&model_matrix, 0, sizeof(model_matrix));
+
+		model_matrix.a1d[0] = Object_matrix.vec.rvec.xyz.x;   model_matrix.a1d[4] = Object_matrix.vec.uvec.xyz.x;   model_matrix.a1d[8] = Object_matrix.vec.fvec.xyz.x;
+		model_matrix.a1d[1] = Object_matrix.vec.rvec.xyz.y;   model_matrix.a1d[5] = Object_matrix.vec.uvec.xyz.y;   model_matrix.a1d[9] = Object_matrix.vec.fvec.xyz.y;
+		model_matrix.a1d[2] = Object_matrix.vec.rvec.xyz.z;   model_matrix.a1d[6] = Object_matrix.vec.uvec.xyz.z;   model_matrix.a1d[10] = Object_matrix.vec.fvec.xyz.z;
+		model_matrix.a1d[12] = Object_position.xyz.x;
+		model_matrix.a1d[13] = Object_position.xyz.y;
+		model_matrix.a1d[14] = Object_position.xyz.z;
+		model_matrix.a1d[15] = 1.0f;
+
+		GL_state.Uniform.setUniform("shadow_mv_matrix", Shadow_view_matrix);
+		GL_state.Uniform.setUniform("shadow_proj_matrix", Shadow_proj_matrix, MAX_SHADOW_CASCADES);
+		GL_state.Uniform.setUniform("model_matrix", model_matrix);
+		GL_state.Uniform.setUniform("veryneardist", Shadow_cascade_distances[0]);
+		GL_state.Uniform.setUniform("neardist", Shadow_cascade_distances[1]);
+		GL_state.Uniform.setUniform("middist", Shadow_cascade_distances[2]);
+		GL_state.Uniform.setUniform("fardist", Shadow_cascade_distances[3]);
+		GL_state.Uniform.setUniform("shadow_map", render_pass);
+
+		GL_state.Texture.SetActiveUnit(render_pass);
+		GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY_EXT);
+		GL_state.Texture.Enable(Shadow_map_texture);
+
+		++render_pass; // bump!
+	}
+
+	if (Current_shader->flags & SDR_FLAG_MODEL_SHADOW_MAP) {
+		GL_state.Uniform.setUniform("shadow_proj_matrix", Shadow_proj_matrix, MAX_SHADOW_CASCADES);
+	}
+
+	if (Current_shader->flags & SDR_FLAG_MODEL_ANIMATED) {
+		GL_state.Uniform.setUniform("sFramebuffer", render_pass);
+
+		GL_state.Texture.SetActiveUnit(render_pass);
+		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+
+		if (Scene_framebuffer_in_frame) {
+			GL_state.Texture.Enable(Scene_effect_texture);
+			glDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);
+		}
+		else {
+			GL_state.Texture.Enable(Framebuffer_fallback_texture_id);
+		}
+
+		++render_pass;
+	}
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_TRANSFORM ) {
+		GL_state.Uniform.setUniform("transform_tex", render_pass);
+		GL_state.Uniform.setUniform("buffer_matrix_offset", GL_transform_buffer_offset);
+
+		GL_state.Texture.SetActiveUnit(render_pass);
+		GL_state.Texture.SetTarget(GL_TEXTURE_BUFFER_ARB);
+		GL_state.Texture.Enable(opengl_get_transform_buffer_texture());
+
+		++render_pass;
+	}
+
+	// Team colors are passed to the shader here, but the shader needs to handle their application.
+	// By default, this is handled through the r and g channels of the misc map, but this can be changed
+	// in the shader; test versions of this used the normal map r and b channels
+	if ( Current_shader->flags & SDR_FLAG_MODEL_TEAMCOLOR ) {
+		team_color &tm_clr = material_info->get_team_color();
+		vec3d stripe_color;
+		vec3d base_color;
+
+		stripe_color.xyz.x = tm_clr.stripe.r;
+		stripe_color.xyz.y = tm_clr.stripe.g;
+		stripe_color.xyz.z = tm_clr.stripe.b;
+
+		base_color.xyz.x = tm_clr.base.r;
+		base_color.xyz.y = tm_clr.base.g;
+		base_color.xyz.z = tm_clr.base.b;
+
+		GL_state.Uniform.setUniform("stripe_color", stripe_color);
+		GL_state.Uniform.setUniform("base_color", base_color);
+	}
+
+	if (Current_shader->flags & SDR_FLAG_MODEL_THRUSTER) {
+		GL_state.Uniform.setUniform("thruster_scale", material_info->get_thrust_scale());
 	}
 }
 

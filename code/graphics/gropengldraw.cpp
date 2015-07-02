@@ -3444,5 +3444,7 @@ void gr_opengl_draw(material *draw_material, vertex_layout *layout, int vbuffer_
 
 void gr_opengl_draw_model(model_material *draw_material, vertex_buffer *buffer, buffer_data *index_data)
 {
-	
+	opengl_tnl_set_model_material(draw_material);
+
+
 }
