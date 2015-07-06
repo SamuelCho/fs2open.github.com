@@ -15,6 +15,13 @@
 #include "render/3d.h"
 #include "bmpman/bmpman.h"
 
+static SCP_map<effect_batch, geometry_batcher> geometry_batches;
+
+SCP_vector<effect_draw_item> effect_draw_queue;
+
+vertex_layout Effect_vertex_layout;
+vertex_layout Point_sprite_vertex_layout;
+
 geometry_batcher::~geometry_batcher()
 {
 	if (vert != NULL) {
@@ -137,6 +144,9 @@ void geometry_batcher::clone(const geometry_batcher &geo)
 		vert = NULL;
 		radius_list = NULL;
 	}
+
+	vertices = geo.vertices;
+	billboard_quads = geo.billboard_quads;
 }
 
 const geometry_batcher &geometry_batcher::operator=(const geometry_batcher &geo)
@@ -148,13 +158,26 @@ const geometry_batcher &geometry_batcher::operator=(const geometry_batcher &geo)
 	return *this;
 }
 
+effect_vertex geometry_batcher::convert_vertex_to_effect(vertex* vert)
+{
+	effect_vertex new_vert;
+
+	new_vert.position = vert->world;
+	new_vert.tex_coord = vert->texture_position;
+	new_vert.radius = 1.0f;
+	new_vert.r = vert->r;
+	new_vert.g = vert->g;
+	new_vert.b = vert->b;
+	new_vert.a = vert->a;
+}
+
 /*
 0----1
 |\   |
 |  \ |
 3----2
 */
-void geometry_batcher::draw_bitmap(vertex *pnt, int orient, float rad, float depth)
+void geometry_batcher::draw_bitmap_old(vertex *pnt, int orient, float rad, float depth)
 {
 	float radius = rad;
 	rad *= 1.41421356f;//1/0.707, becase these are the points of a square or width and height rad
@@ -213,6 +236,7 @@ void geometry_batcher::draw_bitmap(vertex *pnt, int orient, float rad, float dep
 		P[5].texture_position.u = 1.0f;
 		P[4].texture_position.u = 0.0f;
 		P[3].texture_position.u = 0.0f;
+
 		// tri 2
 		P[2].texture_position.u = 1.0f;
 		P[1].texture_position.u = 0.0f;
@@ -222,6 +246,7 @@ void geometry_batcher::draw_bitmap(vertex *pnt, int orient, float rad, float dep
 		P[5].texture_position.u = 0.0f;
 		P[4].texture_position.u = 1.0f;
 		P[3].texture_position.u = 1.0f;
+
 		// tri 2
 		P[2].texture_position.u = 0.0f;
 		P[1].texture_position.u = 1.0f;
@@ -233,6 +258,7 @@ void geometry_batcher::draw_bitmap(vertex *pnt, int orient, float rad, float dep
 		P[5].texture_position.v = 1.0f;
 		P[4].texture_position.v = 1.0f;
 		P[3].texture_position.v = 0.0f;
+
 		// tri 2
 		P[2].texture_position.v = 1.0f;
 		P[1].texture_position.v = 0.0f;
@@ -242,6 +268,7 @@ void geometry_batcher::draw_bitmap(vertex *pnt, int orient, float rad, float dep
 		P[5].texture_position.v = 0.0f;
 		P[4].texture_position.v = 0.0f;
 		P[3].texture_position.v = 1.0f;
+
 		// tri 2
 		P[2].texture_position.v = 0.0f;
 		P[1].texture_position.v = 1.0f;
@@ -260,7 +287,167 @@ void geometry_batcher::draw_bitmap(vertex *pnt, int orient, float rad, float dep
 	n_to_render += 2;
 }
 
-void geometry_batcher::draw_bitmap(vertex *pnt, float rad, float angle, float depth)
+void geometry_batcher::draw_bitmap(vertex *pnt, int orient, float rad, float depth)
+{
+	float radius = rad;
+	rad *= 1.41421356f;//1/0.707, becase these are the points of a square or width and height rad
+
+	vec3d PNT(pnt->world);
+	vec3d p[4];
+	vec3d fvec, rvec, uvec;
+	effect_vertex verts[6];
+
+	// get the direction from the point to the eye
+	vm_vec_sub(&fvec, &View_position, &PNT);
+	vm_vec_normalize_safe(&fvec);
+
+	// get an up vector in the general direction of what we want
+	uvec = View_matrix.vec.uvec;
+
+	// make a right vector from the f and up vector, this r vec is exactly what we want, so...
+	vm_vec_crossprod(&rvec, &View_matrix.vec.fvec, &uvec);
+	vm_vec_normalize_safe(&rvec);
+
+	// fix the u vec with it
+	vm_vec_crossprod(&uvec, &View_matrix.vec.fvec, &rvec);
+
+	// move the center of the sprite based on the depth parameter
+	if ( depth != 0.0f )
+		vm_vec_scale_add(&PNT, &PNT, &fvec, depth);
+
+	// move one of the verts to the left
+	vm_vec_scale_add(&p[0], &PNT, &rvec, rad);
+
+	// and one to the right
+	vm_vec_scale_add(&p[2], &PNT, &rvec, -rad);
+
+	// now move all oof the verts to were they need to be
+	vm_vec_scale_add(&p[1], &p[2], &uvec, rad);
+	vm_vec_scale_add(&p[3], &p[0], &uvec, -rad);
+	vm_vec_scale_add(&p[0], &p[0], &uvec, rad);
+	vm_vec_scale_add(&p[2], &p[2], &uvec, -rad);
+
+	//move all the data from the vecs into the verts
+	//tri 1
+	verts[5].position = p[3];
+	verts[4].position = p[2];
+	verts[3].position = p[1];
+
+	//tri 2
+	verts[2].position = p[3];
+	verts[1].position = p[1];
+	verts[0].position = p[0];
+
+	// set up the UV coords
+	if ( orient & 1 ) {
+		// tri 1
+		verts[5].tex_coord.u = 1.0f;
+		verts[4].tex_coord.u = 0.0f;
+		verts[3].tex_coord.u = 0.0f;
+
+		// tri 2
+		verts[2].tex_coord.u = 1.0f;
+		verts[1].tex_coord.u = 0.0f;
+		verts[0].tex_coord.u = 1.0f;
+	} else {
+		// tri 1
+		verts[5].tex_coord.u = 0.0f;
+		verts[4].tex_coord.u = 1.0f;
+		verts[3].tex_coord.u = 1.0f;
+
+		// tri 2
+		verts[2].tex_coord.u = 0.0f;
+		verts[1].tex_coord.u = 1.0f;
+		verts[0].tex_coord.u = 0.0f;
+	}
+
+	if ( orient & 2 ) {
+		// tri 1
+		verts[5].tex_coord.v = 1.0f;
+		verts[4].tex_coord.v = 1.0f;
+		verts[3].tex_coord.v = 0.0f;
+
+		// tri 2
+		verts[2].tex_coord.v = 1.0f;
+		verts[1].tex_coord.v = 0.0f;
+		verts[0].tex_coord.v = 0.0f;
+	} else {
+		// tri 1
+		verts[5].tex_coord.v = 0.0f;
+		verts[4].tex_coord.v = 0.0f;
+		verts[3].tex_coord.v = 1.0f;
+
+		// tri 2
+		verts[2].tex_coord.v = 0.0f;
+		verts[1].tex_coord.v = 1.0f;
+		verts[0].tex_coord.v = 1.0f;
+	}
+
+	for (int i = 0; i < 6 ; i++) {
+		verts[i].r = pnt->r;
+		verts[i].g = pnt->g;
+		verts[i].b = pnt->b;
+		verts[i].a = pnt->a;
+
+		verts[i].radius = radius;
+
+		vertices.push_back(verts[i]);
+	}
+}
+
+void geometry_batcher::draw_point_bitmap(vertex *position, int orient, float rad, float depth)
+{
+	float radius = rad;
+	rad *= 1.41421356f;//1/0.707, becase these are the points of a square or width and height rad
+
+	vec3d PNT(position->world);
+	vec3d fvec;
+
+	// get the direction from the point to the eye
+	vm_vec_sub(&fvec, &View_position, &PNT);
+	vm_vec_normalize_safe(&fvec);
+
+	// move the center of the sprite based on the depth parameter
+	if ( depth != 0.0f )
+		vm_vec_scale_add(&PNT, &PNT, &fvec, depth);
+
+	particle_pnt new_particle;
+	vec3d up;
+
+	new_particle.position = position->world;
+	new_particle.size = rad;
+
+	int direction = orient % 4;
+
+	switch ( direction ) {
+	case 0:
+		up.xyz.x = 0.0f;
+		up.xyz.y = 1.0f;
+		up.xyz.z = 0.0f;
+		break;
+	case 1:
+		up.xyz.x = 0.0f;
+		up.xyz.y = -1.0f;
+		up.xyz.z = 0.0f;
+		break;
+	case 2:
+		up.xyz.x = -1.0f;
+		up.xyz.y = 0.0f;
+		up.xyz.z = 0.0f;
+		break;
+	case 3:
+		up.xyz.x = 1.0f;
+		up.xyz.y = 0.0f;
+		up.xyz.z = 0.0f;
+		break;
+	}
+
+	new_particle.up = up;
+
+	billboard_quads.push_back(new_particle);
+}
+
+void geometry_batcher::draw_bitmap_old(vertex *pnt, float rad, float angle, float depth)
 {
 	float radius = rad;
 	rad *= 1.41421356f;//1/0.707, becase these are the points of a square or width and height rad
@@ -331,18 +518,134 @@ void geometry_batcher::draw_bitmap(vertex *pnt, float rad, float angle, float de
 	n_to_render += 2;
 }
 
-void geometry_batcher::draw_tri(vertex* verts)
+void geometry_batcher::draw_bitmap(vertex *pnt, float rad, float angle, float depth)
+{
+	float radius = rad;
+	rad *= 1.41421356f;//1/0.707, becase these are the points of a square or width and height rad
+
+	extern float Physics_viewer_bank;
+	angle -= Physics_viewer_bank;
+
+	if ( angle < 0.0f )
+		angle += PI2;
+	else if ( angle > PI2 )
+		angle -= PI2;
+
+	vec3d PNT(pnt->world);
+	vec3d p[4];
+	vec3d fvec, rvec, uvec;
+	effect_vertex verts[6];
+
+	vm_vec_sub(&fvec, &View_position, &PNT);
+	vm_vec_normalize_safe(&fvec);
+
+	vm_rot_point_around_line(&uvec, &View_matrix.vec.uvec, angle, &vmd_zero_vector, &View_matrix.vec.fvec);
+
+	vm_vec_crossprod(&rvec, &View_matrix.vec.fvec, &uvec);
+	vm_vec_normalize_safe(&rvec);
+	vm_vec_crossprod(&uvec, &View_matrix.vec.fvec, &rvec);
+
+	vm_vec_scale_add(&PNT, &PNT, &fvec, depth);
+	vm_vec_scale_add(&p[0], &PNT, &rvec, rad);
+	vm_vec_scale_add(&p[2], &PNT, &rvec, -rad);
+
+	vm_vec_scale_add(&p[1], &p[2], &uvec, rad);
+	vm_vec_scale_add(&p[3], &p[0], &uvec, -rad);
+	vm_vec_scale_add(&p[0], &p[0], &uvec, rad);
+	vm_vec_scale_add(&p[2], &p[2], &uvec, -rad);
+
+
+	//move all the data from the vecs into the verts
+	//tri 1
+	verts[5].position = p[3];
+	verts[4].position = p[2];
+	verts[3].position = p[1];
+
+	//tri 2
+	verts[2].position = p[3];
+	verts[1].position = p[1];
+	verts[0].position = p[0];
+
+	//tri 1
+	verts[5].tex_coord.u = 0.0f;	verts[5].tex_coord.v = 0.0f;
+	verts[4].tex_coord.u = 1.0f;	verts[4].tex_coord.v = 0.0f;
+	verts[3].tex_coord.u = 1.0f;	verts[3].tex_coord.v = 1.0f;
+
+	//tri 2
+	verts[2].tex_coord.u = 0.0f;	verts[2].tex_coord.v = 0.0f;
+	verts[1].tex_coord.u = 1.0f;	verts[1].tex_coord.v = 1.0f;
+	verts[0].tex_coord.u = 0.0f;	verts[0].tex_coord.v = 1.0f;
+
+	for (int i = 0; i < 6 ; i++) {
+		verts[i].r = pnt->r;
+		verts[i].g = pnt->g;
+		verts[i].b = pnt->b;
+		verts[i].a = pnt->a;
+
+		verts[i].radius = radius;
+
+		vertices.push_back(verts[i]);
+	}
+}
+
+void geometry_batcher::draw_point_bitmap(vertex *position, float rad, float angle, float depth)
+{
+	float radius = rad;
+	rad *= 1.41421356f;//1/0.707, becase these are the points of a square or width and height rad
+
+	vec3d PNT(position->world);
+	vec3d fvec;
+
+	// get the direction from the point to the eye
+	vm_vec_sub(&fvec, &View_position, &PNT);
+	vm_vec_normalize_safe(&fvec);
+
+	// move the center of the sprite based on the depth parameter
+	if ( depth != 0.0f )
+		vm_vec_scale_add(&PNT, &PNT, &fvec, depth);
+
+	particle_pnt new_particle;
+	vec3d up;
+
+	vm_rot_point_around_line(&up, &vmd_y_vector, angle, &vmd_zero_vector, &vmd_z_vector);
+
+	new_particle.position = position->world;
+	new_particle.size = rad;
+	new_particle.up = up;
+
+	billboard_quads.push_back(new_particle);
+}
+
+void geometry_batcher::draw_tri_old(vertex* verts)
 {
 	vertex *P = &vert[n_to_render *3 ];
 
-	for (int i = 0; i < 3; i++)
+	for ( int i = 0; i < 3; i++ ) {
 		P[i] = verts[i];
+	}
 
 	n_to_render += 1;
 	use_radius = false;
 }
 
-void geometry_batcher::draw_quad(vertex* verts)
+void geometry_batcher::draw_tri(vertex* verts)
+{
+	effect_vertex new_verts[3];
+
+	for ( int i = 0; i < 3; i++ ) {
+		new_verts[i].position = verts[i].world;
+		new_verts[i].tex_coord = verts[i].texture_position;
+		new_verts[i].radius = 1.0f;
+		new_verts[i].r = verts[i].r;
+		new_verts[i].g = verts[i].g;
+		new_verts[i].b = verts[i].b;
+		new_verts[i].a = verts[i].a;
+
+		vertices.push_back(new_verts[i]);
+	}
+}
+
+void geometry_batcher::draw_quad_old(vertex* verts)
 {
 	vertex *P = &vert[n_to_render * 3];
 
@@ -358,8 +661,21 @@ void geometry_batcher::draw_quad(vertex* verts)
 	use_radius = false;
 }
 
+void geometry_batcher::draw_quad(vertex* verts)
+{
+	effect_vertex new_verts[6];
 
-void geometry_batcher::draw_beam(vec3d *start, vec3d *end, float width, float intensity, float offset)
+	vertices.push_back(convert_vertex_to_effect(&verts[0]));
+	vertices.push_back(convert_vertex_to_effect(&verts[1]));
+	vertices.push_back(convert_vertex_to_effect(&verts[2]));
+
+	vertices.push_back(convert_vertex_to_effect(&verts[0]));
+	vertices.push_back(convert_vertex_to_effect(&verts[2]));
+	vertices.push_back(convert_vertex_to_effect(&verts[3]));
+}
+
+
+void geometry_batcher::draw_beam_old(vec3d *start, vec3d *end, float width, float intensity, float offset)
 {
 	vec3d p[4];
 	vertex *P = &vert[n_to_render * 3];
@@ -426,7 +742,168 @@ void geometry_batcher::draw_beam(vec3d *start, vec3d *end, float width, float in
 	use_radius = true;
 }
 
+void geometry_batcher::draw_beam(vec3d *start, vec3d *end, float width, float intensity, float offset)
+{
+	vec3d p[4];
+	effect_vertex verts[6];
+
+	vec3d fvec, uvecs, uvece, evec;
+
+	vm_vec_sub(&fvec, start, end);
+	vm_vec_normalize_safe(&fvec);
+
+	vm_vec_sub(&evec, &View_position, start);
+	vm_vec_normalize_safe(&evec);
+
+	vm_vec_crossprod(&uvecs, &fvec, &evec);
+	vm_vec_normalize_safe(&uvecs);
+
+	vm_vec_sub(&evec, &View_position, end);
+	vm_vec_normalize_safe(&evec);
+
+	vm_vec_crossprod(&uvece, &fvec, &evec);
+	vm_vec_normalize_safe(&uvece);
+
+
+	vm_vec_scale_add(&p[0], start, &uvecs, width);
+	vm_vec_scale_add(&p[1], end, &uvece, width);
+	vm_vec_scale_add(&p[2], end, &uvece, -width);
+	vm_vec_scale_add(&p[3], start, &uvecs, -width);
+
+
+	//move all the data from the vecs into the verts
+	//tri 1
+	verts[0].position = p[3];
+	verts[1].position = p[2];
+	verts[2].position = p[1];
+
+	//tri 2
+	verts[3].position = p[3];
+	verts[4].position = p[1];
+	verts[5].position = p[0];
+
+	//set up the UV coords
+	//tri 1
+	verts[0].tex_coord.u = 0.0f; verts[0].tex_coord.v = 0.0f;
+	verts[1].tex_coord.u = 1.0f; verts[1].tex_coord.v = 0.0f;
+	verts[2].tex_coord.u = 1.0f; verts[2].tex_coord.v = 1.0f;
+
+	//tri 2
+	verts[3].tex_coord.u = 0.0f; verts[3].tex_coord.v = 0.0f;
+	verts[4].tex_coord.u = 1.0f; verts[4].tex_coord.v = 1.0f;
+	verts[5].tex_coord.u = 0.0f; verts[5].tex_coord.v = 1.0f;
+
+	ubyte _color = (ubyte)(255.0f * intensity);
+
+	for(int i = 0; i < 6; i++){
+		verts[i].r = verts[i].g = verts[i].b = verts[i].a = _color;
+		if(offset > 0.0f) {
+			verts[i].radius = offset;
+		} else {
+			verts[i].radius = width;
+		}
+
+		vertices.push_back(verts[i]);
+	}
+}
+
 float geometry_batcher::draw_laser(vec3d *p0, float width1, vec3d *p1, float width2, int r, int g, int b)
+{
+	width1 *= 0.5f;
+	width2 *= 0.5f;
+
+	vec3d uvec, fvec, rvec, center, reye;
+
+	vm_vec_sub( &fvec, p0, p1 );
+	vm_vec_normalize_safe( &fvec );
+
+	vm_vec_avg( &center, p0, p1 ); // needed for the return value only
+	vm_vec_sub(&reye, &Eye_position, &center);
+	vm_vec_normalize(&reye);
+
+	// compute the up vector
+	vm_vec_crossprod(&uvec, &fvec, &reye);
+	vm_vec_normalize_safe(&uvec);
+	// ... the forward vector
+	vm_vec_crossprod(&fvec, &uvec, &reye);
+	vm_vec_normalize_safe(&fvec);
+	// now recompute right vector, in case it wasn't entirely perpendiclar
+	vm_vec_crossprod(&rvec, &uvec, &fvec);
+
+	// Now have uvec, which is up vector and rvec which is the normal
+	// of the face.
+
+	vec3d start, end;
+
+	vm_vec_scale_add(&start, p0, &fvec, -width1);
+	vm_vec_scale_add(&end, p1, &fvec, width2);
+
+	vec3d vecs[4];
+	effect_vertex verts[6];
+
+	vm_vec_scale_add( &vecs[0], &end, &uvec, width2 );
+	vm_vec_scale_add( &vecs[1], &start, &uvec, width1 );
+	vm_vec_scale_add( &vecs[2], &start, &uvec, -width1 );
+	vm_vec_scale_add( &vecs[3], &end, &uvec, -width2 );
+
+	verts[0].position = vecs[0];
+	verts[1].position = vecs[1];
+	verts[2].position = vecs[2];
+
+	verts[3].position = vecs[0];
+	verts[4].position = vecs[2];
+	verts[5].position = vecs[3];
+
+	verts[0].tex_coord.u = 1.0f;
+	verts[0].tex_coord.v = 0.0f;
+	verts[1].tex_coord.u = 0.0f;
+	verts[1].tex_coord.v = 0.0f;
+	verts[2].tex_coord.u = 0.0f;
+	verts[2].tex_coord.v = 1.0f;
+
+	verts[3].tex_coord.u = 1.0f;
+	verts[3].tex_coord.v = 0.0f;
+	verts[4].tex_coord.u = 0.0f;
+	verts[4].tex_coord.v = 1.0f;
+	verts[5].tex_coord.u = 1.0f;
+	verts[5].tex_coord.v = 1.0f;
+
+	verts[0].r = (ubyte)r;
+	verts[0].g = (ubyte)g;
+	verts[0].b = (ubyte)b;
+	verts[0].a = 255;
+	verts[1].r = (ubyte)r;
+	verts[1].g = (ubyte)g;
+	verts[1].b = (ubyte)b;
+	verts[1].a = 255;
+	verts[2].r = (ubyte)r;
+	verts[2].g = (ubyte)g;
+	verts[2].b = (ubyte)b;
+	verts[2].a = 255;
+	verts[3].r = (ubyte)r;
+	verts[3].g = (ubyte)g;
+	verts[3].b = (ubyte)b;
+	verts[3].a = 255;
+	verts[4].r = (ubyte)r;
+	verts[4].g = (ubyte)g;
+	verts[4].b = (ubyte)b;
+	verts[4].a = 255;
+	verts[5].r = (ubyte)r;
+	verts[5].g = (ubyte)g;
+	verts[5].b = (ubyte)b;
+	verts[5].a = 255;
+
+	vertices.push_back(verts[0]);
+	vertices.push_back(verts[1]);
+	vertices.push_back(verts[2]);
+	vertices.push_back(verts[3]);
+	vertices.push_back(verts[4]);
+	vertices.push_back(verts[5]);
+
+	return center.xyz.z;
+}
+
+float geometry_batcher::draw_laser_old(vec3d *p0, float width1, vec3d *p1, float width2, int r, int g, int b)
 {
 	width1 *= 0.5f;
 	width2 *= 0.5f;
@@ -532,6 +1009,43 @@ void geometry_batcher::render(int flags, float radius)
 		use_radius = true;
 		n_to_render = 0;
 	}
+}
+
+int geometry_batcher::load_buffer_triangles(effect_vertex* buffer, int n_verts)
+{
+	int verts_to_render = vertices.size();
+
+	for ( int i = 0; i < verts_to_render; ++i) {
+		buffer[n_verts+i] = vertices[i];
+	}
+
+	return verts_to_render;
+}
+
+int geometry_batcher::load_buffer_points(particle_pnt* buffer, int n_verts)
+{
+	int verts_to_render = billboard_quads.size();
+	int i;
+
+	buffer_offset = n_verts;
+
+	for ( i = 0; i < verts_to_render; ++i) {
+		buffer[buffer_offset+i].position = vert[i].world;
+		buffer[buffer_offset+i].tex_coord = vert[i].texture_position;
+
+		if ( use_radius && radius_list != NULL ) {
+			buffer[buffer_offset+i].radius = radius_list[i];
+		} else {
+			buffer[buffer_offset+i].radius = 0.0f;
+		}
+
+		buffer[buffer_offset+i].r = vert[i].r;
+		buffer[buffer_offset+i].g = vert[i].g;
+		buffer[buffer_offset+i].b = vert[i].b;
+		buffer[buffer_offset+i].a = vert[i].a;
+	}
+
+	return n_verts + verts_to_render;
 }
 
 void geometry_batcher::load_buffer(effect_vertex* buffer, int *n_verts)
@@ -1101,6 +1615,29 @@ void batch_render_lasers(int buffer_handle)
 	}
 }
 
+void batch_load_buffer_triangles(effect_vertex *buffer, int buffer_num)
+{
+	SCP_map<effect_batch, geometry_batcher>::iterator bi;
+	int offset = 0;
+
+	for ( bi = geometry_batches.begin(); bi != geometry_batches.end(); ++bi ) {
+		effect_draw_item draw_item;
+
+		draw_item.batch_info = bi->first;
+		draw_item.offset = offset;
+		draw_item.n_verts = bi->second.load_buffer_triangles(buffer, offset);
+
+		effect_draw_queue.push_back(draw_item);
+
+		offset += draw_item.n_verts;
+	}
+}
+
+void batch_load_buffer_points()
+{
+
+}
+
 void batch_load_buffer_lasers(effect_vertex* buffer, int *n_verts)
 {
 	for (SCP_map<int, batch_item>::iterator bi = geometry_map.begin(); bi != geometry_map.end(); ++bi) {
@@ -1207,6 +1744,49 @@ void geometry_batch_render(int stream_buffer)
 	batch_render_geometry_shader_map_bitmaps(stream_buffer);
 }
 
+void batch_render_all(int buffer_num, bool triangles)
+{
+	if ( buffer_num >= 0 ) {
+		// need to get vertex size
+		int n_to_render = batch_get_size(triangles);
+		int n_verts = 0;
+
+		int vert_size;
+
+		if ( triangles ) {
+			vert_size = sizeof(effect_vertex);
+		} else {
+			vert_size = sizeof(particle_pnt);
+		}
+
+		if ( ( Batch_buffer_size < (n_to_render * vert_size) ) ) {
+			if ( Batch_buffer != NULL ) {
+				vm_free(Batch_buffer);
+			}
+
+			Batch_buffer_size = n_to_render * vert_size;
+			Batch_buffer = vm_malloc(Batch_buffer_size);
+		}
+		
+		batch_load_buffer_lasers((effect_vertex*)Batch_buffer, &n_verts);
+		batch_load_buffer_geometry_map_bitmaps((effect_vertex*)Batch_buffer, &n_verts);
+		batch_load_buffer_distortion_map_bitmaps((effect_vertex*)Batch_buffer, &n_verts);
+		gr_update_buffer_object(buffer_num, Batch_buffer_size, Batch_buffer);
+
+		Assert(n_verts <= n_to_render);
+
+		batch_render_lasers(stream_buffer);
+		batch_render_geometry_map_bitmaps(stream_buffer);
+		//batch_render_distortion_map_bitmaps(true);
+	} else {
+		batch_render_lasers();
+		batch_render_geometry_map_bitmaps();
+		//batch_render_distortion_map_bitmaps();
+	}
+
+	gr_clear_states();
+}
+
 void batch_render_all(int stream_buffer)
 {
 	if ( stream_buffer >= 0 ) {
@@ -1246,6 +1826,38 @@ void batch_reset()
 {
 	geometry_map.clear();
 	distortion_map.clear();
+}
+
+void batch_create_vertex_layout(vertex_layout *layout, effect_render_type render_type, bool triangles)
+{
+	if ( triangles ) {
+		int stride = sizeof(effect_vertex);
+		int offset = 0;
+
+		layout->add_vertex_component(vertex_format_data::POSITION3, stride, (ubyte*)offset);
+		offset += sizeof(vec3d);
+
+		layout->add_vertex_component(vertex_format_data::TEX_COORD, stride, (ubyte*)offset);
+		offset += sizeof(uv_pair);
+
+		layout->add_vertex_component(vertex_format_data::RADIUS, stride, (ubyte*)offset);
+		offset += sizeof(float);
+
+		layout->add_vertex_component(vertex_format_data::COLOR4, stride, (ubyte*)offset);
+		offset += sizeof(ubyte)*4;
+	} else {
+		int stride = sizeof(particle_pnt);
+		int offset = 0;
+
+		layout->add_vertex_component(vertex_format_data::POSITION3, stride, (ubyte*)offset);
+		offset += sizeof(vec3d);
+
+		layout->add_vertex_component(vertex_format_data::RADIUS, stride, (ubyte*)offset);
+		offset += sizeof(float);
+
+		layout->add_vertex_component(vertex_format_data::UVEC, stride, (ubyte*)offset);
+		offset += sizeof(vec3d);
+	}
 }
 
 void batch_render_close()
@@ -1361,6 +1973,21 @@ void batch_load_buffer_distortion_map_bitmaps(effect_vertex* buffer, int *n_vert
 
 		Assert( bi->second.texture >= 0 );
 		bi->second.batch.load_buffer(buffer, n_verts);
+	}
+}
+
+int batch_get_size(bool triangles)
+{
+	SCP_map<effect_batch, geometry_batcher>::iterator batch_iter;
+	int n_to_render = 0;
+
+	for ( batch_iter = geometry_batches.begin(); batch_iter != geometry_batches.end(); ++batch_iter ) {
+		if ( triangles ) {
+			n_to_render += batch_iter->second.num_triangles_to_render();
+		} else {
+			n_to_render += batch_iter->second.num_points_to_render();
+		}
+		
 	}
 }
 

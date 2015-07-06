@@ -34,6 +34,7 @@
 #include "cmdline/cmdline.h"
 #include "model/model.h"
 #include "weapon/trails.h"
+#include "particle/particle.h"
 #include "graphics/shadows.h"
 #include "graphics/material.h"
 
@@ -1502,6 +1503,64 @@ void gr_opengl_render_buffer(int start, const vertex_buffer *bufferp, int texi, 
 	GL_CHECK_FOR_ERRORS("end of render_buffer()");
 }
 
+void gr_opengl_render_model(model_material* material_info, vertex_buffer* bufferp, int texi)
+{
+	Assert(GL_htl_projection_matrix_set);
+	Assert(GL_htl_view_matrix_set);
+
+	Verify(bufferp != NULL);
+
+	GL_CHECK_FOR_ERRORS("start of render_buffer()");
+
+	if (GL_state.CullFace()) {
+		GL_state.FrontFaceValue(GL_CW);
+	}
+
+	Assert(texi >= 0);
+
+	const buffer_data *datap = &bufferp->tex_buf[texi];
+
+	opengl_tnl_set_model_material(material_info);
+
+	GLubyte *ibuffer = NULL;
+
+	int start = 0;
+	int end = (datap->n_verts - 1);
+	int count = (end - (start * 3) + 1);
+
+	GLenum element_type = (datap->flags & VB_FLAG_LARGE_INDEX) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
+
+	opengl_vertex_buffer *vbp = g_vbp;
+	Assert(vbp);
+
+	// basic setup of all data
+	opengl_init_arrays(vbp, bufferp);
+
+	if ( vbp->ib_handle >= 0 ) {
+		opengl_bind_buffer_object(vbp->ib_handle);
+	} else {
+		ibuffer = (GLubyte*)vbp->index_list;
+	}
+
+	if ( Rendering_to_shadow_map ) {
+		vglDrawElementsInstancedBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), 4, (GLint)bufferp->vertex_offset / bufferp->stride);
+	} else {
+		if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+			if ( Cmdline_drawelements ) {
+				vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset / bufferp->stride);
+			} else {
+				vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset / bufferp->stride);
+			}
+		} else {
+			if ( Cmdline_drawelements ) {
+				glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start));
+			} else {
+				vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+			}
+		}
+	}
+}
+
 extern GLuint Scene_depth_texture;
 extern GLuint Scene_position_texture;
 extern GLuint Distortion_texture[2];
@@ -2226,6 +2285,9 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	int render_pass = 0;
 
 	opengl_tnl_set_material(material_info);
+	
+	opengl_default_light_settings(!material_info->get_center_alpha(), (material_info->get_light_factor() > 0.25f));
+	gr_opengl_set_center_alpha(material_info->get_center_alpha());
 
 	Assert( Current_shader->shader == SDR_TYPE_MODEL );
 
@@ -2236,7 +2298,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		GL_state.Uniform.setUniform("vpheight", 1.0f / gr_screen.max_h);
 	}
 	
-	if (Current_shader->flags & SDR_FLAG_MODEL_CLIP) {
+	if ( Current_shader->flags & SDR_FLAG_MODEL_CLIP ) {
 		material::clip_plane &clip_info = material_info->get_clip_plane();
 
 		GL_state.Uniform.setUniform("clip_normal", clip_info.normal);
@@ -2246,10 +2308,10 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	if ( Current_shader->flags & SDR_FLAG_MODEL_LIGHT ) {
 		int num_lights = MIN(Num_active_gl_lights, GL_max_lights) - 1;
 		GL_state.Uniform.setUniform("n_lights", num_lights);
-		GL_state.Uniform.setUniform("light_factor", GL_light_factor);
+		GL_state.Uniform.setUniform("light_factor", material_info->get_light_factor());
 	}
 
-	if ( Current_shader->flags & SDR_FLAG_MODEL_DIFFUSE_MAP) {
+	if ( Current_shader->flags & SDR_FLAG_MODEL_DIFFUSE_MAP ) {
 		GL_state.Uniform.setUniform("sBasemap", render_pass);
 
 		if ( material_info->is_desaturated() ) {
@@ -2267,17 +2329,18 @@ void opengl_tnl_set_model_material(model_material *material_info)
 			break;
 		case ALPHA_BLEND_ALPHA_ADDITIVE:
 			GL_state.Uniform.setUniform("blend_alpha", 2);
+			break;
 		default:
 			GL_state.Uniform.setUniform("blend_alpha", 0);
+			break;
 		}
-
 
 		gr_opengl_tcache_set(material_info->get_texture_map(TM_BASE_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
 
 		++render_pass;
 	}
 
-	if ( Current_shader->flags & SDR_FLAG_MODEL_GLOW_MAP) {
+	if ( Current_shader->flags & SDR_FLAG_MODEL_GLOW_MAP ) {
 		GL_state.Uniform.setUniform("sGlowmap", render_pass);
 
 		gr_opengl_tcache_set(material_info->get_texture_map(TM_GLOW_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
@@ -2292,13 +2355,13 @@ void opengl_tnl_set_model_material(model_material *material_info)
 
 		++render_pass;
 
-		if (Current_shader->flags & SDR_FLAG_MODEL_ENV_MAP) {
+		if ( Current_shader->flags & SDR_FLAG_MODEL_ENV_MAP ) {
 			// 0 == env with non-alpha specmap, 1 == env with alpha specmap
 			int alpha_spec = bm_has_alpha_channel(material_info->get_texture_map(TM_SPECULAR_TYPE));
 
 			matrix4 texture_mat;
 
-			for (int i = 0; i < 16; ++i) {
+			for ( int i = 0; i < 16; ++i ) {
 				texture_mat.a1d[i] = GL_env_texture_matrix[i];
 			}
 
@@ -2312,7 +2375,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		}
 	}
 
-	if (Current_shader->flags & SDR_FLAG_MODEL_NORMAL_MAP) {
+	if ( Current_shader->flags & SDR_FLAG_MODEL_NORMAL_MAP ) {
 		GL_state.Uniform.setUniform("sNormalmap", render_pass);
 
 		gr_opengl_tcache_set(material_info->get_texture_map(TM_NORMAL_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
@@ -2320,7 +2383,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		++render_pass;
 	}
 
-	if (Current_shader->flags & SDR_FLAG_MODEL_HEIGHT_MAP) {
+	if ( Current_shader->flags & SDR_FLAG_MODEL_HEIGHT_MAP ) {
 		GL_state.Uniform.setUniform("sHeightmap", render_pass);
 
 		gr_opengl_tcache_set(material_info->get_texture_map(TM_HEIGHT_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
@@ -2328,7 +2391,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		++render_pass;
 	}
 
-	if (Current_shader->flags & SDR_FLAG_MODEL_MISC_MAP) {
+	if ( Current_shader->flags & SDR_FLAG_MODEL_MISC_MAP ) {
 		GL_state.Uniform.setUniform("sMiscmap", render_pass);
 
 		gr_opengl_tcache_set(material_info->get_texture_map(TM_MISC_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
@@ -2336,7 +2399,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		++render_pass;
 	}
 
-	if (Current_shader->flags & SDR_FLAG_MODEL_SHADOWS) {
+	if ( Current_shader->flags & SDR_FLAG_MODEL_SHADOWS ) {
 		matrix4 model_matrix;
 		memset(&model_matrix, 0, sizeof(model_matrix));
 
@@ -2364,21 +2427,20 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		++render_pass; // bump!
 	}
 
-	if (Current_shader->flags & SDR_FLAG_MODEL_SHADOW_MAP) {
+	if ( Current_shader->flags & SDR_FLAG_MODEL_SHADOW_MAP ) {
 		GL_state.Uniform.setUniform("shadow_proj_matrix", Shadow_proj_matrix, MAX_SHADOW_CASCADES);
 	}
 
-	if (Current_shader->flags & SDR_FLAG_MODEL_ANIMATED) {
+	if ( Current_shader->flags & SDR_FLAG_MODEL_ANIMATED ) {
 		GL_state.Uniform.setUniform("sFramebuffer", render_pass);
 
 		GL_state.Texture.SetActiveUnit(render_pass);
 		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 
-		if (Scene_framebuffer_in_frame) {
+		if ( Scene_framebuffer_in_frame ) {
 			GL_state.Texture.Enable(Scene_effect_texture);
 			glDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);
-		}
-		else {
+		} else {
 			GL_state.Texture.Enable(Framebuffer_fallback_texture_id);
 		}
 
@@ -2416,7 +2478,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		GL_state.Uniform.setUniform("base_color", base_color);
 	}
 
-	if (Current_shader->flags & SDR_FLAG_MODEL_THRUSTER) {
+	if ( Current_shader->flags & SDR_FLAG_MODEL_THRUSTER ) {
 		GL_state.Uniform.setUniform("thruster_scale", material_info->get_thrust_scale());
 	}
 }
@@ -2714,4 +2776,9 @@ void opengl_tnl_set_material_distortion(uint flags)
 	GL_state.Texture.SetActiveUnit(1);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Scene_depth_texture);
+}
+
+void gr_opengl_render_particles(material* material_info, particle_render_mode mode, vertex_layout* layout, bool vertex_gen)
+{
+
 }

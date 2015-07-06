@@ -9,7 +9,6 @@
 #ifndef	__GRBATCH_H__
 #define	__GRBATCH_H__
 
-
 class geometry_batcher
 {
 private:
@@ -20,6 +19,9 @@ private:
 	bool use_radius;
 	float *radius_list;		// radiuses associated with the vertices in vert
 
+	SCP_vector<effect_vertex> vertices;
+	SCP_vector<particle_pnt> billboard_quads;
+
 	int buffer_offset;
 
 	// makes sure we have enough space in the memory buffer for the geometry we are about to put into it
@@ -28,6 +30,7 @@ private:
 
 	void clone(const geometry_batcher &geo);
 
+	effect_vertex convert_vertex_to_effect(vertex* vert);
 public:
 	geometry_batcher(): n_to_render(0), n_allocated(0), vert(NULL), use_radius(true), radius_list(NULL), buffer_offset(-1) {}
 	~geometry_batcher();
@@ -44,32 +47,45 @@ public:
 
 	// draw a bitmap into the geometry batcher
 	void draw_bitmap(vertex *position, int orient, float rad, float depth = 0);
+	void draw_point_bitmap(vertex *position, int orient, float rad, float depth = 0);
+	void draw_bitmap_old(vertex *position, int orient, float rad, float depth = 0);
 
 	// draw a rotated bitmap
 	void draw_bitmap(vertex *position, float rad, float angle, float depth);
+	void draw_point_bitmap(vertex *position, float rad, float angle, float depth);
+	void draw_bitmap_old(vertex *position, float rad, float angle, float depth);
 
 	// draw a simple 3 vert polygon
 	void draw_tri(vertex *verts);
+	void draw_tri_old(vertex *verts);
 
 	// draw a simple 4 vert polygon
 	void draw_quad(vertex *verts);
+	void draw_quad_old(vertex *verts);
 
 	// draw a beam
 	void draw_beam(vec3d *start, vec3d *end, float width, float intensity = 1.0f, float offset = 0.0f);
+	void draw_beam_old(vec3d *start, vec3d *end, float width, float intensity = 1.0f, float offset = 0.0f);
 
 	//draw a laser
 	float draw_laser(vec3d *p0, float width1, vec3d *p1, float width2, int r, int g, int b);
+	float draw_laser_old(vec3d *p0, float width1, vec3d *p1, float width2, int r, int g, int b);
 
 	// draw all of the batched geometry to the back buffer and flushes the cache
 	// accepts tmap flags so you can use anything you want really
 	void render(int flags, float radius = 0.0f);
 
 	void load_buffer(effect_vertex* buffer, int *n_verts);
+	int load_buffer_triangles(effect_vertex* buffer, int n_verts);
+	int load_buffer_points(particle_pnt* buffer, int n_verts);
 
 	void render_buffer(int buffer_handle, int flags);
 
 	// determine if we even need to try and render this (helpful for particle system)
 	int need_to_render() { return n_to_render; }
+
+	int num_triangles_to_render() { return vertices.size(); }
+	int num_points_to_render() { return billboard_quads.size(); }
 
 	void operator =(int){}
 };
@@ -93,6 +109,35 @@ public:
 	int need_to_render() { return vertices.size(); };
 };
 
+enum effect_render_type {
+	FLAT_EMISSIVE,
+	VOLUME_EMISSIVE,
+	DISTORTION,
+	DISTORTION_THRUSTER,
+	SMOKE
+};
+
+struct effect_batch {
+	effect_render_type render_type;
+	int texture;
+
+	bool operator<(effect_batch& batch) {
+		if ( render_type != batch.render_type ) {
+			
+			return render_type < batch.render_type;
+		}
+
+		return texture < batch.texture;
+	}
+};
+
+struct effect_draw_item {
+	effect_batch batch_info;
+	vertex_layout *layout;
+	int buffer_num;
+	int offset;
+	int n_verts;
+};
 
 float batch_add_laser(int texture, vec3d *p0, float width1, vec3d *p1, float width2, int r = 255, int g = 255, int b = 255);
 int batch_add_bitmap(int texture, int tmap_flags, vertex *pnt, int orient, float rad, float alpha = 1.0f, float depth = 0.0f);

@@ -495,10 +495,12 @@ public:
 	void set_shadow_casting(bool enabled);
 
 	void set_light_factor(float factor);
+	float get_light_factor();
 	void set_lighting(bool mode);
 	void set_deferred_lighting(bool enabled);
 
 	void set_center_alpha(int center_alpha);
+	int get_center_alpha();
 
 	void set_thrust_scale(float scale = -1.0f);
 	float get_thrust_scale();
