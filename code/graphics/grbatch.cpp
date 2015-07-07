@@ -1623,6 +1623,7 @@ void batch_load_buffer_triangles(effect_vertex *buffer, int buffer_num)
 	for ( bi = geometry_batches.begin(); bi != geometry_batches.end(); ++bi ) {
 		effect_draw_item draw_item;
 
+		draw_item.layout = &Effect_vertex_layout;
 		draw_item.batch_info = bi->first;
 		draw_item.offset = offset;
 		draw_item.n_verts = bi->second.load_buffer_triangles(buffer, offset);

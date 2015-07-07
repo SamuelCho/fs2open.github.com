@@ -111,42 +111,49 @@ static opengl_vertex_bind GL_array_binding_data[] =
 	{ vertex_format_data::INTENSITY,	opengl_vertex_bind::ATTRIB,		1, GL_FLOAT,			"intensity",		GL_FALSE }
 };
 
-void opengl_bind_vertex_component(vertex_format_data &vert_component)
+void opengl_bind_vertex_component(vertex_format_data &vert_component, void* base_ptr)
 {
 	opengl_vertex_bind &bind_info = GL_array_binding_data[vert_component.format_type];
+	void* data_src;
+
+	if ( vert_component.offset >= 0 ) {
+		data_src = (ubyte*)base_ptr + vert_component.offset;
+	} else {
+		data_src = vert_component.data_src;
+	}
 
 	switch ( bind_info.binding_type ) {
 		case opengl_vertex_bind::POSITION:
 		{
 			GL_state.Array.EnableClientVertex();
-			GL_state.Array.VertexPointer(bind_info.size, bind_info.data_type, vert_component.stride, vert_component.data_src);
+			GL_state.Array.VertexPointer(bind_info.size, bind_info.data_type, vert_component.stride, data_src);
 			break;
 		}
 		case opengl_vertex_bind::TEXCOORD0:
 		{
 			GL_state.Array.SetActiveClientUnit(0);
 			GL_state.Array.EnableClientTexture();
-			GL_state.Array.TexPointer(bind_info.size, bind_info.data_type, vert_component.stride, vert_component.data_src);
+			GL_state.Array.TexPointer(bind_info.size, bind_info.data_type, vert_component.stride, data_src);
 			break;
 		}
 		case opengl_vertex_bind::TEXCOORD1:
 		{
 			GL_state.Array.SetActiveClientUnit(1);
 			GL_state.Array.EnableClientTexture();
-			GL_state.Array.TexPointer(bind_info.size, bind_info.data_type, vert_component.stride, vert_component.data_src);
+			GL_state.Array.TexPointer(bind_info.size, bind_info.data_type, vert_component.stride, data_src);
 			break;
 		}
 		case opengl_vertex_bind::COLOR:
 		{
 			GL_state.Array.EnableClientColor();
-			GL_state.Array.ColorPointer(bind_info.size, bind_info.data_type, vert_component.stride, vert_component.data_src);
+			GL_state.Array.ColorPointer(bind_info.size, bind_info.data_type, vert_component.stride, data_src);
 			GL_state.InvalidateColor();
 			break;
 		}
 		case opengl_vertex_bind::NORMAL:
 		{
 			GL_state.Array.EnableClientNormal();
-			GL_state.Array.NormalPointer(bind_info.data_type, vert_component.stride, vert_component.data_src);
+			GL_state.Array.NormalPointer(bind_info.data_type, vert_component.stride, data_src);
 			break;
 		}
 		case opengl_vertex_bind::ATTRIB:
@@ -156,7 +163,7 @@ void opengl_bind_vertex_component(vertex_format_data &vert_component)
 
 			if ( index >= 0 ) {
 				GL_state.Array.EnableVertexAttrib(index);
-				GL_state.Array.VertexAttribPointer(index, bind_info.size, bind_info.data_type, bind_info.normalized, vert_component.stride, vert_component.data_src);
+				GL_state.Array.VertexAttribPointer(index, bind_info.size, bind_info.data_type, bind_info.normalized, vert_component.stride, data_src);
 			}
 
 			break;
@@ -171,7 +178,7 @@ void opengl_bind_vertex_layout(vertex_layout &layout)
 	uint num_vertex_bindings = layout.get_num_vertex_components();
 
 	for ( uint i = 0; i < num_vertex_bindings; ++i ) {
-		opengl_bind_vertex_component(*layout.get_vertex_component(i));
+		opengl_bind_vertex_component(*layout.get_vertex_component(i), layout.get_base_vertex_ptr());
 	}
 
 	GL_state.Array.BindPointersEnd();

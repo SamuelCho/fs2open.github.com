@@ -1176,9 +1176,13 @@ struct vertex_format_data
 	vertex_format format_type;
 	uint stride;
 	void *data_src;
+	int offset;
 
 	vertex_format_data(vertex_format i_format_type, uint i_stride, void *i_data_src) : 
-	format_type(i_format_type), stride(i_stride), data_src(i_data_src) {}
+	format_type(i_format_type), stride(i_stride), data_src(i_data_src), offset(-1) {}
+
+	vertex_format_data(vertex_format i_format_type, uint i_stride, int i_offset) : 
+	format_type(i_format_type), stride(i_stride), data_src(NULL), offset(i_offset) {}
 };
 
 class vertex_layout
@@ -1186,14 +1190,25 @@ class vertex_layout
 	SCP_vector<vertex_format_data> Vertex_components;
 
 	uint Vertex_mask;
+
+	void* base_ptr;
 public:
-	vertex_layout(): Vertex_mask(0) {}
+	vertex_layout(): Vertex_mask(0), base_ptr(NULL) {}
+
+	vertex_layout(void* init_ptr): Vertex_mask(0), base_ptr(init_ptr) {}
 
 	uint get_num_vertex_components() { return Vertex_components.size(); }
 
 	vertex_format_data* get_vertex_component(uint index) { return &Vertex_components[index]; }
 
+	void* get_base_vertex_ptr() { return base_ptr; }
+
 	bool resident_vertex_format(vertex_format_data::vertex_format format_type) { return Vertex_mask & (1 << format_type) ? true : false; } 
+
+	void add_vertex_component(vertex_format_data::vertex_format format_type, void* src)
+	{
+		add_vertex_component(format_type, 0, src);
+	}
 
 	void add_vertex_component(vertex_format_data::vertex_format format_type, uint stride, void* src) 
 	{
@@ -1204,6 +1219,17 @@ public:
 
 		Vertex_mask |= (1 << format_type);
 		Vertex_components.push_back(vertex_format_data(format_type, stride, src));
+	}
+
+	void add_vertex_component(vertex_format_data::vertex_format format_type, uint stride, int offset) 
+	{
+		if ( resident_vertex_format(format_type) ) {
+			// we already have a vertex component of this format type
+			return;
+		}
+
+		Vertex_mask |= (1 << format_type);
+		Vertex_components.push_back(vertex_format_data(format_type, stride, offset));
 	}
 };
 
