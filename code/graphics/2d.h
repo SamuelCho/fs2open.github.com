@@ -1203,6 +1203,8 @@ public:
 
 	void* get_base_vertex_ptr() { return base_ptr; }
 
+	void set_base_vertex_ptr(void* i_base_ptr) { base_ptr = i_base_ptr; }
+
 	bool resident_vertex_format(vertex_format_data::vertex_format format_type) { return Vertex_mask & (1 << format_type) ? true : false; } 
 
 	void add_vertex_component(vertex_format_data::vertex_format format_type, void* src)

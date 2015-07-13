@@ -139,6 +139,16 @@ struct effect_draw_item {
 	int n_verts;
 };
 
+struct effect_draw_queue {
+	vertex_layout layout;
+	int buffer_num;
+
+	void* buffer_ptr;
+	int buffer_size;
+
+	SCP_vector<effect_draw_item> queue;
+};
+
 float batch_add_laser(int texture, vec3d *p0, float width1, vec3d *p1, float width2, int r = 255, int g = 255, int b = 255);
 int batch_add_bitmap(int texture, int tmap_flags, vertex *pnt, int orient, float rad, float alpha = 1.0f, float depth = 0.0f);
 int batch_add_bitmap_rotated(int texture, int tmap_flags, vertex *pnt, float angle, float rad, float alpha = 1.0f, float depth = 0.0f);
