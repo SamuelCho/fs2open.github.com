@@ -520,4 +520,25 @@ public:
 	uint determine_shader();
 };
 
+class effect_material : public material
+{
+public:
+	enum effect_render_type {
+		FLAT_EMISSIVE,
+		VOLUME_EMISSIVE,
+		DISTORTION,
+		DISTORTION_THRUSTER,
+		NUM_EFFECT_RENDER_TYPES
+	};
+private:
+	effect_render_type effect_type;
+	bool points;
+public:
+	void set_effect_type(effect_render_type effect_type);
+	effect_render_type get_effect_type();
+
+	void set_point_sprite_mode(bool points);
+	bool get_point_sprite_mode();
+};
+
 #endif

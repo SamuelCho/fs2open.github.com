@@ -109,16 +109,8 @@ public:
 	int need_to_render() { return vertices.size(); };
 };
 
-enum effect_render_type {
-	FLAT_EMISSIVE,
-	VOLUME_EMISSIVE,
-	DISTORTION,
-	DISTORTION_THRUSTER,
-	SMOKE
-};
-
 struct effect_batch {
-	effect_render_type render_type;
+	effect_material::effect_render_type render_type;
 	int texture;
 
 	bool operator<(effect_batch& batch) {
@@ -134,6 +126,7 @@ struct effect_batch {
 struct effect_draw_item {
 	effect_batch batch_info;
 	vertex_layout *layout;
+	bool triangles;
 	int buffer_num;
 	int offset;
 	int n_verts;
