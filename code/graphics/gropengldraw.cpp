@@ -111,6 +111,26 @@ static opengl_vertex_bind GL_array_binding_data[] =
 	{ vertex_format_data::INTENSITY,	opengl_vertex_bind::ATTRIB,		1, GL_FLOAT,			"intensity",		GL_FALSE }
 };
 
+inline GLenum opengl_primitive_type(primitive_type prim_type)
+{
+	switch ( prim_type ) {
+	case PRIM_TYPE_POINTS:
+		return GL_POINTS;
+	case PRIM_TYPE_TRIS:
+		return GL_TRIANGLES;
+	case PRIM_TYPE_TRISTRIP:
+		return GL_TRIANGLE_STRIP;
+	case PRIM_TYPE_QUADS:
+		return GL_QUADS;
+	case PRIM_TYPE_QUADSTRIP:
+		return GL_QUAD_STRIP;
+	case PRIM_TYPE_LINES:
+		return GL_LINES;
+	case PRIM_TYPE_LINESTRIP:
+		return GL_LINE_STRIP;
+	}
+}
+
 void opengl_bind_vertex_component(vertex_format_data &vert_component, void* base_ptr)
 {
 	opengl_vertex_bind &bind_info = GL_array_binding_data[vert_component.format_type];
@@ -3397,4 +3417,48 @@ void gr_opengl_update_distortion()
 	GL_state.Lighting(light);
 	GL_state.Blend(blend);
 	GL_state.CullFace(cull);
+}
+
+void gr_opengl_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+{
+	opengl_tnl_set_material(material_info);
+
+	if ( buffer_handle >= 0 ) {
+		opengl_bind_buffer_object(buffer_handle);
+	}
+
+	opengl_bind_vertex_layout(*layout);
+	
+	glDrawArrays(opengl_primitive_type(prim_type), offset, n_verts);
+}
+
+void gr_opengl_render_primitives_particle(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+{
+	opengl_tnl_set_material_soft_particle(material_info);
+
+	if ( buffer_handle >= 0 ) {
+		opengl_bind_buffer_object(buffer_handle);
+	}
+
+	opengl_bind_vertex_layout(*layout);
+	
+	glDrawArrays(opengl_primitive_type(prim_type), offset, n_verts);
+}
+
+void gr_opengl_render_primitives_distortion(distortion_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+{
+	opengl_tnl_set_material_distortion(material_info);
+
+	if ( buffer_handle >= 0 ) {
+		opengl_bind_buffer_object(buffer_handle);
+	}
+
+	opengl_bind_vertex_layout(*layout);
+
+	glDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);
+	
+	glDrawArrays(opengl_primitive_type(prim_type), offset, n_verts);
+
+	GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT };
+	vglDrawBuffers(2, buffers);
 }

@@ -1941,6 +1941,10 @@ void opengl_setup_function_pointers()
 
 	gr_screen.gf_set_team_color		= gr_opengl_set_team_color;
 
+	gr_screen.gf_render_primitives	= gr_opengl_render_primitives;
+	gr_screen.gf_render_primitives_particle	= gr_opengl_render_primitives_particle;
+	gr_screen.gf_render_primitives_distortion = gr_opengl_render_primitives_distortion;
+
 	// NOTE: All function pointers here should have a Cmdline_nohtl check at the top
 	//       if they shouldn't be run in non-HTL mode, Don't keep separate entries.
 	// *****************************************************************************

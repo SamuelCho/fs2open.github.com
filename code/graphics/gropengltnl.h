@@ -73,8 +73,11 @@ void gr_opengl_set_team_color(team_color *colors);
 
 void opengl_tnl_shutdown();
 
+void opengl_tnl_set_material(material* material_info);
 void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type);
+void opengl_tnl_set_material_distortion(distortion_material* material_info);
 void opengl_tnl_set_material_distortion(uint flags);
+void opengl_tnl_set_material_soft_particle(particle_material * material_info);
 void opengl_tnl_set_material_soft_particle(uint flags);
 
 #endif //_GROPENGLTNL_H

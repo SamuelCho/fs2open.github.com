@@ -409,9 +409,19 @@ public:
 		vec3d normal;
 		vec3d position;
 	};
+
+	enum texture_type {
+		NORMAL,
+		AABITMAP,
+		INTERFACE
+	};
 private:
+	shader_type sdr_type;
 	int shader_handle;
+
 	int texture_maps[TM_NUM_TYPES];
+	texture_type tex_type;
+	gr_texture_source tex_source;
 
 	clip_plane clip_params;
 	int texture_addressing;
@@ -423,6 +433,9 @@ private:
 	color clr;
 	int zbias;
 
+protected:
+	material(shader_type init_sdr_type);
+
 public:
 	material(): shader_handle(-1) {};
 
@@ -431,6 +444,12 @@ public:
 
 	void set_texture_map(int texture_type, int texture_num);
 	int get_texture_map(int texture_type);
+
+	void set_texture_type(texture_type t_type);
+	texture_type get_texture_type();
+
+	void set_texture_source(gr_texture_source source);
+	gr_texture_source get_texture_source();
 
 	bool is_clipped();
 	void set_clip_plane(const vec3d &normal, const vec3d &position);
@@ -486,7 +505,7 @@ class model_material : public material
 	team_color tm_color;
 
 public:
-	model_material(): animated_effect(0), animated_timer(0.0f), thrust_scale(-1.0f), lighting(false), light_factor(1.0f), Batched(false), 
+	model_material(): material(SDR_TYPE_MODEL), animated_effect(0), animated_timer(0.0f), thrust_scale(-1.0f), lighting(false), light_factor(1.0f), Batched(false), 
 		textured(false), team_color_set(false) {}
 
 	void set_texturing(bool mode);
@@ -520,25 +539,28 @@ public:
 	uint determine_shader();
 };
 
-class effect_material : public material
+class particle_material : public material
 {
+	bool point_sprite;
 public:
-	enum effect_render_type {
-		FLAT_EMISSIVE,
-		VOLUME_EMISSIVE,
-		DISTORTION,
-		DISTORTION_THRUSTER,
-		NUM_EFFECT_RENDER_TYPES
-	};
-private:
-	effect_render_type effect_type;
-	bool points;
-public:
-	void set_effect_type(effect_render_type effect_type);
-	effect_render_type get_effect_type();
+	particle_material(): material(SDR_TYPE_EFFECT_PARTICLE) {}
 
-	void set_point_sprite_mode(bool points);
+	void set_point_sprite_mode(bool enabled);
 	bool get_point_sprite_mode();
+
+	uint determine_shader();
+};
+
+class distortion_material: public material
+{
+	bool thruster;
+public:
+	distortion_material(): material(SDR_TYPE_EFFECT_DISTORTION) {}
+
+	void set_thruster_rendering(bool enabled);
+	bool get_thruster_rendering();
+
+	uint determine_shader();
 };
 
 #endif

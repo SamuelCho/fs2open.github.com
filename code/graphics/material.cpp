@@ -86,5 +86,25 @@ uint model_material::determine_shader()
 		Shader_flags |= SDR_FLAG_MODEL_THRUSTER;
 	}
 
+	set_shader_handle(gr_maybe_create_shader(SDR_TYPE_MODEL, Shader_flags));
+
 	return Shader_flags;
+}
+
+uint particle_material::determine_shader()
+{
+	uint flags = 0;
+
+	if ( point_sprite ) {
+		flags |= SDR_FLAG_PARTICLE_POINT_GEN;
+	}
+
+	set_shader_handle(gr_maybe_create_shader(SDR_TYPE_EFFECT_PARTICLE, flags));
+
+	return flags;
+}
+
+uint distortion_material::determine_shader()
+{
+	set_shader_handle(gr_maybe_create_shader(SDR_TYPE_EFFECT_DISTORTION, 0));
 }

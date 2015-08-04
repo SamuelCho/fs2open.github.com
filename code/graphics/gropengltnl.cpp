@@ -1690,7 +1690,20 @@ void gr_opengl_render_stream_buffer(int buffer_handle, int offset, int n_verts, 
 	GL_CHECK_FOR_ERRORS("end of render3d()");
 }
 
-void gr_opengl_render_effects(effect_material* material_info, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+void gr_opengl_render_primitives(material *material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+{
+	opengl_tnl_set_material(material_info);
+
+	if ( buffer_handle >= 0 ) {
+		opengl_bind_buffer_object(buffer_handle);
+	}
+
+	opengl_bind_vertex_layout(*layout);
+	
+	glDrawArrays(opengl_primitive_type(prim_type), offset, n_verts);
+}
+
+void gr_opengl_render_effect_primitives(effect_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
 {
 	opengl_tnl_set_effect_material(material_info);
 
@@ -1700,17 +1713,11 @@ void gr_opengl_render_effects(effect_material* material_info, vertex_layout* lay
 
 	opengl_bind_vertex_layout(*layout);
 
-	GLenum gl_mode = GL_TRIANGLES;
-
-	if ( material_info->get_point_sprite_mode() ) {
-		gl_mode == GL_POINTS;
-	}
-
 	if ( material_info->get_effect_type() == effect_material::DISTORTION || material_info->get_effect_type() == effect_material::DISTORTION_THRUSTER ) {
 		glDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);
 	}
 	
-	glDrawArrays(gl_mode, offset, n_verts);
+	glDrawArrays(opengl_primitive_type(prim_type), offset, n_verts);
 
 	if ( material_info->get_effect_type() == effect_material::DISTORTION || material_info->get_effect_type() == effect_material::DISTORTION_THRUSTER ) {
 		GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT };
@@ -2276,6 +2283,7 @@ void opengl_tnl_set_material(material* material_info)
 		opengl_shader_set_current(material_info->get_shader_handle());
 	}
 
+	GL_state.SetTextureSource(material_info->get_texture_source());
 	GL_state.SetAlphaBlendMode(material_info->get_blend_mode());
 	GL_state.SetZbufferType(material_info->get_depth_mode());
 
@@ -2305,86 +2313,6 @@ void opengl_tnl_set_material(material* material_info)
 	} else {
 		gr_opengl_set_clip_plane(NULL, NULL);
 	}
-}
-
-void opengl_tnl_set_effect_material(effect_material *material_info)
-{
-	opengl_tnl_set_material(material_info);
-
-	gr_alpha_blend blend_mode = material_info->get_blend_mode();
-	float u_scale, v_scale;
-	int tmap_type;
-	int bitmap_num = material_info->get_texture_map(TM_BASE_TYPE);
-
-	if ( bm_has_alpha_channel(bitmap_num) && blend_mode == ALPHA_BLEND_ALPHA_BLEND_ALPHA ) {
-		tmap_type = TCACHE_TYPE_XPARENT;
-	} else if ( blend_mode == ALPHA_BLEND_ADDITIVE ) {
-		tmap_type = TCACHE_TYPE_NORMAL;
-	} else {
-		tmap_type = TCACHE_TYPE_NORMAL;
-	}
-
-	gr_opengl_tcache_set(bitmap_num, tmap_type, &u_scale, &v_scale)
-
-	if ( material_info->get_effect_type() == effect_material::VOLUME_EMISSIVE ) {
-		GL_state.Uniform.setUniform("baseMap", 0);
-		GL_state.Uniform.setUniform("depthMap", 1);
-		GL_state.Uniform.setUniform("window_width", (float)gr_screen.max_w);
-		GL_state.Uniform.setUniform("window_height", (float)gr_screen.max_h);
-		GL_state.Uniform.setUniform("nearZ", Min_draw_distance);
-		GL_state.Uniform.setUniform("farZ", Max_draw_distance);
-
-		if ( Cmdline_no_deferred_lighting ) {
-			GL_state.Uniform.setUniform("linear_depth", 0);
-		} else {
-			GL_state.Uniform.setUniform("linear_depth", 1);
-		}
-
-		if ( !Cmdline_no_deferred_lighting ) {
-			Assert(Scene_position_texture != 0);
-
-			GL_state.Texture.SetActiveUnit(1);
-			GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-			GL_state.Texture.Enable(Scene_position_texture);
-		} else {
-			Assert(Scene_depth_texture != 0);
-
-			GL_state.Texture.SetActiveUnit(1);
-			GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-			GL_state.Texture.Enable(Scene_depth_texture);
-		}
-	} else if ( material_info->get_effect_type() == effect_material::DISTORTION || material_info->get_effect_type() == effect_material::DISTORTION_THRUSTER ) {
-		GL_state.Uniform.setUniform("baseMap", 0);
-		GL_state.Uniform.setUniform("depthMap", 1);
-		GL_state.Uniform.setUniform("window_width", (float)gr_screen.max_w);
-		GL_state.Uniform.setUniform("window_height", (float)gr_screen.max_h);
-		GL_state.Uniform.setUniform("nearZ", Min_draw_distance);
-		GL_state.Uniform.setUniform("farZ", Max_draw_distance);
-		GL_state.Uniform.setUniform("frameBuffer", 2);
-
-		GL_state.Texture.SetActiveUnit(2);
-		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-		GL_state.Texture.Enable(Scene_effect_texture);
-
-		if ( material_info->get_effect_type() == effect_material::DISTORTION_THRUSTER ) {
-			GL_state.Uniform.setUniform("distMap", 3);
-
-			GL_state.Texture.SetActiveUnit(3);
-			GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-			GL_state.Texture.Enable(Distortion_texture[!Distortion_switch]);
-			GL_state.Uniform.setUniform("use_offset", 1.0f);
-		} else {
-			GL_state.Uniform.setUniform("distMap", 0);
-			GL_state.Uniform.setUniform("use_offset", 0.0f);
-		}
-
-		Assert(Scene_depth_texture != 0);
-
-		GL_state.Texture.SetActiveUnit(1);
-		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-		GL_state.Texture.Enable(Scene_depth_texture);
-	}
-	
 }
 
 void opengl_tnl_set_model_material(model_material *material_info)
@@ -2811,6 +2739,46 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 	}
 }
 
+void opengl_tnl_set_material_soft_particle(particle_material * material_info)
+{
+	uint sdr_effect_flags = 0;
+
+	if ( flags & TMAP_FLAG_VERTEX_GEN ) {
+		sdr_effect_flags |= SDR_FLAG_PARTICLE_POINT_GEN;
+	}
+
+	int sdr_index = gr_opengl_maybe_create_shader(SDR_TYPE_EFFECT_PARTICLE, sdr_effect_flags);
+
+	opengl_shader_set_current(sdr_index);
+
+	GL_state.Uniform.setUniform("baseMap", 0);
+	GL_state.Uniform.setUniform("depthMap", 1);
+	GL_state.Uniform.setUniform("window_width", (float)gr_screen.max_w);
+	GL_state.Uniform.setUniform("window_height", (float)gr_screen.max_h);
+	GL_state.Uniform.setUniform("nearZ", Min_draw_distance);
+	GL_state.Uniform.setUniform("farZ", Max_draw_distance);
+
+	if ( Cmdline_no_deferred_lighting ) {
+		GL_state.Uniform.setUniform("linear_depth", 0);
+	} else {
+		GL_state.Uniform.setUniform("linear_depth", 1);
+	}
+
+	if ( !Cmdline_no_deferred_lighting ) {
+		Assert(Scene_position_texture != 0);
+
+		GL_state.Texture.SetActiveUnit(1);
+		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+		GL_state.Texture.Enable(Scene_position_texture);
+	} else {
+		Assert(Scene_depth_texture != 0);
+
+		GL_state.Texture.SetActiveUnit(1);
+		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+		GL_state.Texture.Enable(Scene_depth_texture);
+	}
+}
+
 void opengl_tnl_set_material_soft_particle(uint flags)
 {
 	uint sdr_effect_flags = 0;
@@ -2849,6 +2817,43 @@ void opengl_tnl_set_material_soft_particle(uint flags)
 		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 		GL_state.Texture.Enable(Scene_depth_texture);
 	}
+}
+
+void opengl_tnl_set_material_distortion(distortion_material* material_info)
+{
+	opengl_shader_set_current( gr_opengl_maybe_create_shader(SDR_TYPE_EFFECT_DISTORTION, 0) );
+
+	opengl_tnl_set_material(material_info);
+
+	GL_state.Uniform.setUniform("baseMap", 0);
+	GL_state.Uniform.setUniform("depthMap", 1);
+	GL_state.Uniform.setUniform("window_width", (float)gr_screen.max_w);
+	GL_state.Uniform.setUniform("window_height", (float)gr_screen.max_h);
+	GL_state.Uniform.setUniform("nearZ", Min_draw_distance);
+	GL_state.Uniform.setUniform("farZ", Max_draw_distance);
+	GL_state.Uniform.setUniform("frameBuffer", 2);
+
+	GL_state.Texture.SetActiveUnit(2);
+	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+	GL_state.Texture.Enable(Scene_effect_texture);
+
+	if(material_info->get_thruster_rendering()) {
+		GL_state.Uniform.setUniform("distMap", 3);
+
+		GL_state.Texture.SetActiveUnit(3);
+		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+		GL_state.Texture.Enable(Distortion_texture[!Distortion_switch]);
+		GL_state.Uniform.setUniform("use_offset", 1.0f);
+	} else {
+		GL_state.Uniform.setUniform("distMap", 0);
+		GL_state.Uniform.setUniform("use_offset", 0.0f);
+	}
+
+	Assert(Scene_depth_texture != 0);
+
+	GL_state.Texture.SetActiveUnit(1);
+	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+	GL_state.Texture.Enable(Scene_depth_texture);
 }
 
 void opengl_tnl_set_material_distortion(uint flags)

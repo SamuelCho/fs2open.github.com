@@ -469,7 +469,6 @@ void draw_list::add_buffer_draw(model_material *render_material, vertex_buffer *
 	}
 
 	draw_data.sdr_flags = render_material->determine_shader();
-	render_material->set_shader_handle(gr_maybe_create_shader(SDR_TYPE_MODEL, draw_data.sdr_flags));
 
 	draw_data.buffer = buffer;
 	draw_data.texi = texi;

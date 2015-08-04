@@ -131,7 +131,18 @@ public:
 	}
 };
 
+enum primitive_type {
+	PRIM_TYPE_POINTS,
+	PRIM_TYPE_LINES,
+	PRIM_TYPE_LINESTRIP,
+	PRIM_TYPE_TRIS,
+	PRIM_TYPE_TRISTRIP,
+	PRIM_TYPE_QUADS,
+	PRIM_TYPE_QUADSTRIP,
+};
+
 enum shader_type {
+	SDR_TYPE_NONE = -1,
 	SDR_TYPE_MODEL,
 	SDR_TYPE_EFFECT_PARTICLE,
 	SDR_TYPE_EFFECT_DISTORTION,
@@ -760,6 +771,12 @@ typedef struct screen {
 
 	void (*gf_shadow_map_start)(matrix4 *shadow_view_matrix, matrix *light_matrix);
 	void (*gf_shadow_map_end)();
+
+	// new drawing functions
+	void (*gf_render_primitives)(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
+	void (*gf_render_primitives_particle)(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
+	void (*gf_render_primitives_distortion)(distortion_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
+
 } screen;
 
 // handy macro
