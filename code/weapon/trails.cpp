@@ -163,7 +163,6 @@ void trail_add_batch(trail * trailp)
 	int i;
 	vec3d topv, botv, *fvec, last_pos, tmp_fvec;
 	vertex  top, bot, top_prev, bot_prev;
-	int nv = 0;
 	float w;
 	ubyte l;
 	vec3d centerv;
@@ -271,7 +270,7 @@ void trail_add_batch(trail * trailp)
 				// Last one...
 				vm_vec_avg(&centerv, &topv, &botv);
 
-				vertex center_vert;
+				vertex center_vert = vertex();
 
 				if (!Cmdline_nohtl)
 					g3_transfer_vertex(&center_vert, &centerv);

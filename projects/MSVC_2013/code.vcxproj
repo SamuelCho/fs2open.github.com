@@ -570,7 +570,6 @@
     <ClCompile Include="..\..\code\graphics\gropenglstate.cpp" />
     <ClCompile Include="..\..\code\graphics\gropengltexture.cpp" />
     <ClCompile Include="..\..\code\graphics\gropengltnl.cpp" />
-    <ClCompile Include="..\..\code\graphics\material.cpp" />
     <ClCompile Include="..\..\code\graphics\shadows.cpp" />
     <ClCompile Include="..\..\code\hud\hud.cpp" />
     <ClCompile Include="..\..\code\hud\hudartillery.cpp" />
@@ -635,10 +634,8 @@
     <ClCompile Include="..\..\code\missionui\missiondebrief.cpp" />
     <ClCompile Include="..\..\code\missionui\missionloopbrief.cpp" />
     <ClCompile Include="..\..\code\missionui\missionpause.cpp" />
-    <ClCompile Include="..\..\code\missionui\missionrecommend.cpp" />
     <ClCompile Include="..\..\code\missionui\missionscreencommon.cpp" />
     <ClCompile Include="..\..\code\missionui\missionshipchoice.cpp" />
-    <ClCompile Include="..\..\code\missionui\missionstats.cpp" />
     <ClCompile Include="..\..\code\missionui\missionweaponchoice.cpp" />
     <ClCompile Include="..\..\code\missionui\redalert.cpp" />
     <ClCompile Include="..\..\code\model\modelanim.cpp" />
@@ -803,7 +800,6 @@
     <ClInclude Include="..\..\code\ai\aibig.h" />
     <ClInclude Include="..\..\code\ai\aigoals.h" />
     <ClInclude Include="..\..\code\ai\aiinternal.h" />
-    <ClInclude Include="..\..\code\ai\ailocal.h" />
     <ClInclude Include="..\..\code\anim\animplay.h" />
     <ClInclude Include="..\..\code\anim\packunpack.h" />
     <ClInclude Include="..\..\code\Asteroid\asteroid.h" />
@@ -848,7 +844,6 @@
     <ClInclude Include="..\..\code\Graphics\2d.h" />
     <ClInclude Include="..\..\code\graphics\grbatch.h" />
     <ClInclude Include="..\..\code\graphics\grinternal.h" />
-    <ClInclude Include="..\..\code\graphics\material.h" />
     <ClInclude Include="..\..\code\graphics\shadows.h" />
     <ClInclude Include="..\..\code\graphics\tmapper.h" />
     <ClInclude Include="..\..\code\Graphics\font.h" />
@@ -932,10 +927,8 @@
     <ClInclude Include="..\..\code\missionui\missiondebrief.h" />
     <ClInclude Include="..\..\code\missionui\missionloopbrief.h" />
     <ClInclude Include="..\..\code\missionui\missionpause.h" />
-    <ClInclude Include="..\..\code\missionui\missionrecommend.h" />
     <ClInclude Include="..\..\code\missionui\missionscreencommon.h" />
     <ClInclude Include="..\..\code\missionui\missionshipchoice.h" />
-    <ClInclude Include="..\..\code\missionui\missionstats.h" />
     <ClInclude Include="..\..\code\missionui\missionweaponchoice.h" />
     <ClInclude Include="..\..\code\missionui\redalert.h" />
     <ClInclude Include="..\..\code\model\model.h" />

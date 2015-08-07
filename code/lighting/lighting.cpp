@@ -1123,10 +1123,6 @@ void scene_lights::setLightFilter(int objnum, vec3d *pos, float rad)
 	// clear out current filtered lights
 	FilteredLights.clear();
 
-	if ( Deferred_lighting ) {
-		return;
-	}
-
 	for ( i = 0; i < AllLights.size(); ++i ) {
 		light& l = AllLights[i];
 
@@ -1234,8 +1230,6 @@ void scene_lights::resetLightState()
 
 bool scene_lights::setLights(light_indexing_info *info)
 {
-	size_t i;
-
 	if ( info->index_start == current_light_index && info->num_lights == current_num_lights ) {
 		// don't need to set new lights since the ones requested to be set are currently set
 		return false;
@@ -1248,7 +1242,7 @@ bool scene_lights::setLights(light_indexing_info *info)
 
 	gr_set_lighting(true, true);
 
-	for ( i = 0; i < StaticLightIndices.size(); ++i) {
+	for ( size_t i = 0; i < StaticLightIndices.size(); ++i) {
 		int light_index = StaticLightIndices[i];
 		
 		gr_set_light( &AllLights[light_index] );
@@ -1270,9 +1264,9 @@ bool scene_lights::setLights(light_indexing_info *info)
 	}
 
 	// we definitely shouldn't be exceeding the number of buffered lights
-	Assert(index_start + num_lights <= BufferedLights.size());
+	Assert(index_start + num_lights <= (int)BufferedLights.size());
 
-	for ( i = 0; i < num_lights; ++i ) {
+	for ( int i = 0; i < num_lights; ++i ) {
 		int buffered_light_index = index_start + i;
 		int light_index = BufferedLights[buffered_light_index];
 

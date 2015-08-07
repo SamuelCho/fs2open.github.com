@@ -666,7 +666,7 @@ void control_config_bind_axis(int i, int axis)
 
 int control_config_remove_binding()
 {
-	int z, j, k;
+	int z;
 	config_item_undo *ptr;
 
 	if (Selected_line < 0) {
@@ -696,7 +696,6 @@ int control_config_remove_binding()
 		return -1;
 	}
 
-	j = k = -1;
 	ptr = get_undo_block(1);
 	ptr->index[0] = z;
 	ptr->list[0] = Control_config[z];
@@ -1439,8 +1438,8 @@ void control_config_close()
 void control_config_do_frame(float frametime)
 {
 	const char *str;
-	char buf[256], *jptr;
-	int i, j, k, w, x, y, z, len, line, conflict;
+	char buf[256];
+	int i, j, k, w, x, y, z, line, conflict;
 	int font_height = gr_get_font_height();
 	int select_tease_line = -1;  // line mouse is down on, but won't be selected until button released
 	static float timer = 0.0f;
@@ -1999,7 +1998,6 @@ void control_config_do_frame(float frametime)
 			k = Control_config[z].key_id;
 			j = Control_config[z].joy_id;
 			x = Control_list_key_x[gr_screen.res];
-			jptr = NULL;
 			*buf = 0;
 
 			if ((k < 0) && (j < 0)) {
@@ -2026,7 +2024,6 @@ void control_config_do_frame(float frametime)
 
 					gr_printf_menu(x, y, buf);
 
-					len = strlen(buf);
 					Cc_lines[line].kx = x - Control_list_coords[gr_screen.res][CONTROL_X_COORD];
 					gr_get_string_size(&w, NULL, buf);
 					Cc_lines[line].kw = w;
@@ -2107,6 +2104,45 @@ void control_config_do_frame(float frametime)
 		List_buttons[i++].disable();
 	}
 
+	// If multiple controls presets are provided, display which one is in use
+	if (Control_config_presets.size() > 1) {
+		SCP_string preset_str;
+		int matching_preset = -1;
+
+		for (i=0; i<(int)Control_config_presets.size(); i++) {
+			bool this_preset_matches = true;
+			config_item *this_preset = Control_config_presets[i];
+
+			for (j=0; j<CCFG_MAX; j++) {
+				if (!Control_config[j].disabled && Control_config[j].key_id != this_preset[j].key_default) {
+					this_preset_matches = false;
+					break;
+				}
+			}
+
+			if (this_preset_matches) {
+				matching_preset = i;
+				break;
+			}
+		}
+
+		if (matching_preset >= 0) {
+			sprintf(preset_str, "Controls: %s", Control_config_preset_names[matching_preset].c_str());
+		} else {
+			sprintf(preset_str, "Controls: custom");
+			
+		}
+
+		gr_get_string_size(&w, NULL, preset_str.c_str());
+		gr_set_color_fast(&Color_text_normal);
+
+		if (gr_screen.res == GR_640) {
+			gr_string(16, (24 - font_height) / 2, preset_str.c_str(), GR_RESIZE_MENU);
+		} else {
+			gr_string(24, (40 - font_height) / 2, preset_str.c_str(), GR_RESIZE_MENU);
+		}
+	}
+
 	// blit help overlay if active
 	help_overlay_maybe_blit(Control_config_overlay_id, gr_screen.res);
 
@@ -2165,7 +2201,7 @@ void control_check_indicate()
 #ifndef NDEBUG
 	if (Show_controls_info) {
 		gr_set_color_fast(&HUD_color_debug);
-		gr_printf_no_resize(gr_screen.max_w - 154, 5, NOX("Ctrls checked: %d"), Control_check_count);
+		gr_printf_no_resize(gr_screen.center_offset_x + gr_screen.center_w - 154, gr_screen.center_offset_y + 5, NOX("Ctrls checked: %d"), Control_check_count);
 	}
 #endif
 

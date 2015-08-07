@@ -424,7 +424,7 @@ typedef struct ship_flag_name {
 	int flag_list;						// is this flag in the 1st or 2nd ship flags list?
 } ship_flag_name;
 
-#define MAX_SHIP_FLAG_NAMES					17
+#define MAX_SHIP_FLAG_NAMES					18
 extern ship_flag_name Ship_flag_names[];
 
 // states for the flags variable within the ship structure
@@ -505,6 +505,7 @@ extern ship_flag_name Ship_flag_names[];
 #define SF2_WEAPONS_LOCKED					(1<<25)		// Karajorma - Prevents the player from changing the weapons on the ship on the loadout screen
 #define SF2_SHIP_SELECTIVE_LINKING			(1<<26)		// RSAXVC - Allow pilot to pick firing configuration
 #define SF2_SCRAMBLE_MESSAGES				(1<<27)		// Goober5000 - all messages sent from this ship appear scrambled
+#define SF2_NO_SECONDARY_LOCKON				(1<<28)		// zookeeper - secondary lock-on disabled
 
 // If any of these bits in the ship->flags are set, ignore this ship when targeting
 extern int TARGET_SHIP_IGNORE_FLAGS;
@@ -591,6 +592,8 @@ public:
 
 	float ship_max_shield_strength;
 	float ship_max_hull_strength;
+
+	float max_shield_recharge;
 
 	int ship_guardian_threshold;	// Goober5000 - now also determines whether ship is guardian'd
 
@@ -1144,6 +1147,8 @@ typedef struct ship_collision_physics {
 
 typedef struct path_metadata {
 	vec3d departure_rvec;
+	float arrive_speed_mult;
+	float depart_speed_mult;
 } path_metadata;
 
 // The real FreeSpace ship_info struct.
@@ -1175,6 +1180,7 @@ public:
 	char		pof_file_hud[MAX_FILENAME_LEN];		// POF file to load for the HUD target box
 	int		num_detail_levels;				// number of detail levels for this ship
 	int		detail_distance[MAX_SHIP_DETAIL_LEVELS];					// distance to change detail levels at
+	int		collision_lod;						// check for collisions using a LOD
 	int		cockpit_model_num;					// cockpit model
 	int		model_num;							// ship model
 	int		model_num_hud;						// model to use when rendering to the HUD (eg, mini supercap)
@@ -1301,8 +1307,11 @@ public:
 	float	auto_shield_spread;
 	bool	auto_shield_spread_bypass;
 	int		auto_shield_spread_from_lod;
+	float	auto_shield_spread_min_span;	// Minimum distance weapons must travel until allowed to collide with the shield
 
 	int		shield_point_augment_ctrls[4];	// Re-mapping of shield augmentation controls for model point shields
+
+	float	max_shield_recharge;
 
 	float	hull_repair_rate;				//How much of the hull is repaired every second
 	float	subsys_repair_rate;		//How fast 
@@ -1323,6 +1332,7 @@ public:
 
 	ubyte	shield_icon_index;				// index to locate ship-specific animation frames for the shield on HUD
 	char	icon_filename[MAX_FILENAME_LEN];	// filename for icon that is displayed in ship selection
+	angles	model_icon_angles;					// angle from which the model icon should be rendered (if not 0,0,0)
 	char	anim_filename[MAX_FILENAME_LEN];	// filename for animation that plays in ship selection
 	char	overhead_filename[MAX_FILENAME_LEN];	// filename for animation that plays weapons loadout
 	int 	selection_effect;
@@ -1375,6 +1385,7 @@ public:
 	float		thruster02_glow_len_factor;
 	float		thruster_dist_rad_factor;
 	float		thruster_dist_len_factor;
+	float		thruster_glow_noise_mult;
 
 	bool		draw_distortion;
 
@@ -1401,6 +1412,7 @@ public:
 	vec3d topdown_offset;
 
 	int engine_snd;							// handle to engine sound for ship (-1 if no engine sound)
+	float min_engine_vol;					// minimum volume modifier for engine sound when ship is stationary
 	int glide_start_snd;					// handle to sound to play at the beginning of a glide maneuver (default is 0 for regular throttle down sound)
 	int glide_end_snd;						// handle to sound to play at the end of a glide maneuver (default is 0 for regular throttle up sound)
 
@@ -1424,6 +1436,7 @@ public:
 	float emp_resistance_mod;
 
 	float piercing_damage_draw_limit;
+	int shield_impact_explosion_anim;
 
 	int damage_lightning_type;
 
@@ -1435,7 +1448,7 @@ public:
 
 	SCP_map<SCP_string, path_metadata> pathMetadata;
 
-	SCP_hash_map<int, void*> glowpoint_bank_override_map;
+	SCP_unordered_map<int, void*> glowpoint_bank_override_map;
 };
 
 extern int Num_wings;

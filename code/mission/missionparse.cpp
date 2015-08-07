@@ -973,7 +973,7 @@ void parse_cutscenes(mission *pm)
 	{
 		mission_cutscene scene;
 
-		while (true)
+		while (!optional_string("#end"))
 		{
 			// this list should correspond to the MOVIE_* #defines
 			scene.type = optional_string_one_of(6,
@@ -1000,9 +1000,6 @@ void parse_cutscenes(mission *pm)
 			// add it
 			pm->cutscenes.push_back(scene);
 		}
-
-		// for reverse compatibility, check that we have a closing tag
-		optional_string("#end");
 	}
 }
 
@@ -1838,6 +1835,7 @@ int parse_create_object_sub(p_object *p_objp)
 
 	shipp->ship_max_shield_strength = p_objp->ship_max_shield_strength;
 	shipp->ship_max_hull_strength =  p_objp->ship_max_hull_strength;
+	shipp->max_shield_recharge = p_objp->max_shield_recharge;
 
 	// Goober5000 - ugh, this is really stupid having to do this here; if the
 	// ship creation code was better organized this wouldn't be necessary
@@ -2250,7 +2248,7 @@ int parse_create_object_sub(p_object *p_objp)
 		Objects[objnum].hull_strength = p_objp->initial_hull * shipp->ship_max_hull_strength / 100.0f;
 		for (iLoop = 0; iLoop<Objects[objnum].n_quadrants; iLoop++)
 		{
-			Objects[objnum].shield_quadrant[iLoop] = (float) (p_objp->initial_shields * get_max_shield_quad(&Objects[objnum]) / 100.0f);
+			Objects[objnum].shield_quadrant[iLoop] = (float) (shipp->max_shield_recharge * p_objp->initial_shields * get_max_shield_quad(&Objects[objnum]) / 100.0f);
 		}
 
 		// initial velocities now do not apply to ships which warp in after mission starts
@@ -3110,6 +3108,7 @@ int parse_object(mission *pm, int flag, p_object *p_objp)
 	}
 
 	Assert(p_objp->ship_max_hull_strength > 0.0f);	// Goober5000: div-0 check (not shield because we might not have one)
+	p_objp->max_shield_recharge = Ship_info[p_objp->ship_class].max_shield_recharge;
 
 
 	// if the kamikaze flag is set, we should have the next flag
@@ -4603,8 +4602,9 @@ void resolve_path_masks(int anchor, int *path_mask)
 		Assert(!(anchor & SPECIAL_ARRIVAL_ANCHOR_FLAG));
 		parent_pobjp = mission_parse_get_parse_object(Parse_names[anchor]);
 
-		// load model for checking paths
-		modelnum = model_load(Ship_info[parent_pobjp->ship_class].pof_file, 0, NULL);
+		// Load the anchor ship model with subsystems and all; it'll need to be done for this mission anyway
+		ship_info *sip = &Ship_info[parent_pobjp->ship_class];
+		modelnum = model_load(sip->pof_file, sip->n_subsystems, &sip->subsystems[0]);
 
 		// resolve names to indexes
 		*path_mask = 0;
@@ -4616,9 +4616,6 @@ void resolve_path_masks(int anchor, int *path_mask)
 
 			*path_mask |= (1 << bay_path);
 		}
-
-		// unload model
-		model_unload(modelnum);
 
 		// cache the result
 		prp->cached_mask = *path_mask;
@@ -4930,23 +4927,21 @@ void parse_waypoints_and_jumpnodes(mission *pm)
 
 	required_string("#Waypoints");
 
-	CJumpNode *jnp;
 	char file_name[MAX_FILENAME_LEN] = { 0 };
 	char jump_name[NAME_LENGTH] = { 0 };
 
 	while (optional_string("$Jump Node:")) {
 		stuff_vec3d(&pos);
-		jnp = new CJumpNode(&pos);
-		Assert(jnp != NULL);
+		CJumpNode jnp(&pos);
 
 		if (optional_string("$Jump Node Name:") || optional_string("+Jump Node Name:")) {
 			stuff_string(jump_name, F_NAME, NAME_LENGTH);
-			jnp->SetName(jump_name);
+			jnp.SetName(jump_name);
 		}
 
 		if(optional_string("+Model File:")){
 			stuff_string(file_name, F_NAME, MAX_FILENAME_LEN);
-			jnp->SetModel(file_name);
+			jnp.SetModel(file_name);
 		}
 
 		if(optional_string("+Alphacolor:")) {
@@ -4955,16 +4950,16 @@ void parse_waypoints_and_jumpnodes(mission *pm)
 			stuff_ubyte(&g);
 			stuff_ubyte(&b);
 			stuff_ubyte(&a);
-			jnp->SetAlphaColor(r, g, b, a);
+			jnp.SetAlphaColor(r, g, b, a);
 		}
 
 		if(optional_string("+Hidden:")) {
 			int hide;
 			stuff_boolean(&hide);
-			jnp->SetVisibility(!hide);
+			jnp.SetVisibility(!hide);
 		}
 
-		Jump_nodes.push_back(*jnp);
+		Jump_nodes.push_back(std::move(jnp));
 	}
 
 	while (required_string_either("#Messages", "$Name:"))
@@ -7562,6 +7557,7 @@ void mission_bring_in_support_ship( object *requester_objp )
 	// set support ship hitpoints
 	pobj->ship_max_hull_strength = Ship_info[i].max_hull_strength;
 	pobj->ship_max_shield_strength = Ship_info[i].max_shield_strength;
+	pobj->max_shield_recharge = Ship_info[i].max_shield_recharge;
 
 	pobj->team = requester_shipp->team;
 

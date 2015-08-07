@@ -565,7 +565,7 @@ void hud_shield_quadrant_hit(object *objp, int quadrant)
 	}
 
 	Assertion(shi->shield_hit_timers.size() > 0, "Shield hit info object for object '%s' has a size %d shield_hit_timers; get a coder!\n", Ships[objp->instance].ship_name, shi->shield_hit_timers.size());
-	Assertion(shi->hull_hit_index < shi->shield_hit_timers.size(), "Shield hit info object for object '%s' has a hull_hit_index of %d (should be between 0 and %d); get a coder!\n", Ships[objp->instance].ship_name, shi->hull_hit_index, shi->shield_hit_timers.size() - 1);
+	Assertion(shi->hull_hit_index < (int) shi->shield_hit_timers.size(), "Shield hit info object for object '%s' has a hull_hit_index of %d (should be between 0 and %d); get a coder!\n", Ships[objp->instance].ship_name, shi->hull_hit_index, shi->shield_hit_timers.size() - 1);
 
 	if ( quadrant >= 0 ) {
 		if ( !(Ship_info[Ships[objp->instance].ship_info_index].flags2 & SIF2_MODEL_POINT_SHIELDS) )
@@ -864,7 +864,7 @@ void HudGaugeShield::renderShieldIcon(coord2d coords[6])
 	int nx = 0, ny = 0, i;
 
 	if ( gr_screen.rendering_to_texture != -1 ) {
-		gr_set_screen_scale(canvas_w, canvas_h, -1, -1, target_w, target_h, true);
+		gr_set_screen_scale(canvas_w, canvas_h, -1, -1, target_w, target_h, target_w, target_h, true);
 	} else {
 		if ( reticle_follow ) {
 			nx = HUD_nose_x;

@@ -479,6 +479,7 @@ sexp_oper Operators[] = {
 	//Beams and Turrets Sub-Category
 	{ "fire-beam",						OP_BEAM_FIRE,							3,	5,			SEXP_ACTION_OPERATOR,	},
 	{ "fire-beam-at-coordinates",		OP_BEAM_FIRE_COORDS,					5,	9,			SEXP_ACTION_OPERATOR,	},
+	{ "beam-create",					OP_BEAM_FLOATING_FIRE,					7,	14,			SEXP_ACTION_OPERATOR,	},
 	{ "beam-free",						OP_BEAM_FREE,							2,	INT_MAX,	SEXP_ACTION_OPERATOR,	},
 	{ "beam-free-all",					OP_BEAM_FREE_ALL,						1,	INT_MAX,	SEXP_ACTION_OPERATOR,	},
 	{ "beam-lock",						OP_BEAM_LOCK,							2,	INT_MAX,	SEXP_ACTION_OPERATOR,	},
@@ -500,6 +501,10 @@ sexp_oper Operators[] = {
 	{ "ship-turret-target-order",		OP_SHIP_TURRET_TARGET_ORDER,			1,	1+NUM_TURRET_ORDER_TYPES,	SEXP_ACTION_OPERATOR,	},	//WMC
 	{ "turret-subsys-target-disable",	OP_TURRET_SUBSYS_TARGET_DISABLE,		2,	INT_MAX,	SEXP_ACTION_OPERATOR,	},
 	{ "turret-subsys-target-enable",	OP_TURRET_SUBSYS_TARGET_ENABLE,			2,	INT_MAX,	SEXP_ACTION_OPERATOR,	},
+	{ "turret-set-primary-ammo",		OP_TURRET_SET_PRIMARY_AMMO,				4,	4,			SEXP_ACTION_OPERATOR,	},	// DahBlount
+	{ "turret-set-secondary-ammo",		OP_TURRET_SET_SECONDARY_AMMO,			4,	4,			SEXP_ACTION_OPERATOR,	},	// DahBlount
+	{ "turret-get-primary-ammo",		OP_TURRET_GET_PRIMARY_AMMO,				3,	3,			SEXP_INTEGER_OPERATOR,	},	// DahBlount
+	{ "turret-get-secondary-ammo",		OP_TURRET_GET_SECONDARY_AMMO,			3,	3,			SEXP_INTEGER_OPERATOR,	},	// DahBlount
 	
 	//Models and Textures Sub-Category
 	{ "change-ship-class",				OP_CHANGE_SHIP_CLASS,					2,	INT_MAX,	SEXP_ACTION_OPERATOR,	},	// Goober5000
@@ -4490,7 +4495,7 @@ int sexp_not(int n)
 		if (CAR(n) != -1)
 		{
 			result = is_sexp_true(CAR(n));
-			if ( Sexp_nodes[CAR(n)].value == SEXP_KNOWN_FALSE || Sexp_nodes[CDR(n)].value == SEXP_NAN_FOREVER )
+			if ( Sexp_nodes[CAR(n)].value == SEXP_KNOWN_FALSE || Sexp_nodes[CAR(n)].value == SEXP_NAN_FOREVER )
 				return SEXP_KNOWN_TRUE;												// not KNOWN_FALSE == KNOWN_TRUE;
 			else if ( Sexp_nodes[CAR(n)].value == SEXP_KNOWN_TRUE )		// not KNOWN_TRUE == KNOWN_FALSE
 				return SEXP_KNOWN_FALSE;
@@ -8800,26 +8805,25 @@ int eval_random_of(int arg_handler_node, int condition_node, bool multiple)
 	if (n == -1)
 	{
 		n = CDR(arg_handler_node);
+		int temp_node = n;
 
 		// pick an argument and iterate to it
 		random_argument = rand_internal(1, num_valid_args);
 		i = 0;
-		for (int j = 0; j >= num_valid_args; n = CDR(n))
+		for (int j = 0; j < num_valid_args; temp_node = CDR(temp_node))
 		{
 			Assert(n >= 0);
 
 			// count only valid arguments
-			if (Sexp_nodes[n].flags & SNF_ARGUMENT_VALID) {
+			if (Sexp_nodes[temp_node].flags & SNF_ARGUMENT_VALID) {
 				j++;
-				if (i < random_argument)
-					i++;
+				if (i < random_argument && (++i == random_argument)) {
+					// Found the node we want, store it for use
+					n = temp_node;
+				}
 
-				if ((Sexp_nodes[n].value == SEXP_KNOWN_FALSE) || (Sexp_nodes[n].value == SEXP_NAN_FOREVER))
+				if ((Sexp_nodes[temp_node].value == SEXP_KNOWN_FALSE) || (Sexp_nodes[temp_node].value == SEXP_NAN_FOREVER))
 					num_known_false++;
-
-				// if we're out of valid arguments, we're done
-				if (j >= num_valid_args)
-					break;
 			}
 		}
 
@@ -16555,6 +16559,7 @@ void parse_copy_damage(p_object *target_pobjp, ship *source_shipp)
 	// ...and shields
 	target_pobjp->ship_max_shield_strength = source_shipp->ship_max_shield_strength;
 	target_pobjp->initial_shields = fl2i(get_shield_pct(source_objp) * 100.0f);
+	target_pobjp->max_shield_recharge = source_shipp->max_shield_recharge;
 
 
 	// search through all subsystems on source ship and map them onto target ship
@@ -16931,6 +16936,8 @@ void sexp_beam_fire(int node, bool at_coords)
 	// hmm, this could be wacky. Let's just simply select the first beam weapon in the turret
 	fire_info.beam_info_index = -1;	
 	for (idx=0; idx<fire_info.turret->weapons.num_primary_banks; idx++) {
+		Assertion(fire_info.turret->weapons.primary_bank_weapons[idx] >= 0 && fire_info.turret->weapons.primary_bank_weapons[idx] < MAX_WEAPON_TYPES,
+				"sexp_beam_fire: found invalid weapon index (%i), get a coder\n!", fire_info.turret->weapons.primary_bank_weapons[idx]);
 		// store the weapon info index
 		if (Weapon_info[fire_info.turret->weapons.primary_bank_weapons[idx]].wi_flags & WIF_BEAM) {
 			fire_info.beam_info_index = fire_info.turret->weapons.primary_bank_weapons[idx];
@@ -16945,6 +16952,99 @@ void sexp_beam_fire(int node, bool at_coords)
 		Warning(LOCATION, "Couldn't fire turret on ship %s; subsystem %s has no beam weapons", CTEXT(node), CTEXT(CDR(node)));
 	}
 }	
+
+void sexp_beam_floating_fire(int n)
+{
+	int sindex;
+	beam_fire_info fire_info;
+	memset(&fire_info, 0, sizeof(beam_fire_info));
+	fire_info.accuracy = 0.000001f;							// this will guarantee a hit
+	fire_info.bfi_flags |= BFIF_FLOATING_BEAM;
+	fire_info.turret = NULL;		// A free-floating beam isn't fired from a subsystem.
+
+	fire_info.beam_info_index = weapon_info_lookup(CTEXT(n));
+	n = CDR(n);
+	if (fire_info.beam_info_index < 0)
+	{
+		Warning(LOCATION, "Invalid weapon class passed to beam-create; weapon type '%s' does not exist!\n", CTEXT(n));
+		return;
+	}
+	if (!(Weapon_info[fire_info.beam_info_index].wi_flags & WIF_BEAM)) {
+		Warning(LOCATION, "Invalid weapon class passed to beam-create; weapon type '%s' is not a beam!\n", CTEXT(n));
+		return;
+	}
+
+	fire_info.shooter = NULL;
+	if (stricmp(CTEXT(n), SEXP_NONE_STRING))
+	{
+		sindex = ship_name_lookup(CTEXT(n));
+
+		if (sindex >= 0)
+			fire_info.shooter = &Objects[Ships[sindex].objnum];
+	}
+	n = CDR(n);
+
+	fire_info.team = static_cast<char>(iff_lookup(CTEXT(n)));
+	n = CDR(n);
+
+	fire_info.starting_pos.xyz.x = static_cast<float>(eval_num(n));
+	n = CDR(n);
+	fire_info.starting_pos.xyz.y = static_cast<float>(eval_num(n));
+	n = CDR(n);
+	fire_info.starting_pos.xyz.z = static_cast<float>(eval_num(n));
+	n = CDR(n);
+
+	fire_info.target = NULL;
+	fire_info.target_subsys = NULL;
+
+	sindex = -1;
+	if (stricmp(CTEXT(n), SEXP_NONE_STRING))
+	{
+		sindex = ship_name_lookup(CTEXT(n));
+
+		if (sindex >= 0)
+			fire_info.target = &Objects[Ships[sindex].objnum];
+	} else {
+		fire_info.bfi_flags |= BFIF_TARGETING_COORDS;
+	}
+	n = CDR(n);
+
+	if (n >= 0 && stricmp(CTEXT(n), SEXP_NONE_STRING))
+	{
+		if (sindex >= 0)
+			fire_info.target_subsys = ship_get_subsys(&Ships[sindex], CTEXT(n));
+
+		n = CDR(n);
+	}
+
+	if (n >= 0) {
+		fire_info.target_pos1.xyz.x = fire_info.target_pos2.xyz.x = static_cast<float>(eval_num(n));
+		n = CDR(n);
+	}
+	if (n >= 0) {
+		fire_info.target_pos1.xyz.y = fire_info.target_pos2.xyz.y = static_cast<float>(eval_num(n));
+		n = CDR(n);
+	}
+	if (n >= 0) {
+		fire_info.target_pos1.xyz.z = fire_info.target_pos2.xyz.z = static_cast<float>(eval_num(n));
+		n = CDR(n);
+	}
+
+	if (n >= 0) {
+		fire_info.target_pos2.xyz.x = static_cast<float>(eval_num(n));
+		n = CDR(n);
+	}
+	if (n >= 0) {
+		fire_info.target_pos2.xyz.y = static_cast<float>(eval_num(n));
+		n = CDR(n);
+	}
+	if (n >= 0) {
+		fire_info.target_pos2.xyz.z = static_cast<float>(eval_num(n));
+		n = CDR(n);
+	}
+
+	beam_fire(&fire_info);
+}
 
 void sexp_beam_free(int node)
 {
@@ -17877,6 +17977,286 @@ void sexp_ship_turret_target_order(int node)
 		// next item
 		turret = GET_NEXT(turret);
 	}
+}
+
+// DahBlount
+int sexp_get_turret_primary_ammo(int node)
+{
+	int sindex;
+	ship_subsys *turret = NULL;
+	ship_weapon *swp;
+	int bank, check, ammo_left = 0;
+
+	sindex = ship_name_lookup(CTEXT(node));
+	if (sindex < 0) {
+		return 0;
+	}
+	if (Ships[sindex].objnum < 0) {
+		return 0;
+	}
+
+	turret = ship_get_subsys(&Ships[sindex], CTEXT(node));
+	if (turret == NULL) {
+		return 0;
+	}
+	if (!(turret->system_info->flags2 & MSS_FLAG2_TURRET_USE_AMMO)) {
+		return 0;
+	}
+
+	swp = &turret->weapons;
+
+	check = eval_num(CDR(node));
+	if (check < 0) {
+		return 0;
+	}
+
+	if (check >= swp->num_primary_banks)
+	{
+		for (bank = 0; bank < swp->num_primary_banks; bank++)
+		{
+			// Only ballistic weapons need to be counted
+			if (Weapon_info[swp->primary_bank_weapons[bank]].wi_flags2 & WIF2_BALLISTIC)
+			{
+				ammo_left += swp->primary_bank_ammo[bank];
+			}
+		}
+	} else {
+		// Again only ballistic weapons need to be counted
+		if (Weapon_info[swp->primary_bank_weapons[check]].wi_flags2 & WIF2_BALLISTIC)
+		{
+			ammo_left = swp->primary_bank_ammo[check];
+		}
+	}
+
+	return ammo_left;
+}
+
+// DahBlount - Sets a turrets primary ammo capacity
+void sexp_set_turret_primary_ammo(int node)
+{
+	int sindex;
+	ship_subsys *turret = NULL;
+	int requested_bank;
+	int requested_weapons;
+
+	// Check that a ship has been supplied
+	sindex = ship_name_lookup(CTEXT(node));
+	if (sindex < 0)
+	{
+		return;
+	}
+
+	// Get the turret
+	turret = ship_get_subsys(&Ships[sindex], CTEXT(node));
+	if (turret == NULL) {
+		return;
+	}
+
+	// Get the bank to set the number on
+	requested_bank = eval_num(CDR(node));
+	if (requested_bank < 0)
+	{
+		return;
+	}
+
+	//  Get the number of weapons requested	
+	node = CDR(node);
+	requested_weapons = eval_num(CDR(node));
+	if (requested_weapons < 0)
+	{
+		return;
+	}
+
+	set_turret_primary_ammo(turret, requested_bank, requested_weapons);
+
+	// Multiplayer call back
+	char *subsys = CTEXT(node);
+	multi_start_callback();
+	multi_send_int(sindex);
+	multi_send_string(subsys);
+	multi_send_int(requested_bank);
+	multi_send_int(requested_weapons);
+	multi_end_callback();
+}
+
+void multi_sexp_set_turret_primary_ammo()
+{
+	int sindex, requested_bank, requested_weapons;
+	char *subsys;
+	multi_get_int(sindex);
+	multi_get_string(subsys);
+	multi_get_int(requested_bank);
+	multi_get_int(requested_weapons);
+
+	ship_subsys *turret = ship_get_subsys(&Ships[sindex], subsys);
+
+	set_turret_primary_ammo(turret, requested_bank, requested_weapons);
+}
+
+// DahBlount - Helper function for setting turret primary ammo
+void set_turret_primary_ammo(ship_subsys *turret, int requested_bank, int requested_ammo, bool update)
+{
+	// Can only set one bank at a time. Check that someone hasn't asked for the contents of all 
+	// the banks or a non-existant bank
+	if ((requested_bank > turret->weapons.num_primary_banks) || requested_bank < 0)
+	{
+		return;
+	}
+
+	// Check that this isn't a non-ballistic bank as it's pointless to set the amount of ammo for those
+	if (!(Weapon_info[turret->weapons.primary_bank_weapons[requested_bank]].wi_flags2 & WIF2_BALLISTIC))
+	{
+		return;
+	}
+
+	if (requested_ammo < 0)
+	{
+		return;
+	}
+
+	// Is the number requested larger than the maximum allowed for that particular bank? 
+	int maximum_allowed = fl2i(turret->weapons.primary_bank_capacity[requested_bank]
+		/ Weapon_info[turret->weapons.primary_bank_weapons[requested_bank]].cargo_size);
+	if (maximum_allowed < requested_ammo)
+	{
+		requested_ammo = maximum_allowed;
+	}
+
+	// Set the number of weapons
+	turret->weapons.primary_bank_ammo[requested_bank] = requested_ammo;
+}
+
+// DahBlount - Gets a turrets secondary ammo capacity
+int sexp_get_turret_secondary_ammo(int node)
+{
+	int sindex;
+	ship_subsys *turret = NULL;
+	ship_weapon *swp;
+	int bank, check, ammo_left = 0;
+
+	sindex = ship_name_lookup(CTEXT(node));
+	if (sindex < 0) {
+		return 0;
+	}
+	if (Ships[sindex].objnum < 0) {
+		return 0;
+	}
+
+	turret = ship_get_subsys(&Ships[sindex], CTEXT(node));
+	if (turret == NULL) {
+		return 0;
+	}
+	if (!(turret->system_info->flags2 & MSS_FLAG2_TURRET_USE_AMMO)) {
+		return 0;
+	}
+
+	swp = &turret->weapons;
+
+	check = eval_num(CDR(node));
+	if (check < 0) {
+		return 0;
+	}
+
+	if (check >= swp->num_secondary_banks)
+	{
+		for (bank = 0; bank < swp->num_secondary_banks; bank++)
+		{
+			ammo_left += swp->secondary_bank_ammo[bank];
+		}
+	} else {
+		ammo_left = swp->primary_bank_ammo[check];
+	}
+
+	return ammo_left;
+}
+
+// DahBlount - Sets a turrets secondary ammo capacity
+void sexp_set_turret_secondary_ammo(int node)
+{
+	int sindex;
+	ship_subsys *turret = NULL;
+	int requested_bank;
+	int requested_weapons;
+
+	// Check that a ship has been supplied
+	sindex = ship_name_lookup(CTEXT(node));
+	if (sindex < 0)
+	{
+		return;
+	}
+
+	// Get the turret
+	turret = ship_get_subsys(&Ships[sindex], CTEXT(node));
+	if (turret == NULL) {
+		return;
+	}
+
+	// Get the bank to set the number on
+	requested_bank = eval_num(CDR(node));
+	if (requested_bank < 0)
+	{
+		return;
+	}
+
+	//  Get the number of weapons requested	
+	node = CDR(node);
+	requested_weapons = eval_num(CDR(node));
+	if (requested_weapons < 0)
+	{
+		return;
+	}
+
+	set_turret_secondary_ammo(turret, requested_bank, requested_weapons);
+
+	// Multiplayer call back
+	char *subsys = CTEXT(node);
+	multi_start_callback();
+	multi_send_int(sindex);
+	multi_send_string(subsys);
+	multi_send_int(requested_bank);
+	multi_send_int(requested_weapons);
+	multi_end_callback();
+}
+
+void multi_sexp_set_turret_secondary_ammo()
+{
+	int sindex, requested_bank, requested_weapons;
+	char *subsys;
+	multi_get_int(sindex);
+	multi_get_string(subsys);
+	multi_get_int(requested_bank);
+	multi_get_int(requested_weapons);
+
+	ship_subsys *turret = ship_get_subsys(&Ships[sindex], subsys);
+
+	set_turret_secondary_ammo(turret, requested_bank, requested_weapons);
+}
+
+// DahBlount - Helper function for setting turret secondary ammo
+void set_turret_secondary_ammo(ship_subsys *turret, int requested_bank, int requested_ammo, bool update)
+{
+	// Can only set one bank at a time. Check that someone hasn't asked for the contents of all 
+	// the banks or a non-existant bank
+	if ((requested_bank > turret->weapons.num_secondary_banks) || requested_bank < 0)
+	{
+		return;
+	}
+
+	if (requested_ammo < 0)
+	{
+		return;
+	}
+
+	// Is the number requested larger than the maximum allowed for that particular bank? 
+	int maximum_allowed = fl2i(turret->weapons.secondary_bank_capacity[requested_bank]
+		/ Weapon_info[turret->weapons.secondary_bank_weapons[requested_bank]].cargo_size);
+	if (maximum_allowed < requested_ammo)
+	{
+		requested_ammo = maximum_allowed;
+	}
+
+	// Set the number of weapons
+	turret->weapons.secondary_bank_ammo[requested_bank] = requested_ammo;
 }
 
 // Goober5000
@@ -21000,13 +21380,13 @@ void sexp_show_subtitle(int node)
 	bool post_shaded = false;
 
 	x_pos = eval_num(node);
-	if (gr_screen.max_w != 1024)
-		x_pos = (int) ((x_pos / 1024.0f) * gr_screen.max_w);
+	if (gr_screen.center_w != 1024)
+		x_pos = (int) ((x_pos / 1024.0f) * gr_screen.center_w);
 
 	n = CDR(node);
 	y_pos = eval_num(n);
-	if (gr_screen.max_h != 768)
-		y_pos = (int) ((y_pos / 768.0f) * gr_screen.max_h);
+	if (gr_screen.center_h != 768)
+		y_pos = (int) ((y_pos / 768.0f) * gr_screen.center_h);
 
 	n = CDR(n);
 	text = CTEXT(n);
@@ -21216,9 +21596,9 @@ void sexp_show_subtitle_text(int node)
 	gr_init_alphacolor(&new_color, red, green, blue, 255);
 
 	// calculate pixel positions
-	int x_pos = (int) (gr_screen.max_w * (x_pct / 100.0f));
-	int y_pos = (int) (gr_screen.max_h * (y_pct / 100.0f));
-	int width = (int) (gr_screen.max_w * (width_pct / 100.0f));
+	int x_pos = (int) (gr_screen.center_w * (x_pct / 100.0f));
+	int y_pos = (int) (gr_screen.center_h * (y_pct / 100.0f));
+	int width = (int) (gr_screen.center_w * (width_pct / 100.0f));
 
 	// add the subtitle
 	subtitle new_subtitle(x_pos, y_pos, text, NULL, display_time, fade_time, &new_color, fontnum, center_x, center_y, width, 0, post_shaded);
@@ -21279,9 +21659,9 @@ void multi_sexp_show_subtitle_text()
 	gr_init_alphacolor(&new_color, red, green, blue, 255);
 
 	// calculate pixel positions
-	int x_pos = (int)(gr_screen.max_w * (x_pct / 100.0f));
-	int y_pos = (int)(gr_screen.max_h * (y_pct / 100.0f));
-	int width = (int)(gr_screen.max_w * (width_pct / 100.0f));
+	int x_pos = (int)(gr_screen.center_w * (x_pct / 100.0f));
+	int y_pos = (int)(gr_screen.center_h * (y_pct / 100.0f));
+	int width = (int)(gr_screen.center_w * (width_pct / 100.0f));
 
 	// add the subtitle
 	subtitle new_subtitle(x_pos, y_pos, text, NULL, display_time, fade_time, &new_color, fontnum, center_x, center_y, width, 0, post_shaded);
@@ -21350,10 +21730,10 @@ void sexp_show_subtitle_image(int node)
 		height_pct = 100;
 
 	// calculate pixel positions
-	int x_pos = (int)(gr_screen.max_w * (x_pct / 100.0f));
-	int y_pos = (int)(gr_screen.max_h * (y_pct / 100.0f));
-	int width = (int)(gr_screen.max_w * (width_pct / 100.0f));
-	int height = (int)(gr_screen.max_h * (height_pct / 100.0f));
+	int x_pos = (int)(gr_screen.center_w * (x_pct / 100.0f));
+	int y_pos = (int)(gr_screen.center_h * (y_pct / 100.0f));
+	int width = (int)(gr_screen.center_w * (width_pct / 100.0f));
+	int height = (int)(gr_screen.center_h * (height_pct / 100.0f));
 
 	// add the subtitle
 	subtitle new_subtitle(x_pos, y_pos, NULL, image, display_time, fade_time, NULL, -1, center_x, center_y, width, height, post_shaded);
@@ -24651,6 +25031,24 @@ int eval_sexp(int cur_node, int referenced_node)
 				sexp_val = sexp_player_is_cheating_bastard();
 				break;
 
+			case OP_TURRET_GET_PRIMARY_AMMO:
+				sexp_val = sexp_get_turret_primary_ammo(node);
+				break;
+
+			case OP_TURRET_GET_SECONDARY_AMMO:
+				sexp_val = sexp_get_turret_secondary_ammo(node);
+				break;
+
+			case OP_TURRET_SET_PRIMARY_AMMO:
+				sexp_val = SEXP_TRUE;
+				sexp_set_turret_primary_ammo(node);
+				break;
+
+			case OP_TURRET_SET_SECONDARY_AMMO:
+				sexp_val = SEXP_TRUE;
+				sexp_set_turret_secondary_ammo(node);
+				break;
+
 			default:
 				Error(LOCATION, "Looking for SEXP operator, found '%s'.\n", CTEXT(cur_node));
 				break;
@@ -25001,6 +25399,14 @@ void multi_sexp_eval()
 				multi_sexp_script_eval_multi();
 				break;
 
+			case OP_TURRET_SET_PRIMARY_AMMO:
+				multi_sexp_set_turret_primary_ammo();
+				break;
+
+			case OP_TURRET_SET_SECONDARY_AMMO:
+				multi_sexp_set_turret_secondary_ammo();
+				break;
+
 			// bad sexp in the packet
 			default: 
 				// probably just a version error where the host supports a SEXP but a client does not
@@ -25324,6 +25730,8 @@ int query_operator_return_type(int op)
 		case OP_NUM_VALID_ARGUMENTS:
 		case OP_STRING_GET_LENGTH:
 		case OP_GET_ETS_VALUE:
+		case OP_TURRET_GET_PRIMARY_AMMO:
+		case OP_TURRET_GET_SECONDARY_AMMO:
 			return OPR_POSITIVE;
 
 		case OP_COND:
@@ -25432,6 +25840,7 @@ int query_operator_return_type(int op)
 		case OP_SET_VARIABLE_BY_INDEX:
 		case OP_BEAM_FIRE:
 		case OP_BEAM_FIRE_COORDS:
+		case OP_BEAM_FLOATING_FIRE:
 		case OP_BEAM_FREE:
 		case OP_BEAM_FREE_ALL:
 		case OP_BEAM_LOCK:
@@ -25646,6 +26055,8 @@ int query_operator_return_type(int op)
 		case OP_SET_ETS_VALUES:
 		case OP_CALL_SSM_STRIKE:
 		case OP_SET_MOTION_DEBRIS:
+		case OP_TURRET_SET_PRIMARY_AMMO:
+		case OP_TURRET_SET_SECONDARY_AMMO:
 			return OPR_NULL;
 
 		case OP_AI_CHASE:
@@ -26970,6 +27381,21 @@ int query_operator_argument_type(int op, int argnum)
 					return OPF_NUMBER;
 			}
 
+		case OP_BEAM_FLOATING_FIRE:
+			switch(argnum) {
+				case 0:
+					return OPF_WEAPON_NAME;
+				case 1:
+				case 6:
+					return OPF_SHIP_OR_NONE;
+				case 2:
+					return OPF_IFF;
+				case 7:
+					return OPF_SUBSYSTEM_OR_NONE;
+				default:
+					return OPF_NUMBER;
+			}
+
 		case OP_IS_TAGGED:
 			return OPF_SHIP;
 
@@ -27284,7 +27710,19 @@ int query_operator_argument_type(int op, int argnum)
 				return OPF_NUMBER;
 			}
 
-			
+		// DahBlount
+		case OP_TURRET_GET_PRIMARY_AMMO:
+		case OP_TURRET_GET_SECONDARY_AMMO:
+		case OP_TURRET_SET_PRIMARY_AMMO:
+		case OP_TURRET_SET_SECONDARY_AMMO:
+			if (argnum == 0){
+				return OPF_SHIP;
+			} else if (argnum == 1){
+				return OPF_SUBSYSTEM;
+			} else {
+				return OPF_NUMBER;
+			}
+
 		case OP_GET_NUM_COUNTERMEASURES:
 			return OPF_SHIP;
 
@@ -29263,6 +29701,7 @@ int get_subcategory(int sexp_id)
 
 		case OP_BEAM_FIRE:
 		case OP_BEAM_FIRE_COORDS:
+		case OP_BEAM_FLOATING_FIRE:
 		case OP_BEAM_FREE:
 		case OP_BEAM_FREE_ALL:
 		case OP_BEAM_LOCK:
@@ -29284,6 +29723,10 @@ int get_subcategory(int sexp_id)
 		case OP_SHIP_TURRET_TARGET_ORDER:
 		case OP_TURRET_SUBSYS_TARGET_DISABLE:
 		case OP_TURRET_SUBSYS_TARGET_ENABLE:
+		case OP_TURRET_SET_PRIMARY_AMMO:
+		case OP_TURRET_SET_SECONDARY_AMMO:
+		case OP_TURRET_GET_PRIMARY_AMMO:
+		case OP_TURRET_GET_SECONDARY_AMMO:
 			return CHANGE_SUBCATEGORY_BEAMS_AND_TURRETS;
 
 		case OP_CHANGE_SHIP_CLASS:
@@ -31485,7 +31928,8 @@ sexp_help_struct Sexp_help[] = {
 		"friendly-stealth-invisible - If set, the ship can't be targeted even by ships on the same team\r\n"
 		"hide-ship-name - If set, the ship name can't be seen when the ship is targeted\r\n"
 		"hidden-from-sensors - If set, the ship can't be targeted and appears on radar as a blinking dot\r\n"
-		"no-dynamic - Will stop allowing the AI to persue dynamic goals (eg: chasing ships it was not ordered to)\r\n"},
+		"no-dynamic - Will stop allowing the AI to persue dynamic goals (eg: chasing ships it was not ordered to)\r\n"
+		"no-secondary-lock-on - Will disable target acquisition for secondaries of all types (does not affect turrets)\r\n"},
 
 	{ OP_SHIP_VISIBLE, "ship-visible\r\n"
 		"\tCauses the ships listed in this sexpression to be visible with player sensors.\r\n\r\n"
@@ -31876,6 +32320,23 @@ sexp_help_struct Sexp_help[] = {
 		"\t8:\tsecond y coordinate to be targeted (optional; only used for slash beams)\r\n"
 		"\t9:\tsecond z coordinate to be targeted (optional; only used for slash beams)\r\n" },
 
+	{ OP_BEAM_FLOATING_FIRE, "beam-create\r\n"
+		"\tFire a beam weapon from the specified coordinates to the specified target. Not compatible with multiplayer.\r\n"
+		"\t1:\tBeam weapon to fire\r\n"
+		"\t2:\tParent ship (for kill credit, if applicable; can be none)\r\n"
+		"\t3:\tTeam for this beam to be on (related to difficulty-based damage)\r\n"
+		"\t4:\tX coordinate to fire from\r\n"
+		"\t5:\tY coordinate to fire from\r\n"
+		"\t6:\tZ coordinate to fire from\r\n"
+		"\t7:\tTarget ship (can be none)\r\n"
+		"\t8:\tTarget subsystem (optional, can be none)\r\n"
+		"\t9:\tX coordinate to fire at (optional)\r\n"
+		"\t10:\tY coordinate to fire at (optional)\r\n"
+		"\t11:\tZ coordinate to fire at (optional)\r\n"
+		"\t12:\tSecond X coordinate to fire at (optional; used for slash beams)\r\n"
+		"\t13:\tSecond Y coordinate to fire at (optional; used for slash beams)\r\n"
+		"\t14:\tSecond Z coordinate to fire at (optional; used for slash beams)\r\n" },
+
 	{ OP_IS_TAGGED, "is-tagged\r\n"
 		"\tReturns whether a given ship is tagged or not\r\n"},
 
@@ -31996,6 +32457,32 @@ sexp_help_struct Sexp_help[] = {
 		"\t2: Turret to set\r\n"
 		"\t3: True = Set new list, False = Reset to turret default\r\n"
 		"\trest: Priorities to set (max 32) or blank for no priorities\r\n"},
+
+	{ OP_TURRET_GET_PRIMARY_AMMO, "turret-get-primary-ammo\r\n"
+		"\tGets the turret's primary bank ammo, only works with ballistic weapons\r\n"
+		"\t1: Ship turret is on\r\n"
+		"\t2: Turret the bank is on\r\n"
+		"\t3: Bank to check ammo\r\n"},
+
+	{ OP_TURRET_GET_SECONDARY_AMMO, "turret-get-secondary-ammo\r\n"
+		"\tGets the turret's secondary bank ammo\r\n"
+		"\t1: Ship turret is on\r\n"
+		"\t2: Turret to check ammo\r\n"
+		"\t3: Bank to check ammo\r\n" },
+
+	{ OP_TURRET_SET_PRIMARY_AMMO, "turret-set-primary-ammo\r\n"
+		"\tGets the turret's primary bank ammo, only works with ballistic weapons\r\n"
+		"\t1: Ship turret is on\r\n"
+		"\t2: Turret the bank is on\r\n"
+		"\t3: Bank to add ammo to\r\n" 
+		"\t4: Amount to add" },
+
+	{ OP_TURRET_SET_SECONDARY_AMMO, "turret-set-secondary-ammo\r\n"
+		"\tGets the turret's secondary bank ammos\r\n"
+		"\t1: Ship turret is on\r\n"
+		"\t2: Turret the bank is on\r\n"
+		"\t3: Bank to add ammo to\r\n"
+		"\t4: Amount to add" },
 
 	{ OP_SET_ARMOR_TYPE, "set-armor-type\r\n"
 		"\tSets the armor type for a ship or subsystem\r\n"

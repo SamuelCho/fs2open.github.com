@@ -430,8 +430,8 @@ void parse_startbl(const char *filename)
 							Warning(LOCATION, "Starfield bitmap '%s' listed more than once!!  Only using the first entry!", sbm.filename);
 					}
 					else {
-						Warning(LOCATION, "Starfield bitmap '%s' already listed as a %sxparent bitmap!!  Only using the xparent version!",
-							(rc) ? "xparent" : "non-xparent", (rc) ? "xparent" : "non-xparent", sbm.filename);
+						Warning(LOCATION, "Starfield bitmap '%s' already listed as a %s bitmap!!  Only using the xparent version!",
+							sbm.filename, (rc) ? "xparent" : "non-xparent");
 					}
 				}
 				else {
@@ -1451,7 +1451,7 @@ void subspace_render()
 
 	vm_angles_2_matrix(&tmp,&angs);
 
-	render_info.set_outline_color(255, 255, 255);
+	render_info.set_color(255, 255, 255);
 	render_info.set_alpha(1.0f);
 	render_info.set_flags(render_flags);
 
@@ -2165,7 +2165,7 @@ void stars_draw_background()
 	render_info.set_alpha(1.0f);
 	render_info.set_flags(Nmodel_flags | MR_SKYBOX);
 
-	model_render_immediate(&render_info, Nmodel_num, &Nmodel_orient, &Eye_position, MODEL_RENDER_ALL);
+	model_render_immediate(&render_info, Nmodel_num, &Nmodel_orient, &Eye_position, MODEL_RENDER_ALL, false);
 }
 
 // call this to set a specific model as the background model

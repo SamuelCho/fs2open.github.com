@@ -90,15 +90,12 @@ typedef struct submodel_instance {
 	matrix mc_orient;
 	bool collision_checked;
 	bool blown_off;
-	bool moved_this_frame;
 } submodel_instance;
 
 // Data specific to a particular instance of a model.
 typedef struct polymodel_instance {
 	int model_num;					// global model num index, same as polymodel->id
-	int root_submodel_num;			// unused?
 	submodel_instance *submodel;	// array of submodel instances; mirrors the polymodel->submodel array
-	submodel_instance *submodel_render; // array of submodel instances for the rendering system; mirrors the polymodel->submodel array
 } polymodel_instance;
 
 #define MAX_MODEL_SUBSYSTEMS		200				// used in ships.cpp (only place?) for local stack variable DTP; bumped to 200
@@ -142,6 +139,7 @@ typedef struct polymodel_instance {
 #define MSS_FLAG2_NO_DISAPPEAR					 (1 << 2)	// Submodel won't disappear when subsystem destroyed
 #define MSS_FLAG2_COLLIDE_SUBMODEL				 (1 << 3)	// subsystem takes damage only from hits which impact the associated submodel
 #define MSS_FLAG2_DESTROYED_ROTATION			 (1 << 4)   // allows subobjects to continue to rotate even if they have been destroyed
+#define MSS_FLAG2_TURRET_USE_AMMO				 (1 << 5)	// enables ammo consumption for turrets (DahBlount)
 
 #define NUM_SUBSYSTEM_FLAGS			33
 
@@ -251,16 +249,6 @@ typedef struct model_special {
 #define MARC_TYPE_EMP						1		// EMP blast type arcs
 
 #define MAX_LIVE_DEBRIS	7
-
-
-// IBX stuff
-typedef struct IBX {
-	CFILE *read;		// reads, if an IBX file already exists
-	CFILE *write;		// writes, if new file created
-	int size;			// file size used to make sure an IBX contains enough data for the whole model
-	int version;		// IBX file version to use: v1 is USHORT only, v2 can mix USHORT and UINT
-	char name[MAX_FILENAME_LEN];	// filename of the ibx, this is used in case a safety check fails and we delete the file
-} IBX;
 
 typedef struct model_tmap_vert {
 	ushort vertnum;
@@ -1029,10 +1017,10 @@ void world_find_model_point(vec3d *out, vec3d *world_pt, polymodel *pm, int subm
 
 void world_find_model_instance_point(vec3d *out, vec3d *world_pt, polymodel *pm, polymodel_instance *pmi, int submodel_num, matrix *orient, vec3d *pos);
 
-extern void find_submodel_instance_point(vec3d *outpnt, object *ship_obj, int submodel_num);
-extern void find_submodel_instance_point_normal(vec3d *outpnt, vec3d *outnorm, object *ship_obj, int submodel_num, vec3d *submodel_pnt, vec3d *submodel_norm);
-extern void find_submodel_instance_point_orient(vec3d *outpnt, matrix *outorient, object *ship_obj, int submodel_num, vec3d *submodel_pnt, matrix *submodel_orient);
-extern void find_submodel_instance_world_point(vec3d *outpnt, object *ship_obj, int submodel_num);
+extern void find_submodel_instance_point(vec3d *outpnt, object *pship_obj, int submodel_num);
+extern void find_submodel_instance_point_normal(vec3d *outpnt, vec3d *outnorm, object *pship_obj, int submodel_num, vec3d *submodel_pnt, vec3d *submodel_norm);
+extern void find_submodel_instance_point_orient(vec3d *outpnt, matrix *outorient, object *pship_obj, int submodel_num, vec3d *submodel_pnt, matrix *submodel_orient);
+extern void find_submodel_instance_world_point(vec3d *outpnt, object *pship_obj, int submodel_num);
 
 // Given a polygon model index, find a list of rotating submodels to be used for collision
 void model_get_rotating_submodel_list(SCP_vector<int> *submodel_vector, object *objp);
@@ -1107,8 +1095,8 @@ int submodel_get_num_polys(int model_num, int submodel_num);
 // Given a vector that is in sub_model_num's frame of
 // reference, and given the object's orient and position,
 // return the vector in the model's frame of reference.
-void model_find_obj_dir(vec3d *w_vec, vec3d *m_vec, object *ship_obj, int sub_model_num);
-void model_instance_find_obj_dir(vec3d *w_vec, vec3d *m_vec, object *ship_obj, int sub_model_num);
+void model_find_obj_dir(vec3d *w_vec, vec3d *m_vec, object *pship_obj, int sub_model_num);
+void model_instance_find_obj_dir(vec3d *w_vec, vec3d *m_vec, object *pship_obj, int sub_model_num);
 
 
 // This is the interface to model_check_collision.  Rather than passing all these
@@ -1125,6 +1113,7 @@ typedef struct mc_info {
 	vec3d	*p1;					// The ending point of the ray (sphere) to check
 	int		flags;				// Flags that the model_collide code looks at.  See MC_??? defines
 	float		radius;				// If MC_CHECK_THICK is set, checks a sphere moving with the radius.
+	int		lod;				// Which detail level of the submodel to check instead
 	
 	// Return values
 	int		num_hits;			// How many collisions were found
@@ -1214,7 +1203,7 @@ inline void mc_info_init(mc_info *mc)
 	}
 */
 
-int model_collide(mc_info * mc_info);
+int model_collide(mc_info *mc_info_obj);
 void model_collide_parse_bsp(bsp_collision_tree *tree, void *model_ptr, int version);
 
 bsp_collision_tree *model_get_bsp_collision_tree(int tree_index);

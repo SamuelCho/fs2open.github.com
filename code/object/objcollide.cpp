@@ -60,7 +60,7 @@ public:
 	{}
 };
 
-SCP_hash_map<uint, collider_pair> Collision_cached_pairs;
+SCP_unordered_map<uint, collider_pair> Collision_cached_pairs;
 
 struct checkobject;
 extern checkobject CheckObjects[MAX_OBJECTS];
@@ -1064,7 +1064,7 @@ int collide_remove_weapons( )
 			opp = opp->next;
 		}
 	} else {
-		SCP_hash_map<uint, collider_pair>::iterator it;
+		SCP_unordered_map<uint, collider_pair>::iterator it;
 		collider_pair *pair_obj;
 
 		for ( it = Collision_cached_pairs.begin(); it != Collision_cached_pairs.end(); ++it ) {
@@ -1205,7 +1205,7 @@ void obj_reset_colliders()
 
 void obj_collide_retime_cached_pairs(int checkdly)
 {
-	SCP_hash_map<uint, collider_pair>::iterator it;
+	SCP_unordered_map<uint, collider_pair>::iterator it;
 
 	for ( it = Collision_cached_pairs.begin(); it != Collision_cached_pairs.end(); ++it ) {
 		it->second.next_check_time = timestamp(checkdly);
@@ -1244,8 +1244,6 @@ void obj_find_overlap_colliders(SCP_vector<int> *overlap_list_out, SCP_vector<in
 	SCP_vector<int> overlappers;
 
 	float min;
-	float max;
-	float overlap_min;
 	float overlap_max;
 	
 	overlappers.clear();
@@ -1254,10 +1252,8 @@ void obj_find_overlap_colliders(SCP_vector<int> *overlap_list_out, SCP_vector<in
 		overlapped = false;
 
 		min = obj_get_collider_endpoint((*list)[i], axis, true);
-		max = obj_get_collider_endpoint((*list)[i], axis, false);
 
 		for ( j = 0; j < overlappers.size(); ) {
-			overlap_min = obj_get_collider_endpoint(overlappers[j], axis, true);
 			overlap_max = obj_get_collider_endpoint(overlappers[j], axis, false);
 			if ( min <= overlap_max ) {
 				overlapped = true;
