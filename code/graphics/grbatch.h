@@ -109,22 +109,30 @@ public:
 	int need_to_render() { return vertices.size(); };
 };
 
-struct effect_batch {
-	effect_material::effect_render_type render_type;
+struct primitive_batch_info {
+	enum render_type {
+		FLAT_EMISSIVE,
+		VOLUME_EMISSIVE,
+		DISTORTION,
+		DISTORTION_THRUSTER,
+		NUM_RENDER_TYPES
+	};
+
+	render_type selected_render_type;
 	int texture;
 
-	bool operator<(effect_batch& batch) {
-		if ( render_type != batch.render_type ) {
+	bool operator<(primitive_batch_info& batch) {
+		if ( selected_render_type != batch.selected_render_type ) {
 			
-			return render_type < batch.render_type;
+			return selected_render_type < batch.selected_render_type;
 		}
 
 		return texture < batch.texture;
 	}
 };
 
-struct effect_draw_item {
-	effect_batch batch_info;
+struct primitive_batch_item {
+	primitive_batch_info batch_info;
 	vertex_layout *layout;
 	bool triangles;
 	int buffer_num;
@@ -132,14 +140,14 @@ struct effect_draw_item {
 	int n_verts;
 };
 
-struct effect_draw_queue {
+struct primitive_batch_queue {
 	vertex_layout layout;
 	int buffer_num;
 
 	void* buffer_ptr;
 	int buffer_size;
 
-	SCP_vector<effect_draw_item> queue;
+	SCP_vector<primitive_batch_item> queue;
 };
 
 float batch_add_laser(int texture, vec3d *p0, float width1, vec3d *p1, float width2, int r = 255, int g = 255, int b = 255);

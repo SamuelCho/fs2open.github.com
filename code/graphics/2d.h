@@ -137,6 +137,7 @@ enum primitive_type {
 	PRIM_TYPE_LINESTRIP,
 	PRIM_TYPE_TRIS,
 	PRIM_TYPE_TRISTRIP,
+	PRIM_TYPE_TRIFAN,
 	PRIM_TYPE_QUADS,
 	PRIM_TYPE_QUADSTRIP,
 };
@@ -1118,6 +1119,8 @@ __inline void gr_render_buffer(int start, const vertex_buffer *bufferp, int texi
 
 #define gr_shadow_map_start				GR_CALL(*gr_screen.gf_shadow_map_start)
 #define gr_shadow_map_end				GR_CALL(*gr_screen.gf_shadow_map_end)
+
+#define gr_render_primitives			GR_CALL(*gr_screen.gf_render_primitives);
 
 // color functions
 void gr_get_color( int *r, int *g, int  b );

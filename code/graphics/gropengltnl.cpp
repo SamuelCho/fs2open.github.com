@@ -1681,41 +1681,6 @@ void gr_opengl_render_stream_buffer(int buffer_handle, int offset, int n_verts, 
 	GL_CHECK_FOR_ERRORS("end of render3d()");
 }
 
-void gr_opengl_render_primitives(material *material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
-{
-	opengl_tnl_set_material(material_info);
-
-	if ( buffer_handle >= 0 ) {
-		opengl_bind_buffer_object(buffer_handle);
-	}
-
-	opengl_bind_vertex_layout(*layout);
-	
-	glDrawArrays(opengl_primitive_type(prim_type), offset, n_verts);
-}
-
-void gr_opengl_render_effect_primitives(effect_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
-{
-	opengl_tnl_set_effect_material(material_info);
-
-	if ( buffer_handle >= 0 ) {
-		opengl_bind_buffer_object(buffer_handle);
-	}
-
-	opengl_bind_vertex_layout(*layout);
-
-	if ( material_info->get_effect_type() == effect_material::DISTORTION || material_info->get_effect_type() == effect_material::DISTORTION_THRUSTER ) {
-		glDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);
-	}
-	
-	glDrawArrays(opengl_primitive_type(prim_type), offset, n_verts);
-
-	if ( material_info->get_effect_type() == effect_material::DISTORTION || material_info->get_effect_type() == effect_material::DISTORTION_THRUSTER ) {
-		GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT };
-		vglDrawBuffers(2, buffers);
-	}
-}
-
 void gr_opengl_start_instance_matrix(vec3d *offset, matrix *rotation)
 {
 	if (Cmdline_nohtl) {
@@ -2730,11 +2695,11 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 	}
 }
 
-void opengl_tnl_set_material_soft_particle(particle_material * material_info)
+void opengl_tnl_set_material_particle(particle_material * material_info)
 {
 	uint sdr_effect_flags = 0;
 
-	if ( flags & TMAP_FLAG_VERTEX_GEN ) {
+	if ( material_info->get_point_sprite_mode() ) {
 		sdr_effect_flags |= SDR_FLAG_PARTICLE_POINT_GEN;
 	}
 

@@ -119,6 +119,8 @@ inline GLenum opengl_primitive_type(primitive_type prim_type)
 		return GL_TRIANGLES;
 	case PRIM_TYPE_TRISTRIP:
 		return GL_TRIANGLE_STRIP;
+	case PRIM_TYPE_TRIFAN:
+		return GL_TRIANGLE_FAN;
 	case PRIM_TYPE_QUADS:
 		return GL_QUADS;
 	case PRIM_TYPE_QUADSTRIP:
@@ -2416,13 +2418,8 @@ void gr_opengl_draw_deferred_light_sphere(vec3d *position, float rad, bool clear
 	}
 
 	g3_start_instance_matrix(position, &vmd_identity_matrix, true);
-<<<<<<< HEAD
 	
 	GL_state.Uniform.setUniform("scale", rad, rad, rad);
-=======
-
-	GL_state.Uniform.setUniform3f("scale", rad, rad, rad);
->>>>>>> master
 
 	GL_state.Array.BindArrayBuffer(deferred_light_sphere_vbo);
 	GL_state.Array.BindElementBuffer(deferred_light_sphere_ibo);
@@ -3180,19 +3177,11 @@ void gr_opengl_deferred_lighting_finish()
 		switch(l->type)
 		{
 			case LT_CONE:
-<<<<<<< HEAD
 				GL_state.Uniform.setUniform( "lightType", 2 );
 				GL_state.Uniform.setUniform( "dualCone", l->dual_cone );
 				GL_state.Uniform.setUniform( "coneAngle", l->cone_angle );
 				GL_state.Uniform.setUniform( "coneInnerAngle", l->cone_inner_angle );
 				GL_state.Uniform.setUniform( "coneDir", l->vec2.xyz.x, l->vec2.xyz.y, l->vec2.xyz.z); 
-=======
-				GL_state.Uniform.setUniformi( "lightType", 2 );
-				GL_state.Uniform.setUniformi( "dualCone", l->dual_cone );
-				GL_state.Uniform.setUniformf( "coneAngle", l->cone_angle );
-				GL_state.Uniform.setUniformf( "coneInnerAngle", l->cone_inner_angle );
-				GL_state.Uniform.setUniform3f( "coneDir", l->vec2.xyz.x, l->vec2.xyz.y, l->vec2.xyz.z);
->>>>>>> master
 			case LT_POINT:
 				GL_state.Uniform.setUniform( "diffuseLightColor", l->r * l->intensity * static_point_factor, l->g * l->intensity * static_point_factor, l->b * l->intensity * static_point_factor );
 				GL_state.Uniform.setUniform( "specLightColor", l->spec_r * l->intensity * static_point_factor, l->spec_g * l->intensity * static_point_factor, l->spec_b * l->intensity * static_point_factor );
@@ -3207,19 +3196,11 @@ void gr_opengl_deferred_lighting_finish()
 				gr_opengl_draw_deferred_light_sphere(&l->vec, MAX(l->rada, l->radb) * 1.28f);
 				break;
 			case LT_TUBE:
-<<<<<<< HEAD
 				GL_state.Uniform.setUniform( "diffuseLightColor", l->r * l->intensity * static_tube_factor, l->g * l->intensity * static_tube_factor, l->b * l->intensity * static_tube_factor );
 				GL_state.Uniform.setUniform( "specLightColor", l->spec_r * l->intensity * static_tube_factor, l->spec_g * l->intensity * static_tube_factor, l->spec_b * l->intensity * static_tube_factor );
 				GL_state.Uniform.setUniform( "lightRadius", l->radb * 1.5f );
 				GL_state.Uniform.setUniform( "lightType", 1 );
 			
-=======
-				GL_state.Uniform.setUniform3f( "diffuseLightColor", l->r * l->intensity * static_tube_factor, l->g * l->intensity * static_tube_factor, l->b * l->intensity * static_tube_factor );
-				GL_state.Uniform.setUniform3f( "specLightColor", l->spec_r * l->intensity * static_tube_factor, l->spec_g * l->intensity * static_tube_factor, l->spec_b * l->intensity * static_tube_factor );
-				GL_state.Uniform.setUniformf( "lightRadius", l->radb * 1.5f );
-				GL_state.Uniform.setUniformi( "lightType", 1 );
-
->>>>>>> master
 				vec3d a, b;
 				matrix orient;
 				float length, dist;
@@ -3420,7 +3401,7 @@ void gr_opengl_render_primitives(material* material_info, primitive_type prim_ty
 
 void gr_opengl_render_primitives_particle(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
 {
-	opengl_tnl_set_material_soft_particle(material_info);
+	opengl_tnl_set_material_particle(material_info);
 
 	if ( buffer_handle >= 0 ) {
 		opengl_bind_buffer_object(buffer_handle);

@@ -694,6 +694,7 @@
     <ClCompile Include="..\..\code\render\3dlaser.cpp" />
     <ClCompile Include="..\..\code\render\3dmath.cpp" />
     <ClCompile Include="..\..\code\render\3dsetup.cpp" />
+    <ClCompile Include="..\..\code\render\render.cpp" />
     <ClCompile Include="..\..\code\ship\afterburner.cpp" />
     <ClCompile Include="..\..\code\ship\awacs.cpp" />
     <ClCompile Include="..\..\code\ship\shield.cpp" />

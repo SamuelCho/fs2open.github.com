@@ -17,7 +17,6 @@
 #include "graphics/grinternal.h"
 #include "cfile/cfile.h"
 
-
 #define	SQUARE(x) ((x)*(x))
 
 #define NUM_BLEND_TABLES 3

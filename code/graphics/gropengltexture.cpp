@@ -1357,6 +1357,15 @@ int opengl_get_texture( GLenum target, GLenum pixel_format, GLenum data_format, 
 	return m_offset;
 }
 
+void gr_opengl_get_texture_scale(int bitmap_handle, float *u_scale, float *v_scale)
+{
+	int n = bm_get_cache_slot (bitmap_handle, 1);
+	tcache_slot_opengl *t = &Textures[n];
+
+	*u_scale = t->u_scale;
+	*v_scale = t->v_scale;
+}
+
 /**
  * Sends a texture object out to "image_data"
  *
