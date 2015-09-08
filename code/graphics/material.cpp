@@ -11,6 +11,20 @@ int material::get_shader_handle()
 	return shader_handle;
 }
 
+void material::set_color(int r, int g, int b, int a)
+{
+	gr_init_alphacolor(&clr, r, g, b, a);
+}
+
+void material::set_color(color &clr_in)
+{
+	if ( clr_in.is_alphacolor ) {
+		clr = clr_in;
+	} else {
+		gr_init_alphacolor(&clr, clr_in.red, clr_in.green, clr_in.blue, 255);
+	}
+}
+
 int material::get_texture_type()
 {
 	switch ( tex_type ) {

@@ -8,6 +8,7 @@
 */
 
 #include "globalincs/pstypes.h"
+#include "graphics/2d.h"
 #include "render/3d.h"
 #include "graphics/material.h"
 
@@ -51,7 +52,7 @@ void render_set_unlit_material(material* mat_info, int texture, bool blending, b
 	mat_info->set_texture_source(TEXTURE_SOURCE_NO_FILTERING);
 }
 
-void render_primitives(vertex* verts, int n_verts, int texture, bool blending, bool depth_testing)
+void render_colored_primitives(vertex* verts, int n_verts, primitive_type prim_type, int texture, bool blending, bool depth_testing)
 {
 	vertex_layout layout;
 
@@ -61,19 +62,14 @@ void render_primitives(vertex* verts, int n_verts, int texture, bool blending, b
 
 	material material_info;
 
-	material_info.set_texture_map(texture, TM_BASE_TYPE);
-
-	gr_alpha_blend blend_mode = render_determine_blend_mode(texture, blending);
-	gr_zbuffer_type depth_mode = render_determine_depth_mode(depth_testing, blending);
-
-	material_info.set_blend_mode(blend_mode);
-	material_info.set_depth_mode(depth_mode);
-	material_info.set_cull_mode(false);
-	material_info.set_texture_source(TEXTURE_SOURCE_NO_FILTERING);
+	render_set_unlit_material(&material_info, texture, blending, depth_testing);
 	material_info.set_color(255, 255, 255, 255);
+
+	//gr_render_primitives(&material_info, PRIM_TYPE_TRISTRIP, &layout, 0, n_verts, -1);
+	gr_render_primitives(&material_info, prim_type, &layout, 0, n_verts, -1);
 }
 
-void render_primitives(vertex* verts, int n_verts, int texture, int red, int green, int blue, int alpha, bool blending, bool depth_testing)
+void render_primitives(vertex* verts, int n_verts, primitive_type prim_type, int texture, color *clr, bool blending, bool depth_testing)
 {
 	vertex_layout layout;
 
@@ -84,80 +80,25 @@ void render_primitives(vertex* verts, int n_verts, int texture, int red, int gre
 
 	render_set_unlit_material(&material_info, texture, blending, depth_testing);
 
-	material_info.set_color(red, green, blue, alpha);
+	if ( clr->is_alphacolor ) {
+		material_info.set_color(clr->red, clr->green, clr->blue, clr->alpha);
+	} else {
+		material_info.set_color(clr->red, clr->green, clr->blue, 255);
+	}
 
-	gr_render_primitives(&material_info, PRIM_TYPE_TRISTRIP, &layout, 0, n_verts, -1);
+	gr_render_primitives(&material_info, prim_type, &layout, 0, n_verts, -1);
 }
 
-void render_primitives(vertex* verts, int n_verts, int texture, int alpha, bool blending, bool depth_testing)
+void render_primitives(vertex* verts, int n_verts, primitive_type prim_type, int texture, int alpha, bool blending, bool depth_testing)
 {
-	render_primitives(verts, n_verts, texture, 255, 255, 255, alpha, blending, depth_testing);
+	color clr;
+
+	gr_init_alphacolor(&clr, 255, 255, 255, alpha);
+
+	render_primitives(verts, n_verts, prim_type, texture, &clr, blending, depth_testing);
 }
 
-void render_primitives_2d(vertex* verts, int n_verts, int texture, int red, int green, int blue, int alpha, bool blending, bool depth_testing)
-{
-	vertex_layout layout;
-
-	layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &verts[0].screen.xyw.x);
-	layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &verts[0].texture_position.u);
-
-	material material_info;
-
-	material_info.set_texture_map(texture, TM_BASE_TYPE);
-
-	gr_alpha_blend blend_mode = render_determine_blend_mode(texture, blending);
-	gr_zbuffer_type depth_mode = render_determine_depth_mode(depth_testing, blending);
-
-	material_info.set_blend_mode(blend_mode);
-	material_info.set_depth_mode(depth_mode);
-	material_info.set_cull_mode(false);
-	material_info.set_texture_source(TEXTURE_SOURCE_NO_FILTERING);
-	material_info.set_color(red, green, blue, alpha);
-}
-
-void render_primitives_2d(vertex* verts, int texture, int alpha, bool blending, bool depth_testing)
-{
-	vertex_layout layout;
-
-	layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &verts[0].screen.xyw.x);
-	layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &verts[0].texture_position.u);
-
-	material material_info;
-
-	material_info.set_texture_map(texture, TM_BASE_TYPE);
-
-	gr_alpha_blend blend_mode = render_determine_blend_mode(texture, blending);
-	gr_zbuffer_type depth_mode = render_determine_depth_mode(depth_testing, blending);
-
-	material_info.set_blend_mode(blend_mode);
-	material_info.set_depth_mode(depth_mode);
-	material_info.set_cull_mode(false);
-	material_info.set_texture_source(TEXTURE_SOURCE_NO_FILTERING);
-	material_info.set_color(255, 255, 255, alpha);
-}
-
-void render_primitives_2d(vertex* verts, int texture, int red, int green, int blue, bool blending, bool depth_testing)
-{
-	vertex_layout layout;
-
-	layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &verts[0].screen.xyw.x);
-	layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &verts[0].texture_position.u);
-
-	material material_info;
-
-	material_info.set_texture_map(texture, TM_BASE_TYPE);
-
-	gr_alpha_blend blend_mode = render_determine_blend_mode(texture, blending);
-	gr_zbuffer_type depth_mode = render_determine_depth_mode(depth_testing, blending);
-
-	material_info.set_blend_mode(blend_mode);
-	material_info.set_depth_mode(depth_mode);
-	material_info.set_cull_mode(false);
-	material_info.set_texture_source(TEXTURE_SOURCE_NO_FILTERING);
-	material_info.set_color(red, green, blue, 255);
-}
-
-void render_primitives_2d(vertex* verts, int texture, bool blending, bool depth_testing)
+void render_colored_primitives_2d(vertex* verts, int n_verts, primitive_type prim_type, int texture, bool blending)
 {
 	vertex_layout layout;
 
@@ -167,16 +108,32 @@ void render_primitives_2d(vertex* verts, int texture, bool blending, bool depth_
 
 	material material_info;
 
-	material_info.set_texture_map(texture, TM_BASE_TYPE);
+	render_set_unlit_material(&material_info, texture, blending, false);
 
-	gr_alpha_blend blend_mode = render_determine_blend_mode(texture, blending);
-	gr_zbuffer_type depth_mode = render_determine_depth_mode(depth_testing, blending);
-
-	material_info.set_blend_mode(blend_mode);
-	material_info.set_depth_mode(depth_mode);
-	material_info.set_cull_mode(false);
-	material_info.set_texture_source(TEXTURE_SOURCE_NO_FILTERING);
 	material_info.set_color(255, 255, 255, 255);
+}
+
+void render_primitives_2d(vertex* verts, int n_verts, primitive_type prim_type, int texture, color *clr, bool blending)
+{
+	vertex_layout layout;
+
+	layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &verts[0].screen.xyw.x);
+	layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &verts[0].texture_position.u);
+
+	material material_info;
+
+	render_set_unlit_material(&material_info, texture, blending, false);
+
+	material_info.set_color(*clr);
+}
+
+void render_primitives_2d(vertex* verts, int n_verts, primitive_type prim_type, int texture, int alpha, bool blending)
+{
+	color clr;
+
+	gr_init_alphacolor(&clr, 255, 255, 255, alpha);
+
+	render_primitives_2d(verts, n_verts, prim_type, texture, &clr, blending);
 }
 
 void render_oriented_quad(vec3d *pos, matrix *ori, float width, float height, int texture)
@@ -233,12 +190,7 @@ void render_oriented_quad(vec3d *pos, matrix *ori, float width, float height, in
 	v[3].texture_position.u = 1.0f;
 	v[3].texture_position.v = 1.0f;
 
-	vertex_layout layout;
-
-	layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), &v[0].world.xyz.x);
-	layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &v[0].texture_position.u);
-
-	render_primitives(v, 4, texture, 255, true, true);
+	render_primitives(v, 4, PRIM_TYPE_TRISTRIP, texture, 255, true, true);
 }
 
 void render_oriented_quad(vec3d *pos, vec3d *norm, float width, float height, int texture)
@@ -247,4 +199,9 @@ void render_oriented_quad(vec3d *pos, vec3d *norm, float width, float height, in
 	vm_vector_2_matrix(&m, norm, NULL, NULL);
 
 	render_oriented_quad(pos, &m, width, height, texture);
+}
+
+void render_bitmap_list()
+{
+
 }

@@ -139,7 +139,7 @@ enum primitive_type {
 	PRIM_TYPE_TRISTRIP,
 	PRIM_TYPE_TRIFAN,
 	PRIM_TYPE_QUADS,
-	PRIM_TYPE_QUADSTRIP,
+	PRIM_TYPE_QUADSTRIP
 };
 
 enum shader_type {
