@@ -2233,10 +2233,14 @@ void gr_opengl_shadow_map_end()
 		glScissor(gr_screen.offset_x, (gr_screen.max_h - gr_screen.offset_y - gr_screen.clip_height), gr_screen.clip_width, gr_screen.clip_height);
 }
 
-void opengl_tnl_set_material(material* material_info)
+void opengl_tnl_set_material(material* material_info, bool set_base_map = true)
 {
-	if ( material_info->get_shader_handle() >= 0 ) {
-		opengl_shader_set_current(material_info->get_shader_handle());
+	int shader_handle = material_info->get_shader_handle();
+
+	if ( shader_handle >= 0 ) {
+		opengl_shader_set_current(shader_handle);
+	} else {
+		opengl_shader_set_current();
 	}
 
 	GL_state.SetTextureSource(material_info->get_texture_source());
@@ -2269,6 +2273,12 @@ void opengl_tnl_set_material(material* material_info)
 	} else {
 		gr_opengl_set_clip_plane(NULL, NULL);
 	}
+
+	if ( set_base_map ) {
+		float u_scale, v_scale;
+
+		gr_opengl_tcache_set(material_info->get_texture_map(TM_BASE_TYPE), material_info->get_texture_type(), &u_scale, &v_scale);
+	}
 }
 
 void opengl_tnl_set_model_material(model_material *material_info)
@@ -2276,7 +2286,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	float u_scale, v_scale;
 	int render_pass = 0;
 
-	opengl_tnl_set_material(material_info);
+	opengl_tnl_set_material(material_info, false);
 	
 	opengl_default_light_settings(!material_info->get_center_alpha(), (material_info->get_light_factor() > 0.25f));
 	gr_opengl_set_center_alpha(material_info->get_center_alpha());
@@ -2697,15 +2707,7 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 
 void opengl_tnl_set_material_particle(particle_material * material_info)
 {
-	uint sdr_effect_flags = 0;
-
-	if ( material_info->get_point_sprite_mode() ) {
-		sdr_effect_flags |= SDR_FLAG_PARTICLE_POINT_GEN;
-	}
-
-	int sdr_index = gr_opengl_maybe_create_shader(SDR_TYPE_EFFECT_PARTICLE, sdr_effect_flags);
-
-	opengl_shader_set_current(sdr_index);
+	opengl_tnl_set_material(material_info);
 
 	GL_state.Uniform.setUniform("baseMap", 0);
 	GL_state.Uniform.setUniform("depthMap", 1);
@@ -2738,6 +2740,7 @@ void opengl_tnl_set_material_particle(particle_material * material_info)
 void opengl_tnl_set_material_soft_particle(uint flags)
 {
 	uint sdr_effect_flags = 0;
+	float u_scale, v_scale;
 
 	if ( flags & TMAP_FLAG_VERTEX_GEN ) {
 		sdr_effect_flags |= SDR_FLAG_PARTICLE_POINT_GEN;
@@ -2777,8 +2780,6 @@ void opengl_tnl_set_material_soft_particle(uint flags)
 
 void opengl_tnl_set_material_distortion(distortion_material* material_info)
 {
-	opengl_shader_set_current( gr_opengl_maybe_create_shader(SDR_TYPE_EFFECT_DISTORTION, 0) );
-
 	opengl_tnl_set_material(material_info);
 
 	GL_state.Uniform.setUniform("baseMap", 0);

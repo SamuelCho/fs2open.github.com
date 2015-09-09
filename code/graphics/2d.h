@@ -1119,8 +1119,10 @@ __inline void gr_render_buffer(int start, const vertex_buffer *bufferp, int texi
 
 #define gr_shadow_map_start				GR_CALL(*gr_screen.gf_shadow_map_start)
 #define gr_shadow_map_end				GR_CALL(*gr_screen.gf_shadow_map_end)
-
-#define gr_render_primitives			GR_CALL(*gr_screen.gf_render_primitives);
+__inline void gr_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+{
+	(*gr_screen.gf_render_primitives)(material_info, prim_type, layout, offset, n_verts, buffer_handle);
+}
 
 // color functions
 void gr_get_color( int *r, int *g, int  b );

@@ -948,11 +948,6 @@ bool draw_list::sort_draw_pair(const int a, const int b)
 	return render_state_a->lights.index_start < render_state_b->lights.index_start;
 }
 
-void model_render_set_environment_matrix()
-{
-
-}
-
 void model_render_set_shadow_view_matrix(matrix4 *view_matrix)
 {
 	Model_render_shadow_uniform_data.set_value("shadow_mv_matrix", *view_matrix);

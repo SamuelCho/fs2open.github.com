@@ -38,6 +38,19 @@ gr_zbuffer_type render_determine_depth_mode(bool using_depth_test, bool is_trans
 	return ZBUFFER_TYPE_NONE;
 }
 
+void render_set_unlit_material(material* mat_info, int texture, bool blending, bool depth_testing)
+{
+	mat_info->set_texture_map(texture, TM_BASE_TYPE);
+
+	gr_alpha_blend blend_mode = render_determine_blend_mode(texture, blending);
+	gr_zbuffer_type depth_mode = render_determine_depth_mode(depth_testing, blending);
+
+	mat_info->set_blend_mode(blend_mode);
+	mat_info->set_depth_mode(depth_mode);
+	mat_info->set_cull_mode(false);
+	mat_info->set_texture_source(TEXTURE_SOURCE_NO_FILTERING);
+}
+
 void render_primitives(vertex* verts, int n_verts, int texture, bool blending, bool depth_testing)
 {
 	vertex_layout layout;
@@ -60,7 +73,7 @@ void render_primitives(vertex* verts, int n_verts, int texture, bool blending, b
 	material_info.set_color(255, 255, 255, 255);
 }
 
-void render_primitives(vertex* verts, int texture, int red, int green, int blue, int alpha, bool blending, bool depth_testing)
+void render_primitives(vertex* verts, int n_verts, int texture, int red, int green, int blue, int alpha, bool blending, bool depth_testing)
 {
 	vertex_layout layout;
 
@@ -69,24 +82,19 @@ void render_primitives(vertex* verts, int texture, int red, int green, int blue,
 
 	material material_info;
 
-	material_info.set_texture_map(texture, TM_BASE_TYPE);
+	render_set_unlit_material(&material_info, texture, blending, depth_testing);
 
-	gr_alpha_blend blend_mode = render_determine_blend_mode(texture, blending);
-	gr_zbuffer_type depth_mode = render_determine_depth_mode(depth_testing, blending);
-
-	material_info.set_blend_mode(blend_mode);
-	material_info.set_depth_mode(depth_mode);
-	material_info.set_cull_mode(false);
-	material_info.set_texture_source(TEXTURE_SOURCE_NO_FILTERING);
 	material_info.set_color(red, green, blue, alpha);
+
+	gr_render_primitives(&material_info, PRIM_TYPE_TRISTRIP, &layout, 0, n_verts, -1);
 }
 
-void render_primitives(vertex* verts, int texture, int alpha, bool blending, bool depth_testing)
+void render_primitives(vertex* verts, int n_verts, int texture, int alpha, bool blending, bool depth_testing)
 {
-	render_primitives(verts, texture, 255, 255, 255, alpha, blending, depth_testing);
+	render_primitives(verts, n_verts, texture, 255, 255, 255, alpha, blending, depth_testing);
 }
 
-void render_primitives_2d(vertex* verts, int texture, int red, int green, int blue, int alpha, bool blending, bool depth_testing)
+void render_primitives_2d(vertex* verts, int n_verts, int texture, int red, int green, int blue, int alpha, bool blending, bool depth_testing)
 {
 	vertex_layout layout;
 
@@ -171,7 +179,7 @@ void render_primitives_2d(vertex* verts, int texture, bool blending, bool depth_
 	material_info.set_color(255, 255, 255, 255);
 }
 
-void render_oriented_quad(vec3d *pos, matrix *ori, float width, float height, material* material_info)
+void render_oriented_quad(vec3d *pos, matrix *ori, float width, float height, int texture)
 {
 	//idiot-proof
 	if(width == 0 || height == 0)
@@ -230,31 +238,13 @@ void render_oriented_quad(vec3d *pos, matrix *ori, float width, float height, ma
 	layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), &v[0].world.xyz.x);
 	layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &v[0].texture_position.u);
 
-	gr_render_primitives(material_info, PRIM_TYPE_TRIFAN, &layout, 0, NUM_VERTICES, -1);
-}
-
-void render_oriented_quad(vec3d *pos, vec3d *norm, float width, float height, material* material_info)
-{
-	matrix m;
-	vm_vector_2_matrix(&m, norm, NULL, NULL);
-
-	render_oriented_quad(pos, &m, width, height, material_info);
+	render_primitives(v, 4, texture, 255, true, true);
 }
 
 void render_oriented_quad(vec3d *pos, vec3d *norm, float width, float height, int texture)
 {
-	material material_info;
+	matrix m;
+	vm_vector_2_matrix(&m, norm, NULL, NULL);
 
-	material_info.set_texture_map(texture, TM_BASE_TYPE);
-
-	gr_alpha_blend blend_mode = render_determine_blend_mode(texture, true);
-	gr_zbuffer_type depth_mode = render_determine_depth_mode(true, true);
-
-	material_info.set_blend_mode(blend_mode);
-	material_info.set_depth_mode(depth_mode);
-	material_info.set_cull_mode(false);
-	material_info.set_texture_source(TEXTURE_SOURCE_NO_FILTERING);
-	material_info.set_color(255, 255, 255, 255);
-
-	render_oriented_quad(pos, norm, width, height, &material_info);
+	render_oriented_quad(pos, &m, width, height, texture);
 }

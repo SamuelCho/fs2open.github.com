@@ -22,6 +22,7 @@
 #include "weapon/emp.h"
 #include "network/multi.h"
 #include "network/multimsgs.h"
+#include "graphics/material.h"
 extern int Cmdline_nohtl;
 
 // ------------------------------------------------------------------------------------------------------
@@ -888,7 +889,7 @@ void nebl_render_section(bolt_type *bi, l_section *a, l_section *b)
 
 		// draw
 		gr_set_bitmap(bi->texture, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, Nebl_alpha);
-		g3_draw_poly(4, verts, TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT);		
+		g3_draw_poly(4, verts, TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT);
 	}
 
 	// draw

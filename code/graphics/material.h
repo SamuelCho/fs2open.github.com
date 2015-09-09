@@ -440,13 +440,13 @@ public:
 	material(): shader_handle(-1) {};
 
 	void set_shader_handle(int shader_handle);
-	int get_shader_handle();
+	virtual int get_shader_handle();
 
 	void set_texture_map(int texture_type, int texture_num);
 	int get_texture_map(int texture_type);
 
 	void set_texture_type(texture_type t_type);
-	texture_type get_texture_type();
+	int get_texture_type();
 
 	void set_texture_source(gr_texture_source source);
 	gr_texture_source get_texture_source();
@@ -536,7 +536,7 @@ public:
 	void set_batching(bool enabled);
 	bool is_batched();
 
-	uint determine_shader();
+	virtual int get_shader_handle();
 };
 
 class particle_material : public material
@@ -548,7 +548,7 @@ public:
 	void set_point_sprite_mode(bool enabled);
 	bool get_point_sprite_mode();
 
-	uint determine_shader();
+	virtual int get_shader_handle();
 };
 
 class distortion_material: public material
@@ -560,7 +560,7 @@ public:
 	void set_thruster_rendering(bool enabled);
 	bool get_thruster_rendering();
 
-	uint determine_shader();
+	virtual int get_shader_handle();
 };
 
 #endif
