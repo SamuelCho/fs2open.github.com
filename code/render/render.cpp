@@ -80,11 +80,7 @@ void render_primitives(vertex* verts, int n_verts, primitive_type prim_type, int
 
 	render_set_unlit_material(&material_info, texture, blending, depth_testing);
 
-	if ( clr->is_alphacolor ) {
-		material_info.set_color(clr->red, clr->green, clr->blue, clr->alpha);
-	} else {
-		material_info.set_color(clr->red, clr->green, clr->blue, 255);
-	}
+	material_info.set_color(*clr);
 
 	gr_render_primitives(&material_info, prim_type, &layout, 0, n_verts, -1);
 }
@@ -111,6 +107,8 @@ void render_colored_primitives_2d(vertex* verts, int n_verts, primitive_type pri
 	render_set_unlit_material(&material_info, texture, blending, false);
 
 	material_info.set_color(255, 255, 255, 255);
+
+	gr_render_primitives(&material_info, prim_type, &layout, 0, n_verts, -1);
 }
 
 void render_primitives_2d(vertex* verts, int n_verts, primitive_type prim_type, int texture, color *clr, bool blending)
@@ -125,6 +123,8 @@ void render_primitives_2d(vertex* verts, int n_verts, primitive_type prim_type, 
 	render_set_unlit_material(&material_info, texture, blending, false);
 
 	material_info.set_color(*clr);
+
+	gr_render_primitives(&material_info, prim_type, &layout, 0, n_verts, -1);
 }
 
 void render_primitives_2d(vertex* verts, int n_verts, primitive_type prim_type, int texture, int alpha, bool blending)
@@ -201,7 +201,88 @@ void render_oriented_quad(vec3d *pos, vec3d *norm, float width, float height, in
 	render_oriented_quad(pos, &m, width, height, texture);
 }
 
-void render_bitmap_list()
+void render_bitmap_list(bitmap_rect_list* list, int n_bm, int texture, float alpha, bool blending, int resize_mode)
 {
+	// adapted from g3_draw_2d_poly_bitmap_list
 
+	for ( int i = 0; i < n_bm; i++ ) {
+		bitmap_2d_list *l = &list[i].screen_rect;
+
+		// if no valid hight or width values were given get some from the bitmap
+		if ( (l->w <= 0) || (l->h <= 0) ) {
+			bm_get_info(texture, &l->w, &l->h, NULL, NULL, NULL);
+		}
+
+		if ( resize_mode != GR_RESIZE_NONE && (gr_screen.custom_size || (gr_screen.rendering_to_texture != -1)) ) {
+			gr_resize_screen_pos(&l->x, &l->y, &l->w, &l->h, resize_mode);
+		}
+	}
+
+	vertex* vert_list = new vertex[6 * n_bm];
+
+	for ( int i = 0; i < n_bm; i++ ) {
+		// stuff coords	
+
+		bitmap_2d_list* b = &list[i].screen_rect;
+		texture_rect_list* t = &list[i].texture_rect;
+		//tri one
+		vertex *V = &vert_list[i*6];
+		V->screen.xyw.x = (float)b->x;
+		V->screen.xyw.y = (float)b->y;	
+		V->screen.xyw.w = 0.0f;
+		V->texture_position.u = (float)t->u0;
+		V->texture_position.v = (float)t->v0;
+		V->flags = PF_PROJECTED;
+		V->codes = 0;
+
+		V++;
+		V->screen.xyw.x = (float)(b->x + b->w);
+		V->screen.xyw.y = (float)b->y;	
+		V->screen.xyw.w = 0.0f;
+		V->texture_position.u = (float)t->u1;
+		V->texture_position.v = (float)t->v0;
+		V->flags = PF_PROJECTED;
+		V->codes = 0;
+
+		V++;
+		V->screen.xyw.x = (float)(b->x + b->w);
+		V->screen.xyw.y = (float)(b->y + b->h);	
+		V->screen.xyw.w = 0.0f;
+		V->texture_position.u = (float)t->u1;
+		V->texture_position.v = (float)t->v1;
+		V->flags = PF_PROJECTED;
+		V->codes = 0;
+	
+		//tri two
+		V++;
+		V->screen.xyw.x = (float)b->x;
+		V->screen.xyw.y = (float)b->y;	
+		V->screen.xyw.w = 0.0f;
+		V->texture_position.u = (float)t->u0;
+		V->texture_position.v = (float)t->v0;
+		V->flags = PF_PROJECTED;
+		V->codes = 0;
+
+		V++;
+		V->screen.xyw.x = (float)(b->x + b->w);
+		V->screen.xyw.y = (float)(b->y + b->h);	
+		V->screen.xyw.w = 0.0f;
+		V->texture_position.u = (float)t->u1;
+		V->texture_position.v = (float)t->v1;
+		V->flags = PF_PROJECTED;
+		V->codes = 0;
+
+		V++;
+		V->screen.xyw.x = (float)b->x;
+		V->screen.xyw.y = (float)(b->y + b->h);	
+		V->screen.xyw.w = 0.0f;
+		V->texture_position.u = (float)t->u0;
+		V->texture_position.v = (float)t->v1;
+		V->flags = PF_PROJECTED;
+		V->codes = 0;	
+	}
+
+	render_primitives_2d(vert_list, 6 * n_bm, PRIM_TYPE_TRIS, texture, 255, true);
+
+	delete[] vert_list;
 }
