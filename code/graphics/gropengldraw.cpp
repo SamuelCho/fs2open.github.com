@@ -1837,9 +1837,6 @@ void gr_opengl_render(int nverts, vertex *verts, uint flags)
 	}
 }
 
-
-#define FIND_SCALED_NUM(x, x0, x1, y0, y1) ( ((((x) - (x0)) * ((y1) - (y0))) / ((x1) - (x0))) + (y0) )
-
 void gr_opengl_scaler(vertex *va, vertex *vb, bool bw_bitmap = false)
 {
 	float x0, y0, x1, y1;

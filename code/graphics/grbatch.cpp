@@ -15,14 +15,6 @@
 #include "render/3d.h"
 #include "bmpman/bmpman.h"
 
-static SCP_map<primitive_batch_info, geometry_batcher> geometry_batches;
-
-vertex_layout Effect_vertex_layout;
-vertex_layout Point_sprite_vertex_layout;
-
-primitive_batch_queue Batch_triangle_queue;
-primitive_batch_queue Batch_point_sprite_queue;
-
 geometry_batcher::~geometry_batcher()
 {
 	if (vert != NULL) {
@@ -1518,81 +1510,6 @@ void batch_render_lasers(int buffer_handle)
 	}
 }
 
-void batch_allocate_buffer(primitive_batch_queue *draw_queue, int required_size)
-{
-	Assert(draw_queue != NULL);
-
-	if ( draw_queue->buffer_size < required_size ) {
-		if ( draw_queue->buffer_ptr != NULL ) {
-			vm_free(draw_queue->buffer_ptr);
-		}
-
-		draw_queue->buffer_size = required_size;
-		draw_queue->buffer_ptr = vm_malloc(required_size);
-	}
-
-	if ( draw_queue->buffer_num >= 0 ) {
-		draw_queue->layout.set_base_vertex_ptr(NULL);
-	} else {
-		draw_queue->layout.set_base_vertex_ptr(draw_queue->buffer_ptr);
-	}
-}
-
-void batch_load_buffer(primitive_batch_queue *draw_queue, bool triangles)
-{
-	SCP_map<primitive_batch_info, geometry_batcher>::iterator bi;
-	int offset = 0;
-
-	batch_allocate_buffer(draw_queue, batch_get_size(triangles));
-
-	for ( bi = geometry_batches.begin(); bi != geometry_batches.end(); ++bi ) {
-		primitive_batch_item draw_item;
-
-		draw_item.batch_info = bi->first;
-		draw_item.offset = offset;
-
-		if ( triangles ) {
-			draw_item.n_verts = bi->second.load_buffer_triangles((effect_vertex*)draw_queue->buffer_ptr, offset);
-		} else {
-			draw_item.n_verts = bi->second.load_buffer_points((particle_pnt*)draw_queue->buffer_ptr, offset);
-		}
-
-		draw_queue->queue.push_back(draw_item);
-
-		offset += draw_item.n_verts;
-	}
-
-	if ( draw_queue->buffer_num >= 0 ) {
-		gr_update_buffer_object(draw_queue->buffer_num, Batch_triangle_queue.buffer_size, Batch_triangle_queue.buffer_ptr);
-	}
-}
-
-void batch_load_buffer_points(particle_pnt *buffer, int buffer_num)
-{
-	SCP_map<primitive_batch_info, geometry_batcher>::iterator bi;
-	int offset = 0;
-
-	Batch_point_sprite_queue.buffer_num = buffer_num;
-
-	batch_allocate_buffer(&Batch_point_sprite_queue, batch_get_size(false));
-
-	for ( bi = geometry_batches.begin(); bi != geometry_batches.end(); ++bi ) {
-		primitive_batch_item draw_item;
-
-		draw_item.batch_info = bi->first;
-		draw_item.offset = offset;
-		draw_item.n_verts = bi->second.load_buffer_points(buffer, offset);
-
-		Batch_point_sprite_queue.queue.push_back(draw_item);
-
-		offset += draw_item.n_verts;
-	}
-
-	if ( buffer_num >= 0 ) {
-		gr_update_buffer_object(buffer_num, Batch_triangle_queue.buffer_size, Batch_triangle_queue.buffer_ptr);
-	}
-}
-
 void batch_load_buffer_lasers(effect_vertex* buffer, int *n_verts)
 {
 	for (SCP_map<int, batch_item>::iterator bi = geometry_map.begin(); bi != geometry_map.end(); ++bi) {
@@ -1699,75 +1616,6 @@ void geometry_batch_render(int stream_buffer)
 	batch_render_geometry_shader_map_bitmaps(stream_buffer);
 }
 
-void batch_render(primitive_batch_item *item)
-{
-	if ( item->batch_info.selected_render_type == primitive_batch_info::VOLUME_EMISSIVE ) { // Cmdline_softparticles
-		particle_material material_info;
-		
-		if ( item->triangles ) {
-			material_info.set_point_sprite_mode(false);
-		} else {
-			material_info.set_point_sprite_mode(true);
-		}
-
-		material_info.set_depth_mode(ZBUFFER_TYPE_NONE);
-
-		if ( bm_has_alpha_channel(item->batch_info.texture) ) {
-			material_info.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
-		} else {
-			material_info.set_blend_mode(ALPHA_BLEND_ADDITIVE);
-		}
-
-		material_info.set_texture_map(TM_BASE_TYPE, item->batch_info.texture);
-		material_info.set_cull_mode(false);
-	} else if ( item->batch_info.selected_render_type == primitive_batch_info::DISTORTION || item->batch_info.selected_render_type == primitive_batch_info::DISTORTION_THRUSTER ) {
-		distortion_material material_info;
-
-		material_info.set_depth_mode(ZBUFFER_TYPE_READ);
-
-		if ( bm_has_alpha_channel(item->batch_info.texture) ) {
-			material_info.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
-		} else {
-			material_info.set_blend_mode(ALPHA_BLEND_ADDITIVE);
-		}
-
-		material_info.set_texture_map(TM_BASE_TYPE, item->batch_info.texture);
-		material_info.set_cull_mode(false);
-	}
-
-	gr_render_effects(&material_info, &item->layout, item->offset, item->n_verts, item->buffer_num);
-}
-
-void batch_render_all(int buffer_num, bool triangles)
-{
-	primitive_batch_queue* draw_queue;
-
-	if ( triangles ) {
-		draw_queue = &Batch_triangle_queue;
-	} else {
-		draw_queue = &Batch_point_sprite_queue;
-	}
-
-	draw_queue->buffer_num = buffer_num;
-
-	batch_load_buffer(draw_queue, triangles);
-
-	size_t num_batches = draw_queue->queue.size();
-
-	for ( int j = 0; j < primitive_batch_info::NUM_RENDER_TYPES; ++j ) {
-		for ( size_t i = 0; i < num_batches; ++i ) {
-			if ( draw_queue->queue[i].batch_info.selected_render_type != j ) {
-				continue;
-			}
-
-			batch_render(&draw_queue->queue[i]);
-		}
-	}
-	
-
-	gr_clear_states();
-}
-
 void batch_render_all(int stream_buffer)
 {
 	if ( stream_buffer >= 0 ) {
@@ -1807,38 +1655,6 @@ void batch_reset()
 {
 	geometry_map.clear();
 	distortion_map.clear();
-}
-
-void batch_create_vertex_layout(vertex_layout *layout, effect_render_type render_type, bool triangles)
-{
-	if ( triangles ) {
-		int stride = sizeof(effect_vertex);
-		int offset = 0;
-
-		layout->add_vertex_component(vertex_format_data::POSITION3, stride, (ubyte*)offset);
-		offset += sizeof(vec3d);
-
-		layout->add_vertex_component(vertex_format_data::TEX_COORD, stride, (ubyte*)offset);
-		offset += sizeof(uv_pair);
-
-		layout->add_vertex_component(vertex_format_data::RADIUS, stride, (ubyte*)offset);
-		offset += sizeof(float);
-
-		layout->add_vertex_component(vertex_format_data::COLOR4, stride, (ubyte*)offset);
-		offset += sizeof(ubyte)*4;
-	} else {
-		int stride = sizeof(particle_pnt);
-		int offset = 0;
-
-		layout->add_vertex_component(vertex_format_data::POSITION3, stride, (ubyte*)offset);
-		offset += sizeof(vec3d);
-
-		layout->add_vertex_component(vertex_format_data::RADIUS, stride, (ubyte*)offset);
-		offset += sizeof(float);
-
-		layout->add_vertex_component(vertex_format_data::UVEC, stride, (ubyte*)offset);
-		offset += sizeof(vec3d);
-	}
 }
 
 void batch_render_close()
@@ -1954,21 +1770,6 @@ void batch_load_buffer_distortion_map_bitmaps(effect_vertex* buffer, int *n_vert
 
 		Assert( bi->second.texture >= 0 );
 		bi->second.batch.load_buffer(buffer, n_verts);
-	}
-}
-
-int batch_get_size(bool triangles)
-{
-	SCP_map<primitive_batch_info, geometry_batcher>::iterator batch_iter;
-	int size = 0;
-
-	for ( batch_iter = geometry_batches.begin(); batch_iter != geometry_batches.end(); ++batch_iter ) {
-		if ( triangles ) {
-			size += batch_iter->second.num_triangles_to_render() * sizeof(effect_vertex);
-		} else {
-			size += batch_iter->second.num_points_to_render() * sizeof(particle_pnt);
-		}
-		
 	}
 }
 

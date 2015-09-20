@@ -477,6 +477,7 @@ public:
 	void set_depth_bias(int bias);
 	int get_depth_bias();
 
+	void set_color(float red, float green, float blue, float alpha);
 	void set_color(int r, int g, int b, int a);
 	void set_color(color &clr_in);
 	color& get_color();

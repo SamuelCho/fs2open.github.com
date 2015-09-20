@@ -695,6 +695,7 @@
     <ClCompile Include="..\..\code\render\3dlaser.cpp" />
     <ClCompile Include="..\..\code\render\3dmath.cpp" />
     <ClCompile Include="..\..\code\render\3dsetup.cpp" />
+    <ClCompile Include="..\..\code\render\batching.cpp" />
     <ClCompile Include="..\..\code\render\render.cpp" />
     <ClCompile Include="..\..\code\ship\afterburner.cpp" />
     <ClCompile Include="..\..\code\ship\awacs.cpp" />
@@ -973,6 +974,7 @@
     <ClInclude Include="..\..\code\radar\radarsetup.h" />
     <ClInclude Include="..\..\code\render\3d.h" />
     <ClInclude Include="..\..\code\render\3dinternal.h" />
+    <ClInclude Include="..\..\code\render\batching.h" />
     <ClInclude Include="..\..\code\ship\afterburner.h" />
     <ClInclude Include="..\..\code\ship\awacs.h" />
     <ClInclude Include="..\..\code\ship\ship.h" />

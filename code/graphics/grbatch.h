@@ -109,47 +109,6 @@ public:
 	int need_to_render() { return vertices.size(); };
 };
 
-struct primitive_batch_info {
-	enum render_type {
-		FLAT_EMISSIVE,
-		VOLUME_EMISSIVE,
-		DISTORTION,
-		DISTORTION_THRUSTER,
-		NUM_RENDER_TYPES
-	};
-
-	render_type selected_render_type;
-	int texture;
-
-	bool operator<(primitive_batch_info& batch) {
-		if ( selected_render_type != batch.selected_render_type ) {
-			
-			return selected_render_type < batch.selected_render_type;
-		}
-
-		return texture < batch.texture;
-	}
-};
-
-struct primitive_batch_item {
-	primitive_batch_info batch_info;
-	vertex_layout *layout;
-	bool triangles;
-	int buffer_num;
-	int offset;
-	int n_verts;
-};
-
-struct primitive_batch_queue {
-	vertex_layout layout;
-	int buffer_num;
-
-	void* buffer_ptr;
-	int buffer_size;
-
-	SCP_vector<primitive_batch_item> queue;
-};
-
 float batch_add_laser(int texture, vec3d *p0, float width1, vec3d *p1, float width2, int r = 255, int g = 255, int b = 255);
 int batch_add_bitmap(int texture, int tmap_flags, vertex *pnt, int orient, float rad, float alpha = 1.0f, float depth = 0.0f);
 int batch_add_bitmap_rotated(int texture, int tmap_flags, vertex *pnt, float angle, float rad, float alpha = 1.0f, float depth = 0.0f);

@@ -11,6 +11,11 @@ int material::get_shader_handle()
 	return shader_handle;
 }
 
+void material::set_color(float red, float green, float blue, float alpha)
+{
+	set_color(fl2i(red * 255.0f), fl2i(green * 255.0f), fl2i(blue * 255.0f), fl2i(alpha * 255.0f));
+}
+
 void material::set_color(int r, int g, int b, int a)
 {
 	gr_init_alphacolor(&clr, r, g, b, a);

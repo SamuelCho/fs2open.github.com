@@ -16,6 +16,7 @@
 #include "graphics/tmapper.h"
 #include "cfile/cfile.h"
 #include "bmpman/bmpman.h"
+#include "graphics/material.h"
 
 extern const float Default_min_draw_distance;
 extern const float Default_max_draw_distance;
@@ -184,6 +185,104 @@ enum shader_type {
 
 #define SDR_FLAG_BLUR_HORIZONTAL			(1<<0)
 #define SDR_FLAG_BLUR_VERTICAL				(1<<1)
+
+struct vertex_format_data
+{
+	enum vertex_format {
+		POSITION4,
+		POSITION3,
+		POSITION2,
+		SCREEN_POS,
+		COLOR3,
+		COLOR4,
+		TEX_COORD,
+		NORMAL,
+		TANGENT,
+		MODEL_ID,
+		RADIUS,
+		FVEC,
+		UVEC,
+		INTENSITY
+	};
+
+	vertex_format format_type;
+	uint stride;
+	void *data_src;
+	int offset;
+
+	vertex_format_data(vertex_format i_format_type, uint i_stride, void *i_data_src) : 
+	format_type(i_format_type), stride(i_stride), data_src(i_data_src), offset(-1) {}
+
+	vertex_format_data(vertex_format i_format_type, uint i_stride, int i_offset) : 
+	format_type(i_format_type), stride(i_stride), data_src(NULL), offset(i_offset) {}
+};
+
+class vertex_layout
+{
+	SCP_vector<vertex_format_data> Vertex_components;
+
+	uint Vertex_mask;
+
+	void* base_ptr;
+public:
+	vertex_layout(): Vertex_mask(0), base_ptr(NULL) {}
+
+	vertex_layout(void* init_ptr): Vertex_mask(0), base_ptr(init_ptr) {}
+
+	uint get_num_vertex_components() { return Vertex_components.size(); }
+
+	vertex_format_data* get_vertex_component(uint index) { return &Vertex_components[index]; }
+
+	void* get_base_vertex_ptr() { return base_ptr; }
+
+	void set_base_vertex_ptr(void* i_base_ptr) { base_ptr = i_base_ptr; }
+
+	bool resident_vertex_format(vertex_format_data::vertex_format format_type) { return Vertex_mask & (1 << format_type) ? true : false; } 
+
+	void add_vertex_component(vertex_format_data::vertex_format format_type, void* src)
+	{
+		add_vertex_component(format_type, 0, src);
+	}
+
+	void add_vertex_component(vertex_format_data::vertex_format format_type, uint stride, void* src) 
+	{
+		if ( resident_vertex_format(format_type) ) {
+			// we already have a vertex component of this format type
+			return;
+		}
+
+		Vertex_mask |= (1 << format_type);
+		Vertex_components.push_back(vertex_format_data(format_type, stride, src));
+	}
+
+	void add_vertex_component(vertex_format_data::vertex_format format_type, uint stride, int offset) 
+	{
+		if ( resident_vertex_format(format_type) ) {
+			// we already have a vertex component of this format type
+			return;
+		}
+
+		Vertex_mask |= (1 << format_type);
+		Vertex_components.push_back(vertex_format_data(format_type, stride, offset));
+	}
+};
+
+class vertex_source
+{
+	vertex_layout Vert_config;
+
+	int offset;
+
+	int Vertex_buffer_handle;
+
+	int Index_buffer_handle;
+	void* Index_ptr;
+
+	int Num_verts;
+
+public:
+	vertex_source() {}
+};
 
 // stencil buffering stuff
 extern int gr_stencil_mode;
@@ -460,6 +559,7 @@ public:
 
 struct light;
 
+#define FIND_SCALED_NUM(x, x0, x1, y0, y1) ( ((((x) - (x0)) * ((y1) - (y0))) / ((x1) - (x0))) + (y0) )
 
 #define GR_ALPHABLEND_NONE			0		// no blending
 #define GR_ALPHABLEND_FILTER		1		// 50/50 mix of foreground, background, using intensity as alpha
@@ -1119,7 +1219,7 @@ __inline void gr_render_buffer(int start, const vertex_buffer *bufferp, int texi
 
 #define gr_shadow_map_start				GR_CALL(*gr_screen.gf_shadow_map_start)
 #define gr_shadow_map_end				GR_CALL(*gr_screen.gf_shadow_map_end)
-__inline void gr_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+__inline void gr_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle = -1)
 {
 	(*gr_screen.gf_render_primitives)(material_info, prim_type, layout, offset, n_verts, buffer_handle);
 }
@@ -1180,103 +1280,5 @@ void gr_pline_special(SCP_vector<vec3d> *pts, int thickness,int resize_mode=GR_R
 #define VB_FLAG_LARGE_INDEX	(1<<10)
 #define VB_FLAG_MODEL_ID	(1<<11)
 #define VB_FLAG_TRANS		(1<<12)
-
-struct vertex_format_data
-{
-	enum vertex_format {
-		POSITION4,
-		POSITION3,
-		POSITION2,
-		SCREEN_POS,
-		COLOR3,
-		COLOR4,
-		TEX_COORD,
-		NORMAL,
-		TANGENT,
-		MODEL_ID,
-		RADIUS,
-		FVEC,
-		UVEC,
-		INTENSITY
-	};
-
-	vertex_format format_type;
-	uint stride;
-	void *data_src;
-	int offset;
-
-	vertex_format_data(vertex_format i_format_type, uint i_stride, void *i_data_src) : 
-	format_type(i_format_type), stride(i_stride), data_src(i_data_src), offset(-1) {}
-
-	vertex_format_data(vertex_format i_format_type, uint i_stride, int i_offset) : 
-	format_type(i_format_type), stride(i_stride), data_src(NULL), offset(i_offset) {}
-};
-
-class vertex_layout
-{
-	SCP_vector<vertex_format_data> Vertex_components;
-
-	uint Vertex_mask;
-
-	void* base_ptr;
-public:
-	vertex_layout(): Vertex_mask(0), base_ptr(NULL) {}
-
-	vertex_layout(void* init_ptr): Vertex_mask(0), base_ptr(init_ptr) {}
-
-	uint get_num_vertex_components() { return Vertex_components.size(); }
-
-	vertex_format_data* get_vertex_component(uint index) { return &Vertex_components[index]; }
-
-	void* get_base_vertex_ptr() { return base_ptr; }
-
-	void set_base_vertex_ptr(void* i_base_ptr) { base_ptr = i_base_ptr; }
-
-	bool resident_vertex_format(vertex_format_data::vertex_format format_type) { return Vertex_mask & (1 << format_type) ? true : false; } 
-
-	void add_vertex_component(vertex_format_data::vertex_format format_type, void* src)
-	{
-		add_vertex_component(format_type, 0, src);
-	}
-
-	void add_vertex_component(vertex_format_data::vertex_format format_type, uint stride, void* src) 
-	{
-		if ( resident_vertex_format(format_type) ) {
-			// we already have a vertex component of this format type
-			return;
-		}
-
-		Vertex_mask |= (1 << format_type);
-		Vertex_components.push_back(vertex_format_data(format_type, stride, src));
-	}
-
-	void add_vertex_component(vertex_format_data::vertex_format format_type, uint stride, int offset) 
-	{
-		if ( resident_vertex_format(format_type) ) {
-			// we already have a vertex component of this format type
-			return;
-		}
-
-		Vertex_mask |= (1 << format_type);
-		Vertex_components.push_back(vertex_format_data(format_type, stride, offset));
-	}
-};
-
-class vertex_source
-{
-	vertex_layout Vert_config;
-
-	int offset;
-
-	int Vertex_buffer_handle;
-
-	int Index_buffer_handle;
-	void* Index_ptr;
-
-	int Num_verts;
-
-public:
-	vertex_source() {}
-};
 
 #endif
