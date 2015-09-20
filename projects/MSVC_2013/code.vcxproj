@@ -975,6 +975,7 @@
     <ClInclude Include="..\..\code\render\3d.h" />
     <ClInclude Include="..\..\code\render\3dinternal.h" />
     <ClInclude Include="..\..\code\render\batching.h" />
+    <ClInclude Include="..\..\code\render\render.h" />
     <ClInclude Include="..\..\code\ship\afterburner.h" />
     <ClInclude Include="..\..\code\ship\awacs.h" />
     <ClInclude Include="..\..\code\ship\ship.h" />
