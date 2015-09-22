@@ -60,12 +60,14 @@ struct primitive_batch_item {
 	int n_verts;
 };
 
-struct primitive_batch_queue {
-	vertex_layout layout;
+struct primitive_batch_buffer {
+	vertex_layout *layout;
 	int buffer_num;
 
 	void* buffer_ptr;
 	int buffer_size;
 
-	SCP_vector<primitive_batch_item> queue;
+	bool triangles;
+
+	SCP_vector<primitive_batch_item> items;
 };
