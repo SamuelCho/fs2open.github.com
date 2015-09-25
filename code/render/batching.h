@@ -47,8 +47,10 @@ public:
 	int load_buffer_points(particle_pnt* buffer, int n_verts);
 	int load_buffer_triangles(effect_vertex* buffer, int n_verts);
 
-	int num_triangles_to_render();
+	int num_triangle_vertices_to_render();
 	int num_points_to_render();
+
+	void clear();
 };
 
 struct primitive_batch_item {
@@ -58,6 +60,8 @@ struct primitive_batch_item {
 	int buffer_num;
 	int offset;
 	int n_verts;
+
+	primitive_batch *batch;
 };
 
 struct primitive_batch_buffer {
@@ -66,6 +70,8 @@ struct primitive_batch_buffer {
 
 	void* buffer_ptr;
 	int buffer_size;
+
+	int desired_buffer_size;
 
 	bool triangles;
 

@@ -84,7 +84,7 @@ public:
 	// determine if we even need to try and render this (helpful for particle system)
 	int need_to_render() { return n_to_render; }
 
-	int num_triangles_to_render() { return vertices.size(); }
+	int num_triangle_vertices_to_render() { return vertices.size(); }
 	int num_points_to_render() { return billboard_quads.size(); }
 
 	void operator =(int){}

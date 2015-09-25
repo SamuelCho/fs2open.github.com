@@ -87,6 +87,18 @@ void render_set_unlit_material(material* mat_info, int texture, color *clr, bool
 	mat_info->set_color(*clr);
 }
 
+void render_set_interface_material(material* mat_info, int texture)
+{
+	mat_info->set_texture_map(TM_BASE_TYPE, texture);
+
+	mat_info->set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+	mat_info->set_depth_mode(ZBUFFER_TYPE_NONE);
+	mat_info->set_cull_mode(false);
+	mat_info->set_texture_source(TEXTURE_SOURCE_NO_FILTERING);
+
+	mat_info->set_color(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
 void render_set_volume_emissive_material(particle_material* mat_info, int texture, bool point_sprites)
 {
 	mat_info->set_point_sprite_mode(point_sprites);
@@ -109,6 +121,7 @@ void render_set_distortion_material(distortion_material *mat_info, int texture, 
 
 	mat_info->set_texture_map(TM_BASE_TYPE, texture);
 	mat_info->set_cull_mode(false);
+	mat_info->set_color(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
 void render_colored_primitives(vertex* verts, int n_verts, primitive_type prim_type, int texture, bool blending, bool depth_testing)

@@ -2233,7 +2233,7 @@ void gr_opengl_shadow_map_end()
 		glScissor(gr_screen.offset_x, (gr_screen.max_h - gr_screen.offset_y - gr_screen.clip_height), gr_screen.clip_width, gr_screen.clip_height);
 }
 
-void opengl_tnl_set_material(material* material_info, bool set_base_map = true)
+void opengl_tnl_set_material(material* material_info, bool set_base_map)
 {
 	int shader_handle = material_info->get_shader_handle();
 
@@ -2707,7 +2707,7 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 
 void opengl_tnl_set_material_particle(particle_material * material_info)
 {
-	opengl_tnl_set_material(material_info);
+	opengl_tnl_set_material(material_info, true);
 
 	GL_state.Uniform.setUniform("baseMap", 0);
 	GL_state.Uniform.setUniform("depthMap", 1);
@@ -2780,7 +2780,7 @@ void opengl_tnl_set_material_soft_particle(uint flags)
 
 void opengl_tnl_set_material_distortion(distortion_material* material_info)
 {
-	opengl_tnl_set_material(material_info);
+	opengl_tnl_set_material(material_info, true);
 
 	GL_state.Uniform.setUniform("baseMap", 0);
 	GL_state.Uniform.setUniform("depthMap", 1);

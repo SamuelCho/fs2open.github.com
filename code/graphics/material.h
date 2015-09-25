@@ -437,7 +437,7 @@ protected:
 	material(shader_type init_sdr_type);
 
 public:
-	material(): shader_handle(-1) {};
+	material(): shader_handle(-1), tex_source(TEXTURE_SOURCE_NO_FILTERING) {};
 
 	void set_shader_handle(int shader_handle);
 	virtual int get_shader_handle();

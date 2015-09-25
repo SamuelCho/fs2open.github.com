@@ -57,6 +57,12 @@ int primitive_batch::load_buffer_points(particle_pnt* buffer, int n_verts)
 	return verts_to_render;
 }
 
+void primitive_batch::clear()
+{
+	Triangle_verts.clear();
+	Point_sprite_verts.clear();
+}
+
 void batching_init_buffers()
 {
 	Batch_effect_vertex_queue.buffer_num = gr_create_stream_buffer();
@@ -720,96 +726,132 @@ void batching_render_batch_item(primitive_batch_item *item)
 	}
 }
 
-void batching_allocate_buffer(primitive_batch_buffer *draw_queue, int required_size)
+void batching_allocate_and_load_buffer(primitive_batch_buffer *draw_queue, bool triangles)
 {
 	Assert(draw_queue != NULL);
 
-	if ( draw_queue->buffer_size < required_size ) {
+	if ( draw_queue->buffer_size < draw_queue->desired_buffer_size ) {
 		if ( draw_queue->buffer_ptr != NULL ) {
 			vm_free(draw_queue->buffer_ptr);
 		}
 
-		draw_queue->buffer_size = required_size;
-		draw_queue->buffer_ptr = vm_malloc(required_size);
+		draw_queue->buffer_size = draw_queue->desired_buffer_size;
+		draw_queue->buffer_ptr = vm_malloc(draw_queue->desired_buffer_size);
 	}
+
+	draw_queue->desired_buffer_size = 0;
 
 	if ( draw_queue->buffer_num >= 0 ) {
 		draw_queue->layout->set_base_vertex_ptr(NULL);
 	} else {
 		draw_queue->layout->set_base_vertex_ptr(draw_queue->buffer_ptr);
 	}
-}
 
-int batch_get_size(bool triangles)
-{
-	SCP_map<batch_info, primitive_batch>::iterator batch_iter;
-	int size = 0;
-
-	for ( batch_iter = Batching_primitives.begin(); batch_iter != Batching_primitives.end(); ++batch_iter ) {
-		if ( triangles ) {
-			size += batch_iter->second.num_triangles_to_render() * sizeof(effect_vertex);
-		} else {
-			size += batch_iter->second.num_points_to_render() * sizeof(particle_pnt);
-		}
-	}
-}
-
-void batching_load_buffer(primitive_batch_buffer *draw_queue)
-{
-	SCP_map<batch_info, primitive_batch>::iterator bi;
 	int offset = 0;
-	bool triangles = draw_queue->triangles;
+	size_t num_items = draw_queue->items.size();
 
-	batching_allocate_buffer(draw_queue, batch_get_size(triangles));
+	for ( size_t i = 0; i < num_items; ++i ) {
+		primitive_batch_item *item = &draw_queue->items[i];
 
-	for ( bi = Batching_primitives.begin(); bi != Batching_primitives.end(); ++bi ) {
-		primitive_batch_item draw_item;
-
-		draw_item.batch_item_info = bi->first;
-		draw_item.offset = offset;
+		item->offset = offset;
 
 		if ( triangles ) {
-			draw_item.n_verts = bi->second.load_buffer_triangles((effect_vertex*)draw_queue->buffer_ptr, offset);
+			item->n_verts = item->batch->load_buffer_triangles((effect_vertex*)draw_queue->buffer_ptr, offset);
 		} else {
-			draw_item.n_verts = bi->second.load_buffer_points((particle_pnt*)draw_queue->buffer_ptr, offset);
+			item->n_verts = item->batch->load_buffer_points((particle_pnt*)draw_queue->buffer_ptr, offset);
 		}
-
-		draw_queue->items.push_back(draw_item);
-
-		offset += draw_item.n_verts;
+		
+		offset += item->n_verts;
 	}
 
 	if ( draw_queue->buffer_num >= 0 ) {
-		gr_update_buffer_object(draw_queue->buffer_num, Batch_triangle_queue.buffer_size, Batch_triangle_queue.buffer_ptr);
+		gr_update_buffer_object(draw_queue->buffer_num, draw_queue->buffer_size, draw_queue->buffer_ptr);
 	}
+}
+
+void batching_load_buffers(bool distortion)
+{
+	SCP_map<batch_info, primitive_batch>::iterator bi;
+
+	Batch_effect_vertex_queue.desired_buffer_size = 0;
+	Batch_effect_vertex_no_radius_queue.desired_buffer_size = 0;
+	Batch_point_sprite_queue.desired_buffer_size = 0;
+
+	// assign primitive batch items
+	for ( bi = Batching_primitives.begin(); bi != Batching_primitives.end(); ++bi ) {
+		if ( bi->first.selected_render_type == batch_info::DISTORTION || bi->first.selected_render_type == batch_info::DISTORTION ) {
+			if ( !distortion ) {
+				continue;
+			}
+		} else {
+			if ( distortion ) {
+				continue;
+			}
+		}
+
+		int num_tri_verts = bi->second.num_triangle_vertices_to_render();
+		int num_point_verts = bi->second.num_points_to_render();
+
+		if ( num_tri_verts > 0 ) {
+			primitive_batch_buffer *buffer;
+
+			if ( bi->first.selected_render_type == batch_info::FLAT_EMISSIVE ) {
+				buffer = &Batch_effect_vertex_no_radius_queue;
+			} else {
+				buffer = &Batch_effect_vertex_queue;
+			}
+
+			primitive_batch_item draw_item;
+
+			draw_item.batch_item_info = bi->first;
+			draw_item.offset = -1;
+			draw_item.n_verts = num_tri_verts;
+			draw_item.triangles = true;
+			draw_item.batch = &bi->second;
+
+			buffer->desired_buffer_size += num_tri_verts * sizeof(effect_vertex);
+			buffer->items.push_back(draw_item);
+		}
+
+		if ( num_point_verts > 0 ) {
+			primitive_batch_buffer *buffer;
+
+			buffer = &Batch_point_sprite_queue;
+
+			primitive_batch_item draw_item;
+
+			draw_item.batch_item_info = bi->first;
+			draw_item.offset = -1;
+			draw_item.n_verts = num_point_verts;
+			draw_item.triangles = false;
+			draw_item.batch = &bi->second;
+
+			buffer->desired_buffer_size += num_point_verts * sizeof(particle_pnt);
+			buffer->items.push_back(draw_item);
+		}
+	}
+
+	batching_allocate_and_load_buffer(&Batch_effect_vertex_queue, true);
+	batching_allocate_and_load_buffer(&Batch_effect_vertex_no_radius_queue, true);
+	batching_allocate_and_load_buffer(&Batch_point_sprite_queue, false);	
 }
 
 void batching_render_all(bool distortion)
 {
-	batching_render_buffer(&Batch_point_sprite_queue);
-	batching_render_buffer(&Batch_effect_vertex_no_radius_queue);
-	batching_render_buffer(&Batch_effect_vertex_queue);
+	batching_load_buffers(distortion);
+
+	batching_render_buffer(&Batch_point_sprite_queue, distortion);
+	batching_render_buffer(&Batch_effect_vertex_no_radius_queue, distortion);
+	batching_render_buffer(&Batch_effect_vertex_queue, distortion);
 	
 	gr_clear_states();
 }
 
 void batching_render_buffer(primitive_batch_buffer *buffer, bool distortion)
 {
-	batching_load_buffer(buffer);
-
 	size_t num_batches = buffer->items.size();
 
 	for ( int j = 0; j < batch_info::NUM_RENDER_TYPES; ++j ) {
-		if ( distortion ) {
-			if ( j == batch_info::FLAT_EMISSIVE || j == batch_info::VOLUME_EMISSIVE ) {
-				continue;
-			}
-		} else {
-			if ( j == batch_info::DISTORTION || j == batch_info::DISTORTION_THRUSTER ) {
-				continue;
-			}
-		}
-
 		for ( size_t i = 0; i < num_batches; ++i ) {
 			if ( buffer->items[i].batch_item_info.selected_render_type != j ) {
 				continue;

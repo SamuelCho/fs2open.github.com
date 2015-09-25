@@ -3389,6 +3389,8 @@ void gr_opengl_render_primitives(material* material_info, primitive_type prim_ty
 
 	if ( buffer_handle >= 0 ) {
 		opengl_bind_buffer_object(buffer_handle);
+	} else {
+		GL_state.Array.BindArrayBuffer(0);
 	}
 
 	opengl_bind_vertex_layout(*layout);
@@ -3402,6 +3404,8 @@ void gr_opengl_render_primitives_particle(particle_material* material_info, prim
 
 	if ( buffer_handle >= 0 ) {
 		opengl_bind_buffer_object(buffer_handle);
+	} else {
+		GL_state.Array.BindArrayBuffer(0);
 	}
 
 	opengl_bind_vertex_layout(*layout);
@@ -3415,6 +3419,8 @@ void gr_opengl_render_primitives_distortion(distortion_material* material_info, 
 
 	if ( buffer_handle >= 0 ) {
 		opengl_bind_buffer_object(buffer_handle);
+	} else {
+		GL_state.Array.BindArrayBuffer(0);
 	}
 
 	opengl_bind_vertex_layout(*layout);
