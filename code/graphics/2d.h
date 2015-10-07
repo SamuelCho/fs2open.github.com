@@ -16,7 +16,7 @@
 #include "graphics/tmapper.h"
 #include "cfile/cfile.h"
 #include "bmpman/bmpman.h"
-#include "graphics/material.h"
+#include "math/vecmat.h"
 
 extern const float Default_min_draw_distance;
 extern const float Default_max_draw_distance;
@@ -27,6 +27,11 @@ extern int Gr_inited;
 // z-buffering stuff
 extern int gr_zbuffering, gr_zbuffering_mode;
 extern int gr_global_zbuffering;
+
+class material;
+class model_material;
+class particle_material;
+class distortion_material;
 
 struct transform
 {
@@ -52,6 +57,7 @@ struct transform
 		return new_mat;
 	}
 };
+
 
 class transform_stack {
 	
@@ -97,7 +103,7 @@ public:
 		}
 
 		if ( scale == NULL ) {
-			factor = vmd_scale_identity_vector
+			factor = vmd_scale_identity_vector;
 		} else {
 			factor = *scale;
 		}
@@ -878,10 +884,11 @@ typedef struct screen {
 	void (*gf_shadow_map_end)();
 
 	// new drawing functions
+	void (*gf_render_model)(model_material* material_info, vertex_buffer* bufferp, int texi);
 	void (*gf_render_primitives)(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
 	void (*gf_render_primitives_particle)(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
 	void (*gf_render_primitives_distortion)(distortion_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
-
+	void (*gf_render_primitives_2d)(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
 } screen;
 
 // handy macro
@@ -1222,6 +1229,26 @@ __inline void gr_render_buffer(int start, const vertex_buffer *bufferp, int texi
 __inline void gr_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle = -1)
 {
 	(*gr_screen.gf_render_primitives)(material_info, prim_type, layout, offset, n_verts, buffer_handle);
+}
+
+__inline void gr_render_primitives_particle(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle = -1)
+{
+	(*gr_screen.gf_render_primitives_particle)(material_info, prim_type, layout, offset, n_verts, buffer_handle);
+}
+
+__inline void gr_render_primitives_distortion(distortion_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle = -1)
+{
+	(*gr_screen.gf_render_primitives_distortion)(material_info, prim_type, layout, offset, n_verts, buffer_handle);
+}
+
+__inline void gr_render_primitives_2d(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle = -1)
+{
+	(*gr_screen.gf_render_primitives_2d)(material_info, prim_type, layout, offset, n_verts, buffer_handle);
+}
+
+__inline void gr_render_model(model_material* material_info, vertex_buffer* bufferp, int texi)
+{
+	(*gr_screen.gf_render_model)(material_info, bufferp, texi);
 }
 
 // color functions

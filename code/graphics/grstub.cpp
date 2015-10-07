@@ -754,7 +754,17 @@ void gr_stub_shadow_map_end()
 {
 }
 
+void gr_stub_render_model(model_material* material_info, vertex_buffer* bufferp, int texi)
+{
+
+}
+
 void gr_stub_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+{
+
+}
+
+void gr_stub_render_primitives_2d(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
 {
 
 }
@@ -969,7 +979,9 @@ bool gr_stub_init()
 	gr_screen.gf_update_texture = gr_stub_update_texture;
 	gr_screen.gf_get_bitmap_from_texture = gr_stub_get_bitmap_from_texture;
 
+	gr_screen.gf_render_model = gr_stub_render_model;
 	gr_screen.gf_render_primitives	= gr_stub_render_primitives;
+	gr_screen.gf_render_primitives_2d	= gr_stub_render_primitives_2d;
 	gr_screen.gf_render_primitives_particle	= gr_stub_render_primitives_particle;
 	gr_screen.gf_render_primitives_distortion = gr_stub_render_primitives_distortion;
 

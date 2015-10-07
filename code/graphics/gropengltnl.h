@@ -73,11 +73,17 @@ void gr_opengl_set_team_color(team_color *colors);
 
 void opengl_tnl_shutdown();
 
-void opengl_tnl_set_material(material* material_info);
+void gr_opengl_render_model(model_material* material_info, vertex_buffer* bufferp, int texi);
+void opengl_render_model_program(model_material* material_info, vertex_buffer* bufferp, buffer_data *datap);
+void opengl_render_model_fixed(model_material* material_info, vertex_buffer *bufferp, buffer_data *datap);
+
+void opengl_tnl_set_material(material* material_info, bool set_base_map);
 void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type);
 void opengl_tnl_set_material_distortion(distortion_material* material_info);
 void opengl_tnl_set_material_distortion(uint flags);
 void opengl_tnl_set_material_particle(particle_material * material_info);
 void opengl_tnl_set_material_soft_particle(uint flags);
+
+void opengl_tnl_set_model_material(model_material *material_info);
 
 #endif //_GROPENGLTNL_H

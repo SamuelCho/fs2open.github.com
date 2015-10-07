@@ -129,6 +129,8 @@ inline GLenum opengl_primitive_type(primitive_type prim_type)
 		return GL_LINES;
 	case PRIM_TYPE_LINESTRIP:
 		return GL_LINE_STRIP;
+	default:
+		return GL_TRIANGLE_FAN;
 	}
 }
 
@@ -3385,7 +3387,7 @@ void gr_opengl_update_distortion()
 
 void gr_opengl_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
 {
-	opengl_tnl_set_material(material_info);
+	opengl_tnl_set_material(material_info, true);
 
 	if ( buffer_handle >= 0 ) {
 		opengl_bind_buffer_object(buffer_handle);
@@ -3396,6 +3398,20 @@ void gr_opengl_render_primitives(material* material_info, primitive_type prim_ty
 	opengl_bind_vertex_layout(*layout);
 	
 	glDrawArrays(opengl_primitive_type(prim_type), offset, n_verts);
+}
+
+void gr_opengl_render_primitives_2d(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+{
+	glPushMatrix();
+	glTranslatef((float)gr_screen.offset_x, (float)gr_screen.offset_y, -0.99f);
+
+	gr_opengl_set_2d_matrix();
+
+	gr_opengl_render_primitives(material_info, prim_type, layout, offset, n_verts, buffer_handle);
+
+	gr_opengl_end_2d_matrix();
+
+	glPopMatrix();
 }
 
 void gr_opengl_render_primitives_particle(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)

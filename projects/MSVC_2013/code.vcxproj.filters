@@ -560,6 +560,7 @@
     <ClInclude Include="..\..\code\external_dll\trackirpublic.h" />
     <ClInclude Include="..\..\code\render\batching.h" />
     <ClInclude Include="..\..\code\render\render.h" />
+    <ClInclude Include="..\..\code\graphics\material.h" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="..\..\code\directx\dxguid.lib" />

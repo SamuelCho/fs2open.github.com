@@ -17,6 +17,7 @@
 
 #include "render/3d.h"
 #include "model/model.h"
+#include "render/render.h"
 #include "freespace2/freespace.h"
 #include "mission/missionparse.h"
 #include "network/multi.h"
@@ -304,6 +305,57 @@ void render_low_detail_shield_bitmap(gshield_tri *trip, matrix *orient, vec3d *p
 	}
 }
 
+void shield_render_low_detail_bitmap(gshield_tri *trip, matrix *orient, vec3d *pos, ubyte r, ubyte g, ubyte b, int texture)
+{
+	int		j;
+	vec3d	pnt;
+	vertex	verts[4];
+    
+    memset(verts, 0, sizeof(verts));
+
+	for (j=0; j<4; j++ )	{
+		// Rotate point into world coordinates
+		vm_vec_unrotate(&pnt, &trip->verts[j].pos, orient);
+		vm_vec_add2(&pnt, pos);
+
+		// Pnt is now the x,y,z world coordinates of this vert.
+		if(!Cmdline_nohtl) g3_transfer_vertex(&verts[j], &pnt);
+		else g3_rotate_vertex(&verts[j], &pnt);
+		verts[j].texture_position.u = trip->verts[j].u;
+		verts[j].texture_position.v = trip->verts[j].v;
+	}	
+
+	verts[0].r = r;
+	verts[0].g = g;
+	verts[0].b = b;
+	verts[1].r = r;
+	verts[1].g = g;
+	verts[1].b = b;
+	verts[2].r = r;
+	verts[2].g = g;
+	verts[2].b = b;
+	verts[3].r = r;
+	verts[3].g = g;
+	verts[3].b = b;
+
+	vec3d	norm;
+	vm_vec_perp(&norm, &trip->verts[0].pos, &trip->verts[1].pos, &trip->verts[2].pos);
+	vertex	vertlist[4];
+	if ( vm_vec_dot(&norm, &trip->verts[1].pos ) < 0.0 )	{
+		vertlist[0] = verts[3]; 
+		vertlist[1] = verts[2];
+		vertlist[2] = verts[1]; 
+		vertlist[3] = verts[0];
+	} else {
+		vertlist[0] = verts[0]; 
+		vertlist[1] = verts[1];
+		vertlist[2] = verts[2]; 
+		vertlist[3] = verts[3];
+	}
+
+	render_colored_primitives(vertlist, 4, PRIM_TYPE_TRIFAN, texture, true, true);
+}
+
 /**
  * Render one triangle of a shield hit effect on one ship.
  * Each frame, the triangle needs to be rotated into global coords.
@@ -370,6 +422,59 @@ void render_shield_triangle(gshield_tri *trip, matrix *orient, vec3d *pos, ubyte
 		g3_draw_poly( 3, vertlist, flags);
 	} else {
 		g3_draw_poly( 3, verts, flags);
+	}
+}
+
+void shield_render_triangle(gshield_tri *trip, matrix *orient, vec3d *pos, ubyte r, ubyte g, ubyte b, int texture)
+{
+	int		j;
+	vec3d	pnt;
+	vertex	verts[3];
+    
+    memset(&verts, 0, sizeof(verts));
+
+	if (trip->trinum == -1)
+		return;	//	Means this is a quad, must have switched detail_level.
+
+	for (j=0; j<3; j++ )	{
+		// Rotate point into world coordinates
+		vm_vec_unrotate(&pnt, &trip->verts[j].pos, orient);
+		vm_vec_add2(&pnt, pos);
+
+		// Pnt is now the x,y,z world coordinates of this vert.
+		// For this example, I am just drawing a sphere at that point.
+
+	 	if (!Cmdline_nohtl) g3_transfer_vertex(&verts[j],&pnt);
+	 	else g3_rotate_vertex(&verts[j], &pnt);
+			
+		verts[j].texture_position.u = trip->verts[j].u;
+		verts[j].texture_position.v = trip->verts[j].v;
+		Assert((trip->verts[j].u >= 0.0f) && (trip->verts[j].u <= UV_MAX));
+		Assert((trip->verts[j].v >= 0.0f) && (trip->verts[j].v <= UV_MAX));
+	}
+
+	verts[0].r = r;
+	verts[0].g = g;
+	verts[0].b = b;
+	verts[1].r = r;
+	verts[1].g = g;
+	verts[1].b = b;
+	verts[2].r = r;
+	verts[2].g = g;
+	verts[2].b = b;
+
+	vec3d	norm;
+	Poly_count++;
+	vm_vec_perp(&norm, &verts[0].world, &verts[1].world, &verts[2].world);
+
+	if ( vm_vec_dot(&norm, &verts[1].world) >= 0.0 ) {
+		vertex	vertlist[3];
+		vertlist[0] = verts[2]; 
+		vertlist[1] = verts[1]; 
+		vertlist[2] = verts[0]; 
+		render_colored_primitives(vertlist, 3, PRIM_TYPE_TRIFAN, texture, true, true);
+	} else {
+		render_colored_primitives(verts, 3, PRIM_TYPE_TRIFAN, texture, true, true);
 	}
 }
 

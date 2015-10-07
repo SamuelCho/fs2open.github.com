@@ -1,9 +1,6 @@
 #ifndef _MATERIAL_H
 #define _MATERIAL_H
 
-#include "globalincs/pstypes.h"
-#include "math/vecmat.h"
-#include "graphics/2d.h"
 #include "graphics/grinternal.h"
 #include "model/model.h"
 
@@ -411,39 +408,41 @@ public:
 	};
 
 	enum texture_type {
-		NORMAL,
-		AABITMAP,
-		INTERFACE
+		TEX_TYPE_NORMAL,
+		TEX_TYPE_AABITMAP,
+		TEX_TYPE_INTERFACE
 	};
+
 private:
-	shader_type sdr_type;
-	int shader_handle;
+	shader_type Sdr_type;
+	int Sdr_handle;
 
-	int texture_maps[TM_NUM_TYPES];
-	texture_type tex_type;
-	gr_texture_source tex_source;
+	int Texture_maps[TM_NUM_TYPES];
+	texture_type Tex_type;
+	gr_texture_source Tex_source;
 
-	clip_plane clip_params;
-	int texture_addressing;
-	fog fog_params;
-	gr_zbuffer_type depth_mode;
-	gr_alpha_blend blend_mode;
-	int cull_mode;
-	int fill_mode;
-	color clr;
-	int zbias;
+	clip_plane Clip_params;
+	int Texture_addressing;
+	fog Fog_params;
+	gr_zbuffer_type Depth_mode;
+	gr_alpha_blend Blend_mode;
+	bool Cull_mode;
+	int Fill_mode;
+	color Clr;
+	int Depth_bias;
 
 protected:
-	material(shader_type init_sdr_type);
+	void set_shader_type(shader_type init_sdr_type = SDR_TYPE_NONE);
 
 public:
-	material(): shader_handle(-1), tex_source(TEXTURE_SOURCE_NO_FILTERING) {};
+	material();
 
-	void set_shader_handle(int shader_handle);
+	void set_shader_handle(int handle);
 	virtual int get_shader_handle();
 
 	void set_texture_map(int texture_type, int texture_num);
 	int get_texture_map(int texture_type);
+	bool is_textured();
 
 	void set_texture_type(texture_type t_type);
 	int get_texture_type();
@@ -453,12 +452,14 @@ public:
 
 	bool is_clipped();
 	void set_clip_plane(const vec3d &normal, const vec3d &position);
+	void set_clip_plane();
 	clip_plane& get_clip_plane();
 
 	void set_texture_addressing(int addressing);
 	int get_texture_addressing();
 
 	void set_fog(int r, int g, int b, float near, float far);
+	void set_fog();
 	bool is_fogged();
 	fog& get_fog();
 
@@ -485,10 +486,6 @@ public:
 
 class model_material : public material
 {
-	uint Shader_flags;
-	int Shader_handle;
-
-	bool textured;
 	bool Desaturate;
 
 	bool Shadow_casting;
@@ -496,30 +493,35 @@ class model_material : public material
 
 	bool Deferred;
 	bool lighting;
-	float light_factor;
+	float Light_factor;
 
-	int animated_effect;
-	float animated_timer;
+	int Center_alpha;
 
-	float thrust_scale;
+	int Animated_effect;
+	float Animated_timer;
 
-	bool team_color_set;
-	team_color tm_color;
+	float Thrust_scale;
+
+	bool Team_color_set;
+	team_color Tm_color;
 
 public:
-	model_material(): material(SDR_TYPE_MODEL), animated_effect(0), animated_timer(0.0f), thrust_scale(-1.0f), lighting(false), light_factor(1.0f), Batched(false), 
-		textured(false), team_color_set(false) {}
+	model_material();
 
-	void set_texturing(bool mode);
 	void set_desaturation(bool enabled);
 	bool is_desaturated();
+
 	void set_shadow_casting(bool enabled);
+	bool is_shadow_casting();
 
 	void set_light_factor(float factor);
 	float get_light_factor();
-	void set_lighting(bool mode);
-	void set_deferred_lighting(bool enabled);
 
+	void set_lighting(bool mode);
+	bool is_lit();
+
+	void set_deferred_lighting(bool enabled);
+	
 	void set_center_alpha(int center_alpha);
 	int get_center_alpha();
 
@@ -538,14 +540,15 @@ public:
 	void set_batching(bool enabled);
 	bool is_batched();
 
+	uint get_shader_flags();
 	virtual int get_shader_handle();
 };
 
 class particle_material : public material
 {
-	bool point_sprite;
+	bool Point_sprite;
 public:
-	particle_material(): material(SDR_TYPE_EFFECT_PARTICLE) {}
+	particle_material();
 
 	void set_point_sprite_mode(bool enabled);
 	bool get_point_sprite_mode();
@@ -555,9 +558,9 @@ public:
 
 class distortion_material: public material
 {
-	bool thruster;
+	bool Thruster_render;
 public:
-	distortion_material(): material(SDR_TYPE_EFFECT_DISTORTION) {}
+	distortion_material();
 
 	void set_thruster_rendering(bool enabled);
 	bool get_thruster_rendering();

@@ -23,6 +23,7 @@
 #include "network/multi.h"
 #include "network/multimsgs.h"
 #include "graphics/material.h"
+#include "render/render.h"
 extern int Cmdline_nohtl;
 
 // ------------------------------------------------------------------------------------------------------
@@ -923,6 +924,60 @@ void nebl_render_section(bolt_type *bi, l_section *a, l_section *b)
 
 	gr_set_bitmap(bi->glow, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, Nebl_glow_alpha);
 	g3_draw_poly(4, verts, TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT);	
+}
+
+void nebl_render_section_new(bolt_type *bi, l_section *a, l_section *b)
+{		
+	vertex v[4];
+	vertex *verts[4] = {&v[0], &v[1], &v[2], &v[3]};
+	
+	// draw some stuff
+	for(size_t idx=0; idx<2; idx++){		
+		v[0] = a->vex[idx];		
+		v[0].texture_position.u = 0.0f; v[0].texture_position.v = 0.0f;
+
+		v[1] = a->vex[idx+1];		
+		v[1].texture_position.u = 1.0f; v[1].texture_position.v = 0.0f;
+
+		v[2] = b->vex[idx+1];		
+		v[2].texture_position.u = 1.0f; v[2].texture_position.v = 1.0f;
+
+		v[3] = b->vex[idx];		
+		v[3].texture_position.u = 0.0f; v[3].texture_position.v = 1.0f;
+
+		// draw
+		render_primitives(v, 4, PRIM_TYPE_TRIFAN, bi->texture, Nebl_alpha, true, true);
+	}
+
+	// draw
+	v[0] = a->vex[2];		
+	v[0].texture_position.u = 0.0f; v[0].texture_position.v = 0.0f;
+
+	v[1] = a->vex[0];		
+	v[1].texture_position.u = 1.0f; v[1].texture_position.v = 0.0f;
+
+	v[2] = b->vex[0];		
+	v[2].texture_position.u = 1.0f; v[2].texture_position.v = 1.0f;
+
+	v[3] = b->vex[2];		
+	v[3].texture_position.u = 0.0f; v[3].texture_position.v = 1.0f;
+
+	render_primitives(v, 4, PRIM_TYPE_TRIFAN, bi->texture, Nebl_alpha, true, true);
+
+	// draw the glow beam	
+	verts[0] = &a->glow_vex[0];
+	verts[0]->texture_position.v = 0.0f; verts[0]->texture_position.u = 0.0f;
+
+	verts[1] = &a->glow_vex[1];
+	verts[1]->texture_position.v = 1.0f; verts[1]->texture_position.u = 0.0f;
+
+	verts[2] = &b->glow_vex[1];
+	verts[2]->texture_position.v = 1.0f; verts[2]->texture_position.u = 1.0f;
+
+	verts[3] = &b->glow_vex[0];
+	verts[3]->texture_position.v = 0.0f; verts[3]->texture_position.u = 1.0f;
+
+	render_primitives(v, 4, PRIM_TYPE_TRIFAN, bi->texture, Nebl_glow_alpha, true, true);
 }
 
 // generate a section

@@ -93,11 +93,10 @@ GLuint Shadow_map_texture = 0;
 GLuint Shadow_map_depth_texture = 0;
 GLuint shadow_fbo = 0;
 GLint saved_fb = 0;
-bool Shadow_castingRendering_to_shadow_map = false;
+bool Rendering_to_shadow_map = false;
 
 int Transform_buffer_handle = -1;
 
-matrix4 GL_view_matrix;
 transform_stack GL_model_matrix_stack;
 
 struct opengl_buffer_object {
@@ -1497,21 +1496,28 @@ void gr_opengl_render_buffer(int start, const vertex_buffer *bufferp, int texi, 
 
 void gr_opengl_render_model(model_material* material_info, vertex_buffer* bufferp, int texi)
 {
-	Assert(GL_htl_projection_matrix_set);
-	Assert(GL_htl_view_matrix_set);
+	Assert( GL_htl_projection_matrix_set );
+	Assert( GL_htl_view_matrix_set );
 
-	Verify(bufferp != NULL);
+	Verify( bufferp != NULL );
 
 	GL_CHECK_FOR_ERRORS("start of render_buffer()");
 
-	if (GL_state.CullFace()) {
-		GL_state.FrontFaceValue(GL_CW);
+	Assert( texi >= 0 );
+
+	buffer_data *datap = &bufferp->tex_buf[texi];
+
+	if ( (Use_GLSL > 1) && !GLSL_override ) {
+		opengl_render_model_program(material_info, bufferp, datap);
+	} else {
+		opengl_render_model_fixed(material_info, bufferp, datap);
 	}
 
-	Assert(texi >= 0);
+	GL_CHECK_FOR_ERRORS("end of render_buffer()");
+}
 
-	const buffer_data *datap = &bufferp->tex_buf[texi];
-
+void opengl_render_model_program(model_material* material_info, vertex_buffer* bufferp, buffer_data *datap)
+{
 	opengl_tnl_set_model_material(material_info);
 
 	GLubyte *ibuffer = NULL;
@@ -1551,6 +1557,207 @@ void gr_opengl_render_model(model_material* material_info, vertex_buffer* buffer
 			}
 		}
 	}
+}
+
+void opengl_render_model_fixed(model_material* material_info, vertex_buffer *bufferp, buffer_data *datap)
+{
+	float u_scale, v_scale;
+	int render_pass = 0;
+	int tmap_type;
+	GLubyte *ibuffer = NULL;
+	GLubyte *vbuffer = NULL;
+
+	bool textured = false;
+	bool rendered_env = false;
+	bool using_glow = false;
+	bool using_spec = false;
+	bool using_env = false;
+
+	int start = 0;
+	int end = (datap->n_verts - 1);
+	int count = (end + 1);
+
+	GLenum element_type = (datap->flags & VB_FLAG_LARGE_INDEX) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
+
+	opengl_vertex_buffer *vbp = g_vbp;
+	Assert( vbp );
+
+	if ( material_info->is_textured() ) {
+		textured = true;
+
+		if ( Cmdline_glow && (material_info->get_texture_map(TM_GLOW_TYPE) > 0) ) {
+			using_glow = true;
+		}
+
+		if ( material_info->is_lit() ) {
+			GL_state.Normalize(GL_TRUE);
+
+			if ( !material_info->is_fogged() && (material_info->get_texture_map(TM_SPECULAR_TYPE) > 0) ) {
+				using_spec = true;
+			}
+		}
+	}
+
+	render_pass = 0;
+
+	opengl_tnl_set_material(material_info, false);
+
+	if ( GL_state.CullFace() ) {
+		GL_state.FrontFaceValue(GL_CW);
+	}
+
+	opengl_default_light_settings(!material_info->get_center_alpha(), material_info->get_light_factor() > 0.25f, (using_spec) ? 0 : 1);
+	gr_opengl_set_center_alpha(material_info->get_center_alpha());
+
+	// basic setup of all data
+	opengl_init_arrays(vbp, bufferp);
+
+	if ( vbp->ib_handle >= 0 ) {
+		opengl_bind_buffer_object(vbp->ib_handle);
+	} else {
+		ibuffer = (GLubyte*)vbp->index_list;
+	}
+
+	if ( vbp->vb_handle < 0 ) {
+		vbuffer = (GLubyte*)vbp->array_list;
+	}
+
+	// if we're not doing an alpha pass, turn on the alpha mask
+	
+	if ( material_info->get_depth_mode() == ZBUFFER_TYPE_FULL ) {
+		gr_alpha_mask_set(1, 0.95f);
+	}
+
+	#define BUFFER_OFFSET(off) (vbuffer+bufferp->vertex_offset+(off))
+
+// -------- Begin 1st PASS (base texture, glow) ---------------------------------- //
+	if (textured) {
+		render_pass = 0;
+
+		// base texture
+		if ( material_info->get_texture_map(TM_BASE_TYPE) > 0 ) {
+			if ( !Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+				GL_state.Array.SetActiveClientUnit(render_pass);
+				GL_state.Array.EnableClientTexture();
+				GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
+			}
+
+			gr_opengl_tcache_set(material_info->get_texture_map(TM_BASE_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
+
+			// increment texture count for this pass
+			render_pass++; // bump!
+		}
+
+		// glowmaps!
+		if (using_glow) {
+			GL_state.Array.SetActiveClientUnit(render_pass);
+			GL_state.Array.EnableClientTexture();
+			if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+				GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, 0 );
+			} else {
+				GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
+			}
+
+			// set glowmap on relevant ARB
+			gr_opengl_tcache_set(material_info->get_texture_map(TM_GLOW_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
+
+			opengl_set_additive_tex_env();
+
+			render_pass++; // bump!
+		}
+	}
+
+	// DRAW IT!!
+	if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+		if (Cmdline_drawelements) {
+			vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
+		} else {
+			vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
+		}
+	} else {
+		if (Cmdline_drawelements) {
+			glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
+		} else {
+			vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+		}
+	}
+
+// -------- End 2nd PASS --------------------------------------------------------- //
+
+
+// -------- Begin 4th PASS (specular/shine map) ---------------------------------- //
+	if (using_spec) {
+		// turn all previously used arbs off before the specular pass
+		// this fixes the glowmap multitexture rendering problem - taylor
+		GL_state.Texture.DisableAll();
+		GL_state.Array.SetActiveClientUnit(1);
+		GL_state.Array.DisableClientTexture();
+
+		render_pass = 0;
+
+		if ( !Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+			GL_state.Array.SetActiveClientUnit(0);
+			GL_state.Array.EnableClientTexture();
+			GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
+		}
+
+		gr_opengl_tcache_set(material_info->get_texture_map(TM_SPECULAR_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
+
+		// render with spec lighting only
+		opengl_default_light_settings(0, 0, 1);
+
+		GL_state.Texture.SetEnvCombineMode(GL_COMBINE_RGB, GL_MODULATE);
+		glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
+		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
+		glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);
+		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
+
+		GL_state.Texture.SetRGBScale( (rendered_env) ? 2.0f : 4.0f );
+
+		GL_state.SetAlphaBlendMode(ALPHA_BLEND_ADDITIVE);
+
+		GL_state.DepthMask(GL_TRUE);
+		GL_state.DepthFunc(GL_LEQUAL);
+
+		// DRAW IT!!
+		if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+			if (Cmdline_drawelements) {
+				vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
+			} else {
+				vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
+			}
+		} else {
+			if (Cmdline_drawelements) {
+				glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
+			} else {
+				vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+			}
+		}
+
+		opengl_default_light_settings();
+
+		GL_state.Texture.SetRGBScale(1.0f);
+	}
+// -------- End 4th PASS --------------------------------------------------------- //
+
+	// make sure everthing gets turned back off
+	gr_alpha_mask_set(0, 1.0f);
+	GL_state.Texture.DisableAll();
+	GL_state.Normalize(GL_FALSE);
+	GL_state.Array.SetActiveClientUnit(1);
+	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
+	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);
+	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
+	GL_state.Array.DisableClientTexture();
+	GL_state.Array.SetActiveClientUnit(0);
+	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
+	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);
+	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
+	GL_state.Array.DisableClientTexture();
+	GL_state.Array.DisableClientVertex();
+	GL_state.Array.DisableClientNormal();
 }
 
 extern GLuint Scene_depth_texture;
@@ -2274,7 +2481,7 @@ void opengl_tnl_set_material(material* material_info, bool set_base_map)
 		gr_opengl_set_clip_plane(NULL, NULL);
 	}
 
-	if ( set_base_map ) {
+	if ( set_base_map && material_info->get_texture_map(TM_BASE_TYPE) >= 0 ) {
 		float u_scale, v_scale;
 
 		gr_opengl_tcache_set(material_info->get_texture_map(TM_BASE_TYPE), material_info->get_texture_type(), &u_scale, &v_scale);
@@ -2282,6 +2489,214 @@ void opengl_tnl_set_material(material* material_info, bool set_base_map)
 }
 
 void opengl_tnl_set_model_material(model_material *material_info)
+{
+	float u_scale, v_scale;
+	int render_pass = 0;
+
+	opengl_tnl_set_material(material_info, false);
+
+	if ( GL_state.CullFace() ) {
+		GL_state.FrontFaceValue(GL_CW);
+	}
+	
+	opengl_default_light_settings(!material_info->get_center_alpha(), (material_info->get_light_factor() > 0.25f));
+	gr_opengl_set_center_alpha(material_info->get_center_alpha());
+
+	Assert( Current_shader->shader == SDR_TYPE_MODEL );
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_ANIMATED ) {
+		GL_state.Uniform.setUniform("anim_timer", material_info->get_animated_effect_time());
+		GL_state.Uniform.setUniform("effect_num", material_info->get_animated_effect());
+		GL_state.Uniform.setUniform("vpwidth", 1.0f / gr_screen.max_w);
+		GL_state.Uniform.setUniform("vpheight", 1.0f / gr_screen.max_h);
+	}
+	
+	if ( Current_shader->flags & SDR_FLAG_MODEL_CLIP ) {
+		material::clip_plane &clip_info = material_info->get_clip_plane();
+
+		GL_state.Uniform.setUniform("clip_normal", clip_info.normal);
+		GL_state.Uniform.setUniform("clip_position", clip_info.position);
+	}
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_LIGHT ) {
+		int num_lights = MIN(Num_active_gl_lights, GL_max_lights) - 1;
+		GL_state.Uniform.setUniform("n_lights", num_lights);
+		GL_state.Uniform.setUniform("light_factor", material_info->get_light_factor());
+	}
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_DIFFUSE_MAP ) {
+		GL_state.Uniform.setUniform("sBasemap", render_pass);
+
+		if ( material_info->is_desaturated() ) {
+			color &clr = material_info->get_color();
+			GL_state.Uniform.setUniform("desaturate_clr", clr.red / 255.0f, clr.green / 255.0f, clr.blue / 255.0f);
+
+			GL_state.Uniform.setUniform("desaturate", 1);
+		} else {
+			GL_state.Uniform.setUniform("desaturate", 0);
+		}
+
+		switch ( material_info->get_blend_mode() ) {
+		case ALPHA_BLEND_PREMULTIPLIED:
+			GL_state.Uniform.setUniform("blend_alpha", 1);
+			break;
+		case ALPHA_BLEND_ALPHA_ADDITIVE:
+			GL_state.Uniform.setUniform("blend_alpha", 2);
+			break;
+		default:
+			GL_state.Uniform.setUniform("blend_alpha", 0);
+			break;
+		}
+
+		gr_opengl_tcache_set(material_info->get_texture_map(TM_BASE_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
+
+		++render_pass;
+	}
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_GLOW_MAP ) {
+		GL_state.Uniform.setUniform("sGlowmap", render_pass);
+
+		gr_opengl_tcache_set(material_info->get_texture_map(TM_GLOW_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
+
+		++render_pass;
+	}
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_SPEC_MAP ) {
+		GL_state.Uniform.setUniform("sSpecmap", render_pass);
+
+		gr_opengl_tcache_set(material_info->get_texture_map(TM_SPECULAR_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
+
+		++render_pass;
+
+		if ( Current_shader->flags & SDR_FLAG_MODEL_ENV_MAP ) {
+			// 0 == env with non-alpha specmap, 1 == env with alpha specmap
+			int alpha_spec = bm_has_alpha_channel(material_info->get_texture_map(TM_SPECULAR_TYPE));
+
+			matrix4 texture_mat;
+
+			for ( int i = 0; i < 16; ++i ) {
+				texture_mat.a1d[i] = GL_env_texture_matrix[i];
+			}
+
+			GL_state.Uniform.setUniform("alpha_spec", alpha_spec);
+			GL_state.Uniform.setUniform("envMatrix", texture_mat);
+			GL_state.Uniform.setUniform("sEnvmap", render_pass);
+
+			gr_opengl_tcache_set(ENVMAP, TCACHE_TYPE_CUBEMAP, &u_scale, &v_scale, render_pass);
+
+			++render_pass;
+		}
+	}
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_NORMAL_MAP ) {
+		GL_state.Uniform.setUniform("sNormalmap", render_pass);
+
+		gr_opengl_tcache_set(material_info->get_texture_map(TM_NORMAL_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
+
+		++render_pass;
+	}
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_HEIGHT_MAP ) {
+		GL_state.Uniform.setUniform("sHeightmap", render_pass);
+
+		gr_opengl_tcache_set(material_info->get_texture_map(TM_HEIGHT_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
+
+		++render_pass;
+	}
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_MISC_MAP ) {
+		GL_state.Uniform.setUniform("sMiscmap", render_pass);
+
+		gr_opengl_tcache_set(material_info->get_texture_map(TM_MISC_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
+
+		++render_pass;
+	}
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_SHADOWS ) {
+		matrix4 model_matrix;
+		memset(&model_matrix, 0, sizeof(model_matrix));
+
+		model_matrix.a1d[0] = Object_matrix.vec.rvec.xyz.x;   model_matrix.a1d[4] = Object_matrix.vec.uvec.xyz.x;   model_matrix.a1d[8] = Object_matrix.vec.fvec.xyz.x;
+		model_matrix.a1d[1] = Object_matrix.vec.rvec.xyz.y;   model_matrix.a1d[5] = Object_matrix.vec.uvec.xyz.y;   model_matrix.a1d[9] = Object_matrix.vec.fvec.xyz.y;
+		model_matrix.a1d[2] = Object_matrix.vec.rvec.xyz.z;   model_matrix.a1d[6] = Object_matrix.vec.uvec.xyz.z;   model_matrix.a1d[10] = Object_matrix.vec.fvec.xyz.z;
+		model_matrix.a1d[12] = Object_position.xyz.x;
+		model_matrix.a1d[13] = Object_position.xyz.y;
+		model_matrix.a1d[14] = Object_position.xyz.z;
+		model_matrix.a1d[15] = 1.0f;
+
+		GL_state.Uniform.setUniform("shadow_mv_matrix", Shadow_view_matrix);
+		GL_state.Uniform.setUniform("shadow_proj_matrix", Shadow_proj_matrix, MAX_SHADOW_CASCADES);
+		GL_state.Uniform.setUniform("model_matrix", model_matrix);
+		GL_state.Uniform.setUniform("veryneardist", Shadow_cascade_distances[0]);
+		GL_state.Uniform.setUniform("neardist", Shadow_cascade_distances[1]);
+		GL_state.Uniform.setUniform("middist", Shadow_cascade_distances[2]);
+		GL_state.Uniform.setUniform("fardist", Shadow_cascade_distances[3]);
+		GL_state.Uniform.setUniform("shadow_map", render_pass);
+
+		GL_state.Texture.SetActiveUnit(render_pass);
+		GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY_EXT);
+		GL_state.Texture.Enable(Shadow_map_texture);
+
+		++render_pass; // bump!
+	}
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_SHADOW_MAP ) {
+		GL_state.Uniform.setUniform("shadow_proj_matrix", Shadow_proj_matrix, MAX_SHADOW_CASCADES);
+	}
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_ANIMATED ) {
+		GL_state.Uniform.setUniform("sFramebuffer", render_pass);
+
+		GL_state.Texture.SetActiveUnit(render_pass);
+		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+
+		if ( Scene_framebuffer_in_frame ) {
+			GL_state.Texture.Enable(Scene_effect_texture);
+			glDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);
+		} else {
+			GL_state.Texture.Enable(Framebuffer_fallback_texture_id);
+		}
+
+		++render_pass;
+	}
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_TRANSFORM ) {
+		GL_state.Uniform.setUniform("transform_tex", render_pass);
+		GL_state.Uniform.setUniform("buffer_matrix_offset", GL_transform_buffer_offset);
+
+		GL_state.Texture.SetActiveUnit(render_pass);
+		GL_state.Texture.SetTarget(GL_TEXTURE_BUFFER_ARB);
+		GL_state.Texture.Enable(opengl_get_transform_buffer_texture());
+
+		++render_pass;
+	}
+
+	// Team colors are passed to the shader here, but the shader needs to handle their application.
+	// By default, this is handled through the r and g channels of the misc map, but this can be changed
+	// in the shader; test versions of this used the normal map r and b channels
+	if ( Current_shader->flags & SDR_FLAG_MODEL_TEAMCOLOR ) {
+		team_color &tm_clr = material_info->get_team_color();
+		vec3d stripe_color;
+		vec3d base_color;
+
+		stripe_color.xyz.x = tm_clr.stripe.r;
+		stripe_color.xyz.y = tm_clr.stripe.g;
+		stripe_color.xyz.z = tm_clr.stripe.b;
+
+		base_color.xyz.x = tm_clr.base.r;
+		base_color.xyz.y = tm_clr.base.g;
+		base_color.xyz.z = tm_clr.base.b;
+
+		GL_state.Uniform.setUniform("stripe_color", stripe_color);
+		GL_state.Uniform.setUniform("base_color", base_color);
+	}
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_THRUSTER ) {
+		GL_state.Uniform.setUniform("thruster_scale", material_info->get_thrust_scale());
+	}
+}
+
+void opengl_tnl_set_model_material_fixed(model_material *material_info)
 {
 	float u_scale, v_scale;
 	int render_pass = 0;

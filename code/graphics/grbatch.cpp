@@ -162,6 +162,8 @@ effect_vertex geometry_batcher::convert_vertex_to_effect(vertex* vert)
 	new_vert.g = vert->g;
 	new_vert.b = vert->b;
 	new_vert.a = vert->a;
+
+	return new_vert;
 }
 
 /*
@@ -390,7 +392,6 @@ void geometry_batcher::draw_bitmap(vertex *pnt, int orient, float rad, float dep
 
 void geometry_batcher::draw_point_bitmap(vertex *position, int orient, float rad, float depth)
 {
-	float radius = rad;
 	rad *= 1.41421356f;//1/0.707, becase these are the points of a square or width and height rad
 
 	vec3d PNT(position->world);
@@ -412,12 +413,11 @@ void geometry_batcher::draw_point_bitmap(vertex *position, int orient, float rad
 
 	int direction = orient % 4;
 
+	up.xyz.x = 0.0f;
+	up.xyz.y = 1.0f;
+	up.xyz.z = 0.0f;
+
 	switch ( direction ) {
-	case 0:
-		up.xyz.x = 0.0f;
-		up.xyz.y = 1.0f;
-		up.xyz.z = 0.0f;
-		break;
 	case 1:
 		up.xyz.x = 0.0f;
 		up.xyz.y = -1.0f;
@@ -583,7 +583,6 @@ void geometry_batcher::draw_bitmap(vertex *pnt, float rad, float angle, float de
 
 void geometry_batcher::draw_point_bitmap(vertex *position, float rad, float angle, float depth)
 {
-	float radius = rad;
 	rad *= 1.41421356f;//1/0.707, becase these are the points of a square or width and height rad
 
 	vec3d PNT(position->world);
@@ -656,8 +655,6 @@ void geometry_batcher::draw_quad_old(vertex* verts)
 
 void geometry_batcher::draw_quad(vertex* verts)
 {
-	effect_vertex new_verts[6];
-
 	vertices.push_back(convert_vertex_to_effect(&verts[0]));
 	vertices.push_back(convert_vertex_to_effect(&verts[1]));
 	vertices.push_back(convert_vertex_to_effect(&verts[2]));

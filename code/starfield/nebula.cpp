@@ -17,6 +17,7 @@
 #include "cfile/cfile.h"
 #include "debugconsole/console.h"
 #include "palman/palman.h"
+#include "graphics/material.h"
 
 #define MAX_TRIS 200
 #define MAX_POINTS 300
@@ -219,6 +220,61 @@ void nebula_render()
 	if((The_mission.flags & MISSION_FLAG_FULLNEB) && (Neb2_render_mode == NEB2_RENDER_NONE)){
 		gr_fog_set(GR_FOGMODE_NONE, 0, 0, 0);
 	}
+}
+
+void nebula_render_triangles()
+{
+	int i;
+
+	if (Fred_running) {
+		// no nebula for you!
+		return;
+	}
+
+	if ( !Nebula_loaded ) {
+		return;
+	}
+
+	if ( !Detail.planets_suns )	{
+		return;
+	}	
+
+	// Rotate the nebula.
+	g3_start_instance_matrix( NULL, &Nebula_orient, false);
+
+	for (i=0; i<num_pts; i++ )	{
+		g3_rotate_faraway_vertex( &nebula_verts[i], &nebula_vecs[i] );
+		g3_project_vertex( &nebula_verts[i] );
+	}
+
+	material nebula_material;
+
+	nebula_material.set_depth_mode(ZBUFFER_TYPE_NONE);
+	nebula_material.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+	nebula_material.set_cull_mode(false);
+	nebula_material.set_texture_source(TEXTURE_SOURCE_NONE);
+
+	for ( i = 0 ; i < num_tris; i++ ) {
+		ubyte r, g, b;
+		vertex verts[3];
+		
+		verts[0] = nebula_verts[tri[i][0]];
+		verts[1] = nebula_verts[tri[i][1]];
+		verts[2] = nebula_verts[tri[i][2]];
+
+		nebula_get_color_from_palette(&verts[0].r, &verts[0].g, &verts[0].b, verts[0].b);
+		nebula_get_color_from_palette(&verts[1].r, &verts[1].g, &verts[1].b, verts[1].b);
+		nebula_get_color_from_palette(&verts[2].r, &verts[2].g, &verts[2].b, verts[2].b);
+
+		vertex_layout layout;
+
+		layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &verts[0].screen);
+		layout.add_vertex_component(vertex_format_data::COLOR3, sizeof(vertex), &verts[0].r);
+
+		gr_render_primitives_2d(&nebula_material, PRIM_TYPE_TRIFAN, &layout, 0, 3);
+	}
+
+	g3_done_instance(false);
 }
 
 DCF(nebula,"Loads a different nebula")

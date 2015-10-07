@@ -90,6 +90,7 @@ void render_set_unlit_material(material* mat_info, int texture, color *clr, bool
 void render_set_interface_material(material* mat_info, int texture)
 {
 	mat_info->set_texture_map(TM_BASE_TYPE, texture);
+	mat_info->set_texture_type(material::TEX_TYPE_INTERFACE);
 
 	mat_info->set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
 	mat_info->set_depth_mode(ZBUFFER_TYPE_NONE);
@@ -124,6 +125,7 @@ void render_set_distortion_material(distortion_material *mat_info, int texture, 
 	mat_info->set_color(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
+// reproduces rendering behavior when using flags TMAP_FLAG_TEXTURED | TMAP_FLAG_RGB | TMAP_FLAG_GOURAUD | TMAP_HTL_3D_UNLIT
 void render_colored_primitives(vertex* verts, int n_verts, primitive_type prim_type, int texture, bool blending, bool depth_testing)
 {
 	vertex_layout layout;
@@ -183,7 +185,7 @@ void render_colored_primitives_2d(vertex* verts, int n_verts, primitive_type pri
 
 	material_info.set_color(255, 255, 255, 255);
 
-	gr_render_primitives(&material_info, prim_type, &layout, 0, n_verts);
+	gr_render_primitives_2d(&material_info, prim_type, &layout, 0, n_verts);
 }
 
 void render_primitives_2d(vertex* verts, int n_verts, primitive_type prim_type, int texture, color *clr, bool blending)
@@ -199,7 +201,7 @@ void render_primitives_2d(vertex* verts, int n_verts, primitive_type prim_type, 
 
 	material_info.set_color(*clr);
 
-	gr_render_primitives(&material_info, prim_type, &layout, 0, n_verts);
+	gr_render_primitives_2d(&material_info, prim_type, &layout, 0, n_verts);
 }
 
 void render_primitives_2d(vertex* verts, int n_verts, primitive_type prim_type, int texture, float alpha, bool blending)
@@ -209,6 +211,20 @@ void render_primitives_2d(vertex* verts, int n_verts, primitive_type prim_type, 
 	gr_init_alphacolor(&clr, 255, 255, 255, fl2i(alpha*255.0f));
 
 	render_primitives_2d(verts, n_verts, prim_type, texture, &clr, blending);
+}
+
+void render_primitives_interface(vertex* verts, int n_verts, primitive_type prim_type, int texture)
+{
+	vertex_layout layout;
+
+	layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &verts[0].screen.xyw.x);
+	layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &verts[0].texture_position.u);
+
+	material material_info;
+
+	render_set_interface_material(&material_info, texture);
+
+	gr_render_primitives(&material_info, prim_type, &layout, 0, n_verts);
 }
 
 void render_oriented_quad(vec3d *pos, matrix *ori, float width, float height, int texture)
@@ -410,7 +426,7 @@ void render_rotated_bitmap(vertex *pnt, float angle, float rad, int texture, flo
 	render_primitives(P, 4, PRIM_TYPE_TRIFAN, texture, alpha, true, true);
 }
 
-void render_bitmap_scaler(vertex *va, vertex *vb, int texture, float alpha)
+void render_bitmap_scaler(vertex *va, vertex *vb, int texture, float alpha, bool blending)
 {
 	float x0, y0, x1, y1;
 	float u0, v0, u1, v1;
@@ -531,10 +547,10 @@ void render_bitmap_scaler(vertex *va, vertex *vb, int texture, float alpha)
 	v[3].spec_g = 0;
 	v[3].spec_b = 0;
 
-	render_primitives_2d(v, 4, PRIM_TYPE_TRIFAN, texture, alpha, true);
+	render_primitives_2d(v, 4, PRIM_TYPE_TRIFAN, texture, alpha, blending);
 }
 
-void render_oriented_bitmap_2d(vertex *pnt, int orient, float rad, int texture, float alpha)
+void render_oriented_bitmap_2d(vertex *pnt, int orient, float rad, int texture, float alpha, bool blending)
 {
 	vertex va, vb;
 	float t,w,h;
@@ -606,10 +622,16 @@ void render_oriented_bitmap_2d(vertex *pnt, int orient, float rad, int texture, 
 		vb.texture_position.v = 1.0f;
 	}
 
-	render_bitmap_scaler(&va, &vb, texture, alpha);
+	render_bitmap_scaler(&va, &vb, texture, alpha, blending);
 }
 
-int render_oriented_bitmap(vertex *pnt, int orient, float rad, int texture, float alpha)
+void render_oriented_bitmap_2d(vertex *pnt, int orient, float rad, int texture)
+{
+	render_oriented_bitmap_2d(pnt, orient, rad, texture, 1.0f, false);
+}
+
+// adapted from g3_draw_bitmap_3d
+void render_oriented_bitmap(int texture, float alpha, vertex *pnt, int orient, float rad, float depth)
 {
 	rad *= 1.41421356f;//1/0.707, becase these are the points of a square or width and hieght rad
 
@@ -626,6 +648,7 @@ int render_oriented_bitmap(vertex *pnt, int orient, float rad, int texture, floa
 	rvec = View_matrix.vec.rvec;
 	vm_vec_normalize(&rvec);
 
+	vm_vec_scale_add(&PNT, &PNT, &fvec, depth);
 	vm_vec_scale_add(&p[0], &PNT, &rvec, rad);
 	vm_vec_scale_add(&p[2], &PNT, &rvec, -rad);
 
@@ -750,4 +773,193 @@ void render_laser(vec3d *p0, float width1, vec3d *p1, float width2, int r, int g
 	pts[3].a = 255;
 
 	render_colored_primitives(pts, 4, PRIM_TYPE_TRIFAN, texture, true, true);
+}
+
+void render_bitmap(int _x, int _y, int texture, int resize_mode)
+{
+	int _w, _h;
+	float x, y, w, h;
+	vertex verts[4];
+
+	if (gr_screen.mode == GR_STUB) {
+		return;
+	}
+
+	bm_get_info(texture, &_w, &_h, NULL, NULL, NULL);
+
+	x = i2fl(_x);
+	y = i2fl(_y);
+	w = i2fl(_w);
+	h = i2fl(_h);
+
+	// I will tidy this up later - RT
+	if ( resize_mode != GR_RESIZE_NONE && (gr_screen.custom_size || (gr_screen.rendering_to_texture != -1)) ) {
+		gr_resize_screen_posf(&x, &y, &w, &h, resize_mode);
+	}
+
+	memset(verts, 0, sizeof(verts));
+
+	verts[0].screen.xyw.x = x;
+	verts[0].screen.xyw.y = y;
+	verts[0].texture_position.u = 0.0f;
+	verts[0].texture_position.v = 0.0f;
+
+	verts[1].screen.xyw.x = x + w;
+	verts[1].screen.xyw.y = y;
+	verts[1].texture_position.u = 1.0f;
+	verts[1].texture_position.v = 0.0f;
+
+	verts[2].screen.xyw.x = x + w;
+	verts[2].screen.xyw.y = y + h;
+	verts[2].texture_position.u = 1.0f;
+	verts[2].texture_position.v = 1.0f;
+
+	verts[3].screen.xyw.x = x;
+	verts[3].screen.xyw.y = y + h;
+	verts[3].texture_position.u = 0.0f;
+	verts[3].texture_position.v = 1.0f;
+	
+	render_primitives_interface(verts, 4, PRIM_TYPE_TRIFAN, texture);
+}
+
+int render_rod(vec3d *p0,float width1,vec3d *p1,float width2, vertex * verts, uint tmap_flags)
+{
+	vec3d uvec, fvec, rvec, center;
+
+	vm_vec_sub( &fvec, p0, p1 );
+	vm_vec_normalize_safe( &fvec );
+
+	vm_vec_avg( &center, p0, p1 );
+	vm_vec_sub( &rvec, &Eye_position, &center );
+	vm_vec_normalize( &rvec );
+
+	vm_vec_crossprod(&uvec,&fvec,&rvec);
+			
+	//normalize new perpendicular vector
+	vm_vec_normalize(&uvec);
+	 
+	//now recompute right vector, in case it wasn't entirely perpendiclar
+	vm_vec_crossprod(&rvec,&uvec,&fvec);
+
+	// Now have uvec, which is up vector and rvec which is the normal
+	// of the face.
+
+	int i;
+	vec3d vecs[4];
+	vertex pts[4];
+	vertex *ptlist[4] = { &pts[3], &pts[2], &pts[1], &pts[0] };
+
+	vm_vec_scale_add( &vecs[0], p0, &uvec, width1/2.0f );
+	vm_vec_scale_add( &vecs[1], p1, &uvec, width2/2.0f );
+	vm_vec_scale_add( &vecs[2], p1, &uvec, -width2/2.0f );
+	vm_vec_scale_add( &vecs[3], p0, &uvec, -width1/2.0f );
+	
+	for (i=0; i<4; i++ )	{
+		if ( verts )	{
+			pts[i] = verts[i];
+		}
+
+		g3_transfer_vertex( &pts[i], &vecs[i] );
+	}
+	ptlist[0]->texture_position.u = 0.0f;
+	ptlist[0]->texture_position.v = 0.0f;
+	ptlist[0]->r = gr_screen.current_color.red;
+	ptlist[0]->g = gr_screen.current_color.green;
+	ptlist[0]->b = gr_screen.current_color.blue;
+	ptlist[0]->a = gr_screen.current_color.alpha;
+
+	ptlist[1]->texture_position.u = 1.0f;
+	ptlist[1]->texture_position.v = 0.0f;
+	ptlist[1]->r = gr_screen.current_color.red;
+	ptlist[1]->g = gr_screen.current_color.green;
+	ptlist[1]->b = gr_screen.current_color.blue;
+	ptlist[1]->a = gr_screen.current_color.alpha;
+
+	ptlist[2]->texture_position.u = 1.0f;
+	ptlist[2]->texture_position.v = 1.0f;
+	ptlist[2]->r = gr_screen.current_color.red;
+	ptlist[2]->g = gr_screen.current_color.green;
+	ptlist[2]->b = gr_screen.current_color.blue;
+	ptlist[2]->a = gr_screen.current_color.alpha;
+
+	ptlist[3]->texture_position.u = 0.0f;
+	ptlist[3]->texture_position.v = 1.0f;
+	ptlist[3]->r = gr_screen.current_color.red;
+	ptlist[3]->g = gr_screen.current_color.green;
+	ptlist[3]->b = gr_screen.current_color.blue;
+	ptlist[3]->a = gr_screen.current_color.alpha;
+
+	return g3_draw_poly(4,ptlist,tmap_flags);
+}
+
+void render_rod(int num_points, vec3d *pvecs, float width, color *clr)
+{
+	const int MAX_ROD_VERTS = 100;
+	vec3d uvec, fvec, rvec;
+	vec3d vecs[2];
+	vertex pts[MAX_ROD_VERTS];
+	int i, nv = 0;
+
+	Assert( num_points >= 2 );
+	Assert( (num_points * 2) <= MAX_ROD_VERTS );
+
+	for (i = 0; i < num_points; i++) {
+		vm_vec_sub(&fvec, &View_position, &pvecs[i]);
+		vm_vec_normalize_safe(&fvec);
+
+		int first = i+1;
+		int second = i-1;
+
+		if (i == 0) {
+			first = 1;
+			second = 0;
+		} else if (i == num_points-1) {
+			first = i;
+		}
+
+		vm_vec_sub(&rvec, &pvecs[first], &pvecs[second]);
+		vm_vec_normalize_safe(&rvec);
+
+		vm_vec_crossprod(&uvec, &rvec, &fvec);
+
+		vm_vec_scale_add(&vecs[0], &pvecs[i], &uvec, width * 0.5f);
+		vm_vec_scale_add(&vecs[1], &pvecs[i], &uvec, -width * 0.5f);
+
+		if (nv > MAX_ROD_VERTS - 2) {
+			Warning(LOCATION, "Hit high-water mark (%i) in g3_draw_rod()!!\n", MAX_ROD_VERTS);
+			break;
+		}
+
+		g3_transfer_vertex( &pts[nv], &vecs[0] );
+		g3_transfer_vertex( &pts[nv+1], &vecs[1] );
+
+		pts[nv].texture_position.u = 1.0f;
+		pts[nv].texture_position.v = i2fl(i);
+		pts[nv].r = clr->red;
+		pts[nv].g = clr->green;
+		pts[nv].b = clr->blue;
+		pts[nv].a = clr->alpha;
+
+		pts[nv+1].texture_position.u = 0.0f;
+		pts[nv+1].texture_position.v = i2fl(i);
+		pts[nv+1].r = clr->red;
+		pts[nv+1].g = clr->green;
+		pts[nv+1].b = clr->blue;
+		pts[nv+1].a = clr->alpha;
+
+		nv += 2;
+	}
+
+	// we should always have at least 4 verts, and there should always be an even number
+	Assert( (nv >= 4) && !(nv % 2) );
+
+	material material_instance;
+	material_instance.set_depth_mode(ZBUFFER_TYPE_READ);
+	material_instance.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+
+	vertex_layout layout;
+	layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), &pts[0].world.xyz.x);
+	layout.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), &pts[0].r);
+
+	gr_render_primitives(&material_instance, PRIM_TYPE_TRISTRIP, &layout, 0, nv);
 }

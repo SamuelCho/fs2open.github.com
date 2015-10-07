@@ -23,7 +23,7 @@ struct batch_info {
 	render_type selected_render_type;
 	int texture;
 
-	bool operator<(batch_info& batch) {
+	bool operator < (const batch_info& batch) const {
 		if ( selected_render_type != batch.selected_render_type ) {
 			
 			return selected_render_type < batch.selected_render_type;
@@ -77,3 +77,14 @@ struct primitive_batch_buffer {
 
 	SCP_vector<primitive_batch_item> items;
 };
+
+primitive_batch* batching_find_batch(int texture, batch_info::render_type batch_type);
+void batching_add_bitmap(primitive_batch *batch, vertex *pnt, int orient, float rad, color *clr, float depth);
+void batching_add_laser(primitive_batch *batch, vec3d *p0, float width1, vec3d *p1, float width2, int r, int g, int b);
+void batching_add_laser(int texture, vec3d *p0, float width1, vec3d *p1, float width2, int r, int g, int b);
+
+void batching_add_beam(primitive_batch *batch, vec3d *start, vec3d *end, float width, color *clr, float offset);
+
+int batching_add_polygon(primitive_batch *batch, int texture, vec3d *pos, matrix *orient, float width, float height, color *clr);
+
+void batching_render_buffer(primitive_batch_buffer *buffer, bool distortion);

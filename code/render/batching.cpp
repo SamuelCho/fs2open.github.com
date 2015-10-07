@@ -119,7 +119,7 @@ void batching_init_vertex_layouts()
 	offset += sizeof(vec3d);
 }
 
-void batching_determine_color(color *clr, int texture, float alpha)
+void batching_determine_blend_color(color *clr, int texture, float alpha)
 {
 	gr_alpha_blend blend_mode = render_determine_blend_mode(texture, true);
 
@@ -156,7 +156,7 @@ void batching_add_bitmap(int texture, vertex *pnt, int orient, float rad, float 
 	primitive_batch *batch = batching_find_batch(texture, batch_info::FLAT_EMISSIVE);
 
 	color clr;
-	batching_determine_color(&clr, texture, alpha);
+	batching_determine_blend_color(&clr, texture, alpha);
 
 	batching_add_bitmap(batch, pnt, orient, rad, &clr, 0.0f);
 }
@@ -171,7 +171,7 @@ void batching_add_volume_bitmap(int texture, vertex *pnt, int orient, float rad,
 	primitive_batch *batch = batching_find_batch(texture, batch_info::VOLUME_EMISSIVE);
 
 	color clr;
-	batching_determine_color(&clr, texture, alpha);
+	batching_determine_blend_color(&clr, texture, alpha);
 
 	batching_add_bitmap(batch, pnt, orient, rad, &clr, 0.0f);
 }
@@ -186,7 +186,7 @@ void batching_add_distortion_bitmap(int texture, vertex *pnt, int orient, float 
 	primitive_batch *batch = batching_find_batch(texture, batch_info::DISTORTION);
 
 	color clr;
-	batching_determine_color(&clr, texture, alpha);
+	batching_determine_blend_color(&clr, texture, alpha);
 
 	batching_add_bitmap(batch, pnt, orient, rad, &clr, 0.0f);
 }
@@ -201,12 +201,12 @@ void batching_add_beam(int texture, vec3d *start, vec3d *end, float width, float
 	primitive_batch *batch = batching_find_batch(texture, batch_info::FLAT_EMISSIVE);
 
 	color clr;
-	batching_determine_color(&clr, texture, intensity);
+	batching_determine_blend_color(&clr, texture, intensity);
 
 	batching_add_beam(batch, start, end, width, &clr, 0.0f);
 }
 
-void batch_add_laser(int texture, vec3d *p0, float width1, vec3d *p1, float width2, int r, int g, int b)
+void batching_add_laser(int texture, vec3d *p0, float width1, vec3d *p1, float width2, int r, int g, int b)
 {
 	if (texture < 0) {
 		Int3();
@@ -227,7 +227,7 @@ void batching_add_polygon(int texture, vec3d *pos, matrix *orient, float width, 
 	primitive_batch *batch = batching_find_batch(texture, batch_info::FLAT_EMISSIVE);
 
 	color clr;
-	batching_determine_color(&clr, texture, alpha);
+	batching_determine_blend_color(&clr, texture, alpha);
 
 	batching_add_polygon(batch, texture, pos, orient, width, height, &clr);
 }
@@ -617,7 +617,7 @@ void batching_add_beam(primitive_batch *batch, vec3d *start, vec3d *end, float w
 	batch->add_triangle(&verts[3], &verts[4], &verts[5]);
 }
 
-float batching_add_laser(primitive_batch *batch, vec3d *p0, float width1, vec3d *p1, float width2, int r, int g, int b)
+void batching_add_laser(primitive_batch *batch, vec3d *p0, float width1, vec3d *p1, float width2, int r, int g, int b)
 {
 	width1 *= 0.5f;
 	width2 *= 0.5f;
@@ -713,10 +713,12 @@ void batching_render_batch_item(primitive_batch_item *item)
 		particle_material material_info;
 		render_set_volume_emissive_material(&material_info, item->batch_item_info.texture, !item->triangles);
 
+		gr_render_primitives_particle(&material_info, item->triangles ? PRIM_TYPE_TRIS : PRIM_TYPE_POINTS, item->layout, item->offset, item->n_verts, item->buffer_num);
 	} else if ( item->batch_item_info.selected_render_type == batch_info::DISTORTION || item->batch_item_info.selected_render_type == batch_info::DISTORTION_THRUSTER ) {
 		distortion_material material_info;
+		render_set_distortion_material(&material_info, item->batch_item_info.texture, item->batch_item_info.selected_render_type == batch_info::DISTORTION_THRUSTER);
 
-		render_set_distortion_material(&material_info, item->batch_item_info.texture, item->batch_item_info.selected_render_type == batch_info::DISTORTION_THRUSTER)
+		gr_render_primitives_distortion(&material_info, PRIM_TYPE_TRIS, item->layout, item->offset, item->n_verts, item->buffer_num);
 	} else {
 		material material_info;
 

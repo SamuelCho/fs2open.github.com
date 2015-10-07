@@ -13,6 +13,7 @@
 
 #include "math/vecmat.h"
 #include "render/3d.h"
+#include "render/render.h"
 #include "starfield/starfield.h"
 #include "freespace2/freespace.h"
 #include "io/timer.h"
@@ -1288,6 +1289,71 @@ void stars_draw_bitmaps(int show_bitmaps)
 
 	// restore zbuffer
 	gr_zbuffer_set(saved_zbuffer_mode);
+
+	if ( !Cmdline_nohtl )
+		gr_end_instance_matrix();
+}
+
+void stars_draw_bitmaps_new(int show_bitmaps)
+{
+	int idx;
+	int star_index;
+
+	// should we even be here?
+	if ( !show_bitmaps )
+		return;
+
+	// if we're in the nebula, don't render any backgrounds
+	if (The_mission.flags & MISSION_FLAG_FULLNEB)
+		return;
+
+	// detail settings
+	if ( !Detail.planets_suns )
+		return;
+
+	if ( !Cmdline_nohtl ) {
+		gr_start_instance_matrix(&Eye_position, &vmd_identity_matrix);
+	}
+
+	int sb_instances = (int)Starfield_bitmap_instances.size();
+
+	for (idx = 0; idx < sb_instances; idx++) {
+		// lookup the info index
+		star_index = Starfield_bitmap_instances[idx].star_bitmap_index;
+
+		if (star_index < 0) {
+			continue;
+		}
+
+		// if no bitmap then bail...
+		if (Starfield_bitmaps[star_index].bitmap_id < 0) {
+			continue;
+		}
+
+		int bitmap_id;
+		bool blending = false;
+		float alpha = 1.0f;
+
+		if (Starfield_bitmaps[star_index].xparent) {
+			if (Starfield_bitmaps[star_index].fps) {
+				bitmap_id = Starfield_bitmaps[star_index].bitmap_id + ((timestamp() / (int)(Starfield_bitmaps[star_index].fps)) % Starfield_bitmaps[star_index].n_frames);
+			} else {
+				bitmap_id = Starfield_bitmaps[star_index].bitmap_id;
+			}
+		} else {
+			if (Starfield_bitmaps[star_index].fps) {
+				bitmap_id = Starfield_bitmaps[star_index].bitmap_id + ((timestamp() / (int)(Starfield_bitmaps[star_index].fps)) % Starfield_bitmaps[star_index].n_frames);
+				blending = true;
+				alpha = 0.9999f;
+			} else {
+				bitmap_id = Starfield_bitmaps[star_index].bitmap_id;	
+				blending = true;
+				alpha = 0.9999f;
+			}
+		}
+
+		render_primitives(Starfield_bitmap_instances[idx].verts, Starfield_bitmap_instances[idx].n_verts, PRIM_TYPE_TRIS, bitmap_id, alpha, blending, false);
+	}
 
 	if ( !Cmdline_nohtl )
 		gr_end_instance_matrix();

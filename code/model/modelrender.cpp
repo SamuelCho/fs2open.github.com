@@ -25,6 +25,7 @@
 #include "particle/particle.h"
 #include "gamesequence/gamesequence.h"
 #include "render/3dinternal.h"
+#include "render/render.h"
 #include "math/staticrand.h"
 
 extern int Model_texturing;
@@ -40,14 +41,7 @@ extern bool Scene_framebuffer_in_frame;
 
 extern void interp_render_arc_segment( vec3d *v1, vec3d *v2, int depth );
 
-extern int Interp_thrust_scale_subobj;
-extern float Interp_thrust_scale;
-
 draw_list *draw_list::Target = NULL;
-
-uniform_block Model_render_shadow_gen_uniform_data;
-uniform_block Model_render_shadow_uniform_data;
-uniform_block Model_render_env_uniform_data;
 
 model_batch_buffer TransformBufferHandler;
 
@@ -357,10 +351,6 @@ draw_list::draw_list()
 
 void draw_list::reset()
 {
-	Current_render_state = render_state();
-
-	Clip_planes.clear();
-	Render_states.clear();
 	Render_elements.clear();
 	Render_keys.clear();
 
@@ -369,6 +359,8 @@ void draw_list::reset()
 	Current_scale.xyz.x = 1.0f;
 	Current_scale.xyz.y = 1.0f;
 	Current_scale.xyz.z = 1.0f;
+
+	Current_buffer_id = -1;
 }
 
 void draw_list::sort_draws()
@@ -430,17 +422,7 @@ void draw_list::set_light_filter(int objnum, vec3d *pos, float rad)
 {
 	Scene_light_handler.setLightFilter(objnum, pos, rad);
 
-	Dirty_render_state = true;
-	Current_render_state.lights = Scene_light_handler.bufferLights();
-}
-
-void draw_list::set_light_factor(float factor)
-{
-#ifdef MATERIALS
-	Material_params.set_light_factor(factor);
-#else
-	Current_render_state.light_factor = factor;
-#endif
+	Current_lights_set = Scene_light_handler.bufferLights();
 }
 
 void draw_list::add_buffer_draw(model_material *render_material, vertex_buffer *buffer, int texi, uint tmap_flags)
@@ -449,7 +431,6 @@ void draw_list::add_buffer_draw(model_material *render_material, vertex_buffer *
 
 	render_material->set_deferred_lighting(Deferred_lighting);
 	render_material->set_shadow_casting(Rendering_to_shadow_map ? true : false);
-	render_material->set_texturing((tmap_flags & TMAP_FLAG_TEXTURED) && (buffer->flags & VB_FLAG_UV1));
 
 	if (tmap_flags & TMAP_FLAG_BATCH_TRANSFORMS && buffer->flags & VB_FLAG_MODEL_ID) {
 		draw_data.transformation = transform();
@@ -468,101 +449,38 @@ void draw_list::add_buffer_draw(model_material *render_material, vertex_buffer *
 		render_material->set_batching(false);
 	}
 
-	draw_data.sdr_flags = render_material->determine_shader();
+	draw_data.sdr_flags = render_material->get_shader_flags();
 
+	draw_data.buffer_id = Current_buffer_id;
 	draw_data.buffer = buffer;
 	draw_data.texi = texi;
 	draw_data.flags = tmap_flags;
 	draw_data.render_material = *render_material;
+	draw_data.lights = Current_lights_set;
 
 	Render_elements.push_back(draw_data);
-
 	Render_keys.push_back(Render_elements.size() - 1);
 }
 
 void draw_list::render_buffer(queued_buffer_draw &render_elements)
 {
-	// get the render state for this draw call
-	int render_state_num = render_elements.render_state_handle;
-
-	render_state &draw_state = Render_states[render_state_num];
-
-	// set clip plane if necessary
-	if ( draw_state.clip_plane_handle >= 0 && draw_state.clip_plane_handle != Current_set_clip_plane ) {
-		if ( Current_set_clip_plane >= 0 ) {
-			g3_stop_user_clip_plane();
-		}
-
-		Current_set_clip_plane = draw_state.clip_plane_handle;
-
-		clip_plane_state *clip_plane = &Clip_planes[Current_set_clip_plane];
-
-		g3_start_user_clip_plane(&clip_plane->point, &clip_plane->normal);
-	} else if ( draw_state.clip_plane_handle < 0 && Current_set_clip_plane >= 0 ) {
-		// stop the clip plane if this draw call doesn't have clip plane and clip plane is set.
-		Current_set_clip_plane = -1;
-		g3_stop_user_clip_plane();
-	}
-
-	gr_set_animated_effect(draw_state.animated_effect, draw_state.animated_timer);
-
-	if ( draw_state.using_team_color ) {
-		gr_set_team_color(&draw_state.tm_color);
-	} else {
-		gr_set_team_color(NULL);
-	}
-
-	gr_set_texture_addressing(draw_state.texture_addressing);
-
-	gr_fog_set(draw_state.fog_mode, draw_state.r, draw_state.g, draw_state.b, draw_state.fog_near, draw_state.fog_far);
-
-	gr_zbuffer_set(render_elements.depth_mode);
-	
-	gr_set_cull(draw_state.cull_mode);
-
-	gr_set_fill_mode(draw_state.fill_mode);
-
-	gr_center_alpha(draw_state.center_alpha);
-
 	gr_set_transform_buffer_offset(render_elements.transform_buffer_offset);
 
-	gr_set_color_fast(&draw_state.clr);
-
-	gr_set_light_factor(draw_state.light_factor);
-
-	if ( draw_state.lighting ) {
-		Scene_light_handler.setLights(&draw_state.lights);
+	if ( render_elements.render_material.is_lit() ) {
+		Scene_light_handler.setLights(&render_elements.lights);
 	} else {
 		gr_set_lighting(false, false);
 
 		Scene_light_handler.resetLightState();
 	}
 
-	gr_set_buffer(draw_state.buffer_id);
-
-	gr_zbias(draw_state.zbias);
-
-	gr_set_thrust_scale(draw_state.thrust_scale);
+	gr_set_buffer(render_elements.buffer_id);
 
 	g3_start_instance_matrix(&render_elements.transformation.origin, &render_elements.transformation.basis);
 
 	gr_push_scale_matrix(&render_elements.scale);
 
-	gr_set_bitmap(render_elements.texture_maps[TM_BASE_TYPE], render_elements.blend_filter, GR_BITBLT_MODE_NORMAL, render_elements.alpha);
-
-	GLOWMAP = render_elements.texture_maps[TM_GLOW_TYPE];
-	SPECMAP = render_elements.texture_maps[TM_SPECULAR_TYPE];
-	NORMMAP = render_elements.texture_maps[TM_NORMAL_TYPE];
-	HEIGHTMAP = render_elements.texture_maps[TM_HEIGHT_TYPE];
-	MISCMAP = render_elements.texture_maps[TM_MISC_TYPE];
-
-	gr_render_buffer(0, render_elements.buffer, render_elements.texi, render_elements.flags);
-
-	GLOWMAP = -1;
-	SPECMAP = -1;
-	NORMMAP = -1;
-	HEIGHTMAP = -1;
-	MISCMAP = -1;
+	gr_render_model(&render_elements.render_material, render_elements.buffer, render_elements.texi);
 
 	gr_pop_scale_matrix();
 
@@ -656,99 +574,9 @@ void draw_list::set_scale(vec3d *scale)
 
 void draw_list::set_buffer(int buffer)
 {
-	Current_render_state.buffer_id = buffer;
+	Current_buffer_id = buffer;
 }
 
-<<<<<<< HEAD
-=======
-void draw_list::set_blend_filter(int filter, float alpha)
-{
-// 	if ( !dirty_render_state && ( current_render_state.alpha != alpha && current_render_state.blend_filter != filter ) ) {
-// 		dirty_render_state = true;
-// 	}
-
-// 	current_blend_filter = GR_ALPHABLEND_NONE;
-// 	current_alpha = 1.0f;
-
-	Current_blend_filter = filter;
-	Current_alpha = alpha;
-}
-
-void draw_list::set_texture(int texture_type, int texture_handle)
-{
-	Assert(texture_type > -1);
-	Assert(texture_type < TM_NUM_TYPES);
-
-	Current_textures[texture_type] = texture_handle;
-}
-
-void draw_list::set_cull_mode(int mode)
-{
-	Current_render_state.cull_mode = mode;
-}
-
-void draw_list::set_zbias(int bias)
-{
-	Current_render_state.zbias = bias;
-}
-
-void draw_list::set_lighting(bool lighting)
-{
-	Current_render_state.lighting = lighting;
-}
-
-void draw_list::set_team_color(const team_color &clr)
-{
-	Current_render_state.using_team_color = true;
-	Current_render_state.tm_color = clr;
-}
-
-void draw_list::set_team_color()
-{
-	Current_render_state.using_team_color = false;
-}
-
-void draw_list::set_color(const color &clr)
-{
-	Current_render_state.clr = clr;
-}
-
-void draw_list::set_animated_timer(float time)
-{
-	Current_render_state.animated_timer = time;
-}
-
-void draw_list::set_animated_effect(int effect)
-{
-	Current_render_state.animated_effect = effect;
-}
-
-void draw_list::set_texture_addressing(int addressing)
-{
-	Current_render_state.texture_addressing = addressing;
-}
-
-void draw_list::set_fog(int fog_mode, int r, int g, int b, float fog_near, float fog_far)
-{
-	Current_render_state.fog_mode = fog_mode;
-	Current_render_state.r = r;
-	Current_render_state.g = g;
-	Current_render_state.b = b;
-	Current_render_state.fog_near = fog_near;
-	Current_render_state.fog_far = fog_far;
-}
-
-void draw_list::set_fill_mode(int mode)
-{
-	Current_render_state.fill_mode = mode;
-}
-
-void draw_list::set_center_alpha(int center_alpha)
-{
-	Current_render_state.center_alpha = center_alpha;
-}
-
->>>>>>> master
 void draw_list::init()
 {
 	reset();
@@ -771,20 +599,16 @@ void draw_list::init_render(bool sort)
 	TransformBufferHandler.submit_buffer_data();
 }
 
-void draw_list::render_all(int depth_mode)
+void draw_list::render_all(gr_zbuffer_type depth_mode)
 {
 	Scene_light_handler.resetLightState();
 
 	for ( size_t i = 0; i < Render_keys.size(); ++i ) {
 		int render_index = Render_keys[i];
 
-		if ( depth_mode == -1 || Render_elements[render_index].depth_mode == depth_mode ) {
+		if ( depth_mode == ZBUFFER_TYPE_DEFAULT || Render_elements[render_index].render_material.get_depth_mode() == depth_mode ) {
 			render_buffer(Render_elements[render_index]);
 		}
-	}
-
-	if ( Current_set_clip_plane >= 0 ) {
-		g3_stop_user_clip_plane();
 	}
 
 	gr_alpha_mask_set(0, 1.0f);
@@ -794,7 +618,7 @@ void draw_list::render_arc(arc_effect &arc)
 {
 	g3_start_instance_matrix(&arc.transformation.origin, &arc.transformation.basis);	
 
-	interp_render_arc(&arc.v1, &arc.v2, &arc.primary, &arc.secondary, arc.width);
+	model_render_arc(&arc.v1, &arc.v2, &arc.primary, &arc.secondary, arc.width);
 
 	g3_done_instance(true);
 }
@@ -810,7 +634,7 @@ void draw_list::render_arcs()
 	gr_zbuffer_set(mode);
 }
 
-void draw_list::add_insignia(polymodel *pm, int detail_level, int bitmap_num)
+void draw_list::add_insignia(model_render_params *params, polymodel *pm, int detail_level, int bitmap_num)
 {
 	insignia_draw_data new_insignia;
 
@@ -819,43 +643,37 @@ void draw_list::add_insignia(polymodel *pm, int detail_level, int bitmap_num)
 	new_insignia.detail_level = detail_level;
 	new_insignia.bitmap_num = bitmap_num;
 
-	new_insignia.clip_plane = Current_render_state.clip_plane_handle;
+	new_insignia.clip = params->is_clip_plane_set();
+	new_insignia.clip_normal = params->get_clip_plane_normal();
+	new_insignia.clip_position = params->get_clip_plane_pos();
 
 	Insignias.push_back(new_insignia);
 }
 
 void draw_list::render_insignia(insignia_draw_data &insignia_info)
 {
-	if ( insignia_info.clip_plane >= 0 ) {
-		clip_plane_state &plane_data = Clip_planes[insignia_info.clip_plane];
-
+	if ( insignia_info.clip ) {
 		vec3d tmp;
-		vm_vec_sub(&tmp, &insignia_info.transformation.origin, &plane_data.point);
+		vm_vec_sub(&tmp, &insignia_info.transformation.origin, &insignia_info.clip_position);
 		vm_vec_normalize(&tmp);
 
-		if ( vm_vec_dot(&tmp, &plane_data.normal) < 0.0f) {
+		if ( vm_vec_dot(&tmp, &insignia_info.clip_normal) < 0.0f) {
 			return;
 		}
 	}
 
 	g3_start_instance_matrix(&insignia_info.transformation.origin, &insignia_info.transformation.basis);	
 
-	model_render_insignias(insignia_info.pm, insignia_info.detail_level, insignia_info.bitmap_num);
+	model_render_insignias(&insignia_info);
 
 	g3_done_instance(true);
 }
 
 void draw_list::render_insignias()
 {
-	int mode = gr_zbuffer_set(GR_ZBUFF_READ);
-	gr_zbias(1);
-
 	for ( size_t i = 0; i < Insignias.size(); ++i ) {
 		render_insignia(Insignias[i]);
 	}
-
-	gr_zbias(0);
-	gr_zbuffer_set(mode);
 }
 
 void draw_list::add_outline(vertex* vert_array, int n_verts, color *clr)
@@ -873,22 +691,27 @@ void draw_list::add_outline(vertex* vert_array, int n_verts, color *clr)
 void draw_list::render_outlines()
 {
 	gr_clear_states();
-	int mode = gr_zbuffer_set(GR_ZBUFF_READ);
 
 	for ( size_t i = 0; i < Outlines.size(); ++i ) {
 		render_outline(Outlines[i]);
 	}
-
-	gr_zbuffer_set(mode);
 }
 
 void draw_list::render_outline(outline_draw &outline_info)
 {
 	g3_start_instance_matrix(&outline_info.transformation.origin, &outline_info.transformation.basis);
 
-	gr_set_color_fast(&outline_info.clr);
+	material material_instance;
 
-	gr_render(outline_info.n_verts, outline_info.vert_array, TMAP_HTL_3D_UNLIT | TMAP_FLAG_LINES);
+	material_instance.set_depth_mode(ZBUFFER_TYPE_READ);
+	material_instance.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+	material_instance.set_color(outline_info.clr);
+
+	vertex_layout layout;
+	layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), &outline_info.vert_array[0].world.xyz.x);
+	layout.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), &outline_info.vert_array[0].r);
+
+	gr_render_primitives(&material_instance, PRIM_TYPE_LINES, &layout, 0, outline_info.n_verts);
 
 	g3_done_instance(true);
 }
@@ -898,70 +721,39 @@ bool draw_list::sort_draw_pair(const int a, const int b)
 	queued_buffer_draw *draw_call_a = &Target->Render_elements[a];
 	queued_buffer_draw *draw_call_b = &Target->Render_elements[b];
 
-	render_state *render_state_a = &Target->Render_states[draw_call_a->render_state_handle];
-	render_state *render_state_b = &Target->Render_states[draw_call_b->render_state_handle];
-
-	if ( draw_call_a->depth_mode != draw_call_b->depth_mode ) {
-		return draw_call_a->depth_mode > draw_call_b->depth_mode;
-	}
-
-	if ( render_state_a->clip_plane_handle != render_state_b->clip_plane_handle ) {
-		return render_state_a->clip_plane_handle < render_state_b->clip_plane_handle;
-	}
-	
-	if ( draw_call_a->blend_filter != draw_call_b->blend_filter ) {
-		return draw_call_a->blend_filter < draw_call_b->blend_filter;
-	}
-
 	if ( draw_call_a->sdr_flags != draw_call_b->sdr_flags ) {
 		return draw_call_a->sdr_flags < draw_call_b->sdr_flags;
 	}
 	
-	if ( render_state_a->buffer_id != render_state_b->buffer_id) {
-		return render_state_a->buffer_id < render_state_b->buffer_id;
+	if ( draw_call_a->buffer_id != draw_call_b->buffer_id ) {
+		return draw_call_a->buffer_id < draw_call_b->buffer_id;
 	}
 
-	if ( draw_call_a->texture_maps[TM_BASE_TYPE] != draw_call_b->texture_maps[TM_BASE_TYPE] ) {
-		return draw_call_a->texture_maps[TM_BASE_TYPE] < draw_call_b->texture_maps[TM_BASE_TYPE];
+	if ( draw_call_a->render_material.get_texture_map(TM_BASE_TYPE) != draw_call_b->render_material.get_texture_map(TM_BASE_TYPE) ) {
+		return draw_call_a->render_material.get_texture_map(TM_BASE_TYPE) < draw_call_b->render_material.get_texture_map(TM_BASE_TYPE);
 	}
 
-	if ( draw_call_a->texture_maps[TM_SPECULAR_TYPE] != draw_call_b->texture_maps[TM_SPECULAR_TYPE] ) {
-		return draw_call_a->texture_maps[TM_SPECULAR_TYPE] < draw_call_b->texture_maps[TM_SPECULAR_TYPE];
+	if ( draw_call_a->render_material.get_texture_map(TM_SPECULAR_TYPE) != draw_call_b->render_material.get_texture_map(TM_SPECULAR_TYPE) ) {
+		return draw_call_a->render_material.get_texture_map(TM_SPECULAR_TYPE) < draw_call_b->render_material.get_texture_map(TM_SPECULAR_TYPE);
 	}
 
-	if ( draw_call_a->texture_maps[TM_GLOW_TYPE] != draw_call_b->texture_maps[TM_GLOW_TYPE] ) {
-		return draw_call_a->texture_maps[TM_GLOW_TYPE] < draw_call_b->texture_maps[TM_GLOW_TYPE];
+	if ( draw_call_a->render_material.get_texture_map(TM_GLOW_TYPE) != draw_call_b->render_material.get_texture_map(TM_GLOW_TYPE) ) {
+		return draw_call_a->render_material.get_texture_map(TM_GLOW_TYPE) < draw_call_b->render_material.get_texture_map(TM_GLOW_TYPE);
 	}
 
-	if ( draw_call_a->texture_maps[TM_NORMAL_TYPE] != draw_call_b->texture_maps[TM_NORMAL_TYPE] ) {
-		return draw_call_a->texture_maps[TM_NORMAL_TYPE] < draw_call_b->texture_maps[TM_NORMAL_TYPE];
+	if ( draw_call_a->render_material.get_texture_map(TM_NORMAL_TYPE) != draw_call_b->render_material.get_texture_map(TM_NORMAL_TYPE) ) {
+		return draw_call_a->render_material.get_texture_map(TM_NORMAL_TYPE) < draw_call_b->render_material.get_texture_map(TM_NORMAL_TYPE);
 	}
 
-	if ( draw_call_a->texture_maps[TM_HEIGHT_TYPE] != draw_call_b->texture_maps[TM_HEIGHT_TYPE] ) {
-		return draw_call_a->texture_maps[TM_HEIGHT_TYPE] < draw_call_b->texture_maps[TM_HEIGHT_TYPE];
+	if ( draw_call_a->render_material.get_texture_map(TM_HEIGHT_TYPE) != draw_call_b->render_material.get_texture_map(TM_HEIGHT_TYPE) ) {
+		return draw_call_a->render_material.get_texture_map(TM_HEIGHT_TYPE) < draw_call_b->render_material.get_texture_map(TM_HEIGHT_TYPE);
 	}
 
-	if ( draw_call_a->texture_maps[TM_MISC_TYPE] != draw_call_b->texture_maps[TM_MISC_TYPE] ) {
-		return draw_call_a->texture_maps[TM_MISC_TYPE] < draw_call_b->texture_maps[TM_MISC_TYPE];
+	if ( draw_call_a->render_material.get_texture_map(TM_MISC_TYPE) != draw_call_b->render_material.get_texture_map(TM_MISC_TYPE) ) {
+		return draw_call_a->render_material.get_texture_map(TM_MISC_TYPE) < draw_call_b->render_material.get_texture_map(TM_MISC_TYPE);
 	}
 
-	return render_state_a->lights.index_start < render_state_b->lights.index_start;
-}
-
-void model_render_set_shadow_view_matrix(matrix4 *view_matrix)
-{
-	Model_render_shadow_uniform_data.set_value("shadow_mv_matrix", *view_matrix);
-}
-
-void model_render_set_shadow_cascades(matrix4 *proj_matrices, float *distances)
-{
-	Model_render_shadow_gen_uniform_data.set_values("shadow_proj_matrix", proj_matrices, (int)MAX_SHADOW_CASCADES);
-
-	Model_render_shadow_uniform_data.set_values("shadow_proj_matrix", proj_matrices, (int)MAX_SHADOW_CASCADES);
-	Model_render_shadow_uniform_data.set_value("veryneardist", distances[0]);
-	Model_render_shadow_uniform_data.set_value("neardist", distances[1]);
-	Model_render_shadow_uniform_data.set_value("middist", distances[2]);
-	Model_render_shadow_uniform_data.set_value("fardist", distances[3]);
+	return draw_call_a->lights.index_start < draw_call_b->lights.index_start;
 }
 
 void model_render_add_lightning( draw_list *scene, model_render_params* interp, polymodel *pm, bsp_info * sm )
@@ -1301,13 +1093,13 @@ void model_render_buffers(draw_list* scene, model_material *rendering_material, 
 		if (tmap->is_transparent) {
 			// for special shockwave/warp map usage
 			alpha = (interp->get_warp_alpha() != -1.0f) ? interp->get_warp_alpha() : 0.8f;
-			blend_filter = true;
+			use_blending = true;
 		} else if ( buffer->flags & VB_FLAG_TRANS ) {
-			blend_filter = true;
+			use_blending = true;
 		}
 
 		if (forced_blend_filter != GR_ALPHABLEND_NONE) {
-			blend_filter = true;
+			use_blending = true;
 		}
 
 		bool use_depth_test;
@@ -1322,13 +1114,12 @@ void model_render_buffers(draw_list* scene, model_material *rendering_material, 
 			}
 		}
 
-		gr_zbuffer_type zbuff_mode = model_render_determine_depth_mode(use_depth_test, use_blending);
-		rendering_material->set_depth_mode(zbuff_mode);
+		rendering_material->set_depth_mode(model_render_determine_depth_mode(use_depth_test, use_blending));
 
 		gr_alpha_blend blend_mode = model_render_determine_blend_mode(texture_maps[TM_BASE_TYPE], use_blending);
 		rendering_material->set_blend_mode(blend_mode);
 
-		const color &clr = interp->get_outline_color();
+		const color &clr = interp->get_color();
 		ubyte r = clr.red;
 		ubyte g = clr.green;
 		ubyte b = clr.blue;
@@ -1338,12 +1129,14 @@ void model_render_buffers(draw_list* scene, model_material *rendering_material, 
 
 		rendering_material->set_color(r, g, b, a);
 
-		rendering_material->set_texture_map(TM_BASE_TYPE,	texture_maps[TM_BASE_TYPE]);
-		rendering_material->set_texture_map(TM_GLOW_TYPE,	texture_maps[TM_GLOW_TYPE]);
-		rendering_material->set_texture_map(TM_SPECULAR_TYPE, texture_maps[TM_SPECULAR_TYPE]);
-		rendering_material->set_texture_map(TM_NORMAL_TYPE, texture_maps[TM_NORMAL_TYPE]);
-		rendering_material->set_texture_map(TM_HEIGHT_TYPE, texture_maps[TM_HEIGHT_TYPE]);
-		rendering_material->set_texture_map(TM_MISC_TYPE,	texture_maps[TM_MISC_TYPE]);
+		if ( (tmap_flags & TMAP_FLAG_TEXTURED) && (buffer->flags & VB_FLAG_UV1) ) {
+			rendering_material->set_texture_map(TM_BASE_TYPE,	texture_maps[TM_BASE_TYPE]);
+			rendering_material->set_texture_map(TM_GLOW_TYPE,	texture_maps[TM_GLOW_TYPE]);
+			rendering_material->set_texture_map(TM_SPECULAR_TYPE, texture_maps[TM_SPECULAR_TYPE]);
+			rendering_material->set_texture_map(TM_NORMAL_TYPE, texture_maps[TM_NORMAL_TYPE]);
+			rendering_material->set_texture_map(TM_HEIGHT_TYPE, texture_maps[TM_HEIGHT_TYPE]);
+			rendering_material->set_texture_map(TM_MISC_TYPE,	texture_maps[TM_MISC_TYPE]);
+		}
 
 		scene->add_buffer_draw(rendering_material, buffer, i, tmap_flags);
 	}
@@ -1543,10 +1336,13 @@ gr_alpha_blend model_render_determine_blend_mode(int base_bitmap, bool is_transp
 
 void model_render_determine_color(ubyte &r, ubyte &g, ubyte &b, ubyte &a, gr_alpha_blend blend_mode, bool texturing)
 {
+	if(!texturing)
+		return;
+
 	if (blend_mode == ALPHA_BLEND_ADDITIVE) {
 		r = g = b = a;
 		a = 255;
-	} else if (texturing) {
+	} else {
 		r = g = b = 255;
 	}
 }
@@ -1634,21 +1430,18 @@ void submodel_render_immediate(model_render_params *render_info, int model_num, 
 void submodel_render_queue(model_render_params *render_info, draw_list *scene, int model_num, int submodel_num, matrix *orient, vec3d * pos)
 {
 	polymodel * pm;
+	model_material rendering_material;
 
 	//MONITOR_INC( NumModelsRend, 1 );	
 
 	if ( !( Game_detail_flags & DETAIL_FLAG_MODELS ) )	return;
 	
 	if ( render_info->is_clip_plane_set() ) {
-		scene->set_clip_plane(render_info->get_clip_plane_pos(), render_info->get_clip_plane_normal());
-	} else {
-		scene->set_clip_plane();
+		rendering_material.set_clip_plane(render_info->get_clip_plane_normal(), render_info->get_clip_plane_pos());
 	}
 
 	if ( render_info->is_team_color_set() ) {
-		scene->set_team_color(render_info->get_team_color());
-	} else {
-		scene->set_team_color();
+		rendering_material.set_team_color(render_info->get_team_color());
 	}
 		
 	uint flags = render_info->get_model_flags();
@@ -1677,8 +1470,7 @@ void submodel_render_queue(model_render_params *render_info, draw_list *scene, i
 
 	if ( render_info->get_animated_effect_num() >= 0 ) {
 		tmap_flags |= TMAP_ANIMATED_SHADER;
-		scene->set_animated_effect(render_info->get_animated_effect_num());
-		scene->set_animated_timer(render_info->get_animated_effect_timer());
+		rendering_material.set_animated_effect(render_info->get_animated_effect_num(), render_info->get_animated_effect_timer());
 	}
 
 	bool is_outlines_only_htl = !Cmdline_nohtl && (flags & MR_NO_POLYS) && (flags & MR_SHOW_OUTLINE_HTL);
@@ -1695,27 +1487,27 @@ void submodel_render_queue(model_render_params *render_info, draw_list *scene, i
 	}
 
 	if (is_outlines_only_htl) {
-		scene->set_fill_mode(GR_FILL_MODE_WIRE);
+		rendering_material.set_fill_mode(GR_FILL_MODE_WIRE);
 
 		color outline_color = render_info->get_color();
-		gr_set_color_fast( &outline_color );
+		rendering_material.set_color(outline_color);
 
 		tmap_flags &= ~TMAP_FLAG_RGB;
 	} else {
-		scene->set_fill_mode(GR_FILL_MODE_SOLID);
+		rendering_material.set_fill_mode(GR_FILL_MODE_SOLID);
 	}
 
-	scene->set_light_factor(1.0f);
-
+	rendering_material.set_light_factor(1.0f);
+	
 	if ( !( flags & MR_NO_LIGHTING ) ) {
 		scene->set_light_filter(-1, pos, pm->submodel[submodel_num].rad);
-		scene->set_lighting(true);
+		rendering_material.set_lighting(true);
 	} else {
-		scene->set_lighting(false);
+		rendering_material.set_lighting(false);
 	}
 
 	// fixes disappearing HUD in OGL - taylor
-	scene->set_cull_mode(1);
+	rendering_material.set_cull_mode(true);
 
 	// RT - Put this here to fog debris
 	if( tmap_flags & TMAP_FLAG_PIXEL_FOG ) {
@@ -1729,15 +1521,15 @@ void submodel_render_queue(model_render_params *render_info, draw_list *scene, i
 		unsigned char r, g, b;
 		neb2_get_fog_color(&r, &g, &b);
 
-		scene->set_fog(GR_FOGMODE_FOG, r, g, b, fog_near, fog_far);
+		rendering_material.set_fog(r, g, b, fog_near, fog_far);
 	} else {
-		scene->set_fog(GR_FOGMODE_NONE, 0, 0, 0);
+		rendering_material.set_fog();
 	}
 
 	if(Rendering_to_shadow_map) {
-		scene->set_zbias(-1024);
+		rendering_material.set_depth_bias(-1024);
 	} else {
-		scene->set_zbias(0);
+		rendering_material.set_depth_bias(0);
 	}
 
 	scene->set_buffer(pm->vertex_buffer_id);
@@ -1745,10 +1537,10 @@ void submodel_render_queue(model_render_params *render_info, draw_list *scene, i
 	vec3d view_pos = scene->get_view_position();
 
 	if ( model_render_check_detail_box(&view_pos, pm, submodel_num, flags) ) {
-		model_render_buffers(scene, render_info, &pm->submodel[submodel_num].buffer, pm, submodel_num, 0, tmap_flags);
+		model_render_buffers(scene, &rendering_material, render_info, &pm->submodel[submodel_num].buffer, pm, submodel_num, 0, tmap_flags);
 
 		if ( pm->flags & PM_FLAG_TRANS_BUFFER && pm->submodel[submodel_num].trans_buffer.flags & VB_FLAG_TRANS ) {
-			model_render_buffers(scene, render_info, &pm->submodel[submodel_num].trans_buffer, pm, submodel_num, 0, tmap_flags);
+			model_render_buffers(scene, &rendering_material, render_info, &pm->submodel[submodel_num].trans_buffer, pm, submodel_num, 0, tmap_flags);
 		}
 	}
 	
@@ -2480,6 +2272,109 @@ void model_queue_render_thrusters(model_render_params *interp, polymodel *pm, in
 	}
 }
 
+void model_render_insignias(insignia_draw_data *insignia)
+{
+	polymodel *pm = insignia->pm;
+	int detail_level = insignia->detail_level;
+	int bitmap_num = insignia->bitmap_num;
+
+	// if the model has no insignias, or we don't have a texture, then bail
+	if ( (pm->num_ins <= 0) || (bitmap_num < 0) )
+		return;
+
+	int idx, s_idx;
+	vertex vecs[3];
+	vertex *vlist[3] = { &vecs[0], &vecs[1], &vecs[2] };
+	vec3d t1, t2, t3;
+	int i1, i2, i3;
+	int tmap_flags = TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT;
+
+	material insignia_material;
+	insignia_material.set_depth_bias(1);
+
+	// set the proper texture
+	render_set_unlit_material(&insignia_material, bitmap_num, 0.65f, true, true);
+
+	if ( insignia->clip ) {
+		insignia_material.set_clip_plane(insignia->clip_normal, insignia->clip_position);
+	}
+
+	// otherwise render them	
+	for(idx=0; idx<pm->num_ins; idx++){	
+		// skip insignias not on our detail level
+		if(pm->ins[idx].detail_level != detail_level){
+			continue;
+		}
+
+		for(s_idx=0; s_idx<pm->ins[idx].num_faces; s_idx++){
+			// get vertex indices
+			i1 = pm->ins[idx].faces[s_idx][0];
+			i2 = pm->ins[idx].faces[s_idx][1];
+			i3 = pm->ins[idx].faces[s_idx][2];
+
+			// transform vecs and setup vertices
+			vm_vec_add(&t1, &pm->ins[idx].vecs[i1], &pm->ins[idx].offset);
+			vm_vec_add(&t2, &pm->ins[idx].vecs[i2], &pm->ins[idx].offset);
+			vm_vec_add(&t3, &pm->ins[idx].vecs[i3], &pm->ins[idx].offset);
+
+			if ( Cmdline_nohtl ) {
+				g3_rotate_vertex(&vecs[0], &t1);
+				g3_rotate_vertex(&vecs[1], &t2);
+				g3_rotate_vertex(&vecs[2], &t3);
+			} else {
+				g3_transfer_vertex(&vecs[0], &t1);
+				g3_transfer_vertex(&vecs[1], &t2);
+				g3_transfer_vertex(&vecs[2], &t3);
+			}
+
+			// setup texture coords
+			vecs[0].texture_position.u = pm->ins[idx].u[s_idx][0];
+			vecs[0].texture_position.v = pm->ins[idx].v[s_idx][0];
+
+			vecs[1].texture_position.u = pm->ins[idx].u[s_idx][1];
+			vecs[1].texture_position.v = pm->ins[idx].v[s_idx][1];
+
+			vecs[2].texture_position.u = pm->ins[idx].u[s_idx][2];
+			vecs[2].texture_position.v = pm->ins[idx].v[s_idx][2];
+
+			vertex_layout layout;
+
+			layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), &vecs[0].world);
+			layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &vecs[0].texture_position);
+
+			if ( !Cmdline_nohtl ) {
+				light_apply_rgb( &vecs[0].r, &vecs[0].g, &vecs[0].b, &pm->ins[idx].vecs[i1], &pm->ins[idx].norm[i1], 1.5f );
+				light_apply_rgb( &vecs[1].r, &vecs[1].g, &vecs[1].b, &pm->ins[idx].vecs[i2], &pm->ins[idx].norm[i2], 1.5f );
+				light_apply_rgb( &vecs[2].r, &vecs[2].g, &vecs[2].b, &pm->ins[idx].vecs[i3], &pm->ins[idx].norm[i3], 1.5f );
+				layout.add_vertex_component(vertex_format_data::COLOR3, sizeof(vertex), &vecs[0].r);
+			}
+
+			// draw the polygon
+			gr_render_primitives(&insignia_material, PRIM_TYPE_TRIFAN, &layout, 0, 3);
+		}
+	}
+}
+
+void model_render_arc(vec3d *v1, vec3d *v2, color *primary, color *secondary, float arc_width)
+{
+	Num_arc_segment_points = 0;
+
+	// need need to add the first point
+	memcpy( &Arc_segment_points[Num_arc_segment_points++], v1, sizeof(vec3d) );
+
+	// this should fill in all of the middle, and the last, points
+	interp_render_arc_segment(v1, v2, 0);
+
+	// use primary color for fist pass
+	Assert( primary );
+
+	render_rod(Num_arc_segment_points, Arc_segment_points, arc_width, primary);
+
+	if (secondary) {
+		render_rod(Num_arc_segment_points, Arc_segment_points, arc_width * 0.33f, secondary);
+	}
+}
+
 void model_render_debug_children(polymodel *pm, int mn, int detail_level, uint debug_flags)
 {
 	int i;
@@ -2619,11 +2514,11 @@ void model_render_immediate(model_render_params *render_info, int model_num, mat
 
 	switch ( render ) {
 	case MODEL_RENDER_OPAQUE:
-		model_list.render_all(GR_ZBUFF_FULL);
+		model_list.render_all(ZBUFFER_TYPE_FULL);
 		break;
 	case MODEL_RENDER_TRANS:
-		model_list.render_all(GR_ZBUFF_READ);
-		model_list.render_all(GR_ZBUFF_NONE);
+		model_list.render_all(ZBUFFER_TYPE_READ);
+		model_list.render_all(ZBUFFER_TYPE_NONE);
 		break;
 	case MODEL_RENDER_ALL:
 		model_list.render_all();
@@ -2706,12 +2601,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 	
 	// Set the flags we will pass to the tmapper
 	uint tmap_flags = TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB;
-
-	// if we're in nebula mode, fog everything except for the warp holes and other non-fogged models
-	if((The_mission.flags & MISSION_FLAG_FULLNEB) && (Neb2_render_mode != NEB2_RENDER_NONE) && !(model_flags & MR_NO_FOGGING)){
-		tmap_flags |= TMAP_FLAG_PIXEL_FOG;
-	}
-	
+		
 	if ( !(model_flags & MR_NO_TEXTURING) )	{
 		tmap_flags |= TMAP_FLAG_TEXTURED;
 
@@ -2764,28 +2654,29 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 		scene->push_transform(&auto_back, NULL);
 	}
 
-	if ( tmap_flags & TMAP_FLAG_PIXEL_FOG ) {
+	// if we're in nebula mode, fog everything except for the warp holes and other non-fogged models
+	if ( (The_mission.flags & MISSION_FLAG_FULLNEB) && (Neb2_render_mode != NEB2_RENDER_NONE) && !(model_flags & MR_NO_FOGGING) ) {
 		float fog_near = 10.0f, fog_far = 1000.0f;
 		neb2_get_adjusted_fog_values(&fog_near, &fog_far, objp);
 
 		unsigned char r, g, b;
 		neb2_get_fog_color(&r, &g, &b);
 
-		rendering_material.set_fog(GR_FOGMODE_FOG, r, g, b, fog_near, fog_far);
+		rendering_material.set_fog(r, g, b, fog_near, fog_far);
 	} else {
-		rendering_material.set_fog(GR_FOGMODE_NONE, 0, 0, 0);
+		rendering_material.set_fog();
 	}
 
 	if ( is_outlines_only_htl ) {
 		rendering_material.set_fill_mode(GR_FILL_MODE_WIRE);
 
-		color outline_color = interp->get_color();
-		rendering_material.set_color(outline_color);
-
 		tmap_flags &= ~TMAP_FLAG_RGB;
 	} else {
 		rendering_material.set_fill_mode(GR_FILL_MODE_SOLID);
 	}
+
+	color clr = interp->get_color();
+		rendering_material.set_color(clr);
 		
 	if ( model_flags & MR_EDGE_ALPHA ) {
 		rendering_material.set_center_alpha(-1);
@@ -2796,9 +2687,9 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 	}
 
 	if ( ( model_flags & MR_NO_CULL ) || ( model_flags & MR_ALL_XPARENT ) || ( interp->get_warp_bitmap() >= 0 ) ) {
-		rendering_material.set_cull_mode(0);
+		rendering_material.set_cull_mode(false);
 	} else {
-		rendering_material.set_cull_mode(1);
+		rendering_material.set_cull_mode(true);
 	}
 
 	if ( !(model_flags & MR_NO_LIGHTING) ) {
@@ -2825,7 +2716,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 
 	if ( (tmap_flags & TMAP_FLAG_BATCH_TRANSFORMS) ) {
 		scene->start_model_batch(pm->n_models);
-		model_render_buffers(scene, interp, &pm->detail_buffers[detail_level], pm, -1, detail_level, tmap_flags);
+		model_render_buffers(scene, &rendering_material, interp, &pm->detail_buffers[detail_level], pm, -1, detail_level, tmap_flags);
 	}
 		
 	// Draw the subobjects
@@ -2855,7 +2746,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 			color outline_color = interp->get_color();
 			scene->add_outline(pm->submodel[detail_model_num].outline_buffer, pm->submodel[detail_model_num].n_verts_outline, &outline_color);
 		} else {
-			model_render_buffers(scene, interp, &pm->submodel[detail_model_num].buffer, pm, detail_model_num, detail_level, tmap_flags);
+			model_render_buffers(scene, &rendering_material, interp, &pm->submodel[detail_model_num].buffer, pm, detail_model_num, detail_level, tmap_flags);
 
 			if ( pm->submodel[detail_model_num].num_arcs ) {
 				model_render_add_lightning( scene, interp, pm, &pm->submodel[detail_model_num] );
@@ -2872,7 +2763,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 
 		while( i >= 0 )	{
 			if ( !pm->submodel[i].is_thruster ) {
-				model_render_children_buffers( scene, interp, pm, i, detail_level, tmap_flags, trans_buffer );
+				model_render_children_buffers( scene, &rendering_material, interp, pm, i, detail_level, tmap_flags, trans_buffer );
 			}
 
 			i = pm->submodel[i].next_sibling;
@@ -2882,7 +2773,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 
 		if ( model_render_check_detail_box(&view_pos, pm, pm->detail[detail_level], model_flags) ) {
 			int detail_model_num = pm->detail[detail_level];
-			model_render_buffers(scene, interp, &pm->submodel[detail_model_num].trans_buffer, pm, detail_model_num, detail_level, tmap_flags);
+			model_render_buffers(scene, &rendering_material, interp, &pm->submodel[detail_model_num].trans_buffer, pm, detail_model_num, detail_level, tmap_flags);
 		}
 	}
 
@@ -2893,14 +2784,14 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 
 		while( i >= 0 ) {
 			if (pm->submodel[i].is_thruster) {
-				model_render_children_buffers( scene, interp, pm, i, detail_level, tmap_flags, trans_buffer );
+				model_render_children_buffers( scene, &rendering_material, interp, pm, i, detail_level, tmap_flags, trans_buffer );
 			}
 			i = pm->submodel[i].next_sibling;
 		}
 	}
 
 	if ( !( model_flags & MR_NO_TEXTURING ) ) {
-		scene->add_insignia(pm, detail_level, interp->get_insignia_bitmap());
+		scene->add_insignia(interp, pm, detail_level, interp->get_insignia_bitmap());
 	}
 
 	if ( (model_flags & MR_AUTOCENTER) && (set_autocen) ) {

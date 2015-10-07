@@ -382,9 +382,6 @@ matrix shadows_start_render(matrix *eye_orient, vec3d *eye_pos, float fov, float
 
 	gr_shadow_map_start(&Shadow_view_matrix, &light_matrix);
 
-	model_render_set_shadow_view_matrix(&Shadow_view_matrix);
-	model_render_set_shadow_cascades(Shadow_proj_matrix, Shadow_cascade_distances);
-
 	return light_matrix;
 }
 
@@ -472,7 +469,7 @@ void shadows_render_all(float fov, matrix *eye_orient, vec3d *eye_pos)
 	}
 
 	scene.init_render();
-	scene.render_all(GR_ZBUFF_FULL);
+	scene.render_all(ZBUFFER_TYPE_FULL);
 
 	shadows_end_render();
 
