@@ -1518,6 +1518,8 @@ void gr_opengl_render_model(model_material* material_info, vertex_buffer* buffer
 
 void opengl_render_model_program(model_material* material_info, vertex_buffer* bufferp, buffer_data *datap)
 {
+	GL_state.Texture.SetShaderMode(GL_TRUE);
+
 	opengl_tnl_set_model_material(material_info);
 
 	GLubyte *ibuffer = NULL;
@@ -1557,6 +1559,8 @@ void opengl_render_model_program(model_material* material_info, vertex_buffer* b
 			}
 		}
 	}
+
+	GL_state.Texture.SetShaderMode(GL_FALSE);
 }
 
 void opengl_render_model_fixed(model_material* material_info, vertex_buffer *bufferp, buffer_data *datap)
@@ -2503,6 +2507,8 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	gr_opengl_set_center_alpha(material_info->get_center_alpha());
 
 	Assert( Current_shader->shader == SDR_TYPE_MODEL );
+
+	GL_state.Texture.SetShaderMode(GL_TRUE);
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_ANIMATED ) {
 		GL_state.Uniform.setUniform("anim_timer", material_info->get_animated_effect_time());

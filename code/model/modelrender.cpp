@@ -619,6 +619,7 @@ void draw_list::render_arc(arc_effect &arc)
 	g3_start_instance_matrix(&arc.transformation.origin, &arc.transformation.basis);	
 
 	model_render_arc(&arc.v1, &arc.v2, &arc.primary, &arc.secondary, arc.width);
+	//interp_render_arc(&arc.v1, &arc.v2, &arc.primary, &arc.secondary, arc.width);
 
 	g3_done_instance(true);
 }
@@ -2614,7 +2615,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 	}
 
 	if ( model_flags & MR_DESATURATED ) {
-		tmap_flags |= TMAP_FLAG_DESATURATE;
+		rendering_material.set_desaturation(true);
 	}
 
 	if ( interp->get_animated_effect_num() > 0 ) {
@@ -2676,7 +2677,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 	}
 
 	color clr = interp->get_color();
-		rendering_material.set_color(clr);
+	rendering_material.set_color(clr);
 		
 	if ( model_flags & MR_EDGE_ALPHA ) {
 		rendering_material.set_center_alpha(-1);

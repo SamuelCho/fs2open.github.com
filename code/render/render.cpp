@@ -141,6 +141,21 @@ void render_colored_primitives(vertex* verts, int n_verts, primitive_type prim_t
 	gr_render_primitives(&material_info, prim_type, &layout, 0, n_verts, -1);
 }
 
+void render_colored_primitives(vertex* verts, int n_verts, primitive_type prim_type, int texture, float alpha, bool depth_testing)
+{
+	vertex_layout layout;
+
+	layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), &verts[0].world.xyz.x);
+	layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &verts[0].texture_position.u);
+	layout.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), &verts[0].r);
+
+	material material_info;
+
+	render_set_unlit_material(&material_info, texture, alpha, true, depth_testing);
+
+	gr_render_primitives(&material_info, prim_type, &layout, 0, n_verts, -1);
+}
+
 void render_primitives(vertex* verts, int n_verts, primitive_type prim_type, int texture, color *clr, bool blending, bool depth_testing)
 {
 	vertex_layout layout;
@@ -691,7 +706,7 @@ void render_oriented_bitmap(int texture, float alpha, vertex *pnt, int orient, f
 	render_primitives(P, 4, PRIM_TYPE_TRIFAN, texture, alpha, true, true);
 }
 
-void render_laser(vec3d *p0, float width1, vec3d *p1, float width2, int r, int g, int b, int texture)
+void render_laser(vec3d *p0, float width1, vec3d *p1, float width2, color *clr, int texture, float alpha)
 {
 	width1 *= 0.5f;
 	width2 *= 0.5f;
@@ -755,24 +770,170 @@ void render_laser(vec3d *p0, float width1, vec3d *p1, float width2, int r, int g
 	pts[3].texture_position.u = 0.0f;
 	pts[3].texture_position.v = 1.0f;
 
-	pts[0].r = (ubyte)r;
-	pts[0].g = (ubyte)g;
-	pts[0].b = (ubyte)b;
+	pts[0].r = (ubyte)clr->red;
+	pts[0].g = (ubyte)clr->green;
+	pts[0].b = (ubyte)clr->blue;
 	pts[0].a = 255;
-	pts[1].r = (ubyte)r;
-	pts[1].g = (ubyte)g;
-	pts[1].b = (ubyte)b;
+	pts[1].r = (ubyte)clr->red;
+	pts[1].g = (ubyte)clr->green;
+	pts[1].b = (ubyte)clr->blue;
 	pts[1].a = 255;
-	pts[2].r = (ubyte)r;
-	pts[2].g = (ubyte)g;
-	pts[2].b = (ubyte)b;
+	pts[2].r = (ubyte)clr->red;
+	pts[2].g = (ubyte)clr->green;
+	pts[2].b = (ubyte)clr->blue;
 	pts[2].a = 255;
-	pts[3].r = (ubyte)r;
-	pts[3].g = (ubyte)g;
-	pts[3].b = (ubyte)b;
+	pts[3].r = (ubyte)clr->red;
+	pts[3].g = (ubyte)clr->green;
+	pts[3].b = (ubyte)clr->blue;
 	pts[3].a = 255;
 
-	render_colored_primitives(pts, 4, PRIM_TYPE_TRIFAN, texture, true, true);
+	render_colored_primitives(pts, 4, PRIM_TYPE_TRIFAN, texture, alpha, true);
+}
+
+void render_laser_2d(vec3d *headp, float head_width, vec3d *tailp, float tail_width, float max_len, int texture, color* clr, float alpha)
+{
+	float headx, heady, headr, tailx, taily, tailr;
+	vertex pt1, pt2;
+	float depth;
+
+	Assert( G3_count == 1 );
+
+	g3_rotate_vertex(&pt1,headp);
+
+	g3_project_vertex(&pt1);
+	if (pt1.flags & PF_OVERFLOW) 
+		return;
+
+	g3_rotate_vertex(&pt2,tailp);
+
+	g3_project_vertex(&pt2);
+	if (pt2.flags & PF_OVERFLOW) 
+		return;
+
+	if ( (pt1.codes & pt2.codes) != 0 )	{
+		// Both off the same side
+		return;
+	}
+
+	headx = pt1.screen.xyw.x;
+	heady = pt1.screen.xyw.y;
+	headr = (head_width*Matrix_scale.xyz.x*Canv_w2*pt1.screen.xyw.w);
+
+	tailx = pt2.screen.xyw.x;
+	taily = pt2.screen.xyw.y;
+	tailr = (tail_width*Matrix_scale.xyz.x*Canv_w2*pt2.screen.xyw.w);
+
+	float len_2d = fl_sqrt( (tailx-headx)*(tailx-headx) + (taily-heady)*(taily-heady) );
+
+	// Cap the length if needed.
+	if ( (max_len > 1.0f) && (len_2d > max_len) )	{
+		float ratio = max_len / len_2d;
+	
+		tailx = headx + ( tailx - headx ) * ratio;
+		taily = heady + ( taily - heady ) * ratio;
+		tailr = headr + ( tailr - headr ) * ratio;
+
+		len_2d = fl_sqrt( (tailx-headx)*(tailx-headx) + (taily-heady)*(taily-heady) );
+	}
+
+	depth = (pt1.world.xyz.z+pt2.world.xyz.z)*0.5f;
+
+	float max_r  = headr;
+	float a;
+	if ( tailr > max_r ) 
+		max_r = tailr;
+
+	if ( max_r < 1.0f )
+		max_r = 1.0f;
+
+	float mx, my, w, h1,h2;
+
+	if ( len_2d < max_r ) {
+
+		h1 = headr + (max_r-len_2d);
+		if ( h1 > max_r ) h1 = max_r;
+		h2 = tailr + (max_r-len_2d);
+		if ( h2 > max_r ) h2 = max_r;
+
+		len_2d = max_r;
+		if ( fl_abs(tailx - headx) > 0.01f )	{
+			a = (float)atan2( taily-heady, tailx-headx );
+		} else {
+			a = 0.0f;
+		}
+
+		w = len_2d;
+
+	} else {
+		a = atan2_safe( taily-heady, tailx-headx );
+
+		w = len_2d;
+
+		h1 = headr;
+		h2 = tailr;
+	}
+	
+	mx = (tailx+headx)/2.0f;
+	my = (taily+heady)/2.0f;
+
+	// Draw box with width 'w' and height 'h' at angle 'a' from horizontal
+	// centered around mx, my
+
+	if ( h1 < 1.0f ) h1 = 1.0f;
+	if ( h2 < 1.0f ) h2 = 1.0f;
+
+	float sa, ca;
+
+	sa = (float)sin(a);
+	ca = (float)cos(a);
+
+	vertex v[4];
+	vertex *vertlist[4] = { &v[3], &v[2], &v[1], &v[0] };
+	memset(v,0,sizeof(vertex)*4);
+
+	if ( depth < 0.0f ) depth = 0.0f;
+	
+	v[0].screen.xyw.x = (-w/2.0f)*ca + (-h1/2.0f)*sa + mx;
+	v[0].screen.xyw.y = (-w/2.0f)*sa - (-h1/2.0f)*ca + my;
+	v[0].world.xyz.z = pt1.world.xyz.z;
+	v[0].screen.xyw.w = pt1.screen.xyw.w;
+	v[0].texture_position.u = 0.0f;
+	v[0].texture_position.v = 0.0f;
+	v[0].b = 191;
+
+	v[1].screen.xyw.x = (w/2.0f)*ca + (-h2/2.0f)*sa + mx;
+	v[1].screen.xyw.y = (w/2.0f)*sa - (-h2/2.0f)*ca + my;
+	v[1].world.xyz.z = pt2.world.xyz.z;
+	v[1].screen.xyw.w = pt2.screen.xyw.w;
+	v[1].texture_position.u = 1.0f;
+	v[1].texture_position.v = 0.0f;
+	v[1].b = 191;
+
+	v[2].screen.xyw.x = (w/2.0f)*ca + (h2/2.0f)*sa + mx;
+	v[2].screen.xyw.y = (w/2.0f)*sa - (h2/2.0f)*ca + my;
+	v[2].world.xyz.z = pt2.world.xyz.z;
+	v[2].screen.xyw.w = pt2.screen.xyw.w;
+	v[2].texture_position.u = 1.0f;
+	v[2].texture_position.v = 1.0f;
+	v[2].b = 191;
+
+	v[3].screen.xyw.x = (-w/2.0f)*ca + (h1/2.0f)*sa + mx;
+	v[3].screen.xyw.y = (-w/2.0f)*sa - (h1/2.0f)*ca + my;
+	v[3].world.xyz.z = pt1.world.xyz.z;
+	v[3].screen.xyw.w = pt1.screen.xyw.w;
+	v[3].texture_position.u = 0.0f;
+	v[3].texture_position.v = 1.0f;
+	v[3].b = 191;
+
+	render_primitives_2d(v, 4, PRIM_TYPE_TRIFAN, texture, clr, true);
+}
+
+void render_laser_2d(vec3d *headp, float head_width, vec3d *tailp, float tail_width, float max_len, int texture, float alpha)
+{
+	color clr;
+	gr_init_alphacolor(&clr, 255, 255, 255, 255);
+
+	render_laser_2d(headp, head_width, tailp, tail_width, max_len, texture, &clr, alpha);
 }
 
 void render_bitmap(int _x, int _y, int texture, int resize_mode)

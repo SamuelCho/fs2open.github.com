@@ -1699,11 +1699,12 @@ void beam_render_all()
 				continue;
 			}
 
-			beam_render(moveup, u_offset);
+			//beam_render(moveup, u_offset);
+			beam_render_new(moveup, u_offset);
 		}
 
 		// render the muzzle glow
-		beam_render_muzzle_glow(moveup);		
+		beam_render_muzzle_glow_new(moveup);		
 
 		// maybe generate some muzzle particles
 		beam_generate_muzzle_particles(moveup);

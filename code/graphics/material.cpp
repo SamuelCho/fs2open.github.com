@@ -244,7 +244,8 @@ lighting(false),
 Light_factor(1.0f), 
 Batched(false), 
 Team_color_set(false), 
-Center_alpha(0) 
+Center_alpha(0),
+Desaturate(false)
 { 
 	set_shader_type(SDR_TYPE_MODEL); 
 }

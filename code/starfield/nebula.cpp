@@ -222,7 +222,7 @@ void nebula_render()
 	}
 }
 
-void nebula_render_triangles()
+void nebula_render_new()
 {
 	int i;
 

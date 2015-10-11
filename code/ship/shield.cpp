@@ -305,7 +305,7 @@ void render_low_detail_shield_bitmap(gshield_tri *trip, matrix *orient, vec3d *p
 	}
 }
 
-void shield_render_low_detail_bitmap(gshield_tri *trip, matrix *orient, vec3d *pos, ubyte r, ubyte g, ubyte b, int texture)
+void shield_render_low_detail_bitmap(gshield_tri *trip, matrix *orient, vec3d *pos, ubyte r, ubyte g, ubyte b, int texture, float alpha)
 {
 	int		j;
 	vec3d	pnt;
@@ -353,7 +353,7 @@ void shield_render_low_detail_bitmap(gshield_tri *trip, matrix *orient, vec3d *p
 		vertlist[3] = verts[3];
 	}
 
-	render_colored_primitives(vertlist, 4, PRIM_TYPE_TRIFAN, texture, true, true);
+	render_colored_primitives(vertlist, 4, PRIM_TYPE_TRIFAN, texture, alpha, true);
 }
 
 /**
@@ -425,7 +425,7 @@ void render_shield_triangle(gshield_tri *trip, matrix *orient, vec3d *pos, ubyte
 	}
 }
 
-void shield_render_triangle(gshield_tri *trip, matrix *orient, vec3d *pos, ubyte r, ubyte g, ubyte b, int texture)
+void shield_render_triangle(gshield_tri *trip, matrix *orient, vec3d *pos, ubyte r, ubyte g, ubyte b, int texture, float alpha)
 {
 	int		j;
 	vec3d	pnt;
@@ -472,9 +472,9 @@ void shield_render_triangle(gshield_tri *trip, matrix *orient, vec3d *pos, ubyte
 		vertlist[0] = verts[2]; 
 		vertlist[1] = verts[1]; 
 		vertlist[2] = verts[0]; 
-		render_colored_primitives(vertlist, 3, PRIM_TYPE_TRIFAN, texture, true, true);
+		render_colored_primitives(vertlist, 3, PRIM_TYPE_TRIFAN, texture, alpha, true);
 	} else {
-		render_colored_primitives(verts, 3, PRIM_TYPE_TRIFAN, texture, true, true);
+		render_colored_primitives(verts, 3, PRIM_TYPE_TRIFAN, texture, alpha, true);
 	}
 }
 
@@ -566,16 +566,18 @@ void render_shield(int shield_num)
 			alpha *= 0.85f;
 		}
 
-		gr_set_bitmap(bitmap_id, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, alpha );
+		//gr_set_bitmap(bitmap_id, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, alpha );
 
 		if ( (Detail.shield_effects == 1) || (Detail.shield_effects == 2) ) {
 			if ( bitmap_id != - 1 ) {
-				render_low_detail_shield_bitmap(&Global_tris[Shield_hits[shield_num].tri_list[0]], orient, centerp, Shield_hits[shield_num].rgb[0], Shield_hits[shield_num].rgb[1], Shield_hits[shield_num].rgb[2]);
+				//render_low_detail_shield_bitmap(&Global_tris[Shield_hits[shield_num].tri_list[0]], orient, centerp, Shield_hits[shield_num].rgb[0], Shield_hits[shield_num].rgb[1], Shield_hits[shield_num].rgb[2]);
+				shield_render_low_detail_bitmap(&Global_tris[Shield_hits[shield_num].tri_list[0]], orient, centerp, Shield_hits[shield_num].rgb[0], Shield_hits[shield_num].rgb[1], Shield_hits[shield_num].rgb[2], bitmap_id, alpha);
 			}
 		} else {
 			if ( bitmap_id != - 1 ) {
 				for (i=0; i<Shield_hits[shield_num].num_tris; i++) {
-					render_shield_triangle(&Global_tris[Shield_hits[shield_num].tri_list[i]], orient, centerp, Shield_hits[shield_num].rgb[0], Shield_hits[shield_num].rgb[1], Shield_hits[shield_num].rgb[2]);
+					shield_render_triangle(&Global_tris[Shield_hits[shield_num].tri_list[i]], orient, centerp, Shield_hits[shield_num].rgb[0], Shield_hits[shield_num].rgb[1], Shield_hits[shield_num].rgb[2], bitmap_id, alpha);
+					//render_shield_triangle(&Global_tris[Shield_hits[shield_num].tri_list[i]], orient, centerp, Shield_hits[shield_num].rgb[0], Shield_hits[shield_num].rgb[1], Shield_hits[shield_num].rgb[2]);
 				}
 			}
 		}

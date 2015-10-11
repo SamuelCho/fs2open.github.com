@@ -25,6 +25,7 @@ void nebula_init( const char *filename, int pitch, int bank, int heading );
 void nebula_init( const char *filename, angles *pbh = /*NULL*/ 0 );
 void nebula_close();
 void nebula_render();
+void nebula_render_new();
 
 #define NEBULA_INDEXED_COLORS 20
 
