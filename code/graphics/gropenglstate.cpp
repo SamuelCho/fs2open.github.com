@@ -8,12 +8,10 @@
 */
 
 
-#include "globalincs/pstypes.h"
-#include "graphics/gropengl.h"
-#include "graphics/gropenglstate.h"
 #include "graphics/gropengllight.h"
 #include "graphics/gropenglshader.h"
 #include "graphics/material.h"
+#include "graphics/gropenglstate.h"
 #include "math/vecmat.h"
 
 extern GLfloat GL_max_anisotropy;

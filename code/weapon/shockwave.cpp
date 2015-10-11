@@ -9,17 +9,17 @@
 
 
 
-#include "weapon/shockwave.h"
-#include "render/3d.h"
-#include "weapon/weapon.h"
-#include "ship/ship.h"
-#include "io/timer.h"
-#include "globalincs/linklist.h"
-#include "ship/shiphit.h"
-#include "gamesnd/gamesnd.h"
 #include "asteroid/asteroid.h"
-#include "object/object.h"
+#include "gamesnd/gamesnd.h"
+#include "globalincs/linklist.h"
+#include "io/timer.h"
 #include "model/modelrender.h"
+#include "object/object.h"
+#include "render/3d.h"
+#include "ship/ship.h"
+#include "ship/shiphit.h"
+#include "weapon/shockwave.h"
+#include "weapon/weapon.h"
 
 // -----------------------------------------------------------
 // Module-wide globals
@@ -291,16 +291,14 @@ void shockwave_move(object *shockwave_objp, float frametime)
 			continue;
 		}
 
-		if ( objp->type == OBJ_WEAPON ) {
+		if(objp->type == OBJ_WEAPON) {
 			// only apply to missiles with hitpoints
 			weapon_info* wip = &Weapon_info[Weapons[objp->instance].weapon_info_index];
-			if (wip->weapon_hitpoints <= 0 || !(wip->wi_flags2 & WIF2_TAKES_SHOCKWAVE_DAMAGE))
+			if (wip->weapon_hitpoints <= 0)
 				continue;
-			if (sw->weapon_info_index >= 0) {
-				if (Weapon_info[sw->weapon_info_index].wi_flags2 & WIF2_CIWS) {
-					continue;
-				}
-			}
+
+			if (!(wip->wi_flags2 & WIF2_TAKES_SHOCKWAVE_DAMAGE || (sw->weapon_info_index >= 0 && Weapon_info[sw->weapon_info_index].wi_flags2 & WIF2_CIWS)))
+				continue;
 		}
 
 	

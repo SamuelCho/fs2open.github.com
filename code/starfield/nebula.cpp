@@ -9,15 +9,15 @@
 
 
 
-#include "starfield/nebula.h"
-#include "math/vecmat.h"
-#include "render/3d.h"
-#include "mission/missionparse.h"
-#include "nebula/neb.h"
 #include "cfile/cfile.h"
 #include "debugconsole/console.h"
+#include "math/vecmat.h"
+#include "mission/missionparse.h"
+#include "nebula/neb.h"
 #include "palman/palman.h"
 #include "graphics/material.h"
+#include "render/3d.h"
+#include "starfield/nebula.h"
 
 #define MAX_TRIS 200
 #define MAX_POINTS 300

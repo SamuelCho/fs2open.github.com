@@ -12,6 +12,8 @@
 #ifndef _GRAPHICS_H
 #define _GRAPHICS_H
 
+#include "bmpman/bmpman.h"
+#include "cfile/cfile.h"
 #include "globalincs/pstypes.h"
 #include "graphics/tmapper.h"
 #include "cfile/cfile.h"

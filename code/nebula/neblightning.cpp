@@ -10,20 +10,21 @@
 
 
 
-#include "parse/parselo.h"
-#include "globalincs/linklist.h"
-#include "io/timer.h"
 #include "debugconsole/console.h"
 #include "freespace2/freespace.h"
 #include "gamesnd/gamesnd.h"
-#include "render/3d.h"
+#include "globalincs/linklist.h"
+#include "io/timer.h"
 #include "nebula/neb.h"
 #include "nebula/neblightning.h"
-#include "weapon/emp.h"
 #include "network/multi.h"
 #include "network/multimsgs.h"
 #include "graphics/material.h"
 #include "render/render.h"
+#include "parse/parselo.h"
+#include "render/3d.h"
+#include "weapon/emp.h"
+
 extern int Cmdline_nohtl;
 
 // ------------------------------------------------------------------------------------------------------
