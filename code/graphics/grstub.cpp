@@ -1,17 +1,17 @@
 
 
-#include "graphics/2d.h"
-#include "graphics/grinternal.h"
-#include "bmpman/bmpman.h"
-#include "ddsutils/ddsutils.h"
-#include "tgautils/tgautils.h"
-#include "pngutils/pngutils.h"
-#include "jpgutils/jpgutils.h"
-#include "pcxutils/pcxutils.h"
-#include "globalincs/systemvars.h"
 #include "anim/animplay.h"
 #include "anim/packunpack.h"
+#include "bmpman/bmpman.h"
+#include "ddsutils/ddsutils.h"
+#include "globalincs/systemvars.h"
+#include "graphics/2d.h"
+#include "graphics/grinternal.h"
+#include "jpgutils/jpgutils.h"
 #include "model/model.h"
+#include "pcxutils/pcxutils.h"
+#include "pngutils/pngutils.h"
+#include "tgautils/tgautils.h"
 
 #define BMPMAN_INTERNAL
 #include "bmpman/bm_internal.h"
@@ -196,7 +196,6 @@ void gr_stub_free_screen(int id)
 
 void gr_stub_get_region(int front, int w, int h, ubyte *data)
 {
-	data = NULL;
 }
 
 void gr_stub_gradient(int x1,int y1,int x2,int y2, int resize_mode)
@@ -523,7 +522,7 @@ void gr_stub_get_bitmap_from_texture(void* data_out, int bitmap_num)
 }
 
 // bitmap functions
-int gr_stub_bm_load(ubyte type, int n, const char *filename, CFILE *img_cfp, int *w, int *h, int *bpp, ubyte *c_type, int *mm_lvl, int *size)
+int gr_stub_bm_load(BM_TYPE type, int n, const char *filename, CFILE *img_cfp, int *w, int *h, int *bpp, BM_TYPE *c_type, int *mm_lvl, int *size)
 {
 	int dds_ct;
 
@@ -614,7 +613,7 @@ int gr_stub_bm_load(ubyte type, int n, const char *filename, CFILE *img_cfp, int
 
 int gr_stub_bm_lock(const char *filename, int handle, int bitmapnum, ubyte bpp, ubyte flags, bool nodebug)
 {
-	ubyte c_type = BM_TYPE_NONE;
+	BM_TYPE c_type = BM_TYPE_NONE;
 	ubyte true_bpp;
 
 	bitmap_entry *be = &bm_bitmaps[bitmapnum];
@@ -733,7 +732,7 @@ void gr_stub_bm_page_in_start()
 {
 }
 
-int gr_stub_maybe_create_shader(shader_type shader, unsigned int flags) {
+int gr_stub_maybe_create_shader(shader_type shader_t, unsigned int flags) {
 	return -1;
 }
 

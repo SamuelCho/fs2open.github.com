@@ -67,6 +67,33 @@
 #define BMP_FLAG_RENDER_TARGET_DYNAMIC      (1<<1)      //!< Texture is a dynamic type (animation)
 #define BMP_FLAG_CUBEMAP                    (1<<2)      //!< Texture is a cubemap
 
+// Bitmap types
+enum BM_TYPE
+{
+	BM_TYPE_NONE = 0,   //!< No type
+	BM_TYPE_USER,       //!< in-memory
+	BM_TYPE_PCX,        //!< PCX
+	BM_TYPE_TGA,        //!< 16 or 32 bit targa
+	BM_TYPE_DDS,        //!< generic identifier for DDS
+	BM_TYPE_PNG,        //!< PNG
+	BM_TYPE_JPG,        //!< 32 bit jpeg
+	BM_TYPE_ANI,        //!< in-house ANI format
+	BM_TYPE_EFF,        //!< specifies any type of animated image, the EFF itself is just text
+
+	// special types
+	BM_TYPE_RENDER_TARGET_STATIC,   //!< 24/32 bit setup internally as a static render target
+	BM_TYPE_RENDER_TARGET_DYNAMIC,  //!< 24/32 bit setup internally as a dynamic render target
+
+	// Compressed types (bitmap.c_type)
+	BM_TYPE_DXT1,           //!< 24 bit with switchable alpha
+	BM_TYPE_DXT3,           //!< 32 bit with 4 bit alpha
+	BM_TYPE_DXT5,           //!< 32 bit with 8 bit alpha
+	BM_TYPE_CUBEMAP_DDS,    //!< generic DDS cubemap (uncompressed cubemap surface)
+	BM_TYPE_CUBEMAP_DXT1,   //!< 24-bit cubemap        (compressed cubemap surface)
+	BM_TYPE_CUBEMAP_DXT3,   //!< 32-bit cubemap        (compressed cubemap surface)
+	BM_TYPE_CUBEMAP_DXT5    //!< 32-bit cubemap        (compressed cubemap surface)
+};
+
 /**
  * @}
  */
@@ -89,10 +116,10 @@ extern int bm_texture_ram;  //!< how many bytes of textures are used.
 
 extern int Bm_paging;   //!< Bool type that indicates if BMPMAN is currently paging.
 
-extern const ubyte bm_type_list[];       //!< List of valid bitmap types
+extern const BM_TYPE bm_type_list[];       //!< List of valid bitmap types
 extern const char *bm_ext_list[];        //!< List of extensions for those types
 extern const int BM_NUM_TYPES;           //!< Calculated number of bitmap types
-extern const ubyte bm_ani_type_list[];   //!< List of valid bitmap animation types
+extern const BM_TYPE bm_ani_type_list[];   //!< List of valid bitmap animation types
 extern const char *bm_ani_ext_list[];    //!< List of extensions for those types
 extern const int BM_ANI_NUM_TYPES;       //!< Calculated number of bitmap animation types
 
@@ -300,7 +327,7 @@ int bm_load_either(const char *filename, int *nframes = NULL, int *fps = NULL, i
  * @details Also converts the bitmap to the appropriate format specified by bpp and flags. Only lock a bitmap when you
  *   need it!
  *
- * @param bitmapnum The number indexing the desired bitmap
+ * @param handle    The number indexing the desired bitmap
  * @param bpp       The desired bpp of the bitmep
  * @param flags     The desired bitmap format
  * @param nodebug
@@ -320,7 +347,7 @@ uint bm_get_signature(int handle);
 /**
  * @brief Returns the image type of the given bitmap handle
  */
-ubyte bm_get_type(int handle);
+BM_TYPE bm_get_type(int handle);
 
 /**
  * @brief Unlocks a bitmap
@@ -480,10 +507,8 @@ void bm_page_in_aabitmap(int bitmapnum, int num_frames = 1);
  * @returns 0 If the bitmap had already been released, or
  * @returns 0 If the handle is invalid, or
  * @returns 1 If successful
- *
- * @todo The return type should be a bool
  */
-int bm_page_out(int handle);
+bool bm_page_out(int handle);
 
 /**
  * @brief Sets BMPMAN's memory mode
@@ -598,10 +623,8 @@ int bm_get_tcache_type(int handle);
 
 /**
  * @brief Gets the size, in bytes, taken up by the bitmap indexed by handle
- *
- * @todo retval should be a size_t
  */
-int bm_get_size(int handle);
+size_t bm_get_size(int handle);
 
 /**
  * @brief Gets the number of mipmaps of the indexed texture
@@ -612,10 +635,8 @@ int bm_get_num_mipmaps(int handle);
  * @brief Checks to see if the indexed bitmap has an alpha channel
  *
  * @note Currently just checks if the bitmap is 32bpp and is not a .PCX
- *
- * @todo retval should be a bool
  */
-int bm_has_alpha_channel(int handle);
+bool bm_has_alpha_channel(int handle);
 
 /**
  * @brief (DEBUG) Prints all loaded bitmaps to an outwindow
@@ -643,12 +664,10 @@ int bm_is_render_target(int handle);
 /**
  * @brief (GR function) Calls gr_bm_set_render target for the given bitmap indexed by handle
  *
- * @returns 1 if successful, or
- * @returns 0 if unsuccessful
- *
- * @todo retval should be a bool
+ * @returns true if successful, or
+ * @returns false if unsuccessful
  */
-int bm_set_render_target(int handle, int face = -1);
+bool bm_set_render_target(int handle, int face = -1);
 
 /**
  * @brief Loads and parses an .EFF
@@ -660,11 +679,9 @@ int bm_set_render_target(int handle, int face = -1);
  * @param[out] key     (optional) If given, is set to the keyframe index of this .EFF
  * @param[out] type    (optional) If given, is set to the BM_TYPE of the .EFF
  *
- * @returns 0 If successful,
- * @returns -1 if not successful
- *
- * @todo retval should be a bool
+ * @returns true If successful
+ * @returns false If not successful
  */
-int bm_load_and_parse_eff(const char *filename, int dir_type, int *nframes, int *nfps, int *key, ubyte *type);
+bool bm_load_and_parse_eff(const char *filename, int dir_type, int *nframes, int *nfps, int *key, BM_TYPE *type);
 
 #endif

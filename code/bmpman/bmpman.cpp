@@ -12,16 +12,17 @@
 
 #define BMPMAN_INTERNAL
 
-#include "bmpman/bmpman.h"
-#include "bmpman/bm_internal.h"
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #include "anim/animplay.h"
 #include "anim/packunpack.h"
-#include "cfile/cfile.h"
+#include "bmpman/bm_internal.h"
+#include "bmpman/bmpman.h"
 #include "ddsutils/ddsutils.h"
 #include "debugconsole/console.h"
 #include "globalincs/systemvars.h"
-#include "globalincs/pstypes.h"
 #include "graphics/2d.h"
 #include "graphics/grinternal.h"
 #include "io/key.h"
@@ -34,10 +35,6 @@
 #include "pngutils/pngutils.h"
 #include "ship/ship.h"
 #include "tgautils/tgautils.h"
-
-#ifdef _WIN32
-#include <windows.h>
-#endif
 
 #include <ctype.h>
 #include <limits.h>
@@ -68,13 +65,13 @@ int bm_texture_ram = 0;
 int Bm_paging = 0;
 
 // Extension type lists
-const ubyte bm_type_list[] = { BM_TYPE_DDS, BM_TYPE_TGA, BM_TYPE_PNG, BM_TYPE_JPG, BM_TYPE_PCX };
+const BM_TYPE bm_type_list[] = { BM_TYPE_DDS, BM_TYPE_TGA, BM_TYPE_PNG, BM_TYPE_JPG, BM_TYPE_PCX };
 const char *bm_ext_list[] = { ".dds", ".tga", ".png", ".jpg", ".pcx" };
-const int BM_NUM_TYPES = sizeof(bm_type_list) / sizeof(ubyte);
+const int BM_NUM_TYPES = sizeof(bm_type_list) / sizeof(bm_type_list[0]);
 
-const ubyte bm_ani_type_list[] = { BM_TYPE_EFF, BM_TYPE_ANI };
+const BM_TYPE bm_ani_type_list[] = { BM_TYPE_EFF, BM_TYPE_ANI };
 const char *bm_ani_ext_list[] = { ".eff", ".ani" };
-const int BM_ANI_NUM_TYPES = sizeof(bm_ani_type_list) / sizeof(ubyte);
+const int BM_ANI_NUM_TYPES = sizeof(bm_ani_type_list) / sizeof(bm_ani_type_list[0]);
 
 void(*bm_set_components)(ubyte *pixel, ubyte *r, ubyte *g, ubyte *b, ubyte *a) = NULL;
 void(*bm_set_components_32)(ubyte *pixel, ubyte *r, ubyte *g, ubyte *b, ubyte *a) = NULL;
@@ -202,17 +199,6 @@ float bitmap_lookup::get_channel_alpha(float u, float v)
 static void bm_convert_format(bitmap *bmp, ubyte flags);
 
 /**
- * Converts an 8-bit image to a 24-bit BGR image sending new bitmap data to "out_data"
- *
- * @returns 0 If successful, or
- * @returns 1 If not successful
- *
- * @todo upgrade retval to bool
- * @todo Doesn't seem to be called by anyone. Remove?
- */
-static int bm_convert_color_index_to_BGR(int num, ubyte **out_data);
-
-/**
  * Frees a bitmap's data if it can
  */
 static void bm_free_data(int n, bool release = false);
@@ -259,7 +245,7 @@ DCF(bm_frag, "Shows BmpMan fragmentation") {
 		dc_printf("Displays a graphic showing the BmpMan fragmentation. Color key:\n");
 		dc_printf("\tGray  : NONE\n");
 		dc_printf("\tRed   : PCXn");
-		dc_printf("\tGreen : USER, TGA, PNG, DDS\n");
+		dc_printf("\tGreen : USER, TGA, PNG, DDS, other\n");
 		dc_printf("\tBlue  : ANI, EFF\n\n");
 
 		dc_printf("Once done reviewing the graphic, press any key to return to the console\n");
@@ -289,6 +275,9 @@ DCF(bm_frag, "Shows BmpMan fragmentation") {
 		case BM_TYPE_ANI:
 		case BM_TYPE_EFF:
 			gr_set_color(0, 0, 255);
+			break;
+		default:
+			gr_set_color(0, 255, 0);
 			break;
 		}
 
@@ -352,6 +341,15 @@ DCF(bmpman, "Shows/changes bitmap caching parameters and usage") {
 	} else {
 		dc_printf("<BmpMan> No argument given\n");
 	}
+}
+
+DCF(bmpslots, "Writes bitmap slot info to fs2_open.log") {
+	if (dc_optional_string_either("help", "--help")) {
+		dc_printf("Usage: bmpslots\n");
+		dc_printf("\tWrites bitmap slot info to fs2_open.log\n");
+		return;
+	}
+	bm_print_bitmaps();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -427,92 +425,11 @@ int bm_create(int bpp, int w, int h, void *data, int flags) {
 
 	bm_bitmaps[n].load_count++;
 
-	bm_update_memory_used(n, bm_bitmaps[n].mem_taken);
+	bm_update_memory_used(n, (int)bm_bitmaps[n].mem_taken);
 
 	gr_bm_create(n);
 
 	return bm_bitmaps[n].handle;
-}
-
-int bm_convert_color_index_to_BGR(int num, ubyte **out_data) {
-	int n = num % MAX_BITMAPS;
-	bitmap_entry *be;
-	bitmap *bmp;
-	ubyte *datap, *bgr_data = NULL, *palette = NULL;
-	char filename[MAX_FILENAME_LEN];
-	int i, j, bpp = 0, size = 0;
-	int index = 0, mult = 3;
-
-	Assert(out_data != NULL);
-	Assert(n >= 0);
-	Assert(num == bm_bitmaps[n].handle);
-
-	if (num != bm_bitmaps[n].handle)
-		return 1;
-
-	be = &bm_bitmaps[n];
-	bmp = &be->bm;
-
-	if ((bmp->bpp != 8) || !(bmp->data) || ((be->type != BM_TYPE_DDS) && (be->type != BM_TYPE_PCX))) {
-		return 1;
-	}
-
-	// it's up to the calling function to free() this but not to malloc() it!!
-	bgr_data = (ubyte*)vm_malloc_q(bmp->w * bmp->h * 3);
-
-	ubyte *in_data = (ubyte*)bmp->data;
-
-	if (bgr_data == NULL)
-		return 1;
-
-	memset(bgr_data, 0, bmp->w * bmp->h * 3);
-
-	palette = new ubyte[1024]; // 256*4, largest size we should have to process
-	Assert(palette != NULL);
-
-	// make sure we are using the correct filename in the case of an EFF.
-	// this will populate filename[] whether it's EFF or not
-	EFF_FILENAME_CHECK;
-
-	if (be->type == BM_TYPE_PCX) {
-		pcx_read_header(filename, NULL, NULL, NULL, &bpp, palette);
-		mult = 3; // PCX has RGB for 256 entries
-	} else if (be->type == BM_TYPE_DDS) {
-		dds_read_header(filename, NULL, NULL, NULL, &bpp, NULL, NULL, &size, palette);
-		mult = 4; // DDS has RGBX for 256 entries, 'X' being an alpha setting that we don't need
-	} else {
-		// we really shouldn't be here at this point but give it another check anyway
-		delete[] palette;
-		vm_free(bgr_data);
-		return 1;
-	}
-
-	Assert(bpp == 8);
-
-	// we can only accept 8bits obviously, but this is actually a read error check
-	if (bpp != 8) {
-		delete[] palette;
-		vm_free(bgr_data);
-		return 1;
-	}
-
-	datap = bgr_data;
-
-	for (i = 0; i < bmp->h; i++) {
-		for (j = 0; j < bmp->w; j++) {
-			index = *in_data++;
-			*datap++ = palette[index * mult + 2];
-			*datap++ = palette[index * mult + 1];
-			*datap++ = palette[index * mult];
-		}
-	}
-
-	*out_data = bgr_data;
-
-	delete[] palette;
-
-	// no errors
-	return 0;
 }
 
 void bm_convert_format(bitmap *bmp, ubyte flags) {
@@ -741,9 +658,9 @@ void bm_get_frame_usage(int *ntotal, int *nnew) {
 	for (i = 0; i<MAX_BITMAPS; i++) {
 		if ((bm_bitmaps[i].type != BM_TYPE_NONE) && (bm_bitmaps[i].used_this_frame)) {
 			if (!bm_bitmaps[i].used_last_frame) {
-				*nnew += bm_bitmaps[i].mem_taken;
+				*nnew += (int)bm_bitmaps[i].mem_taken;
 			}
-			*ntotal += bm_bitmaps[i].mem_taken;
+			*ntotal += (int)bm_bitmaps[i].mem_taken;
 		}
 		bm_bitmaps[i].used_last_frame = bm_bitmaps[i].used_this_frame;
 		bm_bitmaps[i].used_this_frame = 0;
@@ -812,8 +729,10 @@ int bm_get_next_handle() {
 
 	//Due to the way bm_next_handle is used to generate the /actual/ bitmap handles ( (bm_next_handle * MAX_BITMAPS) + free slot index in bm_bitmaps[]),
 	//this check is necessary to ensure we don't start giving out negative handles all of a sudden.
-	if (((bm_next_handle + 1) * MAX_BITMAPS) > INT_MAX)
+	if ((bm_next_handle + 1) > INT_MAX / MAX_BITMAPS) {
 		bm_next_handle = 1;
+		mprintf(("BMPMAN: bitmap handles wrapped back to 1\n"));
+	}
 
 	return bm_next_handle;
 }
@@ -858,11 +777,11 @@ uint bm_get_signature(int handle) {
 	return bm_bitmaps[bitmapnum].signature;
 }
 
-int bm_get_size(int num) {
-	int n = num % MAX_BITMAPS;
+size_t bm_get_size(int handle) {
+	int n = handle % MAX_BITMAPS;
 
 	Assert(n >= 0);
-	Assert(num == bm_bitmaps[n].handle);
+	Assert(handle == bm_bitmaps[n].handle);
 
 	return bm_bitmaps[n].mem_taken;
 }
@@ -874,7 +793,7 @@ int bm_get_tcache_type(int num) {
 	return TCACHE_TYPE_NORMAL;
 }
 
-ubyte bm_get_type(int handle) {
+BM_TYPE bm_get_type(int handle) {
 	if (!bm_inited) bm_init();
 
 	int bitmapnum = handle % MAX_BITMAPS;
@@ -883,7 +802,7 @@ ubyte bm_get_type(int handle) {
 	return bm_bitmaps[bitmapnum].type;
 }
 
-int bm_has_alpha_channel(int handle) {
+bool bm_has_alpha_channel(int handle) {
 	int n = handle % MAX_BITMAPS;
 
 	Assert(n >= 0);
@@ -899,8 +818,8 @@ int bm_has_alpha_channel(int handle) {
 void bm_init() {
 	int i;
 
-	mprintf(("Size of bitmap info = %d KB\n", sizeof(bm_bitmaps) / 1024));
-	mprintf(("Size of bitmap extra info = %d bytes\n", sizeof(bm_extra_info)));
+	mprintf(("Size of bitmap info = " SIZE_T_ARG " KB\n", sizeof(bm_bitmaps) / 1024));
+	mprintf(("Size of bitmap extra info = " SIZE_T_ARG " bytes\n", sizeof(bm_extra_info)));
 
 	if (!bm_inited) {
 		bm_inited = 1;
@@ -934,7 +853,7 @@ void bm_init() {
 
 int bm_is_compressed(int num) {
 	int n = num % MAX_BITMAPS;
-	ubyte type = BM_TYPE_NONE;
+	BM_TYPE type = BM_TYPE_NONE;
 
 	//duh
 	if (!Use_compressed_textures)
@@ -967,9 +886,10 @@ int bm_is_compressed(int num) {
 
 	case BM_TYPE_CUBEMAP_DXT5:
 		return DDS_CUBEMAP_DXT5;
-	}
 
-	return 0;
+	default:
+		return 0;
+	}
 }
 
 int bm_is_render_target(int bitmap_id) {
@@ -1000,8 +920,8 @@ int bm_load(const char *real_filename) {
 	int rc = 0;
 	int bm_size = 0, mm_lvl = 0;
 	char filename[MAX_FILENAME_LEN];
-	ubyte type = BM_TYPE_NONE;
-	ubyte c_type = BM_TYPE_NONE;
+	BM_TYPE type = BM_TYPE_NONE;
+	BM_TYPE c_type = BM_TYPE_NONE;
 	CFILE *img_cfp = NULL;
 	int handle = -1;
 
@@ -1095,7 +1015,7 @@ int bm_load(const char *real_filename) {
 	bm_bitmaps[free_slot].bm.data = 0;
 	bm_bitmaps[free_slot].bm.palette = NULL;
 	bm_bitmaps[free_slot].num_mipmaps = mm_lvl;
-	bm_bitmaps[free_slot].mem_taken = bm_size;
+	bm_bitmaps[free_slot].mem_taken = (size_t)bm_size;
 	bm_bitmaps[free_slot].dir_type = CF_TYPE_ANY;
 	bm_bitmaps[free_slot].palette_checksum = 0;
 	bm_bitmaps[free_slot].handle = handle;
@@ -1114,10 +1034,10 @@ int bm_load(const SCP_string& filename) {
 	return bm_load(filename.c_str());
 }
 
-int bm_load_and_parse_eff(const char *filename, int dir_type, int *nframes, int *nfps, int *key, ubyte *type) {
+bool bm_load_and_parse_eff(const char *filename, int dir_type, int *nframes, int *nfps, int *key, BM_TYPE *type) {
 	int frames = 0, fps = 30, keyframe = 0;
 	char ext[8];
-	ubyte c_type = BM_TYPE_NONE;
+	BM_TYPE c_type = BM_TYPE_NONE;
 	char file_text[1024];
 	char file_text_raw[1024];
 
@@ -1150,7 +1070,7 @@ int bm_load_and_parse_eff(const char *filename, int dir_type, int *nframes, int 
 	{
 		mprintf(("BMPMAN: Unable to parse '%s'!  Error message = %s.\n", filename, e.what()));
 		unpause_parse();
-		return -1;
+		return false;
 	}
 
 	// done with EFF so unpause parsing so whatever can continue
@@ -1168,13 +1088,13 @@ int bm_load_and_parse_eff(const char *filename, int dir_type, int *nframes, int 
 		c_type = BM_TYPE_PCX;
 	} else {
 		mprintf(("BMPMAN: Unknown file type in EFF parse!\n"));
-		return -1;
+		return false;
 	}
 
 	// did we do anything?
 	if (c_type == BM_TYPE_NONE || frames == 0) {
 		mprintf(("BMPMAN: EFF parse ERROR!\n"));
-		return -1;
+		return false;
 	}
 
 	if (type)
@@ -1189,7 +1109,7 @@ int bm_load_and_parse_eff(const char *filename, int dir_type, int *nframes, int 
 	if (key)
 		*key = keyframe;
 
-	return 0;
+	return true;
 }
 
 int bm_load_animation(const char *real_filename, int *nframes, int *fps, int *keyframe, int can_drop_frames, int dir_type) {
@@ -1200,7 +1120,7 @@ int bm_load_animation(const char *real_filename, int *nframes, int *fps, int *ke
 	int reduced = 0;
 	int anim_fps = 0, anim_frames = 0, key = 0;
 	int anim_width = 0, anim_height = 0;
-	ubyte type = BM_TYPE_NONE, eff_type = BM_TYPE_NONE, c_type = BM_TYPE_NONE;
+	BM_TYPE type = BM_TYPE_NONE, eff_type = BM_TYPE_NONE, c_type = BM_TYPE_NONE;
 	int bpp = 0, mm_lvl = 0, img_size = 0;
 	char clean_name[MAX_FILENAME_LEN];
 
@@ -1285,7 +1205,7 @@ int bm_load_animation(const char *real_filename, int *nframes, int *fps, int *ke
 
 	// it's an effect file, any readable image type with eff being txt
 	if (type == BM_TYPE_EFF) {
-		if (bm_load_and_parse_eff(filename, dir_type, &anim_frames, &anim_fps, &key, &eff_type) != 0) {
+		if (!bm_load_and_parse_eff(filename, dir_type, &anim_frames, &anim_fps, &key, &eff_type)) {
 			mprintf(("BMPMAN: Error reading EFF\n"));
 			return -1;
 		} else {
@@ -1349,7 +1269,6 @@ int bm_load_animation(const char *real_filename, int *nframes, int *fps, int *ke
 
 	int first_handle = bm_get_next_handle();
 
-	Assert(strlen(filename) < MAX_FILENAME_LEN);
 	for (i = 0; i < anim_frames; i++) {
 		memset(&bm_bitmaps[n + i], 0, sizeof(bitmap_entry));
 
@@ -1410,7 +1329,7 @@ int bm_load_animation(const char *real_filename, int *nframes, int *fps, int *ke
 		bm_bitmaps[n + i].handle = first_handle*MAX_BITMAPS + n + i;
 		bm_bitmaps[n + i].last_used = -1;
 		bm_bitmaps[n + i].num_mipmaps = mm_lvl;
-		bm_bitmaps[n + i].mem_taken = img_size;
+		bm_bitmaps[n + i].mem_taken = (size_t)img_size;
 		bm_bitmaps[n + i].dir_type = dir_type;
 
 		bm_bitmaps[n + i].load_count++;
@@ -1652,7 +1571,7 @@ void bm_lock_ani(int handle, int bitmapnum, bitmap_entry *be, bitmap *bmp, ubyte
 
 	bm = &bm_bitmaps[first_frame].bm;
 	size = bm->w * bm->h * (bpp >> 3);
-	be->mem_taken = size;
+	be->mem_taken = (size_t)size;
 
 	Assert(size > 0);
 
@@ -1770,19 +1689,19 @@ void bm_lock_dds(int handle, int bitmapnum, bitmap_entry *be, bitmap *bmp, ubyte
 #if BYTE_ORDER == BIG_ENDIAN
 	// same as with TGA, we need to byte swap 16 & 32-bit, uncompressed, DDS images
 	if ((be->comp_type == BM_TYPE_DDS) || (be->comp_type == BM_TYPE_CUBEMAP_DDS)) {
-		unsigned int i = 0;
+		size_t i = 0;
 
 		if (dds_bpp == 32) {
 			unsigned int *swap_tmp;
 
-			for (i = 0; i < (unsigned int)be->mem_taken; i += 4) {
+			for (i = 0; i < be->mem_taken; i += 4) {
 				swap_tmp = (unsigned int *)(data + i);
 				*swap_tmp = INTEL_INT(*swap_tmp);
 			}
 		} else if (dds_bpp == 16) {
 			unsigned short *swap_tmp;
 
-			for (i = 0; i < (unsigned int)be->mem_taken; i += 2) {
+			for (i = 0; i < be->mem_taken; i += 2) {
 				swap_tmp = (unsigned short *)(data + i);
 				*swap_tmp = INTEL_SHORT(*swap_tmp);
 			}
@@ -2087,7 +2006,7 @@ int bm_make_render_target(int width, int height, int flags) {
 	bm_bitmaps[n].bm.data = 0;
 	bm_bitmaps[n].bm.palette = NULL;
 	bm_bitmaps[n].num_mipmaps = mm_lvl;
-	bm_bitmaps[n].mem_taken = size;
+	bm_bitmaps[n].mem_taken = (size_t)size;
 	bm_bitmaps[n].dir_type = CF_TYPE_ANY;
 
 	bm_bitmaps[n].palette_checksum = 0;
@@ -2267,6 +2186,9 @@ void bm_page_in_texture(int bitmapnum, int nframes) {
 		case BM_TYPE_CUBEMAP_DXT5:
 			bm_bitmaps[n + i].used_flags = BMP_TEX_CUBEMAP;
 			continue;
+
+		default:
+			continue;
 		}
 	}
 }
@@ -2309,25 +2231,30 @@ void bm_page_in_xparent_texture(int bitmapnum, int nframes) {
 		case BM_TYPE_CUBEMAP_DXT5:
 			bm_bitmaps[n + i].used_flags = BMP_TEX_CUBEMAP;
 			continue;
+
+		default:
+			continue;
 		}
 	}
 }
 
-int bm_page_out(int bitmap_id) {
-	int n = bitmap_id % MAX_BITMAPS;
+bool bm_page_out(int handle) {
+	int n = handle % MAX_BITMAPS;
 
-	Assert(n >= 0 && n < MAX_BITMAPS);
+	Assert(n >= 0);
+	Assert(handle == bm_bitmaps[n].handle);
 
 	// in case it's already been released
 	if (bm_bitmaps[n].type == BM_TYPE_NONE)
 		return 0;
 
-	Assert(bm_bitmaps[n].handle == bitmap_id);	// INVALID BITMAP HANDLE
-
-	// it's possible to hit < 0 here when model_page_out_textures() is called from
-	// anywhere other than in a mission
+	// it's possible to hit < 0 here when model_page_out_textures() is
+	// called from anywhere other than in a mission
 	if (bm_bitmaps[n].preload_count > 0) {
-		nprintf(("BmpMan", "PAGE-OUT: %s - preload_count remaining: %d\n", bm_bitmaps[n].filename, bm_bitmaps[n].preload_count));
+		nprintf(("BmpMan",
+			 "PAGE-OUT: %s - preload_count remaining: %d\n",
+			 bm_bitmaps[n].filename,
+			 bm_bitmaps[n].preload_count));
 
 		// lets decrease it for next time around
 		bm_bitmaps[n].preload_count--;
@@ -2335,7 +2262,7 @@ int bm_page_out(int bitmap_id) {
 		return 0;
 	}
 
-	return (bm_unload(bitmap_id) == 1);
+	return (bm_unload(handle) == 1);
 }
 
 void bm_print_bitmaps() {
@@ -2562,7 +2489,7 @@ void bm_set_low_mem(int mode) {
 	Bm_low_mem = mode;
 }
 
-int bm_set_render_target(int handle, int face) {
+bool bm_set_render_target(int handle, int face) {
 	int n = handle % MAX_BITMAPS;
 
 	if (n >= 0) {
@@ -2571,7 +2498,7 @@ int bm_set_render_target(int handle, int face) {
 		if ((bm_bitmaps[n].type != BM_TYPE_RENDER_TARGET_STATIC) && (bm_bitmaps[n].type != BM_TYPE_RENDER_TARGET_DYNAMIC)) {
 			// odds are that someone passed a normal texture created with bm_load()
 			mprintf(("Trying to set invalid bitmap (slot: %i, handle: %i) as render target!\n", n, handle));
-			return 0;
+			return false;
 		}
 	}
 
@@ -2586,6 +2513,12 @@ int bm_set_render_target(int handle, int face) {
 
 			gr_screen.save_max_w_unscaled_zoomed = gr_screen.max_w_unscaled_zoomed;
 			gr_screen.save_max_h_unscaled_zoomed = gr_screen.max_h_unscaled_zoomed;
+
+			gr_screen.save_center_w = gr_screen.center_w;
+			gr_screen.save_center_h = gr_screen.center_h;
+
+			gr_screen.save_center_offset_x = gr_screen.center_offset_x;
+			gr_screen.save_center_offset_y = gr_screen.center_offset_y;
 		}
 
 		if (n < 0) {
@@ -2597,6 +2530,12 @@ int bm_set_render_target(int handle, int face) {
 
 			gr_screen.max_w_unscaled_zoomed = gr_screen.save_max_w_unscaled_zoomed;
 			gr_screen.max_h_unscaled_zoomed = gr_screen.save_max_h_unscaled_zoomed;
+
+			gr_screen.center_w = gr_screen.save_center_w;
+			gr_screen.center_h = gr_screen.save_center_h;
+
+			gr_screen.center_offset_x = gr_screen.save_center_offset_x;
+			gr_screen.center_offset_y = gr_screen.save_center_offset_y;
 		} else {
 			gr_screen.max_w = bm_bitmaps[n].bm.w;
 			gr_screen.max_h = bm_bitmaps[n].bm.h;
@@ -2606,6 +2545,12 @@ int bm_set_render_target(int handle, int face) {
 
 			gr_screen.max_w_unscaled_zoomed = bm_bitmaps[n].bm.w;
 			gr_screen.max_h_unscaled_zoomed = bm_bitmaps[n].bm.h;
+
+			gr_screen.center_w = bm_bitmaps[n].bm.w;
+			gr_screen.center_h = bm_bitmaps[n].bm.h;
+
+			gr_screen.center_offset_x = 0;
+			gr_screen.center_offset_y = 0;
 		}
 
 		gr_screen.rendering_to_face = face;
@@ -2618,10 +2563,10 @@ int bm_set_render_target(int handle, int face) {
 			opengl_setup_viewport();
 		}
 
-		return 1;
+		return true;
 	}
 
-	return 0;
+	return false;
 }
 
 int bm_unload(int handle, int clear_render_targets, bool nodebug) {
@@ -2741,7 +2686,6 @@ int bm_unload_fast(int handle, int clear_render_targets) {
 
 void bm_unlock(int handle) {
 	bitmap_entry	*be;
-	bitmap			*bmp;
 
 	if (!bm_inited) bm_init();
 
@@ -2758,7 +2702,6 @@ void bm_unlock(int handle) {
 	Assert((bitmapnum >= 0) && (bitmapnum < MAX_BITMAPS));
 
 	be = &bm_bitmaps[bitmapnum];
-	bmp = &be->bm;
 
 	be->ref_count--;
 	Assert(be->ref_count >= 0);		// Trying to unlock data more times than lock was called!!!

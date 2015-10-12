@@ -1,20 +1,19 @@
 
+#include "cmdline/cmdline.h"
+#include "freespace2/freespace.h"
+#include "globalincs/def_files.h"
 #include "graphics/gropengl.h"
+#include "graphics/gropengldraw.h"
 #include "graphics/gropenglextension.h"
 #include "graphics/gropenglpostprocessing.h"
 #include "graphics/gropenglshader.h"
 #include "graphics/gropenglstate.h"
-#include "graphics/gropengldraw.h"
-
 #include "io/timer.h"
+#include "lighting/lighting.h"
+#include "mod_table/mod_table.h"
 #include "nebula/neb.h"
 #include "parse/parselo.h"
-#include "cmdline/cmdline.h"
-#include "mod_table/mod_table.h"
-#include "globalincs/def_files.h"
 #include "ship/ship.h"
-#include "freespace2/freespace.h"
-#include "lighting/lighting.h"
 
 
 extern bool PostProcessing_override;
@@ -399,7 +398,7 @@ void gr_opengl_post_process_end()
 	// state switch just the once (for bloom pass and final render-to-screen)
 	GLboolean depth = GL_state.DepthTest(GL_FALSE);
 	GLboolean depth_mask = GL_state.DepthMask(GL_FALSE);
-	GLboolean light = GL_state.Lighting(GL_FALSE);
+	GLboolean lighting = GL_state.Lighting(GL_FALSE);
 	GLboolean blend = GL_state.Blend(GL_FALSE);
 	GLboolean cull = GL_state.CullFace(GL_FALSE);
 
@@ -611,7 +610,7 @@ void gr_opengl_post_process_end()
 	// reset state
 	GL_state.DepthTest(depth);
 	GL_state.DepthMask(depth_mask);
-	GL_state.Lighting(light);
+	GL_state.Lighting(lighting);
 	GL_state.Blend(blend);
 	GL_state.CullFace(cull);
 
@@ -827,9 +826,9 @@ static bool opengl_post_init_table()
 	}
 }
 
-void opengl_post_load_shader(SCP_string &sflags, shader_type shader, int flags)
+void opengl_post_load_shader(SCP_string &sflags, shader_type shader_t, int flags)
 {
-	if ( shader == SDR_TYPE_POST_PROCESS_MAIN ) {
+	if ( shader_t == SDR_TYPE_POST_PROCESS_MAIN ) {
 		for (size_t idx = 0; idx < Post_effects.size(); idx++) {
 			if (flags & (1 << idx)) {
 				sflags += "#define ";
@@ -837,11 +836,11 @@ void opengl_post_load_shader(SCP_string &sflags, shader_type shader, int flags)
 				sflags += "\n";
 			}
 		}
-	} else if ( shader == SDR_TYPE_POST_PROCESS_LIGHTSHAFTS ) {
+	} else if ( shader_t == SDR_TYPE_POST_PROCESS_LIGHTSHAFTS ) {
 		char temp[64];
 		sprintf(temp, "#define SAMPLE_NUM %d\n", ls_samplenum);
 		sflags += temp;
-	} else if ( shader == SDR_TYPE_POST_PROCESS_FXAA ) {
+	} else if ( shader_t == SDR_TYPE_POST_PROCESS_FXAA ) {
 		switch (Cmdline_fxaa_preset) {
 		case 0:
 			sflags += "#define FXAA_QUALITY_PRESET 10\n";

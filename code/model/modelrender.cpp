@@ -9,23 +9,20 @@
 
 #include <algorithm>
 
-#include "globalincs/pstypes.h"
-#include "io/timer.h"
-#include "math/vecmat.h"
-#include "model/model.h"
-#include "model/modelrender.h"
-#include "ship/ship.h"
-#include "ship/shipfx.h"
 #include "cmdline/cmdline.h"
-#include "nebula/neb.h"
-#include "graphics/tmapper.h"
+#include "gamesequence/gamesequence.h"
+#include "graphics/gropengldraw.h"
 #include "graphics/gropenglextension.h"
 #include "graphics/gropenglshader.h"
-#include "graphics/gropengldraw.h"
-#include "particle/particle.h"
-#include "gamesequence/gamesequence.h"
-#include "render/3dinternal.h"
+#include "graphics/tmapper.h"
+#include "io/timer.h"
 #include "math/staticrand.h"
+#include "model/modelrender.h"
+#include "nebula/neb.h"
+#include "particle/particle.h"
+#include "render/3dinternal.h"
+#include "ship/ship.h"
+#include "ship/shipfx.h"
 
 extern int Model_texturing;
 extern int Model_polys;
@@ -57,8 +54,8 @@ model_render_params::model_render_params():
 	Warp_alpha(-1.0f),
 	Xparent_alpha(1.0f),
 	Forced_bitmap(-1),
-	Replacement_textures(NULL),
 	Insignia_bitmap(-1),
+	Replacement_textures(NULL),
 	Team_color_set(false),
 	Clip_plane_set(false),
 	Animated_effect(-1),
@@ -120,9 +117,9 @@ const vec3d& model_render_params::get_warp_scale()
 	return Warp_scale; 
 }
 
-const color& model_render_params::get_outline_color()
+const color& model_render_params::get_color()
 { 
-	return Outline_color; 
+	return Color; 
 }
 float model_render_params::get_alpha()
 { 
@@ -225,14 +222,14 @@ void model_render_params::set_alpha(float alpha)
 	Xparent_alpha = alpha;
 }
 
-void model_render_params::set_outline_color(color &clr)
+void model_render_params::set_color(color &clr)
 {
-	Outline_color = clr;
+	Color = clr;
 }
 
-void model_render_params::set_outline_color(int r, int g, int b)
+void model_render_params::set_color(int r, int g, int b)
 {
-	gr_init_color( &Outline_color, r, g, b );
+	gr_init_color( &Color, r, g, b );
 }
 
 void model_render_params::set_warp_params(int bitmap, float alpha, vec3d &scale)
@@ -780,10 +777,10 @@ void draw_list::set_lighting(bool lighting)
 	Current_render_state.lighting = lighting;
 }
 
-void draw_list::set_team_color(const team_color &color)
+void draw_list::set_team_color(const team_color &clr)
 {
 	Current_render_state.using_team_color = true;
-	Current_render_state.tm_color = color;
+	Current_render_state.tm_color = clr;
 }
 
 void draw_list::set_team_color()
@@ -844,16 +841,19 @@ void draw_list::init()
 	TransformBufferHandler.reset();
 }
 
-void draw_list::init_render()
+void draw_list::init_render(bool sort)
 {
-	sort_draws();
+	if ( sort ) {
+		sort_draws();
+	}
 
-	Scene_light_handler.resetLightState();
 	TransformBufferHandler.submit_buffer_data();
 }
 
 void draw_list::render_all(int depth_mode)
 {
+	Scene_light_handler.resetLightState();
+
 	for ( size_t i = 0; i < Render_keys.size(); ++i ) {
 		int render_index = Render_keys[i];
 
@@ -1471,7 +1471,7 @@ void model_render_children_buffers(draw_list* scene, model_render_params* interp
 	
 	if ( (model_flags & MR_SHOW_OUTLINE || model_flags & MR_SHOW_OUTLINE_HTL || model_flags & MR_SHOW_OUTLINE_PRESET) && 
 		pm->submodel[mn].outline_buffer != NULL ) {
-		color outline_color = interp->get_outline_color();
+		color outline_color = interp->get_color();
 		scene->add_outline(pm->submodel[mn].outline_buffer, pm->submodel[mn].n_verts_outline, &outline_color);
 	} else {
 		if ( trans_buffer && pm->submodel[mn].trans_buffer.flags & VB_FLAG_TRANS ) {
@@ -1595,16 +1595,20 @@ bool model_render_check_detail_box(vec3d *view_pos, polymodel *pm, int submodel_
 	float box_scale = model_render_determine_box_scale();
 
 	if ( !( flags & MR_FULL_DETAIL ) && model->use_render_box ) {
-		vec3d box_min, box_max;
+		vec3d box_min, box_max, offset;
+
+		if (model->use_render_box_offset) {
+			offset = model->render_box_offset;
+		} else {
+			model_find_submodel_offset(&offset, pm->id, submodel_num);
+		}
 
 		vm_vec_copy_scale(&box_min, &model->render_box_min, box_scale);
 		vm_vec_copy_scale(&box_max, &model->render_box_max, box_scale);
 
-		if ( (-model->use_render_box + in_box(&box_min, &box_max, &model->offset, view_pos)) ) {
+		if ( (-model->use_render_box + in_box(&box_min, &box_max, &offset, view_pos)) ) {
 			return false;
 		}
-
-		return true;
 	}
 
 	if ( !(flags & MR_FULL_DETAIL) && model->use_render_sphere ) {
@@ -1612,14 +1616,16 @@ bool model_render_check_detail_box(vec3d *view_pos, polymodel *pm, int submodel_
 
 		// TODO: doesn't consider submodel rotations yet -zookeeper
 		vec3d offset;
-		model_find_submodel_offset(&offset, pm->id, submodel_num);
-		vm_vec_add2(&offset, &model->render_sphere_offset);
+
+		if (model->use_render_sphere_offset) {
+			offset = model->render_sphere_offset;
+		} else {
+			model_find_submodel_offset(&offset, pm->id, submodel_num);
+		}
 
 		if ( (-model->use_render_sphere + in_sphere(&offset, sphere_radius, view_pos)) ) {
 			return false;
 		}
-
-		return true;
 	}
 
 	return true;
@@ -1713,7 +1719,7 @@ void submodel_render_queue(model_render_params *render_info, draw_list *scene, i
 	if (is_outlines_only_htl) {
 		scene->set_fill_mode(GR_FILL_MODE_WIRE);
 
-		color outline_color = render_info->get_outline_color();
+		color outline_color = render_info->get_color();
 		gr_set_color_fast( &outline_color );
 
 		tmap_flags &= ~TMAP_FLAG_RGB;
@@ -2042,7 +2048,7 @@ void model_render_set_glow_points(polymodel *pm, int objnum)
 	int time = timestamp();
 	glow_point_bank_override *gpo = NULL;
 	bool override_all = false;
-	SCP_hash_map<int, void*>::iterator gpoi;
+	SCP_unordered_map<int, void*>::iterator gpoi;
 	ship_info *sip = NULL;
 	ship *shipp = NULL;
 
@@ -2056,7 +2062,7 @@ void model_render_set_glow_points(polymodel *pm, int objnum)
 		if ( objp != NULL && objp->type == OBJ_SHIP ) {
 			shipp = &Ships[Objects[objnum].instance];
 			sip = &Ship_info[shipp->ship_info_index];
-			SCP_hash_map<int, void*>::iterator gpoi = sip->glowpoint_bank_override_map.find(-1);
+			gpoi = sip->glowpoint_bank_override_map.find(-1);
 
 			if (gpoi != sip->glowpoint_bank_override_map.end()) {
 				override_all = true;
@@ -2110,12 +2116,12 @@ void model_render_glow_points(polymodel *pm, ship *shipp, matrix *orient, vec3d 
 
 	glow_point_bank_override *gpo = NULL;
 	bool override_all = false;
-	SCP_hash_map<int, void*>::iterator gpoi;
+	SCP_unordered_map<int, void*>::iterator gpoi;
 	ship_info *sip = NULL;
 
 	if ( shipp ) {
 		sip = &Ship_info[shipp->ship_info_index];
-		SCP_hash_map<int, void*>::iterator gpoi = sip->glowpoint_bank_override_map.find(-1);
+		gpoi = sip->glowpoint_bank_override_map.find(-1);
 
 		if(gpoi != sip->glowpoint_bank_override_map.end()) {
 			override_all = true;
@@ -2486,6 +2492,8 @@ void model_queue_render_thrusters(model_render_params *interp, polymodel *pm, in
 					pe.max_rad = gpt->radius * tp->max_rad;
 					// How close they stick to that normal 0=on normal, 1=180, 2=360 degree
 					pe.normal_variance = tp->variance;
+					pe.min_life = 0.0f;
+					pe.max_life = 1.0f;
 
 					particle_emit( &pe, PARTICLE_BITMAP, tp->thruster_bitmap.first_frame);
 				}
@@ -2494,7 +2502,7 @@ void model_queue_render_thrusters(model_render_params *interp, polymodel *pm, in
 	}
 }
 
-void model_render_debug_children(polymodel *pm, int mn, int detail_level, uint flags)
+void model_render_debug_children(polymodel *pm, int mn, int detail_level, uint debug_flags)
 {
 	int i;
 
@@ -2541,14 +2549,14 @@ void model_render_debug_children(polymodel *pm, int mn, int detail_level, uint f
 
 	g3_start_instance_matrix(&model->offset, &submodel_matrix, true);
 
-	if ( flags & MR_DEPRECATED_SHOW_PIVOTS ) {
-		model_draw_debug_points( pm, &pm->submodel[mn], flags );
+	if ( debug_flags & MR_DEBUG_PIVOTS ) {
+		model_draw_debug_points( pm, &pm->submodel[mn], debug_flags );
 	}
 
 	i = model->first_child;
 
 	while ( i >= 0 ) {
-		model_render_debug_children( pm, i, detail_level, flags );
+		model_render_debug_children( pm, i, detail_level, debug_flags );
 
 		i = pm->submodel[i].next_sibling;
 	}
@@ -2558,17 +2566,6 @@ void model_render_debug_children(polymodel *pm, int mn, int detail_level, uint f
 
 void model_render_debug(int model_num, matrix *orient, vec3d * pos, uint flags, uint debug_flags, int objnum, int detail_level_locked )
 {
-	ship *shipp = NULL;
-	object *objp = NULL;
-
-	if ( objnum >= 0 ) {
-		objp = &Objects[objnum];
-
-		if ( objp->type == OBJ_SHIP ) {
-			shipp = &Ships[objp->instance];
-		}
-	}
-
 	polymodel *pm = model_get(model_num);	
 	
 	g3_start_instance_matrix(pos, orient, true);
@@ -2632,7 +2629,7 @@ void model_render_debug(int model_num, matrix *orient, vec3d * pos, uint flags, 
 	gr_zbuffer_set(save_gr_zbuffering_mode);
 }
 
-void model_render_immediate(model_render_params *render_info, int model_num, matrix *orient, vec3d * pos, int render)
+void model_render_immediate(model_render_params *render_info, int model_num, matrix *orient, vec3d * pos, int render, bool sort)
 {
 	draw_list model_list;
 
@@ -2640,7 +2637,7 @@ void model_render_immediate(model_render_params *render_info, int model_num, mat
 
 	model_render_queue(render_info, &model_list, model_num, orient, pos);
 
-	model_list.init_render();
+	model_list.init_render(sort);
 
 	switch ( render ) {
 	case MODEL_RENDER_OPAQUE:
@@ -2672,7 +2669,9 @@ void model_render_immediate(model_render_params *render_info, int model_num, mat
 
 	GL_state.Texture.DisableAll();
 
-	model_render_debug(model_num, orient, pos, render_info->get_model_flags(), render_info->get_debug_flags(), render_info->get_object_number(), render_info->get_detail_level_lock());
+	if ( render_info->get_debug_flags() ) {
+		model_render_debug(model_num, orient, pos, render_info->get_model_flags(), render_info->get_debug_flags(), render_info->get_object_number(), render_info->get_detail_level_lock());
+	}
 }
 
 void model_render_queue(model_render_params *interp, draw_list *scene, int model_num, matrix *orient, vec3d *pos)
@@ -2807,13 +2806,12 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 	if ( is_outlines_only_htl ) {
 		scene->set_fill_mode(GR_FILL_MODE_WIRE);
 
-		color outline_color = interp->get_outline_color();
-		scene->set_color(outline_color);
-
 		tmap_flags &= ~TMAP_FLAG_RGB;
 	} else {
 		scene->set_fill_mode(GR_FILL_MODE_SOLID);
 	}
+
+	scene->set_color(interp->get_color());
 		
 	if ( model_flags & MR_EDGE_ALPHA ) {
 		scene->set_center_alpha(-1);
@@ -2880,7 +2878,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 		int detail_model_num = pm->detail[detail_level];
 
 		if ( (is_outlines_only || is_outlines_only_htl) && pm->submodel[detail_model_num].outline_buffer != NULL ) {
-			color outline_color = interp->get_outline_color();
+			color outline_color = interp->get_color();
 			scene->add_outline(pm->submodel[detail_model_num].outline_buffer, pm->submodel[detail_model_num].n_verts_outline, &outline_color);
 		} else {
 			model_render_buffers(scene, interp, &pm->submodel[detail_model_num].buffer, pm, detail_model_num, detail_level, tmap_flags);
@@ -2906,7 +2904,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 			i = pm->submodel[i].next_sibling;
 		}
 
-		vec3d view_pos = scene->get_view_position();
+		view_pos = scene->get_view_position();
 
 		if ( model_render_check_detail_box(&view_pos, pm, pm->detail[detail_level], model_flags) ) {
 			int detail_model_num = pm->detail[detail_level];

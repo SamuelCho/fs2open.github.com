@@ -4,15 +4,15 @@
  * create based on the source.
  */
 
-#include "globalincs/pstypes.h"
+#include "gamesnd/eventmusic.h"
 #include "globalincs/def_files.h"
+#include "localization/localize.h"
 #include "mission/missioncampaign.h"
 #include "mission/missionmessage.h"
+#include "missionui/fictionviewer.h"
 #include "mod_table/mod_table.h"
-#include "localization/localize.h"
 #include "parse/parselo.h"
 #include "sound/sound.h"
-#include "gamesnd/eventmusic.h"
 
 int Directive_wait_time = 3000;
 bool True_loop_argument_sexps = false;
@@ -22,6 +22,7 @@ bool Cutscene_camera_displays_hud = false;
 bool Alternate_chaining_behavior = false;
 int Default_ship_select_effect = 2;
 int Default_weapon_select_effect = 2;
+int Default_fiction_viewer_ui = -1;
 bool Enable_external_shaders = false;
 int Default_detail_level = 3; // "very high" seems a reasonable default in 2012 -zookeeper
 bool Full_color_head_anis = false;
@@ -32,6 +33,8 @@ float Briefing_window_FOV = 0.29375f;
 bool Disable_hc_message_ani = false;
 bool Red_alert_applies_to_delayed_ships = false;
 bool Beams_use_damage_factors = false;
+float Generic_pain_flash_factor = 1.0f;
+float Shield_pain_flash_factor = 0.0f;
 
 
 void parse_mod_table(const char *filename)
@@ -181,6 +184,21 @@ void parse_mod_table(const char *filename)
 			Briefing_window_FOV = fov;
 		}
 
+		
+			if (optional_string("$Generic Pain Flash Factor:")) {
+			stuff_float(&Generic_pain_flash_factor);
+			if (Generic_pain_flash_factor != 1.0f)
+				mprintf(("Game Settings Table: Setting generic pain flash factor to %.2f\n", Generic_pain_flash_factor));
+			
+		}
+		
+			if (optional_string("$Shield Pain Flash Factor:")) {
+			stuff_float(&Shield_pain_flash_factor);
+			if (Shield_pain_flash_factor != 0.0f)
+				 mprintf(("Game Settings Table: Setting shield pain flash factor to %.2f\n", Shield_pain_flash_factor));
+			
+		}
+
 		optional_string("#NETWORK SETTINGS");
 
 		if (optional_string("$FS2NetD port:")) {
@@ -267,6 +285,20 @@ void parse_mod_table(const char *filename)
 			}
 			else {
 				mprintf(("Game Settings Table: Beams will ignore Damage Factors (retail behavior)\n"));
+			}
+		}
+
+		if (optional_string("$Default fiction viewer UI:")) {
+			char ui_name[NAME_LENGTH];
+			stuff_string(ui_name, F_NAME, NAME_LENGTH);
+			if (!stricmp(ui_name, "auto"))
+				Default_fiction_viewer_ui = -1;
+			else {
+				int ui_index = fiction_viewer_ui_name_to_index(ui_name);
+				if (ui_index >= 0)
+					Default_fiction_viewer_ui = ui_index;
+				else
+					Warning(LOCATION, "Unrecognized fiction viewer UI: %s", ui_name);
 			}
 		}
 

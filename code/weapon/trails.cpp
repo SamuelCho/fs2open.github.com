@@ -9,13 +9,13 @@
 
 
 
-#include "weapon/trails.h"
-#include "globalincs/systemvars.h"
-#include "render/3d.h" 
-#include "io/timer.h"
-#include "ship/ship.h"
-#include "graphics/gropenglextension.h"
 #include "cmdline/cmdline.h"
+#include "globalincs/systemvars.h"
+#include "graphics/gropenglextension.h"
+#include "io/timer.h"
+#include "render/3d.h" 
+#include "ship/ship.h"
+#include "weapon/trails.h"
 
 int Num_trails;
 trail Trails;
@@ -270,7 +270,7 @@ void trail_add_batch(trail * trailp)
 				// Last one...
 				vm_vec_avg(&centerv, &topv, &botv);
 
-				vertex center_vert;
+				vertex center_vert = vertex();
 
 				if (!Cmdline_nohtl)
 					g3_transfer_vertex(&center_vert, &centerv);
