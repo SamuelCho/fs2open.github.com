@@ -2057,8 +2057,14 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 			GL_state.Uniform.setUniformi("desaturate", 0);
 		}
 
+		int diffuse_map = gr_screen.current_bitmap;
+
+		if ( ALBEDOMAP >= 0 && lighting_is_enabled ) {
+			diffuse_map = ALBEDOMAP;
+		}
+
 		if ( flags & TMAP_FLAG_ALPHA ) {
-			if ( bm_has_alpha_channel(gr_screen.current_bitmap) ) {
+			if ( bm_has_alpha_channel(diffuse_map) ) {
 				GL_state.SetAlphaBlendMode(ALPHA_BLEND_PREMULTIPLIED);
 				GL_state.Uniform.setUniformi("blend_alpha", 1);
 			} else {
@@ -2075,7 +2081,7 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 			GL_state.Uniform.setUniformi("overrideDiffuse", 0);
 		}
 
-		gr_opengl_tcache_set(gr_screen.current_bitmap, tmap_type, &u_scale, &v_scale, render_pass);
+		gr_opengl_tcache_set(diffuse_map, tmap_type, &u_scale, &v_scale, render_pass);
 
 		++render_pass;
 	}

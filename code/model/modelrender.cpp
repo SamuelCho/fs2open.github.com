@@ -626,6 +626,7 @@ void draw_list::render_buffer(queued_buffer_draw &render_elements)
 
 	gr_set_bitmap(render_elements.texture_maps[TM_BASE_TYPE], render_elements.blend_filter, GR_BITBLT_MODE_NORMAL, render_elements.alpha);
 
+	ALBEDOMAP = render_elements.texture_maps[TM_ALBEDO_TYPE];
 	GLOWMAP = render_elements.texture_maps[TM_GLOW_TYPE];
 	SPECMAP = render_elements.texture_maps[TM_SPECULAR_TYPE];
 	SPECGLOSSMAP = render_elements.texture_maps[TM_SPEC_GLOSS_TYPE];
@@ -635,6 +636,7 @@ void draw_list::render_buffer(queued_buffer_draw &render_elements)
 
 	gr_render_buffer(0, render_elements.buffer, render_elements.texi, render_elements.flags);
 
+	ALBEDOMAP = -1;
 	GLOWMAP = -1;
 	SPECMAP = -1;
 	SPECGLOSSMAP = -1;
@@ -1246,7 +1248,7 @@ void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_
 		forced_blend_filter = GR_ALPHABLEND_FILTER;
 	}
 
-	int texture_maps[TM_NUM_TYPES] = {-1, -1, -1, -1, -1, -1};
+	int texture_maps[TM_NUM_TYPES] = { -1 };
 	size_t buffer_size = buffer->tex_buf.size();
 	const int *replacement_textures = interp->get_replacement_textures();
 
@@ -1256,14 +1258,6 @@ void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_
 		int rt_begin_index = tmap_num*TM_NUM_TYPES;
 		float alpha = 1.0f;
 		int blend_filter = GR_ALPHABLEND_NONE;
-
-		texture_maps[TM_BASE_TYPE] = -1;
-		texture_maps[TM_GLOW_TYPE] = -1;
-		texture_maps[TM_SPECULAR_TYPE] = -1;
-		texture_maps[TM_SPEC_GLOSS_TYPE] = -1;
-		texture_maps[TM_NORMAL_TYPE] = -1;
-		texture_maps[TM_HEIGHT_TYPE] = -1;
-		texture_maps[TM_MISC_TYPE] = -1;
 
 		if (forced_texture != -2) {
 			texture_maps[TM_BASE_TYPE] = forced_texture;
@@ -1286,6 +1280,13 @@ void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_
 				continue;
 			}
 
+			if (replacement_textures != NULL && replacement_textures[rt_begin_index + TM_ALBEDO_TYPE] >= 0) {
+				tex_replace[TM_ALBEDO_TYPE] = texture_info(replacement_textures[rt_begin_index + TM_ALBEDO_TYPE]);
+				texture_maps[TM_ALBEDO_TYPE] = model_interp_get_texture(&tex_replace[TM_ALBEDO_TYPE], base_frametime);
+			} else {
+				texture_maps[TM_ALBEDO_TYPE] = model_interp_get_texture(&tmap->textures[TM_ALBEDO_TYPE], base_frametime);
+			}
+
 			// doing glow maps?
 			if ( !(model_flags & MR_NO_GLOWMAPS) ) {
 				texture_info *tglow = &tmap->textures[TM_GLOW_TYPE];
@@ -1302,7 +1303,7 @@ void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_
 					}
 				}
 			}
-
+			
 			if ( (Detail.lighting > 2)  && (detail_level < 2) ) {
 				// likewise, etc.
 				texture_info *spec_map = &tmap->textures[TM_SPECULAR_TYPE];
@@ -1312,6 +1313,7 @@ void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_
 				texture_info *misc_map = &tmap->textures[TM_MISC_TYPE];
 
 				if (replacement_textures != NULL) {
+
 					if (replacement_textures[rt_begin_index + TM_SPECULAR_TYPE] >= 0) {
 						tex_replace[TM_SPECULAR_TYPE] = texture_info(replacement_textures[rt_begin_index + TM_SPECULAR_TYPE]);
 						spec_map = &tex_replace[TM_SPECULAR_TYPE];
@@ -1396,6 +1398,7 @@ void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_
 		scene->set_blend_filter(blend_filter, alpha);
 
 		scene->set_texture(TM_BASE_TYPE,	texture_maps[TM_BASE_TYPE]);
+		scene->set_texture(TM_ALBEDO_TYPE,	texture_maps[TM_ALBEDO_TYPE]);
 		scene->set_texture(TM_GLOW_TYPE,	texture_maps[TM_GLOW_TYPE]);
 		scene->set_texture(TM_SPECULAR_TYPE, texture_maps[TM_SPECULAR_TYPE]);
 		scene->set_texture(TM_SPEC_GLOSS_TYPE, texture_maps[TM_SPEC_GLOSS_TYPE]);

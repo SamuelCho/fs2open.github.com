@@ -2302,8 +2302,18 @@ void model_load_texture(polymodel *pm, int i, char *file)
 		}
 
 		tbase->LoadTexture(tmp_name, pm->filename);
-		if(tbase->GetTexture() < 0)
+		
+		if ( tbase->GetTexture() < 0 ) {
 			Warning(LOCATION, "Couldn't open texture '%s'\nreferenced by model '%s'\n", tmp_name, pm->filename);
+		}
+
+		// look for albedo map as well (For PBR)
+		strcpy_s(tmp_name, file);
+		strcat_s(tmp_name, "-albedo");
+		strlwr(tmp_name);
+
+		texture_info *talbedo = &tmap->textures[TM_ALBEDO_TYPE];
+		talbedo->LoadTexture(tmp_name, pm->filename);
 	}
 	// -------------------------------------------------------------------------
 

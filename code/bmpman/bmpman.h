@@ -603,6 +603,7 @@ void bm_set_components_argb_32_tex(ubyte *pixel, ubyte *r, ubyte *g, ubyte *b, u
  */
 void bm_get_components(ubyte *pixel, ubyte *r, ubyte *g, ubyte *b, ubyte *a);
 
+extern int ALBEDOMAP; //this holds a reference to a map that is for PBR diffuse maps that are used instead of the base map if the base map is needed for fixed func rendering
 extern int GLOWMAP;	//this holds a reference to a map that is a fully lit version of its index -Bobboau
 extern int SPECMAP;	//this holds a reference to a map that is for specular mapping -Bobboau
 extern int SPECGLOSSMAP;	//this holds a reference to a map that is for specular mapping -Bobboau
