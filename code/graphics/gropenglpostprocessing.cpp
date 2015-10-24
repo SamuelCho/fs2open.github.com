@@ -190,7 +190,7 @@ bool opengl_post_pass_bloom_new()
 
 	GL_state.Uniform.setUniformi("tex", 0);
 	GL_state.Uniform.setUniformi("levels", MAX_MIP_BLUR_LEVELS);
-	GL_state.Uniform.setUniformf("bloom_intensity", Cmdline_bloom_intensity);
+	GL_state.Uniform.setUniformf("bloom_intensity", Cmdline_bloom_intensity / 100.0f);
 
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);

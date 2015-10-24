@@ -2560,7 +2560,7 @@ char *Default_bloom_composite_fragment_shader =
 "			bloom += texture2DLod(bloomed, gl_TexCoord[0].xy, float(mipmap)).rgb * scale;\n"
 "		}\n"
 "		bloom /= factor;\n"
-"		color_out.rgb += bloom;\n"
+"		color_out.rgb += bloom * bloom_intensity;\n"
 "	}\n"
 "	gl_FragColor = color_out;\n"
 "}\n";
