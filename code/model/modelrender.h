@@ -255,6 +255,7 @@ struct queued_buffer_draw
 		depth_mode = GR_ZBUFF_FULL;
 
 		texture_maps[TM_BASE_TYPE]		= -1;
+		texture_maps[TM_ALBEDO_TYPE]	= -1;
 		texture_maps[TM_GLOW_TYPE]		= -1;
 		texture_maps[TM_HEIGHT_TYPE]	= -1;
 		texture_maps[TM_MISC_TYPE]		= -1;

@@ -357,6 +357,7 @@ void draw_list::reset()
 	Current_render_state = render_state();
 
 	Current_textures[TM_BASE_TYPE] = -1;
+	Current_textures[TM_ALBEDO_TYPE] = -1;
 	Current_textures[TM_GLOW_TYPE] = -1;
 	Current_textures[TM_SPECULAR_TYPE] = -1;
 	Current_textures[TM_NORMAL_TYPE] = -1;
@@ -510,6 +511,7 @@ void draw_list::add_buffer_draw(vertex_buffer *buffer, int texi, uint tmap_flags
 	}
 	
 	draw_data.texture_maps[TM_BASE_TYPE] = Current_textures[TM_BASE_TYPE];
+	draw_data.texture_maps[TM_ALBEDO_TYPE] = Current_textures[TM_ALBEDO_TYPE];
 	draw_data.texture_maps[TM_GLOW_TYPE] = Current_textures[TM_GLOW_TYPE];
 	draw_data.texture_maps[TM_SPECULAR_TYPE] = Current_textures[TM_SPECULAR_TYPE];
 	draw_data.texture_maps[TM_SPEC_GLOSS_TYPE] = Current_textures[TM_SPEC_GLOSS_TYPE];

@@ -2284,11 +2284,14 @@ void model_load_texture(polymodel *pm, int i, char *file)
 
 	// base maps ---------------------------------------------------------------
 	texture_info *tbase = &tmap->textures[TM_BASE_TYPE];
+	texture_info *talbedo = &tmap->textures[TM_ALBEDO_TYPE];
+
 	if (strstr(tmp_name, "thruster") || strstr(tmp_name, "invisible") || strstr(tmp_name, "warpmap"))
 	{
 		// Don't load textures for thruster animations or invisible textures
 		// or warp models!-Bobboau
 		tbase->clear();
+		talbedo->clear();
 	}
 	else
 	{
@@ -2312,7 +2315,6 @@ void model_load_texture(polymodel *pm, int i, char *file)
 		strcat_s(tmp_name, "-albedo");
 		strlwr(tmp_name);
 
-		texture_info *talbedo = &tmap->textures[TM_ALBEDO_TYPE];
 		talbedo->LoadTexture(tmp_name, pm->filename);
 	}
 	// -------------------------------------------------------------------------
