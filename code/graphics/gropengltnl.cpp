@@ -2131,9 +2131,6 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 		++render_pass;
 
 		if ( shader_flags & SDR_FLAG_MODEL_ENV_MAP) {
-			// 0 == env with non-alpha specmap, 1 == env with alpha specmap
-			int alpha_spec = bm_has_alpha_channel(SPECMAP) ? 1 : 0;
-
 			matrix4 texture_mat;
 
 			for ( int i = 0; i < 16; ++i ) {
