@@ -1021,9 +1021,9 @@ void opengl_shader_set_passthrough(bool textured, bool alpha, float color_scale)
 	opengl_shader_set_current(gr_opengl_maybe_create_shader(SDR_TYPE_PASSTHROUGH_RENDER, 0));
 
 	if (textured) {
-		GL_state.Uniform.setUniformi("noTexturing", 1);
-	} else {
 		GL_state.Uniform.setUniformi("noTexturing", 0);
+	} else {
+		GL_state.Uniform.setUniformi("noTexturing", 1);
 	}
 
 	if (alpha) {

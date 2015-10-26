@@ -82,7 +82,7 @@ void opengl_post_pass_tonemap()
 	opengl_shader_set_current( gr_opengl_maybe_create_shader(SDR_TYPE_POST_PROCESS_TONEMAPPING, 0) );
 
 	GL_state.Uniform.setUniformi("tex", 0);
-	GL_state.Uniform.setUniformf("exposure", 2.0f);
+	GL_state.Uniform.setUniformf("exposure", 4.0f);
 
 	vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Scene_ldr_texture, 0);
 
@@ -468,7 +468,6 @@ void gr_opengl_post_process_end()
 	// do bloom, hopefully ;)
 	//bool bloomed = opengl_post_pass_bloom();
 	bool bloomed = opengl_post_pass_bloom_new();
-	//bool bloomed = true;
 	
 	// do tone mapping
 	opengl_post_pass_tonemap();

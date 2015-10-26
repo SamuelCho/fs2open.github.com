@@ -1891,7 +1891,7 @@ void model_render_glowpoint(int point_num, vec3d *pos, matrix *orient, glow_poin
 				p.r = p.g = p.b = p.a = (ubyte)(255.0f * MAX(d,0.0f));
 
 				if((gpo && gpo->glow_bitmap_override)?(gpo->glow_bitmap > -1):(bank->glow_bitmap > -1)) {
-					int gpflags = TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT;
+					int gpflags = TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT | TMAP_FLAG_EMISSIVE;
 
 					if (use_depth_buffer)
 						gpflags |= TMAP_FLAG_SOFT_QUAD;
@@ -2038,9 +2038,9 @@ void model_render_glowpoint(int point_num, vec3d *pos, matrix *orient, glow_poin
 			vm_vec_normalize(&tempv);
 
 			if ( The_mission.flags & MISSION_FLAG_FULLNEB ) {
-				batch_add_quad(bank->glow_neb_bitmap, TMAP_FLAG_TILED | TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT, verts);
+				batch_add_quad(bank->glow_neb_bitmap, TMAP_FLAG_TILED | TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT | TMAP_FLAG_EMISSIVE, verts);
 			} else {
-				batch_add_quad(bank->glow_bitmap, TMAP_FLAG_TILED | TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT, verts);
+				batch_add_quad(bank->glow_bitmap, TMAP_FLAG_TILED | TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT | TMAP_FLAG_EMISSIVE, verts);
 			}
 
 			break;
@@ -2383,7 +2383,7 @@ void model_queue_render_thrusters(model_render_params *interp, polymodel *pm, in
 				p.r = p.g = p.b = p.a = (ubyte)(255.0f * d);
 				batch_add_bitmap(
 					thruster_info.primary_glow_bitmap, 
-					TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT | TMAP_FLAG_SOFT_QUAD, 
+					TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT | TMAP_FLAG_SOFT_QUAD | TMAP_FLAG_EMISSIVE, 
 					&p,
 					0,
 					(w * 0.5f * thruster_info.glow_rad_factor),
@@ -2398,7 +2398,7 @@ void model_queue_render_thrusters(model_render_params *interp, polymodel *pm, in
 				p.r = p.g = p.b = p.a = (ubyte)(255.0f * fog_int);
 				batch_add_bitmap_rotated(
 					thruster_info.tertiary_glow_bitmap,
-					TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT | TMAP_FLAG_SOFT_QUAD,
+					TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT | TMAP_FLAG_SOFT_QUAD | TMAP_FLAG_EMISSIVE,
 					&p,
 					(magnitude * 4),
 					(w * 0.6f * thruster_info.tertiary_glow_rad_factor),
@@ -2449,7 +2449,7 @@ void model_queue_render_thrusters(model_render_params *interp, polymodel *pm, in
 						float mag = vm_vec_mag(&gpt->pnt); 
 						mag -= (float)((int)mag);//Valathil - Get a fairly random but constant number to offset the distortion texture
 						distortion_add_beam(dist_bitmap,
-							TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT | TMAP_FLAG_DISTORTION_THRUSTER | TMAP_FLAG_SOFT_QUAD,
+							TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT | TMAP_FLAG_DISTORTION_THRUSTER | TMAP_FLAG_SOFT_QUAD  | TMAP_FLAG_EMISSIVE,
 							&pnt, &norm2, wVal*thruster_info.distortion_rad_factor*0.5f, 1.0f, mag
 							);
 					}

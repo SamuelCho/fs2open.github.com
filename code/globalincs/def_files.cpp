@@ -1868,6 +1868,9 @@ char *Default_main_fragment_shader =
 "\n"
 "#ifdef FLAG_FOG\n"
 "	vec3 fogColor = gl_Fog.color.rgb;\n"
+" #ifdef FLAG_HDR\n"
+"	fogColor = pow(fogColor, vec3(SRGB_GAMMA));\n"
+" #endif\n"
 " #ifdef FLAG_DIFFUSE_MAP\n"
 "	if(blend_alpha == 1) fogColor *= baseColor.a;\n"
 " #endif\n"
@@ -2780,7 +2783,7 @@ char* Default_effect_particle_fragment_shader =
 "void main()\n"
 "{\n"
 "	vec4 fragmentColor = texture2D(baseMap, gl_TexCoord[0].xy);\n"
-"	fragmentColor.rgb = mix(fragmentColor.rgb, pow(fragmentColor.rgb, vec3(SRGB_GAMMA)), float(1.0));\n"
+"	fragmentColor.rgb = mix(fragmentColor.rgb, pow(fragmentColor.rgb, vec3(SRGB_GAMMA)), float(srgb));\n"
 "	vec2 offset = vec2(radius_p * abs(0.5 - gl_TexCoord[0].x) * 2.0, radius_p * abs(0.5 - gl_TexCoord[0].y) * 2.0);\n"
 "	float offset_len = length(offset);\n"
 "	if ( offset_len > radius_p ) {\n"
@@ -2999,9 +3002,10 @@ char* Default_passthrough_fragment_shader =
 "#define SRGB_GAMMA 2.2\n"
 "void main()\n"
 "{\n"
-"	vec4 baseColor = texture2D(baseMap, gl_TexCoord[0].xy)*gl_Color;\n"
-"	baseColor.rgb = mix(baseColor.rgb, pow(baseColor.rgb, vec3(SRGB_GAMMA)), float(srgb));\n"
-"	gl_FragColor = mix(gl_Color, mix(baseColor, vec4(gl_Color.rgb, baseColor.a), float(alphaTexture)), float(noTexturing)) * intensity;\n"
+"	vec4 baseColor = texture2D(baseMap, gl_TexCoord[0].xy);\n"
+"	baseColor.rgb = (srgb == 1) ? pow(baseColor.rgb, vec3(SRGB_GAMMA)) : baseColor.rgb;\n"
+"	baseColor.rgb *= gl_Color.rgb;\n"
+"	gl_FragColor = mix(mix(baseColor, vec4(gl_Color.rgb, baseColor.a), float(alphaTexture)), gl_Color, float(noTexturing)) * intensity;\n"
 "}";
 
 char *Default_deferred_vertex_shader =

@@ -1409,8 +1409,14 @@ void opengl_draw_primitive(int nv, vertex **verts, uint flags, float u_scale, fl
 		vert_def.add_vertex_component(vertex_format_data::COLOR4, 0, &vertCol[0].r);
 	}
 
+	float color_scale = 1.0f;
+
+	if ( High_dynamic_range && flags & TMAP_FLAG_EMISSIVE ) {
+		color_scale = 2.5f;
+	}
+
+	opengl_shader_set_passthrough(textured, false, color_scale);
 	opengl_bind_vertex_layout(vert_def);
-	opengl_shader_set_passthrough(textured);
 
 	glDrawArrays(gl_mode, 0, nv);
 
