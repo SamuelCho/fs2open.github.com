@@ -3188,6 +3188,12 @@ void gr_opengl_deferred_lighting_finish()
 
 	opengl_shader_set_current( gr_opengl_maybe_create_shader(SDR_TYPE_DEFERRED_LIGHTING, 0) );
 
+	vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_luminance_texture, 0);
+	vglFramebufferRenderbufferEXT(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, Scene_stencil_buffer);
+	vglFramebufferRenderbufferEXT(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, Scene_stencil_buffer);
+
+	GL_state.Texture.SetShaderMode(GL_TRUE);
+
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Scene_color_texture);
@@ -3203,10 +3209,6 @@ void gr_opengl_deferred_lighting_finish()
 	GL_state.Texture.SetActiveUnit(3);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Scene_specular_texture);
-
-	vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_luminance_texture, 0);
-	vglFramebufferRenderbufferEXT(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, Scene_stencil_buffer);
-	vglFramebufferRenderbufferEXT(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, Scene_stencil_buffer);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -3312,7 +3314,13 @@ void gr_opengl_deferred_lighting_finish()
 		0.0f, Scene_texture_v_scale
 	};
 
-	opengl_shader_set_passthrough();
+	if ( High_dynamic_range ) {
+		High_dynamic_range = false;
+		opengl_shader_set_passthrough();
+		High_dynamic_range = true;
+	} else {
+		opengl_shader_set_passthrough();
+	}
 
 	GL_state.Array.BindArrayBuffer(0);
 	GL_state.Array.BindElementBuffer(0);
@@ -3347,6 +3355,7 @@ void gr_opengl_deferred_lighting_finish()
 	GL_state.CullFace(cull);
 
 	GL_state.SetAlphaBlendMode( ALPHA_BLEND_NONE );
+	GL_state.Texture.SetShaderMode(GL_FALSE);
 
 	gr_clear_states();
 }
