@@ -2784,6 +2784,7 @@ char* Default_effect_particle_fragment_shader =
 "{\n"
 "	vec4 fragmentColor = texture2D(baseMap, gl_TexCoord[0].xy);\n"
 "	fragmentColor.rgb = mix(fragmentColor.rgb, pow(fragmentColor.rgb, vec3(SRGB_GAMMA)), float(srgb));\n"
+"	fragmentColor *= gl_Color;\n"
 "	vec2 offset = vec2(radius_p * abs(0.5 - gl_TexCoord[0].x) * 2.0, radius_p * abs(0.5 - gl_TexCoord[0].y) * 2.0);\n"
 "	float offset_len = length(offset);\n"
 "	if ( offset_len > radius_p ) {\n"
@@ -2805,9 +2806,9 @@ char* Default_effect_particle_fragment_shader =
 "	float depthOffset = sqrt(pow(radius_p, 2.0) - pow(offset_len, 2.0));\n"
 "	float frontDepth = fragDepthLinear - depthOffset;\n"
 "	float backDepth = fragDepthLinear + depthOffset;\n"
-"	float ds = min(sceneDepthLinear, backDepth) - max(nearZ, frontDepth);\n"
-"	fragmentColor.rgb = fragmentColor.rgb * ( ds / (depthOffset*2.0) );\n"
-"	gl_FragColor = max(fragmentColor, vec4(0.0))*2.5;\n"
+"	//fragmentColor.rgb = fragmentColor.rgb * smoothstep(fragDepthLinear, fragDepthLinear + radius_p * 2.0f, sceneDepthLinear);\n"
+"	fragmentColor.rgb = fragmentColor.rgb * smoothstep(max(nearZ, frontDepth), backDepth, sceneDepthLinear);\n"
+"	gl_FragColor = max(fragmentColor, vec4(0.0)) * 2.5;\n"
 "}";
 
 char* Default_effect_distortion_vertex_shader =
