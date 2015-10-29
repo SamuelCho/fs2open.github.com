@@ -2808,7 +2808,8 @@ char* Default_effect_particle_fragment_shader =
 "	float backDepth = fragDepthLinear + depthOffset;\n"
 "	//fragmentColor.rgb = fragmentColor.rgb * smoothstep(fragDepthLinear, fragDepthLinear + radius_p * 2.0f, sceneDepthLinear);\n"
 "	fragmentColor.rgb = fragmentColor.rgb * smoothstep(max(nearZ, frontDepth), backDepth, sceneDepthLinear);\n"
-"	gl_FragColor = max(fragmentColor, vec4(0.0)) * 2.5;\n"
+"	fragmentColor.rgb *= (srgb == 1) ? 2.5 : 1.0;\n"
+"	gl_FragColor = max(fragmentColor, vec4(0.0));\n"
 "}";
 
 char* Default_effect_distortion_vertex_shader =
