@@ -1261,6 +1261,15 @@ void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_
 		float alpha = 1.0f;
 		int blend_filter = GR_ALPHABLEND_NONE;
 
+		texture_maps[TM_BASE_TYPE] = -1;
+		texture_maps[TM_GLOW_TYPE] = -1;
+		texture_maps[TM_SPECULAR_TYPE] = -1;
+		texture_maps[TM_NORMAL_TYPE] = -1;
+		texture_maps[TM_HEIGHT_TYPE] = -1;
+		texture_maps[TM_MISC_TYPE] = -1;
+		texture_maps[TM_SPEC_GLOSS_TYPE] = -1;
+		texture_maps[TM_ALBEDO_TYPE] = -1;
+
 		if (forced_texture != -2) {
 			texture_maps[TM_BASE_TYPE] = forced_texture;
 			alpha = forced_alpha;
