@@ -242,6 +242,65 @@ void render_primitives_interface(vertex* verts, int n_verts, primitive_type prim
 	gr_render_primitives(&material_info, prim_type, &layout, 0, n_verts);
 }
 
+void render_textured_points(
+	material material_info,
+	float x1, float y1, float u1, float v1,
+	float x2, float y2, float u2, float v2 )
+{
+	float glVertices[4][4] = {
+		{ x1, y1, u1, v1 },
+		{ x1, y2, u1, v2 },
+		{ x2, y1, u2, v1 },
+		{ x2, y2, u2, v2 }
+	};
+
+	vertex_layout vert_def;
+
+	vert_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(glVertices[0]), glVertices);
+	vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(glVertices[0]), &(glVertices[0][2]));
+
+	gr_render_primitives_2d(&material_info, PRIM_TYPE_TRISTRIP, &vert_def, 0, 4);
+}
+
+void render_points(
+	material material_info,
+	int x1, int y1, 
+	int x2, int y2 )
+{
+	int glVertices[8] = {
+		x1, y1,
+		x1, y2,
+		x2, y1,
+		x2, y2
+	};
+
+	vertex_layout vert_def;
+
+	vert_def.add_vertex_component(vertex_format_data::SCREEN_POS, 0, glVertices);
+
+	gr_render_primitives_2d(&material_info, PRIM_TYPE_TRISTRIP, &vert_def, 0, 4);
+}
+
+void render_points(
+	material material_info,
+	float x1, float y1,
+	float x2, float y2 )
+{
+	float glVertices[8] = {
+		x1, y1,
+		x1, y2,
+		x2, y1,
+		x2, y2
+	};
+
+	vertex_layout vert_def;
+
+	vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, glVertices);
+
+	gr_render_primitives_2d(&material_info, PRIM_TYPE_TRISTRIP, &vert_def, 0, 4);
+}
+
+// adapted from g3_draw_polygon()
 void render_oriented_quad(vec3d *pos, matrix *ori, float width, float height, int texture)
 {
 	//idiot-proof
@@ -307,6 +366,7 @@ void render_oriented_quad(vec3d *pos, vec3d *norm, float width, float height, in
 	render_oriented_quad(pos, &m, width, height, texture);
 }
 
+// adapted from gr_bitmap_list()
 void render_bitmap_list(bitmap_rect_list* list, int n_bm, int texture, float alpha, bool blending, int resize_mode)
 {
 	// adapted from g3_draw_2d_poly_bitmap_list
@@ -325,6 +385,7 @@ void render_bitmap_list(bitmap_rect_list* list, int n_bm, int texture, float alp
 	}
 
 	vertex* vert_list = new vertex[6 * n_bm];
+	float sw = 0.1f;
 
 	for ( int i = 0; i < n_bm; i++ ) {
 		// stuff coords	
@@ -335,7 +396,7 @@ void render_bitmap_list(bitmap_rect_list* list, int n_bm, int texture, float alp
 		vertex *V = &vert_list[i*6];
 		V->screen.xyw.x = (float)b->x;
 		V->screen.xyw.y = (float)b->y;	
-		V->screen.xyw.w = 0.0f;
+		V->screen.xyw.w = sw;
 		V->texture_position.u = (float)t->u0;
 		V->texture_position.v = (float)t->v0;
 		V->flags = PF_PROJECTED;
@@ -344,7 +405,7 @@ void render_bitmap_list(bitmap_rect_list* list, int n_bm, int texture, float alp
 		V++;
 		V->screen.xyw.x = (float)(b->x + b->w);
 		V->screen.xyw.y = (float)b->y;	
-		V->screen.xyw.w = 0.0f;
+		V->screen.xyw.w = sw;
 		V->texture_position.u = (float)t->u1;
 		V->texture_position.v = (float)t->v0;
 		V->flags = PF_PROJECTED;
@@ -353,7 +414,7 @@ void render_bitmap_list(bitmap_rect_list* list, int n_bm, int texture, float alp
 		V++;
 		V->screen.xyw.x = (float)(b->x + b->w);
 		V->screen.xyw.y = (float)(b->y + b->h);	
-		V->screen.xyw.w = 0.0f;
+		V->screen.xyw.w = sw;
 		V->texture_position.u = (float)t->u1;
 		V->texture_position.v = (float)t->v1;
 		V->flags = PF_PROJECTED;
@@ -363,7 +424,7 @@ void render_bitmap_list(bitmap_rect_list* list, int n_bm, int texture, float alp
 		V++;
 		V->screen.xyw.x = (float)b->x;
 		V->screen.xyw.y = (float)b->y;	
-		V->screen.xyw.w = 0.0f;
+		V->screen.xyw.w = sw;
 		V->texture_position.u = (float)t->u0;
 		V->texture_position.v = (float)t->v0;
 		V->flags = PF_PROJECTED;
@@ -372,7 +433,7 @@ void render_bitmap_list(bitmap_rect_list* list, int n_bm, int texture, float alp
 		V++;
 		V->screen.xyw.x = (float)(b->x + b->w);
 		V->screen.xyw.y = (float)(b->y + b->h);	
-		V->screen.xyw.w = 0.0f;
+		V->screen.xyw.w = sw;
 		V->texture_position.u = (float)t->u1;
 		V->texture_position.v = (float)t->v1;
 		V->flags = PF_PROJECTED;
@@ -381,7 +442,7 @@ void render_bitmap_list(bitmap_rect_list* list, int n_bm, int texture, float alp
 		V++;
 		V->screen.xyw.x = (float)b->x;
 		V->screen.xyw.y = (float)(b->y + b->h);	
-		V->screen.xyw.w = 0.0f;
+		V->screen.xyw.w = sw;
 		V->texture_position.u = (float)t->u0;
 		V->texture_position.v = (float)t->v1;
 		V->flags = PF_PROJECTED;
@@ -393,6 +454,7 @@ void render_bitmap_list(bitmap_rect_list* list, int n_bm, int texture, float alp
 	delete[] vert_list;
 }
 
+// adapted g3_draw_rotated_bitmap_3d()
 void render_rotated_bitmap(vertex *pnt, float angle, float rad, int texture, float alpha)
 {
 	rad *= 1.41421356f;//1/0.707, becase these are the points of a square or width and hieght rad
@@ -441,6 +503,7 @@ void render_rotated_bitmap(vertex *pnt, float angle, float rad, int texture, flo
 	render_primitives(P, 4, PRIM_TYPE_TRIFAN, texture, alpha, true, true);
 }
 
+// adapted from gr_opengl_scaler()
 void render_bitmap_scaler(vertex *va, vertex *vb, int texture, float alpha, bool blending)
 {
 	float x0, y0, x1, y1;
@@ -565,6 +628,7 @@ void render_bitmap_scaler(vertex *va, vertex *vb, int texture, float alpha, bool
 	render_primitives_2d(v, 4, PRIM_TYPE_TRIFAN, texture, alpha, blending);
 }
 
+// adapted from g3_draw_bitmap()
 void render_oriented_bitmap_2d(vertex *pnt, int orient, float rad, int texture, float alpha, bool blending)
 {
 	vertex va, vb;
@@ -706,6 +770,7 @@ void render_oriented_bitmap(int texture, float alpha, vertex *pnt, int orient, f
 	render_primitives(P, 4, PRIM_TYPE_TRIFAN, texture, alpha, true, true);
 }
 
+// adapted from g3_draw_laser_htl()
 void render_laser(vec3d *p0, float width1, vec3d *p1, float width2, color *clr, int texture, float alpha)
 {
 	width1 *= 0.5f;
@@ -790,6 +855,7 @@ void render_laser(vec3d *p0, float width1, vec3d *p1, float width2, color *clr, 
 	render_colored_primitives(pts, 4, PRIM_TYPE_TRIFAN, texture, alpha, true);
 }
 
+// adapted from g3_draw_laser()
 void render_laser_2d(vec3d *headp, float head_width, vec3d *tailp, float tail_width, float max_len, int texture, color* clr, float alpha)
 {
 	float headx, heady, headr, tailx, taily, tailr;
@@ -936,6 +1002,7 @@ void render_laser_2d(vec3d *headp, float head_width, vec3d *tailp, float tail_wi
 	render_laser_2d(headp, head_width, tailp, tail_width, max_len, texture, &clr, alpha);
 }
 
+// adapted from gr_bitmap()
 void render_bitmap(int _x, int _y, int texture, int resize_mode)
 {
 	int _w, _h;
@@ -983,6 +1050,7 @@ void render_bitmap(int _x, int _y, int texture, int resize_mode)
 	render_primitives_interface(verts, 4, PRIM_TYPE_TRIFAN, texture);
 }
 
+// adapted from g3_draw_rod()
 int render_rod(vec3d *p0,float width1,vec3d *p1,float width2, vertex * verts, uint tmap_flags)
 {
 	vec3d uvec, fvec, rvec, center;
@@ -1053,6 +1121,7 @@ int render_rod(vec3d *p0,float width1,vec3d *p1,float width2, vertex * verts, ui
 	return g3_draw_poly(4,ptlist,tmap_flags);
 }
 
+// adapted from g3_draw_rod()
 void render_rod(int num_points, vec3d *pvecs, float width, color *clr)
 {
 	const int MAX_ROD_VERTS = 100;
@@ -1123,4 +1192,176 @@ void render_rod(int num_points, vec3d *pvecs, float width, color *clr)
 	layout.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), &pts[0].r);
 
 	gr_render_primitives(&material_instance, PRIM_TYPE_TRISTRIP, &layout, 0, nv);
+}
+
+// adapted from g3_draw_2d_rect()
+void render_colored_rect(int x, int y, int w, int h, int r, int g, int b, int a)
+{
+	int saved_zbuf;
+	vertex v[4];
+	vertex *verts[4] = {&v[0], &v[1], &v[2], &v[3]};
+
+	memset(v,0,sizeof(vertex)*4);
+
+	float sw = 0.1f;
+
+	// stuff coords		
+	v[0].screen.xyw.x = i2fl(x);
+	v[0].screen.xyw.y = i2fl(y);
+	v[0].screen.xyw.w = sw;
+	v[0].texture_position.u = 0.0f;
+	v[0].texture_position.v = 0.0f;
+	v[0].flags = PF_PROJECTED;
+	v[0].codes = 0;
+	v[0].r = (ubyte)r;
+	v[0].g = (ubyte)g;
+	v[0].b = (ubyte)b;
+	v[0].a = (ubyte)a;
+
+	v[1].screen.xyw.x = i2fl(x + w);
+	v[1].screen.xyw.y = i2fl(y);	
+	v[1].screen.xyw.w = sw;
+	v[1].texture_position.u = 0.0f;
+	v[1].texture_position.v = 0.0f;
+	v[1].flags = PF_PROJECTED;
+	v[1].codes = 0;
+	v[1].r = (ubyte)r;
+	v[1].g = (ubyte)g;
+	v[1].b = (ubyte)b;
+	v[1].a = (ubyte)a;
+
+	v[2].screen.xyw.x = i2fl(x + w);
+	v[2].screen.xyw.y = i2fl(y + h);
+	v[2].screen.xyw.w = sw;
+	v[2].texture_position.u = 0.0f;
+	v[2].texture_position.v = 0.0f;
+	v[2].flags = PF_PROJECTED;
+	v[2].codes = 0;
+	v[2].r = (ubyte)r;
+	v[2].g = (ubyte)g;
+	v[2].b = (ubyte)b;
+	v[2].a = (ubyte)a;
+
+	v[3].screen.xyw.x = i2fl(x);
+	v[3].screen.xyw.y = i2fl(y + h);
+	v[3].screen.xyw.w = sw;
+	v[3].texture_position.u = 0.0f;
+	v[3].texture_position.v = 0.0f;
+	v[3].flags = PF_PROJECTED;
+	v[3].codes = 0;				
+	v[3].r = (ubyte)r;
+	v[3].g = (ubyte)g;
+	v[3].b = (ubyte)b;
+	v[3].a = (ubyte)a;
+
+	material material_instance;
+	material_instance.set_depth_mode(ZBUFFER_TYPE_NONE);
+	material_instance.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+	material_instance.set_cull_mode(false);
+	material_instance.set_color(1.0f, 1.0f, 1.0f, 1.0f);
+
+	vertex_layout layout;
+	layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &v[0].screen.xyw.x);
+	layout.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), &v[0].r);
+
+	// draw the polys
+	gr_render_primitives_2d(&material_instance, PRIM_TYPE_TRIFAN, &layout, 0, 4);
+}
+
+// adapted from g3_draw_2d_shield_icon()
+void render_shield_icon(const coord2d coords[6], const int r, const int g, const int b, const int a)
+{
+	int saved_zbuf;
+	vertex v[6];
+	vertex *verts[6] = {&v[0], &v[1], &v[2], &v[3], &v[4], &v[5]};
+
+	memset(v,0,sizeof(vertex)*6);
+
+	float sw = 0.1f;
+
+	// stuff coords
+	v[0].screen.xyw.x = i2fl(coords[0].x);
+	v[0].screen.xyw.y = i2fl(coords[0].y);
+	v[0].screen.xyw.w = sw;
+	v[0].texture_position.u = 0.0f;
+	v[0].texture_position.v = 0.0f;
+	v[0].flags = PF_PROJECTED;
+	v[0].codes = 0;
+	v[0].r = (ubyte)r;
+	v[0].g = (ubyte)g;
+	v[0].b = (ubyte)b;
+	v[0].a = 0;
+
+	v[1].screen.xyw.x = i2fl(coords[1].x);
+	v[1].screen.xyw.y = i2fl(coords[1].y);
+	v[1].screen.xyw.w = sw;
+	v[1].texture_position.u = 0.0f;
+	v[1].texture_position.v = 0.0f;
+	v[1].flags = PF_PROJECTED;
+	v[1].codes = 0;
+	v[1].r = (ubyte)r;
+	v[1].g = (ubyte)g;
+	v[1].b = (ubyte)b;
+	v[1].a = (ubyte)a;
+
+	v[2].screen.xyw.x = i2fl(coords[2].x);
+	v[2].screen.xyw.y = i2fl(coords[2].y);
+	v[2].screen.xyw.w = sw;
+	v[2].texture_position.u = 0.0f;
+	v[2].texture_position.v = 0.0f;
+	v[2].flags = PF_PROJECTED;
+	v[2].codes = 0;
+	v[2].r = (ubyte)r;
+	v[2].g = (ubyte)g;
+	v[2].b = (ubyte)b;
+	v[2].a = 0;
+
+	v[3].screen.xyw.x = i2fl(coords[3].x);
+	v[3].screen.xyw.y = i2fl(coords[3].y);
+	v[3].screen.xyw.w = sw;
+	v[3].texture_position.u = 0.0f;
+	v[3].texture_position.v = 0.0f;
+	v[3].flags = PF_PROJECTED;
+	v[3].codes = 0;
+	v[3].r = (ubyte)r;
+	v[3].g = (ubyte)g;
+	v[3].b = (ubyte)b;
+	v[3].a = (ubyte)a;
+
+	v[4].screen.xyw.x = i2fl(coords[4].x);
+	v[4].screen.xyw.y = i2fl(coords[4].y);
+	v[4].screen.xyw.w = sw;
+	v[4].texture_position.u = 0.0f;
+	v[4].texture_position.v = 0.0f;
+	v[4].flags = PF_PROJECTED;
+	v[4].codes = 0;
+	v[4].r = (ubyte)r;
+	v[4].g = (ubyte)g;
+	v[4].b = (ubyte)b;
+	v[4].a = 0;
+
+	v[5].screen.xyw.x = i2fl(coords[5].x);
+	v[5].screen.xyw.y = i2fl(coords[5].y);
+	v[5].screen.xyw.w = sw;
+	v[5].texture_position.u = 0.0f;
+	v[5].texture_position.v = 0.0f;
+	v[5].flags = PF_PROJECTED;
+	v[5].codes = 0;
+	v[5].r = (ubyte)r;
+	v[5].g = (ubyte)g;
+	v[5].b = (ubyte)b;
+	v[5].a = 0;
+
+	material material_instance;
+	material_instance.set_depth_mode(ZBUFFER_TYPE_NONE);
+	material_instance.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+	material_instance.set_cull_mode(false);
+	material_instance.set_color(1.0f, 1.0f, 1.0f, 1.0f);
+
+	vertex_layout layout;
+	layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &v[0].screen.xyw.x);
+	layout.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), &v[0].r);
+
+	// draw the polys
+	gr_render_primitives_2d(&material_instance, PRIM_TYPE_TRISTRIP, &layout, 0, 6);
 }
