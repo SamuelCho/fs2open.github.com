@@ -3384,6 +3384,8 @@ void gr_opengl_update_distortion()
 
 void gr_opengl_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
 {
+	GL_CHECK_FOR_ERRORS("start of gr_opengl_render_primitives()");
+
 	opengl_tnl_set_material(material_info, true);
 
 	if ( buffer_handle >= 0 ) {
@@ -3395,10 +3397,14 @@ void gr_opengl_render_primitives(material* material_info, primitive_type prim_ty
 	opengl_bind_vertex_layout(*layout);
 	
 	glDrawArrays(opengl_primitive_type(prim_type), offset, n_verts);
+
+	GL_CHECK_FOR_ERRORS("end of gr_opengl_render_primitives()");
 }
 
 void gr_opengl_render_primitives_2d(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
 {
+	GL_CHECK_FOR_ERRORS("start of gr_opengl_render_primitives_2d()");
+
 	glPushMatrix();
 	glTranslatef((float)gr_screen.offset_x, (float)gr_screen.offset_y, -0.99f);
 
@@ -3409,6 +3415,8 @@ void gr_opengl_render_primitives_2d(material* material_info, primitive_type prim
 	gr_opengl_end_2d_matrix();
 
 	glPopMatrix();
+
+	GL_CHECK_FOR_ERRORS("end of gr_opengl_render_primitives_2d()");
 }
 
 void gr_opengl_render_primitives_particle(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)

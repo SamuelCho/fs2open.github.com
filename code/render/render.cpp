@@ -13,6 +13,7 @@
 #include "render/3dinternal.h"
 #include "graphics/material.h"
 #include "render/render.h"
+#include "graphics/line.h"
 
 gr_alpha_blend render_determine_blend_mode(int base_bitmap, bool is_transparent)
 {
@@ -123,6 +124,64 @@ void render_set_distortion_material(distortion_material *mat_info, int texture, 
 	mat_info->set_texture_map(TM_BASE_TYPE, texture);
 	mat_info->set_cull_mode(false);
 	mat_info->set_color(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+void render_primitive_textured(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic)
+{
+	vertex_layout layout;
+
+	if ( orthographic ) {
+		layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &verts[0].screen.xyw.x);
+	} else {
+		layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), &verts[0].world.xyz.x);
+	}
+
+	layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &verts[0].texture_position.u);
+
+	if ( orthographic ) {
+		gr_render_primitives_2d(mat, prim_type, &layout, 0, n_verts, -1);
+	} else {
+		gr_render_primitives(mat, prim_type, &layout, 0, n_verts, -1);
+	}
+}
+
+void render_primitives_colored_textured(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic)
+{
+	vertex_layout layout;
+
+	if ( orthographic ) {
+		layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &verts[0].screen.xyw.x);
+	} else {
+		layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), &verts[0].world.xyz.x);
+	}
+
+	layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &verts[0].texture_position.u);
+	layout.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), &verts[0].r);
+
+	if ( orthographic ) {
+		gr_render_primitives_2d(mat, prim_type, &layout, 0, n_verts, -1);
+	} else {
+		gr_render_primitives(mat, prim_type, &layout, 0, n_verts, -1);
+	}
+}
+
+void render_primitives_colored(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic)
+{
+	vertex_layout layout;
+
+	if ( orthographic ) {
+		layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &verts[0].screen.xyw.x);
+	} else {
+		layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), &verts[0].world.xyz.x);
+	}
+
+	layout.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), &verts[0].r);
+
+	if ( orthographic ) {
+		gr_render_primitives_2d(mat, prim_type, &layout, 0, n_verts, -1);
+	} else {
+		gr_render_primitives(mat, prim_type, &layout, 0, n_verts, -1);
+	}
 }
 
 // reproduces rendering behavior when using flags TMAP_FLAG_TEXTURED | TMAP_FLAG_RGB | TMAP_FLAG_GOURAUD | TMAP_HTL_3D_UNLIT
@@ -242,7 +301,7 @@ void render_primitives_interface(vertex* verts, int n_verts, primitive_type prim
 	gr_render_primitives(&material_info, prim_type, &layout, 0, n_verts);
 }
 
-void render_textured_points(
+void render_screen_points_textured(
 	material material_info,
 	float x1, float y1, float u1, float v1,
 	float x2, float y2, float u2, float v2 )
@@ -262,7 +321,7 @@ void render_textured_points(
 	gr_render_primitives_2d(&material_info, PRIM_TYPE_TRISTRIP, &vert_def, 0, 4);
 }
 
-void render_points(
+void render_screen_points(
 	material material_info,
 	int x1, int y1, 
 	int x2, int y2 )
@@ -281,7 +340,7 @@ void render_points(
 	gr_render_primitives_2d(&material_info, PRIM_TYPE_TRISTRIP, &vert_def, 0, 4);
 }
 
-void render_points(
+void render_screen_points(
 	material material_info,
 	float x1, float y1,
 	float x2, float y2 )
@@ -1357,11 +1416,860 @@ void render_shield_icon(const coord2d coords[6], const int r, const int g, const
 	material_instance.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
 	material_instance.set_cull_mode(false);
 	material_instance.set_color(1.0f, 1.0f, 1.0f, 1.0f);
-
-	vertex_layout layout;
-	layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &v[0].screen.xyw.x);
-	layout.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), &v[0].r);
-
+	
 	// draw the polys
-	gr_render_primitives_2d(&material_instance, PRIM_TYPE_TRISTRIP, &layout, 0, 6);
+	render_primitives_colored(&material_instance, v, 4, PRIM_TYPE_TRISTRIP, true);
+}
+
+// adapted from gr_opengl_line()
+void render_line(color *clr, int x1,int y1,int x2,int y2, int resize_mode)
+{
+	int do_resize;
+	float sx1, sy1;
+	float sx2, sy2;
+
+	if ( resize_mode != GR_RESIZE_NONE && (gr_screen.custom_size || (gr_screen.rendering_to_texture != -1)) ) {
+		do_resize = 1;
+	} else {
+		do_resize = 0;
+	}
+
+	int clip_left = ((do_resize) ? gr_screen.clip_left_unscaled : gr_screen.clip_left);
+	int clip_right = ((do_resize) ? gr_screen.clip_right_unscaled : gr_screen.clip_right);
+	int clip_top = ((do_resize) ? gr_screen.clip_top_unscaled : gr_screen.clip_top);
+	int clip_bottom = ((do_resize) ? gr_screen.clip_bottom_unscaled : gr_screen.clip_bottom);
+	int offset_x = ((do_resize) ? gr_screen.offset_x_unscaled : gr_screen.offset_x);
+	int offset_y = ((do_resize) ? gr_screen.offset_y_unscaled : gr_screen.offset_y);
+
+
+	INT_CLIPLINE(x1, y1, x2, y2, clip_left, clip_top, clip_right, clip_bottom, return, ;, ;);
+
+	sx1 = i2fl(x1 + offset_x);
+	sy1 = i2fl(y1 + offset_y);
+	sx2 = i2fl(x2 + offset_x);
+	sy2 = i2fl(y2 + offset_y);
+
+
+	if (do_resize) {
+		gr_resize_screen_posf(&sx1, &sy1, NULL, NULL, resize_mode);
+		gr_resize_screen_posf(&sx2, &sy2, NULL, NULL, resize_mode);
+	}
+
+	material mat;
+
+	mat.set_texture_source(TEXTURE_SOURCE_NONE);
+	mat.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+	mat.set_depth_mode(ZBUFFER_TYPE_NONE);
+	mat.set_color(*clr);
+
+	if ( (x1 == x2) && (y1 == y2) ) {
+
+		float vert[3]= {sx1, sy1, -0.99f};
+
+		vertex_layout vert_def;
+
+		vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, vert);
+
+		gr_render_primitives_2d(&mat, PRIM_TYPE_POINTS, &vert_def, 0, 1);
+
+		return;
+	}
+
+	if (x1 == x2) {
+		if (sy1 < sy2) {
+			sy2 += 0.5f;
+		} else {
+			sy1 += 0.5f;
+		}
+	} else if (y1 == y2) {
+		if (sx1 < sx2) {
+			sx2 += 0.5f;
+		} else {
+			sx1 += 0.5f;
+		}
+	}
+
+	float line[6] = {
+		sx2, sy2, -0.99f,
+		sx1, sy1, -0.99f
+	};
+
+	vertex_layout vert_def;
+
+	vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, line);
+
+	gr_render_primitives_2d(&mat, PRIM_TYPE_POINTS, &vert_def, 0, 2);
+}
+
+// adapted from gr_opengl_line_htl()
+void render_line_htl(color *clr, vec3d *start, vec3d *end, bool depth_testing)
+{
+	material mat;
+
+	mat.set_texture_source(TEXTURE_SOURCE_NONE);
+	mat.set_depth_mode((depth_testing) ? ZBUFFER_TYPE_FULL : ZBUFFER_TYPE_NONE);
+	mat.set_color(*clr);
+
+    if (clr->is_alphacolor) {
+		mat.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+	} else {
+        mat.set_blend_mode(ALPHA_BLEND_NONE);
+    }
+
+	float line[6] = {
+		start->xyz.x,	start->xyz.y,	start->xyz.z,
+		end->xyz.x,		end->xyz.y,		end->xyz.z
+	};
+
+	vertex_layout vert_def;
+
+	vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, line);
+
+	gr_render_primitives_2d(&mat, PRIM_TYPE_LINES, &vert_def, 0, 2);
+}
+
+// adapted from gr_opengl_pixel()
+void render_pixel(color *clr, int x, int y, int resize_mode)
+{
+	render_line(clr, x, y, x, y, resize_mode);
+}
+
+// adapted from opengl_aabitmap_ex_internal()
+void render_aabitmap_ex_internal(int texture, color *clr, int x, int y, int w, int h, int sx, int sy, int resize_mode, bool mirror)
+{
+	if ( (w < 1) || (h < 1) ) {
+		return;
+	}
+
+	if ( clr == NULL || !clr->is_alphacolor ) {
+		return;
+	}
+
+	if ( texture < 0 ) {
+		mprintf(("WARNING: trying to draw with invalid texture (%i)!\n", texture));
+		return;
+	}
+
+	float u_scale, v_scale;
+
+	material mat;
+
+	mat.set_texture_source(TEXTURE_SOURCE_NO_FILTERING);
+	mat.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+	mat.set_depth_mode(ZBUFFER_TYPE_NONE);
+	mat.set_cull_mode(false);
+
+	mat.set_texture_map(TM_BASE_TYPE, texture);
+	mat.set_texture_type(material::TEX_TYPE_AABITMAP);
+
+	float u_scale = 1.0f;
+	float v_scale = 1.0f;
+	
+	float u0, u1, v0, v1;
+	float x1, x2, y1, y2;
+	int bw, bh, do_resize;
+
+	if ( resize_mode != GR_RESIZE_NONE && (gr_screen.custom_size || (gr_screen.rendering_to_texture != -1)) ) {
+		do_resize = 1;
+	} else {
+		do_resize = 0;
+	}
+
+	bm_get_info(gr_screen.current_bitmap, &bw, &bh);
+
+	u0 = u_scale * (i2fl(sx) / i2fl(bw));
+	v0 = v_scale * (i2fl(sy) / i2fl(bh));
+
+	u1 = u_scale * (i2fl(sx+w) / i2fl(bw));
+	v1 = v_scale * (i2fl(sy+h) / i2fl(bh));
+
+	x1 = i2fl(x + ((do_resize) ? gr_screen.offset_x_unscaled : gr_screen.offset_x));
+	y1 = i2fl(y + ((do_resize) ? gr_screen.offset_y_unscaled : gr_screen.offset_y));
+	x2 = x1 + i2fl(w);
+	y2 = y1 + i2fl(h);
+
+	if (do_resize) {
+		gr_resize_screen_posf(&x1, &y1, NULL, NULL, resize_mode);
+		gr_resize_screen_posf(&x2, &y2, NULL, NULL, resize_mode);
+	}
+
+	mat.set_color(*clr);
+
+	if (mirror) {
+		float temp = u0;
+		u0 = u1;
+		u1 = temp;
+	}
+
+	render_screen_points_textured(&mat, x1,y1,u0,v0, x2,y2,u1,v1);
+}
+
+// adapted from gr_opengl_aabitmap_ex()
+void render_aabitmap_ex(int texture, color *clr, int x, int y, int w, int h, int sx, int sy, int resize_mode, bool mirror)
+{
+	if ( texture < 0 ) {
+		mprintf(("WARNING: trying to draw with invalid texture (%i)!\n", texture));
+		return;
+	}
+
+	int reclip;
+#ifndef NDEBUG
+	int count = 0;
+#endif
+
+	int dx1 = x;
+	int dx2 = x + w - 1;
+	int dy1 = y;
+	int dy2 = y + h - 1;
+
+	int bw, bh, do_resize;
+
+	bm_get_info(texture, &bw, &bh);
+
+	if ( resize_mode != GR_RESIZE_NONE && (gr_screen.custom_size || (gr_screen.rendering_to_texture != -1)) ) {
+		do_resize = 1;
+	} else {
+		do_resize = 0;
+	}
+
+	int clip_left = ((do_resize) ? gr_screen.clip_left_unscaled : gr_screen.clip_left);
+	int clip_right = ((do_resize) ? gr_screen.clip_right_unscaled : gr_screen.clip_right);
+	int clip_top = ((do_resize) ? gr_screen.clip_top_unscaled : gr_screen.clip_top);
+	int clip_bottom = ((do_resize) ? gr_screen.clip_bottom_unscaled : gr_screen.clip_bottom);
+
+	do {
+		reclip = 0;
+
+#ifndef NDEBUG
+		if (count > 1) {
+			Int3();
+		}
+
+		count++;
+#endif
+
+		if ( (dx1 > clip_right) || (dx2 < clip_left) ) {
+			return;
+		}
+
+		if ( (dy1 > clip_bottom) || (dy2 < clip_top) ) {
+			return;
+		}
+
+		if (dx1 < clip_left) {
+			sx += clip_left - dx1;
+			dx1 = clip_left;
+		}
+
+		if (dy1 < clip_top) {
+			sy += clip_top - dy1;
+			dy1 = clip_top;
+		}
+
+		if (dx2 > clip_right) {
+			dx2 = clip_right;
+		}
+
+		if (dy2 > clip_bottom) {
+			dy2 = clip_bottom;
+		}
+
+
+		if ( sx < 0 ) {
+			dx1 -= sx;
+			sx = 0;
+			reclip = 1;
+		}
+
+		if ( sy < 0 ) {
+			dy1 -= sy;
+			sy = 0;
+			reclip = 1;
+		}
+
+		w = dx2 - dx1 + 1;
+		h = dy2 - dy1 + 1;
+
+		if ( sx + w > bw ) {
+			w = bw - sx;
+			dx2 = dx1 + w - 1;
+		}
+
+		if ( sy + h > bh ) {
+			h = bh - sy;
+			dy2 = dy1 + h - 1;
+		}
+
+		if ( (w < 1) || (h < 1) ) {
+			// clipped away!
+			return;
+		}
+	} while (reclip);
+
+	// Make sure clipping algorithm works
+#ifndef NDEBUG
+	Assert( w > 0 );
+	Assert( h > 0 );
+	Assert( w == (dx2-dx1+1) );
+	Assert( h == (dy2-dy1+1) );
+	Assert( sx >= 0 );
+	Assert( sy >= 0 );
+	Assert( sx+w <= bw );
+	Assert( sy+h <= bh );
+	Assert( dx2 >= dx1 );
+	Assert( dy2 >= dy1 );
+	Assert( (dx1 >= clip_left) && (dx1 <= clip_right) );
+	Assert( (dx2 >= clip_left) && (dx2 <= clip_right) );
+	Assert( (dy1 >= clip_top) && (dy1 <= clip_bottom) );
+	Assert( (dy2 >= clip_top) && (dy2 <= clip_bottom) );
+#endif
+
+	// We now have dx1,dy1 and dx2,dy2 and sx, sy all set validly within clip regions.
+	render_aabitmap_ex_internal(texture, clr, dx1, dy1, (dx2 - dx1 + 1), (dy2 - dy1 + 1), sx, sy, resize_mode, mirror);
+}
+
+// adapted from gr_opengl_aabitmap()
+void render_aabitmap(int texture, color *clr, int x, int y, int resize_mode, bool mirror)
+{
+	if ( texture < 0 ) {
+		mprintf(("WARNING: trying to draw with invalid texture (%i)!\n", texture));
+		return;
+	}
+
+	int w, h, do_resize;
+
+	bm_get_info(texture, &w, &h);
+
+	if ( resize_mode != GR_RESIZE_NONE && (gr_screen.custom_size || (gr_screen.rendering_to_texture != -1)) ) {
+		do_resize = 1;
+	} else {
+		do_resize = 0;
+	}
+
+	int dx1 = x;
+	int dx2 = x + w - 1;
+	int dy1 = y;
+	int dy2 = y + h - 1;
+	int sx = 0, sy = 0;
+
+	int clip_left = ((do_resize) ? gr_screen.clip_left_unscaled : gr_screen.clip_left);
+	int clip_right = ((do_resize) ? gr_screen.clip_right_unscaled : gr_screen.clip_right);
+	int clip_top = ((do_resize) ? gr_screen.clip_top_unscaled : gr_screen.clip_top);
+	int clip_bottom = ((do_resize) ? gr_screen.clip_bottom_unscaled : gr_screen.clip_bottom);
+
+	if ( (dx1 > clip_right) || (dx2 < clip_left) ) {
+		return;
+	}
+
+	if ( (dy1 > clip_bottom) || (dy2 < clip_top) ) {
+		return;
+	}
+
+	if (dx1 < clip_left) {
+		sx = clip_left - dx1;
+		dx1 = clip_left;
+	}
+
+	if (dy1 < clip_top) {
+		sy = clip_top - dy1;
+		dy1 = clip_top;
+	}
+
+	if (dx2 > clip_right) {
+		dx2 = clip_right;
+	}
+
+	if (dy2 > clip_bottom) {
+		dy2 = clip_bottom;
+	}
+
+	if ( (sx < 0) || (sy < 0) ) {
+		return;
+	}
+
+	if ( (sx >= w) || (sy >= h) ) {
+		return;
+	}
+
+	// Draw bitmap bm[sx,sy] into (dx1,dy1)-(dx2,dy2)
+	render_aabitmap_ex_internal(texture, clr, dx1, dy1, (dx2 - dx1 + 1), (dy2 - dy1 + 1), sx, sy, resize_mode, mirror);
+}
+
+#define MAX_VERTS_PER_DRAW 120
+struct string_vert { float x,y,u,v; };
+static string_vert String_render_buff[MAX_VERTS_PER_DRAW];
+
+// adapted from gr_opengl_string()
+void render_string(color *clr, float sx, float sy, const char *s, int resize_mode)
+{
+	int width, spacing, letter;
+	float x, y;
+	bool do_resize;
+	float bw, bh;
+	float u0, u1, v0, v1;
+	float x1, x2, y1, y2;
+	float u_scale, v_scale;
+
+	if ( !Current_font || (*s == 0) ) {
+		return;
+	}
+
+	material mat;
+
+	mat.set_texture_map(TM_BASE_TYPE, Current_font->bitmap_id);
+	mat.set_texture_source(TEXTURE_SOURCE_NO_FILTERING);
+	mat.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+	mat.set_depth_mode(ZBUFFER_TYPE_NONE);
+	mat.set_cull_mode(false);
+
+	int buffer_offset = 0;
+
+	int ibw, ibh;
+
+	bm_get_info(Current_font->bitmap_id, &ibw, &ibh);
+
+	bw = i2fl(ibw);
+	bh = i2fl(ibh);
+
+	// set color!
+	mat.set_color(*clr);
+
+//	if ( (gr_screen.custom_size && resize) || (gr_screen.rendering_to_texture != -1) ) {
+	if ( resize_mode != GR_RESIZE_NONE && (gr_screen.custom_size || (gr_screen.rendering_to_texture != -1)) ) {
+		do_resize = true;
+	} else {
+		do_resize = false;
+	}
+
+	int clip_left = ((do_resize) ? gr_screen.clip_left_unscaled : gr_screen.clip_left);
+	int clip_right = ((do_resize) ? gr_screen.clip_right_unscaled : gr_screen.clip_right);
+	int clip_top = ((do_resize) ? gr_screen.clip_top_unscaled : gr_screen.clip_top);
+	int clip_bottom = ((do_resize) ? gr_screen.clip_bottom_unscaled : gr_screen.clip_bottom);
+
+	x = sx;
+	y = sy;
+
+	if (sx == (float)0x8000) {
+		// centered
+		x = (float)get_centered_x(s, !do_resize);
+	} else {
+		x = sx;
+	}
+
+	spacing = 0;
+
+	vertex_layout vert_def;
+
+	vert_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(string_vert), &String_render_buff[0].x);
+	vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(string_vert), &String_render_buff[0].u);
+
+	// pick out letter coords, draw it, goto next letter and do the same
+	while (*s)	{
+		x += spacing;
+
+		while (*s == '\n')	{
+			s++;
+			y += Current_font->h;
+
+			if (sx == (float)0x8000) {
+				// centered
+				x = (float)get_centered_x(s, !do_resize);
+			} else {
+				x = sx;
+			}
+		}
+
+		if (*s == 0) {
+			break;
+		}
+
+		letter = get_char_width(s[0], s[1], &width, &spacing);
+		s++;
+
+		// not in font, draw as space
+		if (letter < 0) {
+			continue;
+		}
+
+		float xd, yd, xc, yc;
+		float wc, hc;
+
+		// Check if this character is totally clipped
+		if ( (x + width) < clip_left ) {
+			continue;
+		}
+
+		if ( (y + Current_font->h) < clip_top ) {
+			continue;
+		}
+
+		if (x > clip_right) {
+			continue;
+		}
+
+		if (y > clip_bottom) {
+			continue;
+		}
+
+		xd = yd = 0;
+
+		if (x < clip_left) {
+			xd = clip_left - x;
+		}
+
+		if (y < clip_top) {
+			yd = clip_top - y;
+		}
+
+		xc = x + xd;
+		yc = y + yd;
+
+		wc = width - xd;
+		hc = Current_font->h - yd;
+
+		if ( (xc + wc) > clip_right ) {
+			wc = clip_right - xc;
+		}
+
+		if ( (yc + hc) > clip_bottom ) {
+			hc = clip_bottom - yc;
+		}
+
+		if ( (wc < 1) || (hc < 1) ) {
+			continue;
+		}
+
+		int u = Current_font->bm_u[letter];
+		int v = Current_font->bm_v[letter];
+
+		x1 = xc + ((do_resize) ? gr_screen.offset_x_unscaled : gr_screen.offset_x);
+		y1 = yc + ((do_resize) ? gr_screen.offset_y_unscaled : gr_screen.offset_y);
+		x2 = x1 + wc;
+		y2 = y1 + hc;
+
+		if (do_resize) {
+			gr_resize_screen_posf( &x1, &y1, NULL, NULL, resize_mode );
+			gr_resize_screen_posf( &x2, &y2, NULL, NULL, resize_mode );
+		}
+
+		u0 = u_scale * (i2fl(u+xd) / bw);
+		v0 = v_scale * (i2fl(v+yd) / bh);
+
+		u1 = u_scale * (i2fl((u+xd)+wc) / bw);
+		v1 = v_scale * (i2fl((v+yd)+hc) / bh);
+
+		if ( buffer_offset == MAX_VERTS_PER_DRAW ) {
+			gr_render_primitives_2d(&mat, PRIM_TYPE_TRIS, &vert_def, 0, buffer_offset);
+			buffer_offset = 0;
+		}
+
+		String_render_buff[buffer_offset].x = (float)x1;
+		String_render_buff[buffer_offset].y = (float)y1;
+		String_render_buff[buffer_offset].u = u0;
+		String_render_buff[buffer_offset].v = v0;
+		buffer_offset++;
+
+		String_render_buff[buffer_offset].x = (float)x1;
+		String_render_buff[buffer_offset].y = (float)y2;
+		String_render_buff[buffer_offset].u = u0;
+		String_render_buff[buffer_offset].v = v1;
+		buffer_offset++;
+
+		String_render_buff[buffer_offset].x = (float)x2;
+		String_render_buff[buffer_offset].y = (float)y1;
+		String_render_buff[buffer_offset].u = u1;
+		String_render_buff[buffer_offset].v = v0;
+		buffer_offset++;
+
+		String_render_buff[buffer_offset].x = (float)x1;
+		String_render_buff[buffer_offset].y = (float)y2;
+		String_render_buff[buffer_offset].u = u0;
+		String_render_buff[buffer_offset].v = v1;
+		buffer_offset++;
+
+		String_render_buff[buffer_offset].x = (float)x2;
+		String_render_buff[buffer_offset].y = (float)y1;
+		String_render_buff[buffer_offset].u = u1;
+		String_render_buff[buffer_offset].v = v0;
+		buffer_offset++;
+
+		String_render_buff[buffer_offset].x = (float)x2;
+		String_render_buff[buffer_offset].y = (float)y2;
+		String_render_buff[buffer_offset].u = u1;
+		String_render_buff[buffer_offset].v = v1;
+		buffer_offset++;
+	}
+
+	if ( buffer_offset ) {
+		gr_render_primitives_2d(&mat, PRIM_TYPE_TRIS, &vert_def, 0, buffer_offset);
+	}
+}
+
+void render_string(color *clr, int sx, int sy, const char *s, int resize_mode)
+{
+	render_string(clr, i2fl(sx), i2fl(sy), s, resize_mode);
+}
+
+// adapted from gr_opengl_aaline
+void render_aaline(color *clr, vertex *v1, vertex *v2)
+{
+// -- AA OpenGL lines.  Looks good but they are kinda slow so this is disabled until an option is implemented - taylor
+//	gr_opengl_set_state( TEXTURE_SOURCE_NONE, ALPHA_BLEND_ALPHA_BLEND_ALPHA, ZBUFFER_TYPE_NONE );
+//	glEnable( GL_LINE_SMOOTH );
+//	glHint( GL_LINE_SMOOTH_HINT, GL_FASTEST );
+//	glLineWidth( 1.0 );
+
+	float x1 = v1->screen.xyw.x;
+	float y1 = v1->screen.xyw.y;
+	float x2 = v2->screen.xyw.x;
+	float y2 = v2->screen.xyw.y;
+	float sx1, sy1;
+	float sx2, sy2;
+
+
+	FL_CLIPLINE(x1, y1, x2, y2, (float)gr_screen.clip_left, (float)gr_screen.clip_top, (float)gr_screen.clip_right, (float)gr_screen.clip_bottom, return, ;, ;);
+
+	sx1 = x1 + (float)gr_screen.offset_x;
+	sy1 = y1 + (float)gr_screen.offset_y;
+	sx2 = x2 + (float)gr_screen.offset_x;
+	sy2 = y2 + (float)gr_screen.offset_y;
+
+	material mat;
+
+	mat.set_texture_source(TEXTURE_SOURCE_NONE);
+	mat.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+	mat.set_depth_mode(ZBUFFER_TYPE_NONE);
+	mat.set_color(*clr);
+
+	if ( (x1 == x2) && (y1 == y2) ) {
+		float vert[3]= {sx1, sy1, -0.99f};
+
+		vertex_layout vert_def;
+
+		vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, vert);
+
+		gr_render_primitives_2d(&mat, PRIM_TYPE_POINTS, &vert_def, 0, 1);
+
+		return;
+	}
+
+	if (x1 == x2) {
+		if (sy1 < sy2) {
+			sy2 += 0.5f;
+		} else {
+			sy1 += 0.5f;
+		}
+	} else if (y1 == y2) {
+		if (sx1 < sx2) {
+			sx2 += 0.5f;
+		} else {
+			sx1 += 0.5f;
+		}
+	}
+
+	float line[6] = {
+		sx2, sy2, -0.99f,
+		sx1, sy1, -0.99f
+	};
+
+	vertex_layout vert_def;
+
+	vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, line);
+
+	gr_render_primitives_2d(&mat, PRIM_TYPE_LINES, &vert_def, 0, 2);
+
+//	glDisable( GL_LINE_SMOOTH );
+}
+
+// adapted from gr_opengl_gradient()
+void render_gradient(color *clr, int x1, int y1, int x2, int y2, int resize_mode)
+{
+	int swapped = 0;
+
+	if ( !clr->is_alphacolor ) {
+		render_line(clr, x1, y1, x2, y2, resize_mode);
+		return;
+	}
+
+	if ( resize_mode != GR_RESIZE_NONE && (gr_screen.custom_size || (gr_screen.rendering_to_texture != -1)) ) {
+		gr_resize_screen_pos(&x1, &y1, NULL, NULL, resize_mode);
+		gr_resize_screen_pos(&x2, &y2, NULL, NULL, resize_mode);
+	}
+
+	INT_CLIPLINE(x1, y1, x2, y2, gr_screen.clip_left, gr_screen.clip_top, gr_screen.clip_right, gr_screen.clip_bottom, return, ;, swapped = 1);
+
+	material mat;
+
+	mat.set_texture_source(TEXTURE_SOURCE_NONE);
+	mat.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+	mat.set_depth_mode(ZBUFFER_TYPE_NONE);
+
+	ubyte aa = swapped ? 0 : clr->alpha;
+	ubyte ba = swapped ? clr->alpha : 0;
+
+	float sx1, sy1, sx2, sy2;
+
+	sx1 = i2fl(x1 + gr_screen.offset_x);
+	sy1 = i2fl(y1 + gr_screen.offset_y);
+	sx2 = i2fl(x2 + gr_screen.offset_x);
+	sy2 = i2fl(y2 + gr_screen.offset_y);
+
+	if (x1 == x2) {
+		if (sy1 < sy2) {
+			sy2 += 0.5f;
+		} else {
+			sy1 += 0.5f;
+		}
+	} else if (y1 == y2) {
+		if (sx1 < sx2) {
+			sx2 += 0.5f;
+		} else {
+			sx1 += 0.5f;
+		}
+	}
+
+	ubyte colour[8] = {
+		clr->red, clr->green, clr->blue, ba,
+		clr->red, clr->green, clr->blue, aa
+	};
+
+	float verts[4] = {
+		sx2, sy2,
+		sx1, sy1
+	};
+
+	vertex_layout vert_def;
+
+	vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, verts);
+	vert_def.add_vertex_component(vertex_format_data::COLOR4, 0, colour);
+
+	gr_render_primitives_2d(&mat, PRIM_TYPE_LINES, &vert_def, 0, 2);
+}
+
+// render gr_opengl_arc()
+void render_arc(int xc, int yc, float r, float angle_start, float angle_end, bool fill, int resize_mode)
+{
+	// Ensure that angle_start < angle_end
+	if (angle_end < angle_start) {
+		float temp = angle_start;
+		angle_start = angle_end;
+		angle_end = temp;
+	}
+
+	float arc_length_ratio;
+	arc_length_ratio = MIN(angle_end - angle_start, 360.0f) / 360.0f;
+
+	int segments = 4 + (int)(r * arc_length_ratio); // seems like a good approximation
+	float theta = 2 * PI / float(segments - 1) * arc_length_ratio;
+	float c = cosf(theta);
+	float s = sinf(theta);
+	float t;
+
+	float x1 = cosf(ANG_TO_RAD(angle_start));
+	float y1 = sinf(ANG_TO_RAD(angle_start));
+	float x2 = x1;
+	float y2 = y1;
+
+	float halflinewidth = 0.0f;
+	float inner_rad = 0.0f; // only used if fill==false
+	float outer_rad = r;
+
+	if (!fill) {
+		float linewidth;
+		glGetFloatv(GL_LINE_WIDTH, &linewidth);
+
+		halflinewidth = linewidth / 2.0f;
+		inner_rad = r - halflinewidth;
+		outer_rad = r + halflinewidth;
+	}
+
+	int do_resize = 0;
+
+	if ( resize_mode != GR_RESIZE_NONE && (gr_screen.custom_size || (gr_screen.rendering_to_texture != -1)) ) {
+		gr_resize_screen_pos(&xc, &yc, NULL, NULL, resize_mode);
+		do_resize = 1;
+	}
+
+	// Big clip
+	if ( (xc+outer_rad) < gr_screen.clip_left ) {
+		return;
+	}
+
+	if ( (xc-outer_rad) > gr_screen.clip_right ) {
+		return;
+	}
+
+	if ( (yc+outer_rad) < gr_screen.clip_top ) {
+		return;
+	}
+
+	if ( (yc-outer_rad) > gr_screen.clip_bottom ) {
+		return;
+	}
+
+	int offset_x = ((do_resize) ? gr_screen.offset_x_unscaled : gr_screen.offset_x);
+	int offset_y = ((do_resize) ? gr_screen.offset_y_unscaled : gr_screen.offset_y);
+
+	GL_state.SetTextureSource(TEXTURE_SOURCE_NONE);
+	GL_state.SetAlphaBlendMode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+	GL_state.SetZbufferType(ZBUFFER_TYPE_NONE);
+
+	GLfloat *arc;
+
+	gr_opengl_set_2d_matrix();
+	GL_state.Color(gr_screen.current_color.red, gr_screen.current_color.green, gr_screen.current_color.blue, gr_screen.current_color.alpha);
+
+	if (fill) {
+		arc = new GLfloat[segments * 2 + 2];
+
+		arc[0] = i2fl(xc);
+		arc[1] = i2fl(yc);
+
+		for (int i=2; i < segments * 2 + 2; i+=2) {
+			arc[i] = i2fl(xc + (x2 * outer_rad) + offset_x);
+			arc[i+1] = i2fl(yc + (y2 * outer_rad) + offset_y);
+
+			t = x2;
+			x2 = c * x1 - s * y1;
+			y2 = s * t + c * y1;
+
+			x1 = x2;
+			y1 = y2;
+		}
+
+		vertex_layout vert_def;
+		vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, arc);
+		opengl_bind_vertex_layout(vert_def);
+
+		glDrawArrays(GL_TRIANGLE_FAN, 0, segments + 1);
+	} else {
+		arc = new GLfloat[segments * 4];
+
+		for (int i=0; i < segments * 4; i+=4) {
+			arc[i] = i2fl(xc + (x2 * outer_rad) + offset_x);
+			arc[i+1] = i2fl(yc + (y2 * outer_rad) + offset_y);
+
+			arc[i+2] = i2fl(xc + (x2 * inner_rad) + offset_x);
+			arc[i+3] = i2fl(yc + (y2 * inner_rad) + offset_y);
+
+			t = x2;
+			x2 = c * x1 - s * y1;
+			y2 = s * t + c * y1;
+
+			x1 = x2;
+			y1 = y2;
+		}
+
+		vertex_layout vert_def;
+		vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, arc);
+		opengl_bind_vertex_layout(vert_def);
+
+		glDrawArrays(GL_QUAD_STRIP, 0, segments * 2);
+	}
+
+	GL_CHECK_FOR_ERRORS("end of opengl_arc()");
+
+	gr_opengl_end_2d_matrix();
+
+	delete [] arc;
 }

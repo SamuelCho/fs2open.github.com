@@ -407,6 +407,8 @@ void opengl_state::init()
 	glDepthFunc(GL_LESS);
 	depthfunc_Value = GL_LESS;
 
+	glGetFloatv(GL_LINE_WIDTH, &line_width_Value);
+
 	Current_alpha_blend_mode = ALPHA_BLEND_NONE;
 	Current_zbuffer_type = ZBUFFER_TYPE_READ;
 
@@ -851,6 +853,16 @@ void opengl_state::SetStencilType(gr_stencil_type st)
     GL_state.StencilTest( (st == STENCIL_TYPE_NONE) ? GL_FALSE : GL_TRUE );
          
     Current_stencil_type = st;
+}
+
+void opengl_state::SetLineWidth(GLfloat width)
+{
+	if ( width == line_width_Value ) {
+		return;
+	}
+
+	glLineWidth(width);
+	line_width_Value = width;
 }
 
 opengl_array_state::~opengl_array_state()

@@ -464,6 +464,8 @@ class opengl_state
 		GLfloat polygon_offset_Factor;
 		GLfloat polygon_offset_Unit;
 
+		GLfloat line_width_Value;
+
 		gr_alpha_blend Current_alpha_blend_mode;
 		gr_zbuffer_type Current_zbuffer_type;
         gr_stencil_type Current_stencil_type;
@@ -483,6 +485,7 @@ class opengl_state
         void SetStencilType(gr_stencil_type st);
 		void SetPolygonOffset(GLfloat factor, GLfloat units);
 		void SetPolygonMode(GLenum face, GLenum mode);
+		void SetLineWidth(GLfloat width);
 
 		// the GLboolean functions will return the current state if no argument
 		// and the previous state if an argument is passed

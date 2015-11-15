@@ -4323,6 +4323,8 @@ void interp_configure_vertex_buffers(polymodel *pm, int mn)
 		tri_count[i] = 0;
 	}
 
+	int milliseconds = timer_get_milliseconds();
+
 	bsp_polygon_data *bsp_polies = new bsp_polygon_data(model->bsp_data);
 
 	for (i = 0; i < MAX_MODEL_TEXTURES; i++) {
@@ -4360,6 +4362,10 @@ void interp_configure_vertex_buffers(polymodel *pm, int mn)
 
 	// done with the bsp now that we have the vertex data
 	delete bsp_polies;
+
+	int time_elapsed = timer_get_milliseconds() - milliseconds;
+
+	mprintf(("BSP Parse took %d milliseconds.", time_elapsed));
 
 	if (total_verts < 1) {
 		return;

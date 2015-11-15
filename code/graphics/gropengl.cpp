@@ -1333,7 +1333,7 @@ void gr_opengl_setup_background_fog(bool set)
 
 void gr_opengl_set_line_width(float width)
 {
-	glLineWidth(width);
+	GL_state.SetLineWidth(width);
 }
 
 // Returns the human readable error string if there is an error or NULL if not

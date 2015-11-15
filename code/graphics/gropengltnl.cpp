@@ -2480,10 +2480,15 @@ void opengl_tnl_set_material(material* material_info, bool set_base_map)
 		gr_opengl_set_clip_plane(NULL, NULL);
 	}
 
-	if ( set_base_map && material_info->get_texture_map(TM_BASE_TYPE) >= 0 ) {
+	int base_map = material_info->get_texture_map(TM_BASE_TYPE);
+
+	if ( set_base_map && base_map >= 0 ) {
 		float u_scale, v_scale;
 
-		gr_opengl_tcache_set(material_info->get_texture_map(TM_BASE_TYPE), material_info->get_texture_type(), &u_scale, &v_scale);
+		if ( !gr_opengl_tcache_set(base_map, material_info->get_texture_type(), &u_scale, &v_scale) ) {
+			mprintf(("WARNING: Error setting bitmap texture (%i)!\n", base_map));
+		}
+	}
 	}
 }
 
