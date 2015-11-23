@@ -126,7 +126,7 @@ void render_set_distortion_material(distortion_material *mat_info, int texture, 
 	mat_info->set_color(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
-void render_primitive_textured(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic)
+void render_primitives_textured(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic)
 {
 	vertex_layout layout;
 
@@ -245,62 +245,6 @@ void render_primitives(vertex* verts, int n_verts, primitive_type prim_type, int
 	gr_render_primitives(&material_info, prim_type, &layout, 0, n_verts, -1);
 }
 
-void render_colored_primitives_2d(vertex* verts, int n_verts, primitive_type prim_type, int texture, bool blending)
-{
-	vertex_layout layout;
-
-	layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &verts[0].screen.xyw.x);
-	layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &verts[0].texture_position.u);
-	layout.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), &verts[0].r);
-
-	material material_info;
-
-	render_set_unlit_material(&material_info, texture, blending, false);
-
-	material_info.set_color(255, 255, 255, 255);
-
-	gr_render_primitives_2d(&material_info, prim_type, &layout, 0, n_verts);
-}
-
-void render_primitives_2d(vertex* verts, int n_verts, primitive_type prim_type, int texture, color *clr, bool blending)
-{
-	vertex_layout layout;
-
-	layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &verts[0].screen.xyw.x);
-	layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &verts[0].texture_position.u);
-
-	material material_info;
-
-	render_set_unlit_material(&material_info, texture, blending, false);
-
-	material_info.set_color(*clr);
-
-	gr_render_primitives_2d(&material_info, prim_type, &layout, 0, n_verts);
-}
-
-void render_primitives_2d(vertex* verts, int n_verts, primitive_type prim_type, int texture, float alpha, bool blending)
-{
-	color clr;
-
-	gr_init_alphacolor(&clr, 255, 255, 255, fl2i(alpha*255.0f));
-
-	render_primitives_2d(verts, n_verts, prim_type, texture, &clr, blending);
-}
-
-void render_primitives_interface(vertex* verts, int n_verts, primitive_type prim_type, int texture)
-{
-	vertex_layout layout;
-
-	layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &verts[0].screen.xyw.x);
-	layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &verts[0].texture_position.u);
-
-	material material_info;
-
-	render_set_interface_material(&material_info, texture);
-
-	gr_render_primitives(&material_info, prim_type, &layout, 0, n_verts);
-}
-
 void render_screen_points_textured(
 	material material_info,
 	float x1, float y1, float u1, float v1,
@@ -414,7 +358,10 @@ void render_oriented_quad(vec3d *pos, matrix *ori, float width, float height, in
 	v[3].texture_position.u = 1.0f;
 	v[3].texture_position.v = 1.0f;
 
-	render_primitives(v, 4, PRIM_TYPE_TRIFAN, texture, 255, true, true);
+	material material_params;
+
+	render_set_unlit_material(&material_params, texture, 1.0f, true, true);
+	render_primitives_textured(&material_params, v, 4, PRIM_TYPE_TRIFAN, false);
 }
 
 void render_oriented_quad(vec3d *pos, vec3d *norm, float width, float height, int texture)
@@ -508,7 +455,10 @@ void render_bitmap_list(bitmap_rect_list* list, int n_bm, int texture, float alp
 		V->codes = 0;	
 	}
 
-	render_primitives_2d(vert_list, 6 * n_bm, PRIM_TYPE_TRIS, texture, 255, true);
+	material material_params;
+
+	render_set_unlit_material(&material_params, texture, 1.0f, true, false);
+	render_primitives_textured(&material_params, vert_list, 6 * n_bm, PRIM_TYPE_TRIS, true);
 
 	delete[] vert_list;
 }
@@ -559,7 +509,10 @@ void render_rotated_bitmap(vertex *pnt, float angle, float rad, int texture, flo
 	P[2].texture_position.u = 1.0f;	P[2].texture_position.v = 1.0f;
 	P[3].texture_position.u = 0.0f;	P[3].texture_position.v = 1.0f;
 
-	render_primitives(P, 4, PRIM_TYPE_TRIFAN, texture, alpha, true, true);
+	material material_params;
+
+	render_set_unlit_material(&material_params, texture, alpha, true, true);
+	render_primitives_textured(&material_params, P, 4, PRIM_TYPE_TRIFAN, false);
 }
 
 // adapted from gr_opengl_scaler()
@@ -684,7 +637,10 @@ void render_bitmap_scaler(vertex *va, vertex *vb, int texture, float alpha, bool
 	v[3].spec_g = 0;
 	v[3].spec_b = 0;
 
-	render_primitives_2d(v, 4, PRIM_TYPE_TRIFAN, texture, alpha, blending);
+	material material_params;
+
+	render_set_unlit_material(&material_params, texture, alpha, blending, false);
+	render_primitives_textured(&material_params, v, 4, PRIM_TYPE_TRIFAN, true);
 }
 
 // adapted from g3_draw_bitmap()
@@ -826,7 +782,10 @@ void render_oriented_bitmap(int texture, float alpha, vertex *pnt, int orient, f
 		P[3].texture_position.v = 1.0f;
 	}
 
-	render_primitives(P, 4, PRIM_TYPE_TRIFAN, texture, alpha, true, true);
+	material material_params;
+
+	render_set_unlit_material(&material_params, texture, alpha, true, true);
+	render_primitives_textured(&material_params, P, 4, PRIM_TYPE_TRIFAN, false);
 }
 
 // adapted from g3_draw_laser_htl()
@@ -911,7 +870,10 @@ void render_laser(vec3d *p0, float width1, vec3d *p1, float width2, color *clr, 
 	pts[3].b = (ubyte)clr->blue;
 	pts[3].a = 255;
 
-	render_colored_primitives(pts, 4, PRIM_TYPE_TRIFAN, texture, alpha, true);
+	material material_params;
+
+	render_set_unlit_material(&material_params, texture, alpha, true, true);
+	render_primitives_colored_textured(&material_params, pts, 4, PRIM_TYPE_TRIFAN, false);
 }
 
 // adapted from g3_draw_laser()
@@ -1050,7 +1012,10 @@ void render_laser_2d(vec3d *headp, float head_width, vec3d *tailp, float tail_wi
 	v[3].texture_position.v = 1.0f;
 	v[3].b = 191;
 
-	render_primitives_2d(v, 4, PRIM_TYPE_TRIFAN, texture, clr, true);
+	material material_params;
+
+	render_set_unlit_material(&material_params, texture, clr, true, false);
+	render_primitives_textured(&material_params, v, 4, PRIM_TYPE_TRIFAN, true);
 }
 
 void render_laser_2d(vec3d *headp, float head_width, vec3d *tailp, float tail_width, float max_len, int texture, float alpha)
@@ -1105,8 +1070,11 @@ void render_bitmap(int _x, int _y, int texture, int resize_mode)
 	verts[3].screen.xyw.y = y + h;
 	verts[3].texture_position.u = 0.0f;
 	verts[3].texture_position.v = 1.0f;
-	
-	render_primitives_interface(verts, 4, PRIM_TYPE_TRIFAN, texture);
+
+	material material_params;
+
+	render_set_interface_material(&material_params, texture);
+	render_primitives_textured(&material_params, verts, 4, PRIM_TYPE_TRIFAN, true);
 }
 
 // adapted from g3_draw_rod()
@@ -1242,15 +1210,12 @@ void render_rod(int num_points, vec3d *pvecs, float width, color *clr)
 	// we should always have at least 4 verts, and there should always be an even number
 	Assert( (nv >= 4) && !(nv % 2) );
 
-	material material_instance;
-	material_instance.set_depth_mode(ZBUFFER_TYPE_READ);
-	material_instance.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+	material material_params;
 
-	vertex_layout layout;
-	layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), &pts[0].world.xyz.x);
-	layout.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), &pts[0].r);
+	material_params.set_depth_mode(ZBUFFER_TYPE_READ);
+	material_params.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
 
-	gr_render_primitives(&material_instance, PRIM_TYPE_TRISTRIP, &layout, 0, nv);
+	render_primitives_colored(&material_params, pts, nv, PRIM_TYPE_TRISTRIP, false);
 }
 
 // adapted from g3_draw_2d_rect()
@@ -1313,18 +1278,14 @@ void render_colored_rect(int x, int y, int w, int h, int r, int g, int b, int a)
 	v[3].b = (ubyte)b;
 	v[3].a = (ubyte)a;
 
-	material material_instance;
-	material_instance.set_depth_mode(ZBUFFER_TYPE_NONE);
-	material_instance.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
-	material_instance.set_cull_mode(false);
-	material_instance.set_color(1.0f, 1.0f, 1.0f, 1.0f);
-
-	vertex_layout layout;
-	layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &v[0].screen.xyw.x);
-	layout.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), &v[0].r);
+	material material_params;
+	material_params.set_depth_mode(ZBUFFER_TYPE_NONE);
+	material_params.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+	material_params.set_cull_mode(false);
+	material_params.set_color(1.0f, 1.0f, 1.0f, 1.0f);
 
 	// draw the polys
-	gr_render_primitives_2d(&material_instance, PRIM_TYPE_TRIFAN, &layout, 0, 4);
+	render_primitives_colored(&material_params, v, 4, PRIM_TYPE_TRIFAN, true);
 }
 
 // adapted from g3_draw_2d_shield_icon()
@@ -2146,8 +2107,8 @@ void render_gradient(color *clr, int x1, int y1, int x2, int y2, int resize_mode
 	gr_render_primitives_2d(&mat, PRIM_TYPE_LINES, &vert_def, 0, 2);
 }
 
-// render gr_opengl_arc()
-void render_arc(int xc, int yc, float r, float angle_start, float angle_end, bool fill, int resize_mode)
+// adapted from gr_opengl_arc()
+void render_arc(color *clr, int xc, int yc, float r, float angle_start, float angle_end, bool fill, float linewidth, int resize_mode)
 {
 	// Ensure that angle_start < angle_end
 	if (angle_end < angle_start) {
@@ -2175,9 +2136,6 @@ void render_arc(int xc, int yc, float r, float angle_start, float angle_end, boo
 	float outer_rad = r;
 
 	if (!fill) {
-		float linewidth;
-		glGetFloatv(GL_LINE_WIDTH, &linewidth);
-
 		halflinewidth = linewidth / 2.0f;
 		inner_rad = r - halflinewidth;
 		outer_rad = r + halflinewidth;
@@ -2210,17 +2168,17 @@ void render_arc(int xc, int yc, float r, float angle_start, float angle_end, boo
 	int offset_x = ((do_resize) ? gr_screen.offset_x_unscaled : gr_screen.offset_x);
 	int offset_y = ((do_resize) ? gr_screen.offset_y_unscaled : gr_screen.offset_y);
 
-	GL_state.SetTextureSource(TEXTURE_SOURCE_NONE);
-	GL_state.SetAlphaBlendMode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
-	GL_state.SetZbufferType(ZBUFFER_TYPE_NONE);
+	material material_params;
 
-	GLfloat *arc;
+	material_params.set_texture_source(TEXTURE_SOURCE_NONE);
+	material_params.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+	material_params.set_depth_mode(ZBUFFER_TYPE_NONE);
+	material_params.set_color(*clr);
 
-	gr_opengl_set_2d_matrix();
-	GL_state.Color(gr_screen.current_color.red, gr_screen.current_color.green, gr_screen.current_color.blue, gr_screen.current_color.alpha);
+	float *arc;
 
 	if (fill) {
-		arc = new GLfloat[segments * 2 + 2];
+		arc = new float[segments * 2 + 2];
 
 		arc[0] = i2fl(xc);
 		arc[1] = i2fl(yc);
@@ -2239,11 +2197,10 @@ void render_arc(int xc, int yc, float r, float angle_start, float angle_end, boo
 
 		vertex_layout vert_def;
 		vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, arc);
-		opengl_bind_vertex_layout(vert_def);
 
-		glDrawArrays(GL_TRIANGLE_FAN, 0, segments + 1);
+		gr_render_primitives_2d(&material_params, PRIM_TYPE_TRIFAN, &vert_def, 0, segments + 1);
 	} else {
-		arc = new GLfloat[segments * 4];
+		arc = new float[segments * 4];
 
 		for (int i=0; i < segments * 4; i+=4) {
 			arc[i] = i2fl(xc + (x2 * outer_rad) + offset_x);
@@ -2262,14 +2219,201 @@ void render_arc(int xc, int yc, float r, float angle_start, float angle_end, boo
 
 		vertex_layout vert_def;
 		vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, arc);
-		opengl_bind_vertex_layout(vert_def);
 
-		glDrawArrays(GL_QUAD_STRIP, 0, segments * 2);
+		gr_render_primitives_2d(&material_params, PRIM_TYPE_QUADSTRIP, &vert_def, 0, segments * 2);
 	}
 
-	GL_CHECK_FOR_ERRORS("end of opengl_arc()");
-
-	gr_opengl_end_2d_matrix();
-
 	delete [] arc;
+}
+
+void render_circle(color *clr, int xc, int yc, int d, int resize_mode)
+{
+	render_arc(clr, xc, yc, d / 2.0f, 0.0f, 360.0f, true, 0.0f, resize_mode);
+}
+
+void render_unfilled_circle(color *clr, float linewidth, int xc, int yc, int d, int resize_mode)
+{
+	int r = d / 2;
+	int segments = 4 + (int)(r); // seems like a good approximation
+	float theta = 2 * PI / float(segments - 1);
+	float c = cosf(theta);
+	float s = sinf(theta);
+	float t;
+
+	float x1 = 1.0f;
+	float y1 = 0.0f;
+	float x2 = x1;
+	float y2 = y1;
+	
+	float halflinewidth = linewidth / 2.0f;
+	float inner_rad = r - halflinewidth;
+	float outer_rad = r + halflinewidth;
+
+	int do_resize = 0;
+
+	if ( resize_mode != GR_RESIZE_NONE && (gr_screen.custom_size || (gr_screen.rendering_to_texture != -1)) ) {
+		gr_resize_screen_pos(&xc, &yc, NULL, NULL, resize_mode);
+		do_resize = 1;
+	}
+
+	// Big clip
+	if ( (xc+outer_rad) < gr_screen.clip_left ) {
+		return;
+	}
+
+	if ( (xc-outer_rad) > gr_screen.clip_right ) {
+		return;
+	}
+
+	if ( (yc+outer_rad) < gr_screen.clip_top ) {
+		return;
+	}
+
+	if ( (yc-outer_rad) > gr_screen.clip_bottom ) {
+		return;
+	}
+
+	int offset_x = ((do_resize) ? gr_screen.offset_x_unscaled : gr_screen.offset_x);
+	int offset_y = ((do_resize) ? gr_screen.offset_y_unscaled : gr_screen.offset_y);
+
+	material material_params;
+
+	material_params.set_texture_source(TEXTURE_SOURCE_NONE);
+	material_params.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+	material_params.set_depth_mode(ZBUFFER_TYPE_NONE);
+	material_params.set_color(*clr);
+
+	float *circle = new float[segments * 4];
+
+	for (int i=0; i < segments * 4; i+=4) {
+		circle[i] = i2fl(xc + (x2 * outer_rad) + offset_x);
+		circle[i+1] = i2fl(yc + (y2 * outer_rad) + offset_y);
+
+		circle[i+2] = i2fl(xc + (x2 * inner_rad) + offset_x);
+		circle[i+3] = i2fl(yc + (y2 * inner_rad) + offset_y);
+
+		t = x2;
+		x2 = c * x1 - s * y1;
+		y2 = s * t + c * y1;
+
+		x1 = x2;
+		y1 = y2;
+	}
+
+	vertex_layout vert_def;
+	vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, circle);
+
+	gr_render_primitives_2d(&material_params, PRIM_TYPE_QUADSTRIP, &vert_def, 0, segments * 2);
+
+	delete [] circle;
+}
+
+void render_curve(color *clr, int xc, int yc, int r, int direction, int resize_mode)
+{
+	int a, b, p;
+
+	if (resize_mode != GR_RESIZE_NONE) {
+		gr_resize_screen_pos(&xc, &yc, NULL, NULL, resize_mode);
+	}
+
+	if ( (xc + r) < gr_screen.clip_left ) {
+		return;
+	}
+
+	if ( (yc + r) < gr_screen.clip_top ) {
+		return;
+	}
+
+	p = 3 - (2 * r);
+	a = 0;
+	b = r;
+
+	switch (direction) {
+		case 0: {
+			yc += r;
+			xc += r;
+
+			while (a < b) {
+				// Draw the first octant
+				render_line(clr, xc - b + 1, yc - a, xc - b, yc - a, GR_RESIZE_NONE);
+
+				if (p < 0) {
+					p += (a << 2) + 6;
+				} else {
+					// Draw the second octant
+					render_line(clr, xc - a + 1, yc - b, xc - a, yc - b, GR_RESIZE_NONE);
+					p += ((a - b) << 2) + 10;
+					b--;
+				}
+
+				a++;
+			}
+
+			break;
+		}
+
+		case 1: {
+			yc += r;
+
+			while (a < b) {
+				// Draw the first octant
+				render_line(clr, xc + b - 1, yc - a, xc + b, yc - a, GR_RESIZE_NONE);
+
+				if (p < 0) {
+					p += (a << 2) + 6;
+				} else {
+					// Draw the second octant
+					render_line(clr, xc + a - 1, yc - b, xc + a, yc - b, GR_RESIZE_NONE);
+					p += ((a - b) << 2) + 10;
+					b--;
+				}
+
+				a++;
+			}
+
+			break;
+		}
+
+		case 2: {
+			xc += r;
+
+			while (a < b) {
+				// Draw the first octant
+				render_line(clr, xc - b + 1, yc + a, xc - b, yc + a, GR_RESIZE_NONE);
+
+				if (p < 0) {
+					p += (a << 2) + 6;
+				} else {
+					// Draw the second octant
+					render_line(clr, xc - a + 1, yc + b, xc - a, yc + b, GR_RESIZE_NONE);
+					p += ((a - b) << 2) + 10;
+					b--;
+				}
+
+				a++;
+			}
+
+			break;
+		}
+
+		case 3: {
+			while (a < b) {
+				// Draw the first octant
+				render_line(clr, xc + b - 1, yc + a, xc + b, yc + a, GR_RESIZE_NONE);
+
+				if (p < 0) {
+					p += (a << 2) + 6;
+				} else {
+					// Draw the second octant
+					render_line(clr, xc + a - 1, yc + b, xc + a, yc + b, GR_RESIZE_NONE);
+					p += ((a - b) << 2) + 10;
+					b--;
+				}
+
+				a++;
+			}
+
+			break;
+		}
+	}
 }
