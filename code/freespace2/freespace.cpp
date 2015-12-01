@@ -138,6 +138,7 @@
 #include "radar/radar.h"
 #include "radar/radarsetup.h"
 #include "render/3d.h"
+#include "render/render.h"
 #include "ship/afterburner.h"
 #include "ship/awacs.h"
 #include "ship/ship.h"
@@ -1161,12 +1162,14 @@ void game_loading_callback(int count)
 	if ( Game_loading_ani.num_frames > 0 )	{
 		GR_MAYBE_CLEAR_RES(Game_loading_background);
 		if ( Game_loading_background > -1 )	{
-			gr_set_bitmap( Game_loading_background );
-			gr_bitmap(0,0,GR_RESIZE_MENU);
+			//gr_set_bitmap( Game_loading_background );
+			//gr_bitmap(0,0,GR_RESIZE_MENU);
+			render_bitmap(Game_loading_background, 0, 0, GR_RESIZE_MENU);
 		}
 
-		gr_set_bitmap( Game_loading_ani.first_frame + framenum );
-		gr_bitmap(Game_loading_ani_coords[gr_screen.res][0],Game_loading_ani_coords[gr_screen.res][1], GR_RESIZE_MENU);
+		//gr_set_bitmap( Game_loading_ani.first_frame + framenum );
+		//gr_bitmap(Game_loading_ani_coords[gr_screen.res][0],Game_loading_ani_coords[gr_screen.res][1], GR_RESIZE_MENU);
+		render_bitmap(Game_loading_ani.first_frame + framenum, Game_loading_ani_coords[gr_screen.res][0],Game_loading_ani_coords[gr_screen.res][1], GR_RESIZE_MENU);
 
 		do_flip = 1;
 	}
@@ -2605,10 +2608,16 @@ void game_set_view_clip(float frametime)
 
 		if (g3_in_frame() == 0) {
 			// Ensure that the bars are black
-			gr_set_color(0,0,0);
-			gr_set_bitmap(0); // Valathil - Don't ask me why this has to be here but otherwise the black bars don't draw
-			gr_rect(0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
-			gr_rect(0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			//gr_set_color(0,0,0);
+			//gr_set_bitmap(0); // Valathil - Don't ask me why this has to be here but otherwise the black bars don't draw
+			//gr_rect(0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			//gr_rect(0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+
+			color clr;
+			gr_init_color(&clr, 0, 0, 0);
+
+			render_colored_rect(&clr, 0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			render_colored_rect(&clr, 0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
 		} else {
 			//	Numeric constants encouraged by J "pig farmer" S, who shall remain semi-anonymous.
 			// J.S. I've changed my ways!! See the new "no constants" code!!!
@@ -2788,8 +2797,9 @@ void game_tst_frame()
 		}
 
 		// draw the bitmap
-		gr_set_bitmap(tst_bitmap);
-		gr_bitmap((int)tst_x, (int)tst_y, GR_RESIZE_NONE);
+		//gr_set_bitmap(tst_bitmap);
+		//gr_bitmap((int)tst_x, (int)tst_y, GR_RESIZE_NONE);
+		render_bitmap(tst_bitmap, (int)tst_x, (int)tst_y, GR_RESIZE_NONE);
 
 		if(tst_mode == 1){
 			if(timestamp_elapsed_safe(tst_stamp, 1100)){
@@ -4364,10 +4374,16 @@ void bars_do_frame(float frametime)
 
 		if (g3_in_frame() == 0) {
 			//Set rectangles
-			gr_set_color(0,0,0);
-			gr_set_bitmap(0); // Valathil - Don't ask me why this has to be here but otherwise the black bars don't draw
-			gr_rect(0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
-			gr_rect(0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			//gr_set_color(0,0,0);
+			//gr_set_bitmap(0); // Valathil - Don't ask me why this has to be here but otherwise the black bars don't draw
+			//gr_rect(0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			//gr_rect(0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+
+			color clr;
+			gr_init_color(&clr, 0, 0, 0);
+
+			render_colored_rect(&clr, 0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			render_colored_rect(&clr, 0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
 		} else {
 			//Set clipping
 			gr_reset_clip();
@@ -4379,10 +4395,16 @@ void bars_do_frame(float frametime)
 		int yborder = gr_screen.max_h/CUTSCENE_BAR_DIVISOR;
 
 		if (g3_in_frame() == 0) {
-			gr_set_color(0,0,0);
-			gr_set_bitmap(0); // Valathil - Don't ask me why this has to be here but otherwise the black bars don't draw
-			gr_rect(0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
-			gr_rect(0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			//gr_set_color(0,0,0);
+			//gr_set_bitmap(0); // Valathil - Don't ask me why this has to be here but otherwise the black bars don't draw
+			//gr_rect(0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			//gr_rect(0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+
+			color clr;
+			gr_init_color(&clr, 0, 0, 0);
+
+			render_colored_rect(&clr, 0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			render_colored_rect(&clr, 0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
 		} else {
 			gr_reset_clip();
 			gr_set_clip(0, yborder, gr_screen.max_w, gr_screen.max_h - (yborder*2), GR_RESIZE_NONE );
@@ -8799,7 +8821,7 @@ void game_title_screen_display()
 		if (Game_title_bitmap != -1)
 		{
 			// set
-			gr_set_bitmap(Game_title_bitmap);
+			//gr_set_bitmap(Game_title_bitmap);
 
 			// get bitmap's width and height
 			int width, height;
@@ -8809,13 +8831,15 @@ void game_title_screen_display()
 			gr_set_screen_scale(width, height);
 
 			// draw it in the center of the screen
-			gr_bitmap((gr_screen.max_w_unscaled - width)/2, (gr_screen.max_h_unscaled - height)/2, GR_RESIZE_MENU);
+			//gr_bitmap((gr_screen.max_w_unscaled - width)/2, (gr_screen.max_h_unscaled - height)/2, GR_RESIZE_MENU);
+			render_bitmap(Game_title_bitmap, (gr_screen.max_w_unscaled - width)/2, (gr_screen.max_h_unscaled - height)/2, GR_RESIZE_MENU);
 
 			if (Game_title_logo != -1)
 			{
-				gr_set_bitmap(Game_title_logo);
+				//gr_set_bitmap(Game_title_logo);
 
-				gr_bitmap(0, 0, GR_RESIZE_MENU);
+				//gr_bitmap(0, 0, GR_RESIZE_MENU);
+				render_bitmap(Game_title_logo, 0, 0, GR_RESIZE_MENU);
 
 			}
 

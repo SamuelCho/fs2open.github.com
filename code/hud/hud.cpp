@@ -49,6 +49,7 @@
 #include "radar/radar.h"
 #include "radar/radarsetup.h"
 #include "render/3d.h"
+#include "render/render.h"
 #include "ship/ship.h"
 #include "starfield/supernova.h"
 #include "weapon/emp.h"
@@ -935,7 +936,8 @@ void HudGauge::renderCircle(int x, int y, int diameter)
 		}
 	}
 	
-	gr_circle(x+nx, y+ny, diameter);
+	//gr_circle(x+nx, y+ny, diameter);
+	render_circle(x+nx, y+ny, diameter);
 	gr_reset_screen_scale();
 }
 

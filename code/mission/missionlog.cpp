@@ -23,7 +23,7 @@
 #include "parse/parselo.h"
 #include "playerman/player.h"
 #include "ship/ship.h"
-
+#include "render/render.h"
 
 
 #define MAX_LOG_ENTRIES		700
@@ -895,7 +895,8 @@ void mission_log_scrollback(int line, int list_x, int list_y, int list_w, int li
 				gr_force_fit_string(buf, 256, list_w - seg->x);
 
 			end_string_at_first_hash_symbol(buf);
-			gr_string(list_x + seg->x, list_y + y, buf, GR_RESIZE_MENU);
+			//gr_string(list_x + seg->x, list_y + y, buf, GR_RESIZE_MENU);
+			render_string(list_x + seg->x, list_y + y, buf, GR_RESIZE_MENU);
 
 			// possibly "print" some symbols for interesting log entries
 			if ( (seg->flags & LOG_FLAG_GOAL_TRUE) || (seg->flags & LOG_FLAG_GOAL_FAILED) ) {
@@ -907,13 +908,18 @@ void mission_log_scrollback(int line, int list_x, int list_y, int list_w, int li
 					gr_set_color_fast(&Color_bright_green);
 
 				i = list_y + y + font_h / 2 - 1;
-				gr_circle(list_x + TIME_X - 6, i, 5, GR_RESIZE_MENU);
+				//gr_circle(list_x + TIME_X - 6, i, 5, GR_RESIZE_MENU);
+				render_circle(list_x + TIME_X - 6, i, 5, GR_RESIZE_MENU);
 
 				gr_set_color_fast(&Color_bright);
-				gr_line(list_x + TIME_X - 10, i, list_x + TIME_X - 8, i, GR_RESIZE_MENU);
-				gr_line(list_x + TIME_X - 6, i - 4, list_x + TIME_X - 6, i - 2, GR_RESIZE_MENU);
-				gr_line(list_x + TIME_X - 4, i, list_x + TIME_X - 2, i, GR_RESIZE_MENU);
-				gr_line(list_x + TIME_X - 6, i + 2, list_x + TIME_X - 6, i + 4, GR_RESIZE_MENU);
+				//gr_line(list_x + TIME_X - 10, i, list_x + TIME_X - 8, i, GR_RESIZE_MENU);
+				//gr_line(list_x + TIME_X - 6, i - 4, list_x + TIME_X - 6, i - 2, GR_RESIZE_MENU);
+				//gr_line(list_x + TIME_X - 4, i, list_x + TIME_X - 2, i, GR_RESIZE_MENU);
+				//gr_line(list_x + TIME_X - 6, i + 2, list_x + TIME_X - 6, i + 4, GR_RESIZE_MENU);
+				render_line(list_x + TIME_X - 10, i, list_x + TIME_X - 8, i, GR_RESIZE_MENU);
+				render_line(list_x + TIME_X - 6, i - 4, list_x + TIME_X - 6, i - 2, GR_RESIZE_MENU);
+				render_line(list_x + TIME_X - 4, i, list_x + TIME_X - 2, i, GR_RESIZE_MENU);
+				render_line(list_x + TIME_X - 6, i + 2, list_x + TIME_X - 6, i + 4, GR_RESIZE_MENU);
 			}
 
 			seg = seg->next;

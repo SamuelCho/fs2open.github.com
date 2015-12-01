@@ -11,53 +11,84 @@
 #include "graphics/2d.h"
 #include "graphics/material.h"
 
+struct batch_vertex {
+	vec3d position;
+	uv_pair tex_coord;
+	ubyte r, g, b, a;
+	float radius;
+	vec3d uvec;
+};
+
 struct batch_info {
-	enum render_type {
+	enum material_type {
 		FLAT_EMISSIVE,
 		VOLUME_EMISSIVE,
 		DISTORTION,
-		DISTORTION_THRUSTER,
 		NUM_RENDER_TYPES
 	};
 
-	render_type selected_render_type;
+	material_type mat_type;
 	int texture;
+	primitive_type prim_type;
+	bool thruster;	// only used by distortion
+
+	batch_info(): mat_type(FLAT_EMISSIVE), texture(-1), prim_type(PRIM_TYPE_TRIS), thruster(false) {}
 
 	bool operator < (const batch_info& batch) const {
-		if ( selected_render_type != batch.selected_render_type ) {
-			
-			return selected_render_type < batch.selected_render_type;
+		if ( mat_type != batch.mat_type ) {
+			return mat_type < batch.mat_type;
 		}
 
-		return texture < batch.texture;
+		if ( texture != batch.texture ) {
+			return texture < batch.texture;
+		}
+
+		if ( prim_type != batch.prim_type ) {
+			return prim_type < batch.prim_type;
+		}
+
+		return thruster == batch.thruster;
+	}
+};
+
+struct batch_buffer_key {
+	uint Vertex_mask;
+	primitive_type Prim_type;
+
+	batch_buffer_key(): Vertex_mask(0), Prim_type(PRIM_TYPE_TRIS) {}
+	batch_buffer_key(uint vertex_mask, primitive_type prim_type): Vertex_mask(vertex_mask), Prim_type(prim_type) {}
+
+	bool operator < (const batch_buffer_key& key) const {
+		if ( Vertex_mask != key.Vertex_mask ) {
+			return Vertex_mask < key.Vertex_mask;
+		}
+
+		return Prim_type < key.Prim_type;
 	}
 };
 
 class primitive_batch
 {
 	batch_info render_info;
-
-	SCP_vector<effect_vertex> Triangle_verts;
-	SCP_vector<particle_pnt> Point_sprite_verts;
+	SCP_vector<batch_vertex> Vertices;
 
 public:
-	void add_triangle(effect_vertex* v0, effect_vertex* v1, effect_vertex *v2);
-	void add_point_sprite(particle_pnt *sprite);
+	primitive_batch(batch_info info): render_info(info) {}
 
-	int load_buffer_points(particle_pnt* buffer, int n_verts);
-	int load_buffer_triangles(effect_vertex* buffer, int n_verts);
+	batch_info &get_render_info() { return render_info; }
 
-	int num_triangle_vertices_to_render();
-	int num_points_to_render();
+	void add_triangle(batch_vertex* v0, batch_vertex* v1, batch_vertex* v2);
+	void add_point_sprite(batch_vertex *p);
+
+	int load_buffer(batch_vertex* buffer, int n_verts);
+
+	int num_verts();
 
 	void clear();
 };
 
 struct primitive_batch_item {
 	batch_info batch_item_info;
-	vertex_layout *layout;
-	bool triangles;
-	int buffer_num;
 	int offset;
 	int n_verts;
 
@@ -65,7 +96,7 @@ struct primitive_batch_item {
 };
 
 struct primitive_batch_buffer {
-	vertex_layout *layout;
+	vertex_layout layout;
 	int buffer_num;
 
 	void* buffer_ptr;
@@ -73,18 +104,19 @@ struct primitive_batch_buffer {
 
 	int desired_buffer_size;
 
-	bool triangles;
+	primitive_type prim_type;
 
 	SCP_vector<primitive_batch_item> items;
 };
 
-primitive_batch* batching_find_batch(int texture, batch_info::render_type batch_type);
-void batching_add_bitmap(primitive_batch *batch, vertex *pnt, int orient, float rad, color *clr, float depth);
-void batching_add_laser(primitive_batch *batch, vec3d *p0, float width1, vec3d *p1, float width2, int r, int g, int b);
+primitive_batch* batching_find_batch(int texture, batch_info::material_type material_id, primitive_type prim_type = PRIM_TYPE_TRIS, bool thruster = false);
+
+void batching_add_bitmap(int texture, vertex *pnt, int orient, float rad, float alpha);
+void batching_add_volume_bitmap(int texture, vertex *pnt, int orient, float rad, float alpha);
+void batching_add_distortion_bitmap(int texture, vertex *pnt, int orient, float rad, float alpha);
+void batching_add_distortion_beam(int texture, vec3d *start, vec3d *end, float width, float intensity, float offset);
+void batching_add_beam(int texture, vec3d *start, vec3d *end, float width, float intensity);
+void batching_add_polygon(int texture, vec3d *pos, matrix *orient, float width, float height, float alpha);
 void batching_add_laser(int texture, vec3d *p0, float width1, vec3d *p1, float width2, int r, int g, int b);
 
-void batching_add_beam(primitive_batch *batch, vec3d *start, vec3d *end, float width, color *clr, float offset);
-
-int batching_add_polygon(primitive_batch *batch, int texture, vec3d *pos, matrix *orient, float width, float height, color *clr);
-
-void batching_render_buffer(primitive_batch_buffer *buffer, bool distortion);
+void batching_render_all(bool render_distortions);

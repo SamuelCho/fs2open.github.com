@@ -11,9 +11,11 @@
 
 #include "cmdline/cmdline.h"
 #include "globalincs/systemvars.h"
+#include "graphics/2d.h"
 #include "graphics/gropenglextension.h"
 #include "io/timer.h"
 #include "render/3d.h" 
+#include "render/render.h"
 #include "ship/ship.h"
 #include "weapon/trails.h"
 
@@ -470,8 +472,13 @@ void trail_render( trail * trailp )
 		Warning( LOCATION, "even number of verts in trail render\n" );
 
 	profile_begin("Trail Draw");
-	gr_set_bitmap( ti->texture.bitmap_id, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, 1.0f );
-	gr_render(nv, Trail_v_list, TMAP_FLAG_TEXTURED | TMAP_FLAG_ALPHA | TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_HTL_3D_UNLIT | TMAP_FLAG_TRISTRIP);
+	//gr_set_bitmap( ti->texture.bitmap_id, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, 1.0f );
+	//gr_render(nv, Trail_v_list, TMAP_FLAG_TEXTURED | TMAP_FLAG_ALPHA | TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_HTL_3D_UNLIT | TMAP_FLAG_TRISTRIP);
+
+	material material_def;
+	render_set_unlit_material(&material_def, ti->texture.bitmap_id, 1.0f, true, false);
+	render_primitives_textured(&material_def, Trail_v_list, nv, PRIM_TYPE_TRISTRIP, false);
+
 	profile_end("Trail Draw");
 }
 

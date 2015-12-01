@@ -223,6 +223,8 @@ struct vertex_format_data
 
 	vertex_format_data(vertex_format i_format_type, uint i_stride, int i_offset) : 
 	format_type(i_format_type), stride(i_stride), data_src(NULL), offset(i_offset) {}
+
+	static uint mask(vertex_format v_format) { return 1 << v_format; }
 };
 
 class vertex_layout
@@ -245,7 +247,10 @@ public:
 
 	void set_base_vertex_ptr(void* i_base_ptr) { base_ptr = i_base_ptr; }
 
-	bool resident_vertex_format(vertex_format_data::vertex_format format_type) { return Vertex_mask & (1 << format_type) ? true : false; } 
+	bool resident_vertex_format(vertex_format_data::vertex_format format_type)
+	{ 
+		return ( Vertex_mask & vertex_format_data::mask(format_type) ) ? true : false; 
+	} 
 
 	void add_vertex_component(vertex_format_data::vertex_format format_type, void* src)
 	{

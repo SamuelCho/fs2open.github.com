@@ -2320,6 +2320,43 @@ void gr_opengl_sphere_htl(float rad)
 	gluDeleteQuadric(quad);
 }
 
+void gr_opengl_sphere(material* material_def, float rad)
+{
+	if (Cmdline_nohtl) {
+		return;
+	}
+
+	GLUquadricObj *quad = NULL;
+
+	// FIXME: before this is used in anything other than FRED2 we need to make this creation/deletion
+	// stuff global so that it's not so slow (it can be reused for multiple quadratic objects)
+	quad = gluNewQuadric();
+
+	if (quad == NULL) {
+		Int3();
+		return;
+	}
+
+	opengl_tnl_set_material(material_def, true);
+	GL_state.Array.BindArrayBuffer(0);
+
+	// FIXME: opengl_check_for_errors() needs to be modified to work with this at
+	// some point but for now I just don't care so it does nothing
+	gluQuadricCallback(quad, GLU_ERROR, NULL);
+
+	// FIXME: maybe support fill/wireframe with a future flag?
+	gluQuadricDrawStyle(quad, GLU_FILL);
+
+	// assuming unlit spheres, otherwise use GLU_SMOOTH so that it looks better
+	gluQuadricNormals(quad, GLU_NONE);
+
+	// we could set the slices/stacks at some point in the future but just use 16 now since it looks ok
+	gluSphere(quad, (GLdouble)rad, 16, 16);
+
+	// FIXME: I just heard this scream "Globalize Me!!".  It was really scary.  I even cried.
+	gluDeleteQuadric(quad);
+}
+
 void gr_opengl_deferred_light_sphere_init(int rings, int segments) // Generate a VBO of a sphere of radius 1.0f, based on code at http://www.ogre3d.org/tikiwiki/ManualSphereMeshes
 {
 	unsigned int nVertex = (rings + 1) * (segments+1) * 3;

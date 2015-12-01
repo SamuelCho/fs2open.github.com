@@ -69,6 +69,7 @@
 #include "radar/radar.h"
 #include "radar/radarsetup.h"
 #include "render/3d.h"
+#include "render/render.h"
 #include "ship/afterburner.h"
 #include "ship/ship.h"
 #include "ship/shipcontrails.h"
@@ -7494,13 +7495,15 @@ int ship_start_render_cockpit_display(int cockpit_display_num)
 	gr_clear();
 	
 	if ( display->source >= 0 ) {
-		gr_set_bitmap(display->source);
-		gr_bitmap(0, 0, GR_RESIZE_NONE);
+		//gr_set_bitmap(display->source);
+		//gr_bitmap(0, 0, GR_RESIZE_NONE);
+		render_bitmap(display->source, 0, 0, GR_RESIZE_NONE);
 	}
 
 	if ( display->background >= 0 ) {
-		gr_set_bitmap(display->background);
-		gr_bitmap_ex(display->offset[0], display->offset[1], display->size[0], display->size[1], 0, 0, GR_RESIZE_NONE);
+		//gr_set_bitmap(display->background);
+		//gr_bitmap_ex(display->offset[0], display->offset[1], display->size[0], display->size[1], 0, 0, GR_RESIZE_NONE);
+		render_bitmap_ex(display->background, display->offset[0], display->offset[1], display->size[0], display->size[1], 0, 0, GR_RESIZE_NONE);
 	}
 
 	gr_set_cull(cull);
@@ -7529,8 +7532,9 @@ void ship_end_render_cockpit_display(int cockpit_display_num)
 	int cull = gr_set_cull(0);
 	if ( display->foreground >= 0 ) {
 		gr_reset_clip();
-		gr_set_bitmap(display->foreground);
-		gr_bitmap_ex(display->offset[0], display->offset[1], display->size[0], display->size[1], 0, 0, GR_RESIZE_NONE);
+		//gr_set_bitmap(display->foreground);
+		//gr_bitmap_ex(display->offset[0], display->offset[1], display->size[0], display->size[1], 0, 0, GR_RESIZE_NONE);
+		render_bitmap_ex(display->foreground, display->offset[0], display->offset[1], display->size[0], display->size[1], 0, 0, GR_RESIZE_NONE);
 	}
 
 	gr_set_cull(cull);

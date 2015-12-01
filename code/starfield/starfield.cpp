@@ -1352,7 +1352,9 @@ void stars_draw_bitmaps_new(int show_bitmaps)
 			}
 		}
 
-		render_primitives(Starfield_bitmap_instances[idx].verts, Starfield_bitmap_instances[idx].n_verts, PRIM_TYPE_TRIS, bitmap_id, alpha, blending, false);
+		material material_params;
+		render_set_unlit_material(&material_params, bitmap_id, alpha, blending, false);
+		render_primitives_textured(&material_params, Starfield_bitmap_instances[idx].verts, Starfield_bitmap_instances[idx].n_verts, PRIM_TYPE_TRIS, false);
 	}
 
 	if ( !Cmdline_nohtl )

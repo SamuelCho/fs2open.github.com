@@ -15,43 +15,26 @@
 #include "render/render.h"
 
 static SCP_map<batch_info, primitive_batch> Batching_primitives;
+static SCP_map<batch_buffer_key, primitive_batch_buffer> Batching_buffers;
 
-vertex_layout Effect_vertex_layout;
-vertex_layout Effect_vertex_no_radius_layout;
-vertex_layout Point_sprite_vertex_layout;
-
-primitive_batch_buffer Batch_effect_vertex_queue;
-primitive_batch_buffer Batch_effect_vertex_no_radius_queue;
-primitive_batch_buffer Batch_point_sprite_queue;
-
-void primitive_batch::add_triangle(effect_vertex* v0, effect_vertex* v1, effect_vertex *v2)
+void primitive_batch::add_triangle(batch_vertex* v0, batch_vertex* v1, batch_vertex *v2)
 {
-
+	Vertices.push_back(*v0);
+	Vertices.push_back(*v1);
+	Vertices.push_back(*v2);
 }
 
-void primitive_batch::add_point_sprite(particle_pnt *sprite)
+void primitive_batch::add_point_sprite(batch_vertex *p)
 {
-
+	Vertices.push_back(*p);
 }
 
-int primitive_batch::load_buffer_triangles(effect_vertex* buffer, int n_verts)
+int primitive_batch::load_buffer(batch_vertex* buffer, int n_verts)
 {
-	int verts_to_render = Triangle_verts.size();
+	int verts_to_render = Vertices.size();
 
 	for ( int i = 0; i < verts_to_render; ++i) {
-		buffer[n_verts+i] = Triangle_verts[i];
-	}
-
-	return verts_to_render;
-}
-
-int primitive_batch::load_buffer_points(particle_pnt* buffer, int n_verts)
-{
-	int verts_to_render = Point_sprite_verts.size();
-	int i;
-
-	for ( i = 0; i < verts_to_render; ++i) {
-		buffer[n_verts+i] = Point_sprite_verts[i];
+		buffer[n_verts+i] = Vertices[i];
 	}
 
 	return verts_to_render;
@@ -59,64 +42,48 @@ int primitive_batch::load_buffer_points(particle_pnt* buffer, int n_verts)
 
 void primitive_batch::clear()
 {
-	Triangle_verts.clear();
-	Point_sprite_verts.clear();
+	Vertices.clear();
 }
 
-void batching_init_buffers()
-{
-	Batch_effect_vertex_queue.buffer_num = gr_create_stream_buffer();
-	Batch_effect_vertex_no_radius_queue.buffer_num = gr_create_stream_buffer();
-	Batch_point_sprite_queue.buffer_num = gr_create_stream_buffer();
-
-	Batch_effect_vertex_queue.buffer_ptr = NULL;
-	Batch_effect_vertex_no_radius_queue.buffer_ptr = NULL;
-	Batch_point_sprite_queue.buffer_ptr = NULL;
-
-	Batch_effect_vertex_queue.buffer_size = 0;
-	Batch_effect_vertex_no_radius_queue.buffer_size = 0;
-	Batch_point_sprite_queue.buffer_size = 0;
-
-	Batch_effect_vertex_queue.layout = &Effect_vertex_layout;
-	Batch_effect_vertex_no_radius_queue.layout = &Effect_vertex_no_radius_layout;
-	Batch_point_sprite_queue.layout = &Point_sprite_vertex_layout;
-
-	Batch_effect_vertex_queue.triangles = true;
-	Batch_effect_vertex_no_radius_queue.triangles = true;
-	Batch_point_sprite_queue.triangles = false;
-}
-
-void batching_init_vertex_layouts()
+void batching_setup_vertex_layout(vertex_layout *layout, uint vert_mask)
 {
 	int offset = 0;
-	int stride = sizeof(effect_vertex);
+	int stride = sizeof(batch_vertex);
 
-	Effect_vertex_layout.add_vertex_component(vertex_format_data::POSITION3, stride, (ubyte*)offset);
-	Effect_vertex_no_radius_layout.add_vertex_component(vertex_format_data::POSITION3, stride, (ubyte*)offset);
-	offset += sizeof(vec3d);
+	if ( vert_mask & vertex_format_data::mask(vertex_format_data::POSITION3) ) {
+		layout->add_vertex_component(vertex_format_data::POSITION3, stride, offset);
+		offset += sizeof(vec3d);
+	}
 
-	Effect_vertex_layout.add_vertex_component(vertex_format_data::TEX_COORD, stride, (ubyte*)offset);
-	Effect_vertex_no_radius_layout.add_vertex_component(vertex_format_data::TEX_COORD, stride, (ubyte*)offset);
-	offset += sizeof(uv_pair);
+	if ( vert_mask & vertex_format_data::mask(vertex_format_data::TEX_COORD) ) {
+		layout->add_vertex_component(vertex_format_data::TEX_COORD, stride, offset);
+		offset += sizeof(uv_pair);
+	}
 
-	Effect_vertex_layout.add_vertex_component(vertex_format_data::RADIUS, stride, (ubyte*)offset);
-	offset += sizeof(float);
+	if ( vert_mask & vertex_format_data::mask(vertex_format_data::COLOR4) ) {
+		layout->add_vertex_component(vertex_format_data::COLOR4, stride, offset);
+		offset += sizeof(ubyte) * 4;
+	}
 
-	Effect_vertex_layout.add_vertex_component(vertex_format_data::COLOR4, stride, (ubyte*)offset);
-	Effect_vertex_no_radius_layout.add_vertex_component(vertex_format_data::COLOR4, stride, (ubyte*)offset);
-	offset += sizeof(ubyte) * 4;
+	if ( vert_mask & vertex_format_data::mask(vertex_format_data::RADIUS) ) {
+		layout->add_vertex_component(vertex_format_data::RADIUS, stride, offset);
+		offset += sizeof(float);
+	}
 
-	offset = 0;
-	stride = sizeof(particle_pnt);
+	if ( vert_mask & vertex_format_data::mask(vertex_format_data::UVEC) ) {
+		layout->add_vertex_component(vertex_format_data::UVEC, stride, offset);
+		offset += sizeof(vec3d);
+	}
+}
 
-	Point_sprite_vertex_layout.add_vertex_component(vertex_format_data::POSITION3, stride, (ubyte*)offset);
-	offset += sizeof(vec3d);
+void batching_init_buffer(primitive_batch_buffer *buffer, primitive_type prim_type, uint vertex_mask)
+{
+	batching_setup_vertex_layout(&buffer->layout, vertex_mask);
 
-	Point_sprite_vertex_layout.add_vertex_component(vertex_format_data::RADIUS, stride, (ubyte*)offset);
-	offset += sizeof(float);
-
-	Point_sprite_vertex_layout.add_vertex_component(vertex_format_data::UVEC, stride, (ubyte*)offset);
-	offset += sizeof(vec3d);
+	buffer->buffer_num = gr_create_stream_buffer();
+	buffer->buffer_ptr = NULL;
+	buffer->buffer_size = 0;
+	buffer->prim_type = prim_type;
 }
 
 void batching_determine_blend_color(color *clr, int texture, float alpha)
@@ -130,117 +97,76 @@ void batching_determine_blend_color(color *clr, int texture, float alpha)
 	}
 }
 
-primitive_batch* batching_find_batch(int texture, batch_info::render_type batch_type)
+primitive_batch_buffer* batching_find_buffer(uint vertex_mask, primitive_type prim_type)
 {
-	batch_info query;
+	batch_buffer_key query(vertex_mask, prim_type);
 
-	query.texture = texture;
-	query.selected_render_type = batch_type;
+	SCP_map<batch_buffer_key, primitive_batch_buffer>::iterator iter = Batching_buffers.find(query);
 
-	SCP_map<batch_info, primitive_batch>::iterator iter = Batching_primitives.find(query);
+	if ( iter == Batching_buffers.end() ) {
+		primitive_batch_buffer *buffer = &Batching_buffers[query];
 
-	if ( iter == Batching_primitives.end() ) {
-		return &Batching_primitives[query];
+		batching_init_buffer(buffer, prim_type, vertex_mask);
+
+		return buffer;
 	} else {
 		return &iter->second;
 	}
 }
 
-void batching_add_bitmap(int texture, vertex *pnt, int orient, float rad, float alpha)
+primitive_batch* batching_find_batch(int texture, batch_info::material_type material_id, primitive_type prim_type, bool thruster)
 {
-	if (texture < 0) {
-		Int3();
-		return;
+	batch_info query;
+
+	query.texture = texture;
+	query.mat_type = material_id;
+	query.prim_type = prim_type;
+	query.thruster = thruster;
+
+	SCP_map<batch_info, primitive_batch>::iterator iter = Batching_primitives.find(query);
+
+	if ( iter == Batching_primitives.end() ) {
+		primitive_batch* batch = &Batching_primitives[query];
+
+		*batch = primitive_batch(query);
+
+		return batch;
+	} else {
+		return &iter->second;
 	}
-
-	primitive_batch *batch = batching_find_batch(texture, batch_info::FLAT_EMISSIVE);
-
-	color clr;
-	batching_determine_blend_color(&clr, texture, alpha);
-
-	batching_add_bitmap(batch, pnt, orient, rad, &clr, 0.0f);
 }
 
-void batching_add_volume_bitmap(int texture, vertex *pnt, int orient, float rad, float alpha)
+uint batching_determine_vertex_layout(batch_info *info)
 {
-	if (texture < 0) {
-		Int3();
-		return;
+	if ( info->prim_type == PRIM_TYPE_POINTS ) {
+		return vertex_format_data::mask(vertex_format_data::POSITION3) 
+			| vertex_format_data::mask(vertex_format_data::RADIUS) 
+			| vertex_format_data::mask(vertex_format_data::UVEC);
 	}
 
-	primitive_batch *batch = batching_find_batch(texture, batch_info::VOLUME_EMISSIVE);
-
-	color clr;
-	batching_determine_blend_color(&clr, texture, alpha);
-
-	batching_add_bitmap(batch, pnt, orient, rad, &clr, 0.0f);
-}
-
-void batching_add_distortion_bitmap(int texture, vertex *pnt, int orient, float rad, float alpha)
-{
-	if (texture < 0) {
-		Int3();
-		return;
+	if ( info->mat_type == batch_info::VOLUME_EMISSIVE || info->mat_type == batch_info::DISTORTION ) {
+		return vertex_format_data::mask(vertex_format_data::POSITION3) 
+			| vertex_format_data::mask(vertex_format_data::COLOR4) 
+			| vertex_format_data::mask(vertex_format_data::TEX_COORD)
+			| vertex_format_data::mask(vertex_format_data::RADIUS);
+	} else {
+		return vertex_format_data::mask(vertex_format_data::POSITION3) 
+			| vertex_format_data::mask(vertex_format_data::COLOR4) 
+			| vertex_format_data::mask(vertex_format_data::TEX_COORD);
 	}
-
-	primitive_batch *batch = batching_find_batch(texture, batch_info::DISTORTION);
-
-	color clr;
-	batching_determine_blend_color(&clr, texture, alpha);
-
-	batching_add_bitmap(batch, pnt, orient, rad, &clr, 0.0f);
-}
-
-void batching_add_beam(int texture, vec3d *start, vec3d *end, float width, float intensity)
-{
-	if (texture < 0) {
-		Int3();
-		return;
-	}
-
-	primitive_batch *batch = batching_find_batch(texture, batch_info::FLAT_EMISSIVE);
-
-	color clr;
-	batching_determine_blend_color(&clr, texture, intensity);
-
-	batching_add_beam(batch, start, end, width, &clr, 0.0f);
-}
-
-void batching_add_laser(int texture, vec3d *p0, float width1, vec3d *p1, float width2, int r, int g, int b)
-{
-	if (texture < 0) {
-		Int3();
-	}
-
-	primitive_batch *batch = batching_find_batch(texture, batch_info::FLAT_EMISSIVE);
-
-	batching_add_laser(batch, p0, width1, p1, width2, r, g, b);
-}
-
-void batching_add_polygon(int texture, vec3d *pos, matrix *orient, float width, float height, float alpha)
-{
-	if (texture < 0) {
-		Int3();
-		return;
-	}
-
-	primitive_batch *batch = batching_find_batch(texture, batch_info::FLAT_EMISSIVE);
-
-	color clr;
-	batching_determine_blend_color(&clr, texture, alpha);
-
-	batching_add_polygon(batch, texture, pos, orient, width, height, &clr);
 }
 
 void batching_add_bitmap(primitive_batch *batch, vertex *pnt, int orient, float rad, color *clr, float depth)
 {
+	Assert(batch->get_render_info().prim_type == PRIM_TYPE_TRIS);
+
 	float radius = rad;
 	rad *= 1.41421356f;//1/0.707, becase these are the points of a square or width and height rad
 
 	vec3d PNT(pnt->world);
 	vec3d p[4];
 	vec3d fvec, rvec, uvec;
-	effect_vertex verts[6];
+	batch_vertex verts[6];
 
 	// get the direction from the point to the eye
 	vm_vec_sub(&fvec, &View_position, &PNT);
@@ -337,11 +263,14 @@ void batching_add_bitmap(primitive_batch *batch, vertex *pnt, int orient, float 
 		verts[i].radius = radius;
 	}
 
+	batch->add_triangle(&verts[5], &verts[4], &verts[3]);
 	batch->add_triangle(&verts[2], &verts[1], &verts[0]);
 }
 
 void batching_add_point_bitmap(primitive_batch *batch, vertex *position, int orient, float rad, float depth)
 {
+	Assert(batch->get_render_info().prim_type == PRIM_TYPE_POINTS);
+
 	float radius = rad;
 	rad *= 1.41421356f;//1/0.707, becase these are the points of a square or width and height rad
 
@@ -356,11 +285,11 @@ void batching_add_point_bitmap(primitive_batch *batch, vertex *position, int ori
 	if ( depth != 0.0f )
 		vm_vec_scale_add(&PNT, &PNT, &fvec, depth);
 
-	particle_pnt new_particle;
+	batch_vertex new_particle;
 	vec3d up;
 
 	new_particle.position = position->world;
-	new_particle.size = rad;
+	new_particle.radius = rad;
 
 	int direction = orient % 4;
 
@@ -387,13 +316,15 @@ void batching_add_point_bitmap(primitive_batch *batch, vertex *position, int ori
 		break;
 	}
 
-	new_particle.up = up;
+	new_particle.uvec = up;
 
 	batch->add_point_sprite(&new_particle);
 }
 
 void batching_add_bitmap(primitive_batch *batch, vertex *pnt, float rad, float angle, color *clr, float depth)
 {
+	Assert(batch->get_render_info().prim_type == PRIM_TYPE_TRIS);
+
 	float radius = rad;
 	rad *= 1.41421356f;//1/0.707, becase these are the points of a square or width and height rad
 
@@ -408,7 +339,7 @@ void batching_add_bitmap(primitive_batch *batch, vertex *pnt, float rad, float a
 	vec3d PNT(pnt->world);
 	vec3d p[4];
 	vec3d fvec, rvec, uvec;
-	effect_vertex verts[6];
+	batch_vertex verts[6];
 
 	vm_vec_sub(&fvec, &View_position, &PNT);
 	vm_vec_normalize_safe(&fvec);
@@ -465,6 +396,8 @@ void batching_add_bitmap(primitive_batch *batch, vertex *pnt, float rad, float a
 
 void batching_add_point_bitmap(primitive_batch *batch, vertex *position, float rad, float angle, float depth)
 {
+	Assert(batch->get_render_info().prim_type == PRIM_TYPE_POINTS);
+
 	float radius = rad;
 	rad *= 1.41421356f;//1/0.707, becase these are the points of a square or width and height rad
 
@@ -479,23 +412,25 @@ void batching_add_point_bitmap(primitive_batch *batch, vertex *position, float r
 	if ( depth != 0.0f )
 		vm_vec_scale_add(&PNT, &PNT, &fvec, depth);
 
-	particle_pnt new_particle;
+	batch_vertex new_particle;
 	vec3d up;
 
 	vm_rot_point_around_line(&up, &vmd_y_vector, angle, &vmd_zero_vector, &vmd_z_vector);
 
 	new_particle.position = position->world;
-	new_particle.size = rad;
-	new_particle.up = up;
+	new_particle.radius = rad;
+	new_particle.uvec = up;
 
 	batch->add_point_sprite(&new_particle);
 }
 
-int batching_add_polygon(primitive_batch *batch, int texture, vec3d *pos, matrix *orient, float width, float height, color *clr)
+void batching_add_polygon(primitive_batch *batch, int texture, vec3d *pos, matrix *orient, float width, float height, color *clr)
 {
+	Assert(batch->get_render_info().prim_type == PRIM_TYPE_TRIS);
+
 	//idiot-proof
 	if(width == 0 || height == 0)
-		return 0;
+		return;
 
 	Assert(pos != NULL);
 	Assert(orient != NULL);
@@ -504,7 +439,7 @@ int batching_add_polygon(primitive_batch *batch, int texture, vec3d *pos, matrix
 
 	const int NUM_VERTICES = 4;
 	vec3d p[NUM_VERTICES] = { ZERO_VECTOR };
-	effect_vertex v[NUM_VERTICES];
+	batch_vertex v[NUM_VERTICES];
 
 	p[0].xyz.x = width;
 	p[0].xyz.y = height;
@@ -553,8 +488,10 @@ int batching_add_polygon(primitive_batch *batch, int texture, vec3d *pos, matrix
 
 void batching_add_beam(primitive_batch *batch, vec3d *start, vec3d *end, float width, color *clr, float offset)
 {
+	Assert(batch->get_render_info().prim_type == PRIM_TYPE_TRIS);
+
 	vec3d p[4];
-	effect_vertex verts[6];
+	batch_vertex verts[6];
 
 	vec3d fvec, uvecs, uvece, evec;
 
@@ -619,6 +556,8 @@ void batching_add_beam(primitive_batch *batch, vec3d *start, vec3d *end, float w
 
 void batching_add_laser(primitive_batch *batch, vec3d *p0, float width1, vec3d *p1, float width2, int r, int g, int b)
 {
+	Assert(batch->get_render_info().prim_type == PRIM_TYPE_TRIS);
+
 	width1 *= 0.5f;
 	width2 *= 0.5f;
 
@@ -649,7 +588,7 @@ void batching_add_laser(primitive_batch *batch, vec3d *p0, float width1, vec3d *
 	vm_vec_scale_add(&end, p1, &fvec, width2);
 
 	vec3d vecs[4];
-	effect_vertex verts[6];
+	batch_vertex verts[6];
 
 	vm_vec_scale_add( &vecs[0], &end, &uvec, width2 );
 	vm_vec_scale_add( &vecs[1], &start, &uvec, width1 );
@@ -707,28 +646,128 @@ void batching_add_laser(primitive_batch *batch, vec3d *p0, float width1, vec3d *
 	batch->add_triangle(&verts[3], &verts[4], &verts[5]);
 }
 
-void batching_render_batch_item(primitive_batch_item *item)
+void batching_add_bitmap(int texture, vertex *pnt, int orient, float rad, float alpha)
 {
-	if ( item->batch_item_info.selected_render_type == batch_info::VOLUME_EMISSIVE ) { // Cmdline_softparticles
-		particle_material material_info;
-		render_set_volume_emissive_material(&material_info, item->batch_item_info.texture, !item->triangles);
+	if (texture < 0) {
+		Int3();
+		return;
+	}
 
-		gr_render_primitives_particle(&material_info, item->triangles ? PRIM_TYPE_TRIS : PRIM_TYPE_POINTS, item->layout, item->offset, item->n_verts, item->buffer_num);
-	} else if ( item->batch_item_info.selected_render_type == batch_info::DISTORTION || item->batch_item_info.selected_render_type == batch_info::DISTORTION_THRUSTER ) {
-		distortion_material material_info;
-		render_set_distortion_material(&material_info, item->batch_item_info.texture, item->batch_item_info.selected_render_type == batch_info::DISTORTION_THRUSTER);
+	primitive_batch *batch = batching_find_batch(texture, batch_info::FLAT_EMISSIVE);
 
-		gr_render_primitives_distortion(&material_info, PRIM_TYPE_TRIS, item->layout, item->offset, item->n_verts, item->buffer_num);
+	color clr;
+	batching_determine_blend_color(&clr, texture, alpha);
+
+	batching_add_bitmap(batch, pnt, orient, rad, &clr, 0.0f);
+}
+
+void batching_add_volume_bitmap(int texture, vertex *pnt, int orient, float rad, float alpha)
+{
+	if (texture < 0) {
+		Int3();
+		return;
+	}
+
+	primitive_batch *batch = batching_find_batch(texture, batch_info::VOLUME_EMISSIVE);
+
+	color clr;
+	batching_determine_blend_color(&clr, texture, alpha);
+
+	batching_add_bitmap(batch, pnt, orient, rad, &clr, 0.0f);
+}
+
+void batching_add_distortion_bitmap(int texture, vertex *pnt, int orient, float rad, float alpha)
+{
+	if (texture < 0) {
+		Int3();
+		return;
+	}
+
+	primitive_batch *batch = batching_find_batch(texture, batch_info::DISTORTION);
+
+	color clr;
+	batching_determine_blend_color(&clr, texture, alpha);
+
+	batching_add_bitmap(batch, pnt, orient, rad, &clr, 0.0f);
+}
+
+void batching_add_distortion_beam(int texture, vec3d *start, vec3d *end, float width, float intensity, float offset)
+{
+	if (texture < 0) {
+		Int3();
+		return;
+	}
+
+	primitive_batch *batch = batching_find_batch(texture, batch_info::DISTORTION, PRIM_TYPE_TRIS, true);
+
+	color clr;
+	batching_determine_blend_color(&clr, texture, intensity);
+
+	batching_add_beam(batch, start, end, width, &clr, offset);
+}
+
+void batching_add_beam(int texture, vec3d *start, vec3d *end, float width, float intensity)
+{
+	if (texture < 0) {
+		Int3();
+		return;
+	}
+
+	primitive_batch *batch = batching_find_batch(texture, batch_info::FLAT_EMISSIVE);
+
+	color clr;
+	batching_determine_blend_color(&clr, texture, intensity);
+
+	batching_add_beam(batch, start, end, width, &clr, 0.0f);
+}
+
+void batching_add_laser(int texture, vec3d *p0, float width1, vec3d *p1, float width2, int r, int g, int b)
+{
+	if (texture < 0) {
+		Int3();
+	}
+
+	primitive_batch *batch = batching_find_batch(texture, batch_info::FLAT_EMISSIVE);
+
+	batching_add_laser(batch, p0, width1, p1, width2, r, g, b);
+}
+
+void batching_add_polygon(int texture, vec3d *pos, matrix *orient, float width, float height, float alpha)
+{
+	if (texture < 0) {
+		Int3();
+		return;
+	}
+
+	primitive_batch *batch = batching_find_batch(texture, batch_info::FLAT_EMISSIVE);
+
+	color clr;
+	batching_determine_blend_color(&clr, texture, alpha);
+
+	batching_add_polygon(batch, texture, pos, orient, width, height, &clr);
+}
+
+void batching_render_batch_item(primitive_batch_item *item, vertex_layout *layout, primitive_type prim_type, int buffer_num)
+{
+	if ( item->batch_item_info.mat_type == batch_info::VOLUME_EMISSIVE ) { // Cmdline_softparticles
+		particle_material material_def;
+
+		render_set_volume_emissive_material(&material_def, item->batch_item_info.texture, prim_type == PRIM_TYPE_POINTS);
+		gr_render_primitives_particle(&material_def, prim_type, layout, item->offset, item->n_verts, buffer_num);
+	} else if ( item->batch_item_info.mat_type == batch_info::DISTORTION ) {
+		distortion_material material_def;
+
+		render_set_distortion_material(&material_def, item->batch_item_info.texture, item->batch_item_info.thruster);
+		gr_render_primitives_distortion(&material_def, PRIM_TYPE_TRIS, layout, item->offset, item->n_verts, buffer_num);
 	} else {
-		material material_info;
+		material material_def;
 
-		render_set_unlit_material(&material_info, item->batch_item_info.texture, true, true);
-
-		gr_render_primitives(&material_info, PRIM_TYPE_TRIS, item->layout, item->offset, item->n_verts, item->buffer_num);
+		render_set_unlit_material(&material_def, item->batch_item_info.texture, true, true);
+		gr_render_primitives(&material_def, PRIM_TYPE_TRIS, layout, item->offset, item->n_verts, buffer_num);
 	}
 }
 
-void batching_allocate_and_load_buffer(primitive_batch_buffer *draw_queue, bool triangles)
+void batching_allocate_and_load_buffer(primitive_batch_buffer *draw_queue)
 {
 	Assert(draw_queue != NULL);
 
@@ -744,9 +783,9 @@ void batching_allocate_and_load_buffer(primitive_batch_buffer *draw_queue, bool 
 	draw_queue->desired_buffer_size = 0;
 
 	if ( draw_queue->buffer_num >= 0 ) {
-		draw_queue->layout->set_base_vertex_ptr(NULL);
+		draw_queue->layout.set_base_vertex_ptr(NULL);
 	} else {
-		draw_queue->layout->set_base_vertex_ptr(draw_queue->buffer_ptr);
+		draw_queue->layout.set_base_vertex_ptr(draw_queue->buffer_ptr);
 	}
 
 	int offset = 0;
@@ -756,12 +795,8 @@ void batching_allocate_and_load_buffer(primitive_batch_buffer *draw_queue, bool 
 		primitive_batch_item *item = &draw_queue->items[i];
 
 		item->offset = offset;
-
-		if ( triangles ) {
-			item->n_verts = item->batch->load_buffer_triangles((effect_vertex*)draw_queue->buffer_ptr, offset);
-		} else {
-			item->n_verts = item->batch->load_buffer_points((particle_pnt*)draw_queue->buffer_ptr, offset);
-		}
+		item->n_verts = item->batch->load_buffer((batch_vertex*)draw_queue->buffer_ptr, offset);
+		item->batch->clear();
 		
 		offset += item->n_verts;
 	}
@@ -774,14 +809,16 @@ void batching_allocate_and_load_buffer(primitive_batch_buffer *draw_queue, bool 
 void batching_load_buffers(bool distortion)
 {
 	SCP_map<batch_info, primitive_batch>::iterator bi;
+	SCP_map<batch_buffer_key, primitive_batch_buffer>::iterator buffer_iter;
 
-	Batch_effect_vertex_queue.desired_buffer_size = 0;
-	Batch_effect_vertex_no_radius_queue.desired_buffer_size = 0;
-	Batch_point_sprite_queue.desired_buffer_size = 0;
+	for ( buffer_iter = Batching_buffers.begin(); buffer_iter != Batching_buffers.end(); ++buffer_iter ) {
+		// zero out the buffers
+		buffer_iter->second.desired_buffer_size = 0;
+	}
 
 	// assign primitive batch items
 	for ( bi = Batching_primitives.begin(); bi != Batching_primitives.end(); ++bi ) {
-		if ( bi->first.selected_render_type == batch_info::DISTORTION || bi->first.selected_render_type == batch_info::DISTORTION ) {
+		if ( bi->first.mat_type == batch_info::DISTORTION ) {
 			if ( !distortion ) {
 				continue;
 			}
@@ -791,75 +828,54 @@ void batching_load_buffers(bool distortion)
 			}
 		}
 
-		int num_tri_verts = bi->second.num_triangle_vertices_to_render();
-		int num_point_verts = bi->second.num_points_to_render();
+		int num_verts = bi->second.num_verts();
 
-		if ( num_tri_verts > 0 ) {
-			primitive_batch_buffer *buffer;
+		if ( num_verts > 0 ) {
+			batch_info render_info = bi->second.get_render_info();
+			uint vertex_mask = batching_determine_vertex_layout(&render_info);
 
-			if ( bi->first.selected_render_type == batch_info::FLAT_EMISSIVE ) {
-				buffer = &Batch_effect_vertex_no_radius_queue;
-			} else {
-				buffer = &Batch_effect_vertex_queue;
-			}
-
+			primitive_batch_buffer *buffer = batching_find_buffer(vertex_mask, render_info.prim_type);
 			primitive_batch_item draw_item;
 
-			draw_item.batch_item_info = bi->first;
+			draw_item.batch_item_info = render_info;
 			draw_item.offset = -1;
-			draw_item.n_verts = num_tri_verts;
-			draw_item.triangles = true;
+			draw_item.n_verts = num_verts;
 			draw_item.batch = &bi->second;
 
-			buffer->desired_buffer_size += num_tri_verts * sizeof(effect_vertex);
-			buffer->items.push_back(draw_item);
-		}
-
-		if ( num_point_verts > 0 ) {
-			primitive_batch_buffer *buffer;
-
-			buffer = &Batch_point_sprite_queue;
-
-			primitive_batch_item draw_item;
-
-			draw_item.batch_item_info = bi->first;
-			draw_item.offset = -1;
-			draw_item.n_verts = num_point_verts;
-			draw_item.triangles = false;
-			draw_item.batch = &bi->second;
-
-			buffer->desired_buffer_size += num_point_verts * sizeof(particle_pnt);
+			buffer->desired_buffer_size += num_verts * sizeof(batch_vertex);
 			buffer->items.push_back(draw_item);
 		}
 	}
 
-	batching_allocate_and_load_buffer(&Batch_effect_vertex_queue, true);
-	batching_allocate_and_load_buffer(&Batch_effect_vertex_no_radius_queue, true);
-	batching_allocate_and_load_buffer(&Batch_point_sprite_queue, false);	
+	for ( buffer_iter = Batching_buffers.begin(); buffer_iter != Batching_buffers.end(); ++buffer_iter ) {
+		batching_allocate_and_load_buffer(&buffer_iter->second);
+	}
 }
 
-void batching_render_all(bool distortion)
-{
-	batching_load_buffers(distortion);
-
-	batching_render_buffer(&Batch_point_sprite_queue, distortion);
-	batching_render_buffer(&Batch_effect_vertex_no_radius_queue, distortion);
-	batching_render_buffer(&Batch_effect_vertex_queue, distortion);
-	
-	gr_clear_states();
-}
-
-void batching_render_buffer(primitive_batch_buffer *buffer, bool distortion)
+void batching_render_buffer(primitive_batch_buffer *buffer)
 {
 	size_t num_batches = buffer->items.size();
 
 	for ( int j = 0; j < batch_info::NUM_RENDER_TYPES; ++j ) {
 		for ( size_t i = 0; i < num_batches; ++i ) {
-			if ( buffer->items[i].batch_item_info.selected_render_type != j ) {
+			if ( buffer->items[i].batch_item_info.mat_type != j ) {
 				continue;
 			}
 
-			batching_render_batch_item(&buffer->items[i]);
+			batching_render_batch_item(&buffer->items[i], &buffer->layout, buffer->prim_type, buffer->buffer_num);
 		}
 	}
+}
+
+void batching_render_all(bool render_distortions)
+{
+	batching_load_buffers(render_distortions);
+
+	SCP_map<batch_buffer_key, primitive_batch_buffer>::iterator bi;
+
+	for ( bi = Batching_buffers.begin(); bi != Batching_buffers.end(); ++bi ) {
+		batching_render_buffer(&bi->second);
+	}
+	
+	gr_clear_states();
 }

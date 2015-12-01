@@ -17,12 +17,49 @@ void render_set_unlit_material(material* mat_info, int texture, bool blending, b
 void render_set_volume_emissive_material(particle_material* mat_info, int texture, bool point_sprites);
 void render_set_distortion_material(distortion_material *mat_info, int texture, bool thruster);
 
-void render_primitives(vertex* verts, int n_verts, primitive_type prim_type, int texture, float alpha, bool blending, bool depth_testing);
-void render_colored_primitives(vertex* verts, int n_verts, primitive_type prim_type, int texture, bool blending, bool depth_testing);
-void render_colored_primitives(vertex* verts, int n_verts, primitive_type prim_type, int texture, float alpha, bool depth_testing);
-void render_rod(int num_points, vec3d *pvecs, float width, color *clr);
+void render_primitives_textured(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic = false);
+void render_primitives_colored(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic = false);
+void render_primitives_colored_textured(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic = false);
+
+void render_rod(color *clr, int num_points, vec3d *pvecs, float width);
+
 void render_laser(vec3d *p0, float width1, vec3d *p1, float width2, color *clr, int texture, float alpha);
 void render_laser_2d(vec3d *headp, float head_width, vec3d *tailp, float tail_width, float max_len, int texture, color* clr, float alpha);
 void render_laser_2d(vec3d *headp, float head_width, vec3d *tailp, float tail_width, float max_len, int texture, float alpha);
+
 void render_oriented_bitmap(int texture, float alpha, vertex *pnt, int orient, float rad, float depth);
 void render_oriented_bitmap_2d(vertex *pnt, int orient, float rad, int texture);
+
+void render_string(color *clr, float sx, float sy, const char *s, int resize_mode = GR_RESIZE_FULL);
+void render_string(float sx, float sy, const char *s, int resize_mode = GR_RESIZE_FULL);
+void render_string(color *clr, int sx, int sy, const char *s, int resize_mode = GR_RESIZE_FULL);
+void render_string(int sx, int sy, const char *s, int resize_mode = GR_RESIZE_FULL);
+
+
+void render_bitmap(int texture, int _x, int _y, int resize_mode = GR_RESIZE_FULL);
+void render_bitmap_ex(int texture, int x, int y, int w, int h, int sx, int sy, int resize_mode = GR_RESIZE_FULL);
+void render_aabitmap(int texture, color *clr, int x, int y, int resize_mode = GR_RESIZE_FULL, bool mirror = false);
+void render_aabitmap(int texture, int x, int y, int resize_mode = GR_RESIZE_FULL, bool mirror = false);
+void render_aabitmap_ex(int texture, color *clr, int x, int y, int w, int h, int sx, int sy, int resize_mode = GR_RESIZE_FULL, bool mirror = false);
+void render_aabitmap_ex(int texture, int x, int y, int w, int h, int sx, int sy, int resize_mode = GR_RESIZE_FULL, bool mirror = false);
+
+void render_aaline(color *clr, vertex *v1, vertex *v2);
+
+void render_circle(color *clr, int xc, int yc, int d, int resize_mode = GR_RESIZE_FULL);
+void render_circle(int xc, int yc, int d, int resize_mode = GR_RESIZE_FULL);
+
+void render_arc(color *clr, int xc, int yc, float r, float angle_start, float angle_end, bool fill, float linewidth = 1.0f, int resize_mode = GR_RESIZE_FULL);
+
+void render_curve(color *clr, int xc, int yc, int r, int direction, int resize_mode = GR_RESIZE_FULL);
+void render_curve(int xc, int yc, int r, int direction, int resize_mode = GR_RESIZE_FULL);
+
+void render_unfilled_circle(color *clr, float linewidth, int xc, int yc, int d, int resize_mode = GR_RESIZE_FULL);
+
+void render_colored_rect(color *clr, int x, int y, int w, int h, int resize_mode = GR_RESIZE_FULL);
+void render_colored_rect(int x, int y, int w, int h, int resize_mode = GR_RESIZE_FULL);
+
+void render_line(int x1,int y1,int x2,int y2, int resize_mode = GR_RESIZE_FULL);
+
+void render_gradient(int x1, int y1, int x2, int y2, int resize_mode = GR_RESIZE_FULL);
+
+void render_pline_special(color *clr, SCP_vector<vec3d> *pts, int thickness, int resize_mode = GR_RESIZE_FULL);

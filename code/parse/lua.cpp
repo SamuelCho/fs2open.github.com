@@ -46,6 +46,7 @@
 #include "playerman/player.h"
 #include "render/3d.h"
 #include "render/3dinternal.h"
+#include "render/render.h"
 #include "ship/ship.h"
 #include "ship/shipfx.h"
 #include "ship/shiphit.h"
@@ -3355,6 +3356,8 @@ ade_obj<int> l_Texture("texture", "Texture handle");
 
 static float lua_Opacity = 1.0f;
 static int lua_Opacity_type = GR_ALPHABLEND_NONE;
+static float lua_Line_width = 1.0f;
+static color lua_Color;
 
 ADE_FUNC(__gc, l_Texture, NULL, "Auto-deletes texture", NULL, NULL)
 {
@@ -13294,7 +13297,9 @@ ADE_FUNC(setColor, l_Graphics, "integer Red, number Green, number Blue, [integer
 
 	color ac;
 	gr_init_alphacolor(&ac,r,g,b,a);
+	gr_init_alphacolor(&lua_Color,r,g,b,a);
 	gr_set_color_fast(&ac);
+	
 
 	return ADE_RETURN_NIL;
 }
@@ -13313,7 +13318,8 @@ ADE_FUNC(setLineWidth, l_Graphics, "[number width=1.0]", "Sets the line width fo
 		return ADE_RETURN_FALSE;
 	}
 
-	gr_set_line_width(width);
+	//gr_set_line_width(width);
+	lua_Line_width = width;
 
 	return ADE_RETURN_TRUE;
 }
@@ -13331,9 +13337,11 @@ ADE_FUNC(drawCircle, l_Graphics, "number Radius, number X, number Y, [boolean Fi
 
 	if (fill) {
 		//WMC - Circle takes...diameter.
-		gr_circle(x,y, ra*2, GR_RESIZE_NONE);
+		//gr_circle(x,y, ra*2, GR_RESIZE_NONE);
+		render_circle(&lua_Color, x, y, ra*2, GR_RESIZE_NONE);
 	} else {
-		gr_unfilled_circle(x,y, ra*2, GR_RESIZE_NONE);
+		//gr_unfilled_circle(x,y, ra*2, GR_RESIZE_NONE);
+		render_unfilled_circle(&lua_Color, lua_Line_width, x, y, ra*2, GR_RESIZE_NONE);
 	}
 
 	return ADE_RETURN_NIL;
@@ -13352,7 +13360,8 @@ ADE_FUNC(drawArc, l_Graphics, "number Radius, number X, number Y, number StartAn
 		return ADE_RETURN_NIL;
 	}
 
-	gr_arc(x,y, ra, angle_start, angle_end, fill, GR_RESIZE_NONE);
+	//gr_arc(x,y, ra, angle_start, angle_end, fill, GR_RESIZE_NONE);
+	render_arc(&lua_Color, x, y, ra, angle_start, angle_end, fill, lua_Line_width, GR_RESIZE_NONE);
 
 	return ADE_RETURN_NIL;
 }

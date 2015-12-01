@@ -931,6 +931,10 @@ void nebl_render_section_new(bolt_type *bi, l_section *a, l_section *b)
 {		
 	vertex v[4];
 	vertex *verts[4] = {&v[0], &v[1], &v[2], &v[3]};
+
+	material material_params;
+
+	render_set_unlit_material(&material_params, bi->texture, Nebl_alpha, true, true);
 	
 	// draw some stuff
 	for(size_t idx=0; idx<2; idx++){		
@@ -947,7 +951,7 @@ void nebl_render_section_new(bolt_type *bi, l_section *a, l_section *b)
 		v[3].texture_position.u = 0.0f; v[3].texture_position.v = 1.0f;
 
 		// draw
-		render_primitives(v, 4, PRIM_TYPE_TRIFAN, bi->texture, Nebl_alpha, true, true);
+		render_primitives_textured(&material_params, v, 4, PRIM_TYPE_TRIFAN, false);
 	}
 
 	// draw
@@ -963,7 +967,7 @@ void nebl_render_section_new(bolt_type *bi, l_section *a, l_section *b)
 	v[3] = b->vex[2];		
 	v[3].texture_position.u = 0.0f; v[3].texture_position.v = 1.0f;
 
-	render_primitives(v, 4, PRIM_TYPE_TRIFAN, bi->texture, Nebl_alpha, true, true);
+	render_primitives_textured(&material_params, v, 4, PRIM_TYPE_TRIFAN, false);
 
 	// draw the glow beam	
 	verts[0] = &a->glow_vex[0];
@@ -978,7 +982,7 @@ void nebl_render_section_new(bolt_type *bi, l_section *a, l_section *b)
 	verts[3] = &b->glow_vex[0];
 	verts[3]->texture_position.v = 0.0f; verts[3]->texture_position.u = 1.0f;
 
-	render_primitives(v, 4, PRIM_TYPE_TRIFAN, bi->texture, Nebl_glow_alpha, true, true);
+	render_primitives_textured(&material_params, v, 4, PRIM_TYPE_TRIFAN, false);
 }
 
 // generate a section

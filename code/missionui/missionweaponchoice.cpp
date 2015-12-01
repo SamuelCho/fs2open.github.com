@@ -37,6 +37,7 @@
 #include "parse/parselo.h"
 #include "popup/popup.h"
 #include "render/3d.h"
+#include "render/render.h"
 #include "ship/ship.h"
 #include "weapon/weapon.h"
 
@@ -933,7 +934,8 @@ void wl_render_overhead_view(float frametime)
 				{
 					Assert(num_found < NUM_ICON_FRAMES);
 					gr_set_color_fast(&Icon_colors[ICON_FRAME_NORMAL + num_found]);
-					gr_circle(Wl_bank_coords[gr_screen.res][x][0] + 106, Wl_bank_coords[gr_screen.res][x][1] + 12, 5, GR_RESIZE_MENU);
+					//gr_circle(Wl_bank_coords[gr_screen.res][x][0] + 106, Wl_bank_coords[gr_screen.res][x][1] + 12, 5, GR_RESIZE_MENU);
+					render_circle(Wl_bank_coords[gr_screen.res][x][0] + 106, Wl_bank_coords[gr_screen.res][x][1] + 12, 5, GR_RESIZE_MENU);
 					for(y = 0; y < pm->gun_banks[x].num_slots; y++)
 					{
 						//Stuff
@@ -964,7 +966,8 @@ void wl_render_overhead_view(float frametime)
 							lineendx = xc - 4;
 						}
 
-						gr_line(Wl_bank_coords[gr_screen.res][x][0] + 106, Wl_bank_coords[gr_screen.res][x][1] + 12, lineendx, Wl_bank_coords[gr_screen.res][x][1] + 12, GR_RESIZE_MENU);
+						//gr_line(Wl_bank_coords[gr_screen.res][x][0] + 106, Wl_bank_coords[gr_screen.res][x][1] + 12, lineendx, Wl_bank_coords[gr_screen.res][x][1] + 12, GR_RESIZE_MENU);
+						render_line(Wl_bank_coords[gr_screen.res][x][0] + 106, Wl_bank_coords[gr_screen.res][x][1] + 12, lineendx, Wl_bank_coords[gr_screen.res][x][1] + 12, GR_RESIZE_MENU);
 						
 						if (curve == 0 || curve == 2)
 							lineendx = xc;
@@ -975,7 +978,8 @@ void wl_render_overhead_view(float frametime)
 							lineendy = Wl_bank_coords[gr_screen.res][x][1] + 7;
 						}
 						
-						gr_curve(lineendx, lineendy, 5, curve, GR_RESIZE_MENU);
+						//gr_curve(lineendx, lineendy, 5, curve, GR_RESIZE_MENU);
+						render_curve(lineendx, lineendy, 5, curve, GR_RESIZE_MENU);
 						
 						if (curve == 0 || curve == 1) {
 							lineendy = Wl_bank_coords[gr_screen.res][x][1] + 17;
@@ -983,8 +987,10 @@ void wl_render_overhead_view(float frametime)
 							lineendy = Wl_bank_coords[gr_screen.res][x][1] + 7;
 						}
 
-						gr_line(xc, lineendy, xc, yc, GR_RESIZE_MENU);
-						gr_circle(xc, yc, 5, GR_RESIZE_MENU);
+						//gr_line(xc, lineendy, xc, yc, GR_RESIZE_MENU);
+						render_line(xc, lineendy, xc, yc, GR_RESIZE_MENU);
+						//gr_circle(xc, yc, 5, GR_RESIZE_MENU);
+						render_circle(xc, yc, 5, GR_RESIZE_MENU);
 					}
 					num_found++;
 				}
@@ -998,7 +1004,8 @@ void wl_render_overhead_view(float frametime)
 				{
 					Assert(num_found < NUM_ICON_FRAMES);
 					gr_set_color_fast(&Icon_colors[ICON_FRAME_NORMAL + num_found]);
-					gr_circle(Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][0] - 50, Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 12, 5, GR_RESIZE_MENU);
+					//gr_circle(Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][0] - 50, Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 12, 5, GR_RESIZE_MENU);
+					render_circle(Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][0] - 50, Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 12, 5, GR_RESIZE_MENU);
 					for(y = 0; y < pm->missile_banks[x].num_slots; y++)
 					{
 						vm_vec_unrotate(&subobj_pos,&pm->missile_banks[x].pnt[y],&object_orient);
@@ -1027,14 +1034,17 @@ void wl_render_overhead_view(float frametime)
 						else
 							lineendx = xc + 4;
 
-						gr_line(Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][0] - 50, Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 12, lineendx, Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 12, GR_RESIZE_MENU);
+						//gr_line(Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][0] - 50, Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 12, lineendx, Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 12, GR_RESIZE_MENU);
+						render_line(Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][0] - 50, Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 12, lineendx, Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 12, GR_RESIZE_MENU);
 						
 						if (curve == 1 || curve == 2) {
 							lineendy = Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 7;
 						} else {
 							lineendy = Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 12;
 						}
-						gr_curve(xc, lineendy, 5, curve, GR_RESIZE_MENU);
+
+						//gr_curve(xc, lineendy, 5, curve, GR_RESIZE_MENU);
+						render_curve(xc, lineendy, 5, curve, GR_RESIZE_MENU);
 						
 						if (curve == 1 || curve == 2) {
 							lineendy = Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 7;
@@ -1042,8 +1052,10 @@ void wl_render_overhead_view(float frametime)
 							lineendy = Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 17;
 						}
 						
-						gr_line(xc, lineendy, xc, yc, GR_RESIZE_MENU);
-						gr_circle(xc, yc, 5, GR_RESIZE_MENU);
+						//gr_line(xc, lineendy, xc, yc, GR_RESIZE_MENU);
+						render_line(xc, lineendy, xc, yc, GR_RESIZE_MENU);
+						//gr_circle(xc, yc, 5, GR_RESIZE_MENU);
+						render_circle(xc, yc, 5, GR_RESIZE_MENU);
 					}
 
 					num_found++;
@@ -1067,7 +1079,8 @@ void wl_render_overhead_view(float frametime)
 
 	ss_return_name(Selected_wl_slot/MAX_WING_SLOTS, Selected_wl_slot%MAX_WING_SLOTS, name);
 	gr_set_color_fast(&Color_normal);
-	gr_string(Wl_ship_name_coords[gr_screen.res][0], Wl_ship_name_coords[gr_screen.res][1], name, GR_RESIZE_MENU);
+	//gr_string(Wl_ship_name_coords[gr_screen.res][0], Wl_ship_name_coords[gr_screen.res][1], name, GR_RESIZE_MENU);
+	render_string(Wl_ship_name_coords[gr_screen.res][0], Wl_ship_name_coords[gr_screen.res][1], name, GR_RESIZE_MENU);
 }
 
 // ---------------------------------------------------------------------------------

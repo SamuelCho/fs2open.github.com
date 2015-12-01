@@ -1113,9 +1113,9 @@ void model_render_buffers(draw_list* scene, model_material *rendering_material, 
 			}
 		}
 
-		rendering_material->set_depth_mode(model_render_determine_depth_mode(use_depth_test, use_blending));
+		rendering_material->set_depth_mode(render_determine_depth_mode(use_depth_test, use_blending));
 
-		gr_alpha_blend blend_mode = model_render_determine_blend_mode(texture_maps[TM_BASE_TYPE], use_blending);
+		gr_alpha_blend blend_mode = render_determine_blend_mode(texture_maps[TM_BASE_TYPE], use_blending);
 		rendering_material->set_blend_mode(blend_mode);
 
 		const color &clr = interp->get_color();
@@ -1320,19 +1320,6 @@ bool model_render_determine_autocenter(vec3d *auto_back, polymodel *pm, int deta
 	return false;
 }
 
-gr_alpha_blend model_render_determine_blend_mode(int base_bitmap, bool is_transparent)
-{
-	if (is_transparent) {
-		if (base_bitmap >= 0 && bm_has_alpha_channel(base_bitmap)) {
-			return ALPHA_BLEND_PREMULTIPLIED;
-		}
-
-		return ALPHA_BLEND_ADDITIVE;
-	}
-
-	return ALPHA_BLEND_ALPHA_BLEND_ALPHA;
-}
-
 void model_render_determine_color(ubyte &r, ubyte &g, ubyte &b, ubyte &a, gr_alpha_blend blend_mode, bool texturing)
 {
 	if(!texturing)
@@ -1344,19 +1331,6 @@ void model_render_determine_color(ubyte &r, ubyte &g, ubyte &b, ubyte &a, gr_alp
 	} else {
 		r = g = b = 255;
 	}
-}
-
-gr_zbuffer_type model_render_determine_depth_mode(bool using_depth_test, bool is_transparent)
-{
-	if (using_depth_test) {
-		if (is_transparent) {
-			return ZBUFFER_TYPE_READ;
-		}
-
-		return ZBUFFER_TYPE_FULL;
-	}
-
-	return ZBUFFER_TYPE_NONE;
 }
 
 bool model_render_check_detail_box(vec3d *view_pos, polymodel *pm, int submodel_num, uint flags)
@@ -2367,10 +2341,10 @@ void model_render_arc(vec3d *v1, vec3d *v2, color *primary, color *secondary, fl
 	// use primary color for fist pass
 	Assert( primary );
 
-	render_rod(Num_arc_segment_points, Arc_segment_points, arc_width, primary);
+	render_rod(primary, Num_arc_segment_points, Arc_segment_points, arc_width);
 
 	if (secondary) {
-		render_rod(Num_arc_segment_points, Arc_segment_points, arc_width * 0.33f, secondary);
+		render_rod(secondary, Num_arc_segment_points, Arc_segment_points, arc_width * 0.33f);
 	}
 }
 

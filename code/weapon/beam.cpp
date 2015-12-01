@@ -1393,7 +1393,9 @@ void beam_render_new(beam *b, float u_offset)
 			CLAMP(framenum, 0, bwsi->texture.num_frames-1);
 		}
 
-		render_colored_primitives(h1, 4, PRIM_TYPE_TRIFAN, bwsi->texture.first_frame + framenum, true, true);
+		material material_params;
+		render_set_unlit_material(&material_params, bwsi->texture.first_frame + framenum, 1.0f, true, true);
+		render_primitives_colored_textured(&material_params, h1, 4, PRIM_TYPE_TRIFAN, false);
 	}
 }
 

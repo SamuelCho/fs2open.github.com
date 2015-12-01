@@ -28,7 +28,7 @@
 #include "localization/localize.h"
 #include "palman/palman.h"
 #include "parse/parselo.h"
-
+#include "render/render.h"
 
 
 int Num_fonts = 0;
@@ -137,7 +137,8 @@ void gr_char_centered(int x, int y, char chr, ubyte sc1, int resize_mode)
 	str[0] = chr;
 	str[1] = 0;
 	gr_get_string_size(&w, NULL, str);
-	gr_string(x - w / 2, y, str, resize_mode);
+	//gr_string(x - w / 2, y, str, resize_mode);
+	render_string(x - w / 2, y, str, resize_mode);
 }
 
 void gr_print_timestamp(int x, int y, fix timestamp, int resize_mode)
@@ -156,8 +157,10 @@ void gr_print_timestamp(int x, int y, fix timestamp, int resize_mode)
 	gr_get_string_size(&w, NULL, "0");
 	gr_get_string_size(&c, NULL, ":");
 
-	gr_string(x + w, y, ":", resize_mode);
-	gr_string(x + w * 3 + c, y, ":", resize_mode);
+	//gr_string(x + w, y, ":", resize_mode);
+	render_string(x + w, y, ":", resize_mode);
+	//gr_string(x + w * 3 + c, y, ":", resize_mode);
+	render_string(x + w * 3 + c, y, ":", resize_mode);
 
 	font_num = gr_get_current_fontnum();
 	if (font_num == -1) {
@@ -322,7 +325,8 @@ void _cdecl gr_printf_menu( int x, int y, const char * format, ... )
 	va_end(args);
 	grx_printf_text[sizeof(grx_printf_text)-1] = '\0';
 
-	gr_string(x,y,grx_printf_text,GR_RESIZE_MENU);
+	//gr_string(x,y,grx_printf_text,GR_RESIZE_MENU);
+	render_string(x,y,grx_printf_text,GR_RESIZE_MENU);
 }
 
 void _cdecl gr_printf_menu_zoomed( int x, int y, const char * format, ... )
