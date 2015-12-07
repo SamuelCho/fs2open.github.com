@@ -22,11 +22,12 @@ void render_primitives_colored_textured(material* mat, vertex* verts, int n_vert
 
 void render_rod(color *clr, int num_points, vec3d *pvecs, float width);
 
-void render_laser(vec3d *p0, float width1, vec3d *p1, float width2, color *clr, int texture, float alpha);
-void render_laser_2d(vec3d *headp, float head_width, vec3d *tailp, float tail_width, float max_len, int texture, color* clr, float alpha);
-void render_laser_2d(vec3d *headp, float head_width, vec3d *tailp, float tail_width, float max_len, int texture, float alpha);
+void render_laser(int texture, color *clr, float alpha, vec3d *headp, float head_width, vec3d *tailp, float tail_width);
+void render_laser_2d(int texture, color* clr, float alpha, vec3d *headp, float head_width, vec3d *tailp, float tail_width, float max_len);
+void render_laser_2d(int texture, float alpha, vec3d *headp, float head_width, vec3d *tailp, float tail_width, float max_len);
 
-void render_oriented_bitmap(int texture, float alpha, vertex *pnt, int orient, float rad, float depth);
+void render_oriented_bitmap(int texture, float alpha, vertex *pnt, int orient, float rad, float depth = 0.0f);
+void render_oriented_bitmap_2d(int texture, float alpha, vertex *pnt, int orient, float rad);
 void render_oriented_bitmap_2d(int texture, vertex *pnt, int orient, float rad);
 
 void render_oriented_quad(int texture, vec3d *pos, matrix *ori, float width, float height);
@@ -62,9 +63,17 @@ void render_curve(int xc, int yc, int r, int direction, int resize_mode = GR_RES
 void render_unfilled_circle(color *clr, float linewidth, int xc, int yc, int d, int resize_mode = GR_RESIZE_FULL);
 
 void render_colored_rect(color *clr, int x, int y, int w, int h, int resize_mode = GR_RESIZE_FULL);
+void render_colored_rect(shader *shade_clr, int x, int y, int w, int h, int resize_mode = GR_RESIZE_FULL);
 void render_colored_rect(int x, int y, int w, int h, int resize_mode = GR_RESIZE_FULL);
 
+void render_line(color *clr, int x1,int y1,int x2,int y2, int resize_mode = GR_RESIZE_FULL);
 void render_line(int x1,int y1,int x2,int y2, int resize_mode = GR_RESIZE_FULL);
+
+void render_line_3d(color *clr, bool depth_testing, vec3d *start, vec3d *end);
+void render_line_3d(bool depth_testing, vec3d *start, vec3d *end);
+
+void render_pixel(color *clr, int x, int y, int resize_mode = GR_RESIZE_FULL);
+void render_pixel(int x, int y, int resize_mode = GR_RESIZE_FULL);
 
 void render_gradient(color *clr, int x1, int y1, int x2, int y2, int resize_mode = GR_RESIZE_FULL);
 void render_gradient(int x1, int y1, int x2, int y2, int resize_mode = GR_RESIZE_FULL);
@@ -75,3 +84,6 @@ void render_sphere_fast(color *clr, vertex *pnt, float rad);
 void render_sphere_fast(color *clr, vec3d *pnt, float rad);
 void render_sphere_fast(vertex *pnt, float rad);
 void render_sphere_fast(vec3d *pnt, float rad);
+
+void render_shield_icon(color *clr, coord2d coords[6], int resize_mode = GR_RESIZE_FULL);
+void render_shield_icon(coord2d coords[6], int resize_mode = GR_RESIZE_FULL);

@@ -13410,7 +13410,8 @@ ADE_FUNC(drawLine, l_Graphics, "number X1, number Y1, number X2, number Y2", "Dr
 	if(!ade_get_args(L, "iiii", &x1, &y1, &x2, &y2))
 		return ADE_RETURN_NIL;
 
-	gr_line(x1,y1,x2,y2,GR_RESIZE_NONE);
+	//gr_line(x1,y1,x2,y2,GR_RESIZE_NONE);
+	render_line(&lua_Color, x1, y1, x2, y2, GR_RESIZE_NONE);
 
 	return ADE_RETURN_NIL;
 }
@@ -13425,7 +13426,8 @@ ADE_FUNC(drawPixel, l_Graphics, "number X, number Y", "Sets pixel to CurrentColo
 	if(!ade_get_args(L, "ii", &x, &y))
 		return ADE_RETURN_NIL;
 
-	gr_pixel(x,y,GR_RESIZE_NONE);
+	//gr_pixel(x,y,GR_RESIZE_NONE);
+	render_pixel(&lua_Color, x, y, GR_RESIZE_NONE);
 
 	return ADE_RETURN_NIL;
 }
@@ -13479,15 +13481,21 @@ ADE_FUNC(drawRectangle, l_Graphics, "number X1, number Y1, number X2, number Y2,
 
 	if(f)
 	{
-		gr_set_bitmap(0);  // gr_rect will use the last bitmaps info, so set to zero to flush any previous alpha state
-		gr_rect(x1, y1, x2-x1, y2-y1, GR_RESIZE_NONE);
+		//gr_set_bitmap(0);  // gr_rect will use the last bitmaps info, so set to zero to flush any previous alpha state
+		//gr_rect(x1, y1, x2-x1, y2-y1, GR_RESIZE_NONE);
+		render_colored_rect(&lua_Color, x1, y1, x2-x1, y2-y1, GR_RESIZE_NONE);
 	}
 	else
 	{
-		gr_line(x1,y1,x2,y1,GR_RESIZE_NONE);	//Top
-		gr_line(x1,y2,x2,y2,GR_RESIZE_NONE); //Bottom
-		gr_line(x1,y1,x1,y2,GR_RESIZE_NONE);	//Left
-		gr_line(x2,y1,x2,y2,GR_RESIZE_NONE);	//Right
+// 		gr_line(x1,y1,x2,y1,GR_RESIZE_NONE);	//Top
+// 		gr_line(x1,y2,x2,y2,GR_RESIZE_NONE); //Bottom
+// 		gr_line(x1,y1,x1,y2,GR_RESIZE_NONE);	//Left
+// 		gr_line(x2,y1,x2,y2,GR_RESIZE_NONE);	//Right
+
+		render_line(&lua_Color, x1, y1, x2, y1, GR_RESIZE_NONE);	//Top
+		render_line(&lua_Color, x1, y2, x2, y2, GR_RESIZE_NONE); //Bottom
+		render_line(&lua_Color, x1, y1, x1, y2, GR_RESIZE_NONE);	//Left
+		render_line(&lua_Color, x2, y1, x2, y2, GR_RESIZE_NONE);	//Right
 	}
 
 	return ADE_RETURN_NIL;
@@ -14161,8 +14169,9 @@ ADE_FUNC(drawMonochromeImage, l_Graphics, "string Filename/texture Texture, numb
 	if(y2!=INT_MAX)
 		h = y2-y;
 
-	gr_set_bitmap(idx, lua_Opacity_type, GR_BITBLT_MODE_NORMAL,alpha);
-	gr_aabitmap_ex(x, y, w, h, sx, sy, GR_RESIZE_NONE, m);
+	//gr_set_bitmap(idx, lua_Opacity_type, GR_BITBLT_MODE_NORMAL,alpha);
+	//gr_aabitmap_ex(x, y, w, h, sx, sy, GR_RESIZE_NONE, m);
+	render_aabitmap_ex(idx, x, y, w, h, sx, sy, GR_RESIZE_NONE, m);
 
 	return ADE_RETURN_TRUE;
 }
@@ -15630,15 +15639,27 @@ ADE_FUNC(avdTest, l_Testing, NULL, "Test the AVD Physics code", NULL, NULL)
 	{
 		float Pc, Vc;
 		avd.get((float)i/1000.0f, &Pc, &Vc);
-		gr_set_color(0, 255, 0);
-		gr_pixel(i/10, gr_screen.clip_bottom - (int)(Pc*10.0f), GR_RESIZE_NONE);
-		gr_set_color(255, 0, 0);
-		gr_pixel(i/10, gr_screen.clip_bottom - (int)(Vc*10.0f), GR_RESIZE_NONE);
+// 		gr_set_color(0, 255, 0);
+// 		gr_pixel(i/10, gr_screen.clip_bottom - (int)(Pc*10.0f), GR_RESIZE_NONE);
+// 		gr_set_color(255, 0, 0);
+// 		gr_pixel(i/10, gr_screen.clip_bottom - (int)(Vc*10.0f), GR_RESIZE_NONE);
+
+		color clr;
+
+		gr_init_color(&clr, 0, 255, 0);
+		render_pixel(&clr, i/10, gr_screen.clip_bottom - (int)(Pc*10.0f), GR_RESIZE_NONE);
+
+		gr_init_color(&clr, 255, 0, 0);
+		render_pixel(&clr, i/10, gr_screen.clip_bottom - (int)(Vc*10.0f), GR_RESIZE_NONE);
 
 		avd.get(&Pc, &Vc);
-		gr_set_color(255, 255, 255);
-		gr_pixel((timestamp()%3000)/10, gr_screen.clip_bottom - (int)(Pc*10.0f), GR_RESIZE_NONE);
-		gr_pixel((timestamp()%3000)/10, gr_screen.clip_bottom - (int)(Vc*10.0f), GR_RESIZE_NONE);
+// 		gr_set_color(255, 255, 255);
+// 		gr_pixel((timestamp()%3000)/10, gr_screen.clip_bottom - (int)(Pc*10.0f), GR_RESIZE_NONE);
+// 		gr_pixel((timestamp()%3000)/10, gr_screen.clip_bottom - (int)(Vc*10.0f), GR_RESIZE_NONE);
+
+		gr_init_color(&clr, 255, 255, 255);
+ 		render_pixel(&clr, (timestamp()%3000)/10, gr_screen.clip_bottom - (int)(Pc*10.0f), GR_RESIZE_NONE);
+ 		render_pixel(&clr, (timestamp()%3000)/10, gr_screen.clip_bottom - (int)(Vc*10.0f), GR_RESIZE_NONE);
 	}
 
 	return ADE_RETURN_NIL;

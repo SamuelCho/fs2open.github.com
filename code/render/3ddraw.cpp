@@ -17,7 +17,7 @@
 #include "io/key.h"
 #include "physics/physics.h"		// For Physics_viewer_bank for g3_draw_rotated_bitmap
 #include "render/3dinternal.h"
-
+#include "render/render.h"
 
 //vertex buffers for polygon drawing and clipping
 static vertex **Vbuf0 = NULL;
@@ -1252,7 +1252,8 @@ void g3_draw_horizon_line()
 	}
 
 	// draw from left to right.
-	gr_line( fl2i(horz_pts[0].x),fl2i(horz_pts[0].y),fl2i(horz_pts[1].x),fl2i(horz_pts[1].y), GR_RESIZE_NONE );
+	//gr_line( fl2i(horz_pts[0].x),fl2i(horz_pts[0].y),fl2i(horz_pts[1].x),fl2i(horz_pts[1].y), GR_RESIZE_NONE );
+	render_line( fl2i(horz_pts[0].x),fl2i(horz_pts[0].y),fl2i(horz_pts[1].x),fl2i(horz_pts[1].y), GR_RESIZE_NONE );
 	
 }
 

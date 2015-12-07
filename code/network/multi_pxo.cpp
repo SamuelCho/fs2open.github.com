@@ -5404,7 +5404,8 @@ void multi_pxo_ban_draw()
 		// if the mouse is over the banner button, highlight with a rectangle
 		if(Multi_pxo_ban_button.is_mouse_on()){
 			gr_set_color_fast(&Color_bright_blue);
-			gr_rect(Pxo_ban_coords[gr_screen.res][0] - 1, Pxo_ban_coords[gr_screen.res][1] - 1, Pxo_ban_coords[gr_screen.res][2] + 2, Pxo_ban_coords[gr_screen.res][3] + 2, GR_RESIZE_MENU);
+			//gr_rect(Pxo_ban_coords[gr_screen.res][0] - 1, Pxo_ban_coords[gr_screen.res][1] - 1, Pxo_ban_coords[gr_screen.res][2] + 2, Pxo_ban_coords[gr_screen.res][3] + 2, GR_RESIZE_MENU);
+			render_colored_rect(Pxo_ban_coords[gr_screen.res][0] - 1, Pxo_ban_coords[gr_screen.res][1] - 1, Pxo_ban_coords[gr_screen.res][2] + 2, Pxo_ban_coords[gr_screen.res][3] + 2, GR_RESIZE_MENU);
 		}
 
 		// draw the bitmap itself

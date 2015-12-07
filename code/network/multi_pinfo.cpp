@@ -394,8 +394,9 @@ void multi_pinfo_popup_do()
 		gr_restore_screen(Multi_pinfo_screen_save);		
 
 		// grey the screen
-		gr_set_shader(&Grey_shader);
-		gr_shade(0,0,gr_screen.clip_width, gr_screen.clip_height, GR_RESIZE_NONE);
+		//gr_set_shader(&Grey_shader);
+		//gr_shade(0,0,gr_screen.clip_width, gr_screen.clip_height, GR_RESIZE_NONE);
+		render_colored_rect(&Grey_shader, 0, 0, gr_screen.clip_width, gr_screen.clip_height, GR_RESIZE_NONE);
 		
 		// draw the background bitmap
 		//gr_set_bitmap(Multi_pinfo_bitmap);

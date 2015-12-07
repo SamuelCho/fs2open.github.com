@@ -170,7 +170,8 @@ void HudGaugeRadarOrb::drawContactHtl(vec3d *pnt, int rad)
 		g3_draw_htl_sphere(pnt,size/300.0f);
 	}
 
-	g3_draw_htl_line(&p,pnt);
+	//g3_draw_htl_line(&p,pnt);
+	render_line_3d(false, &p, pnt);
 }
 
 // radar is damaged, so make blips dance around
@@ -447,15 +448,18 @@ void HudGaugeRadarOrb::drawOutlinesHtl()
 	{
         gr_init_alphacolor(&Orb_color_orange, 192, 96, 32, calcAlpha(&orb_ring_xy[last]));
 		gr_set_color_fast(&Orb_color_orange);
-		g3_draw_htl_line(&orb_ring_xy[last],&orb_ring_xy[i]);
+		//g3_draw_htl_line(&orb_ring_xy[last],&orb_ring_xy[i]);
+		render_line_3d(false, &orb_ring_xy[last],&orb_ring_xy[i]);
 
         gr_init_alphacolor(&Orb_color_teal, 48, 160, 96, calcAlpha(&orb_ring_xz[last]));
         gr_set_color_fast(&Orb_color_teal);
-		g3_draw_htl_line(&orb_ring_xz[last],&orb_ring_xz[i]);
+		//g3_draw_htl_line(&orb_ring_xz[last],&orb_ring_xz[i]);
+		render_line_3d(false, &orb_ring_xz[last],&orb_ring_xz[i]);
 
         gr_init_alphacolor(&Orb_color_purple, 112, 16, 192, calcAlpha(&orb_ring_yz[last]));
 		gr_set_color_fast(&Orb_color_purple);
-		g3_draw_htl_line(&orb_ring_yz[last],&orb_ring_yz[i]);
+		//g3_draw_htl_line(&orb_ring_yz[last],&orb_ring_yz[i]);
+		render_line_3d(false, &orb_ring_yz[last],&orb_ring_yz[i]);
 
         last = i;
 	}
@@ -652,14 +656,16 @@ void HudGaugeRadarOrb::drawCrosshairs( vec3d pnt )
 		pnt_end = pnt_start = pnt;
 		pnt_start.xyz.x += (float) m*0.05f;
 		pnt_end.xyz.x += (float) m*0.15f;
-		g3_draw_htl_line(&pnt_start, &pnt_end);
+		//g3_draw_htl_line(&pnt_start, &pnt_end);
+		render_line_3d(false, &pnt_start, &pnt_end);
 	}
 	for(j = 0; j < 2; j++) {
 		m = (j * 2) - 1;
 		pnt_end = pnt_start = pnt;
 		pnt_start.xyz.y += (float) m*0.05f;
 		pnt_end.xyz.y += (float) m*0.15f;
-		g3_draw_htl_line(&pnt_start, &pnt_end);
+		//g3_draw_htl_line(&pnt_start, &pnt_end);
+		render_line_3d(false, &pnt_start, &pnt_end);
 	}
 }
 

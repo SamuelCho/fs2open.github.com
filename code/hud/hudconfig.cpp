@@ -889,8 +889,9 @@ void hud_config_render_gauges()
 
 		// draw
 		if ( HC_gauge_regions[gr_screen.res][i].bitmap >= 0 ) {
-			gr_set_bitmap(HC_gauge_regions[gr_screen.res][i].bitmap);
-			gr_aabitmap(HC_gauge_regions[gr_screen.res][i].x, HC_gauge_regions[gr_screen.res][i].y, GR_RESIZE_MENU);
+			//gr_set_bitmap(HC_gauge_regions[gr_screen.res][i].bitmap);
+			//gr_aabitmap(HC_gauge_regions[gr_screen.res][i].x, HC_gauge_regions[gr_screen.res][i].y, GR_RESIZE_MENU);
+			render_aabitmap(HC_gauge_regions[gr_screen.res][i].bitmap, HC_gauge_regions[gr_screen.res][i].x, HC_gauge_regions[gr_screen.res][i].y, GR_RESIZE_MENU);
 		}
 		
 		/*

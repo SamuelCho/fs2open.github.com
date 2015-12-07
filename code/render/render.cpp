@@ -558,7 +558,6 @@ void render_bitmap_scaler(int texture, float alpha, bool blending, vertex *va, v
 		return;
 	}
 
-
 	vertex v[4];
 
 	v[0].screen.xyw.x = clipped_x0;
@@ -688,6 +687,11 @@ void render_oriented_bitmap_2d(int texture, vertex *pnt, int orient, float rad)
 	render_oriented_bitmap_2d(texture, 1.0f, false, pnt, orient, rad);
 }
 
+void render_oriented_bitmap_2d(int texture, float alpha, vertex *pnt, int orient, float rad)
+{
+	render_oriented_bitmap_2d(texture, alpha, true, pnt, orient, rad);
+}
+
 // adapted from g3_draw_bitmap_3d
 void render_oriented_bitmap(int texture, float alpha, vertex *pnt, int orient, float rad, float depth)
 {
@@ -753,17 +757,17 @@ void render_oriented_bitmap(int texture, float alpha, vertex *pnt, int orient, f
 }
 
 // adapted from g3_draw_laser_htl()
-void render_laser(int texture, color *clr, float alpha, vec3d *p0, float width1, vec3d *p1, float width2)
+void render_laser(int texture, color *clr, float alpha, vec3d *headp, float head_width, vec3d *tailp, float tail_width)
 {
-	width1 *= 0.5f;
-	width2 *= 0.5f;
+	head_width *= 0.5f;
+	tail_width *= 0.5f;
 	vec3d uvec, fvec, rvec, center, reye, rfvec;
 
-	vm_vec_sub( &fvec, p0, p1 );
+	vm_vec_sub( &fvec, headp, tailp );
 	vm_vec_normalize_safe( &fvec );
 	vm_vec_copy_scale(&rfvec, &fvec, -1.0f);
 
-	vm_vec_avg( &center, p0, p1 ); //needed for the return value only
+	vm_vec_avg( &center, headp, tailp ); //needed for the return value only
 	vm_vec_sub(&reye, &Eye_position, &center);
 	vm_vec_normalize(&reye);
 
@@ -794,15 +798,15 @@ void render_laser(int texture, color *clr, float alpha, vec3d *p0, float width1,
 
 	int i;
 	vec3d start, end;
-	vm_vec_scale_add(&start, p0, &fvec, -width1);
-	vm_vec_scale_add(&end, p1, &fvec, width2);
+	vm_vec_scale_add(&start, headp, &fvec, -head_width);
+	vm_vec_scale_add(&end, tailp, &fvec, tail_width);
 	vec3d vecs[4];
 	vertex pts[4];
 
-	vm_vec_scale_add( &vecs[0], &start, &uvec, width1 );
-	vm_vec_scale_add( &vecs[1], &end, &uvec, width2 );
-	vm_vec_scale_add( &vecs[2], &end, &uvec, -width2 );
-	vm_vec_scale_add( &vecs[3], &start, &uvec, -width1 );
+	vm_vec_scale_add( &vecs[0], &start, &uvec, head_width );
+	vm_vec_scale_add( &vecs[1], &end, &uvec, tail_width );
+	vm_vec_scale_add( &vecs[2], &end, &uvec, -tail_width );
+	vm_vec_scale_add( &vecs[3], &start, &uvec, -head_width );
 
 	for ( i = 0; i < 4; i++ ) {
 		g3_transfer_vertex( &pts[i], &vecs[i] );
@@ -990,7 +994,7 @@ void render_laser_2d(int texture, float alpha, vec3d *headp, float head_width, v
 	color clr;
 	gr_init_alphacolor(&clr, 255, 255, 255, 255);
 
-	render_laser_2d(headp, head_width, tailp, tail_width, max_len, texture, &clr, alpha);
+	render_laser_2d(texture, &clr, alpha, headp, head_width, tailp, tail_width, max_len);
 }
 
 // adapted from gr_bitmap()
@@ -1207,14 +1211,31 @@ void render_colored_rect(int x, int y, int w, int h, int resize_mode)
 	render_colored_rect(&gr_screen.current_color, x, y, w, h, resize_mode);
 }
 
+void render_colored_rect(shader *shade_clr, int x, int y, int w, int h, int resize_mode)
+{
+	color clr;
+	gr_init_alphacolor(&clr, shade_clr->r, shade_clr->g, shade_clr->b, shade_clr->c);
+
+	render_colored_rect(&clr, x, y, w, h, resize_mode);
+}
+
 // adapted from g3_draw_2d_shield_icon()
-void render_shield_icon(color *clr, const coord2d coords[6])
+void render_shield_icon(color *clr, coord2d coords[6], int resize_mode)
 {
 	int saved_zbuf;
 	vertex v[6];
 	vertex *verts[6] = {&v[0], &v[1], &v[2], &v[3], &v[4], &v[5]};
 
 	memset(v,0,sizeof(vertex)*6);
+
+	if (resize_mode != GR_RESIZE_NONE) {
+		gr_resize_screen_pos(&coords[0].x, &coords[0].y, NULL, NULL, resize_mode);
+		gr_resize_screen_pos(&coords[1].x, &coords[1].y, NULL, NULL, resize_mode);
+		gr_resize_screen_pos(&coords[2].x, &coords[2].y, NULL, NULL, resize_mode);
+		gr_resize_screen_pos(&coords[3].x, &coords[3].y, NULL, NULL, resize_mode);
+		gr_resize_screen_pos(&coords[4].x, &coords[4].y, NULL, NULL, resize_mode);
+		gr_resize_screen_pos(&coords[5].x, &coords[5].y, NULL, NULL, resize_mode);
+	}
 
 	float sw = 0.1f;
 
@@ -1299,6 +1320,11 @@ void render_shield_icon(color *clr, const coord2d coords[6])
 	
 	// draw the polys
 	render_primitives_colored(&material_instance, v, 4, PRIM_TYPE_TRISTRIP, true);
+}
+
+void render_shield_icon(coord2d coords[6], int resize_mode)
+{
+	render_shield_icon(&gr_screen.current_color, coords, resize_mode);
 }
 
 // adapted from gr_opengl_line()

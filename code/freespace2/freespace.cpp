@@ -1186,8 +1186,9 @@ void game_loading_callback(int count)
 	}
 
 	if (Processing_filename[0] != '\0') {
-		gr_set_shader(&busy_shader);
-		gr_shade(0, 0, gr_screen.max_w_unscaled, 17, GR_RESIZE_MENU); // make sure it goes across the entire width
+		//gr_set_shader(&busy_shader);
+		//gr_shade(0, 0, gr_screen.max_w_unscaled, 17, GR_RESIZE_MENU); // make sure it goes across the entire width
+		render_colored_rect(&busy_shader, 0, 0, gr_screen.max_w_unscaled, 17, GR_RESIZE_MENU); // make sure it goes across the entire width
 
 		gr_set_color_fast(&Color_white);
 		//gr_string(5, 5, Processing_filename, GR_RESIZE_MENU);

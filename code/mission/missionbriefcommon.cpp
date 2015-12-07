@@ -630,8 +630,9 @@ void brief_preload_fade_anim(brief_icon *bi)
 		Assert(ha->first_frame >= 0);
 	}
 
-	gr_set_bitmap(ha->first_frame);
-	gr_aabitmap(0, 0);
+	//gr_set_bitmap(ha->first_frame);
+	//gr_aabitmap(0, 0);
+	gr_aabitmap(ha->first_frame, 0, 0);
 }
 
 void brief_preload_highlight_anim(brief_icon *bi)
@@ -652,8 +653,9 @@ void brief_preload_highlight_anim(brief_icon *bi)
 
 	bi->highlight_anim = *ha;
 
-	gr_set_bitmap(ha->first_frame);
-	gr_aabitmap(0, 0);
+	//gr_set_bitmap(ha->first_frame);
+	//gr_aabitmap(0, 0);
+	render_aabitmap(ha->first_frame, 0, 0);
 }
 
 /**
@@ -840,7 +842,8 @@ void brief_render_icon_line(int stage_num, int line_num)
 
 	brief_set_icon_color(icon[0]->team);
 
-	gr_line(fl2i(icon_x[0]), fl2i(icon_y[0]), fl2i(icon_x[1]), fl2i(icon_y[1]), GR_RESIZE_NONE);
+	//gr_line(fl2i(icon_x[0]), fl2i(icon_y[0]), fl2i(icon_x[1]), fl2i(icon_y[1]), GR_RESIZE_NONE);
+	render_line(fl2i(icon_x[0]), fl2i(icon_y[0]), fl2i(icon_x[1]), fl2i(icon_y[1]), GR_RESIZE_NONE);
 }
 
 /**
@@ -996,8 +999,9 @@ void brief_render_icon(int stage_num, int icon_num, float frametime, int selecte
 		}		
 
 		if ( !(bi->flags & BI_FADEIN) ) {
-			gr_set_bitmap(icon_bitmap);
-			gr_aabitmap(bx, by, GR_RESIZE_MENU,mirror_icon);
+			//gr_set_bitmap(icon_bitmap);
+			//gr_aabitmap(bx, by, GR_RESIZE_MENU,mirror_icon);
+			render_aabitmap(icon_bitmap, bx, by, GR_RESIZE_MENU, mirror_icon);
 
 			// draw text centered over the icon (make text darker)
 			if ( bi->type == ICON_FIGHTER_PLAYER || bi->type == ICON_BOMBER_PLAYER ) {

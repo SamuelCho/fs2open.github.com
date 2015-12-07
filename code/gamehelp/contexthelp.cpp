@@ -185,8 +185,9 @@ void context_help_init()
 
 void context_help_grey_screen()
 {
-	gr_set_shader(&Grey_shader);
-	gr_shade(0,0,gr_screen.clip_width, gr_screen.clip_height, GR_RESIZE_NONE);
+	//gr_set_shader(&Grey_shader);
+	//gr_shade(0,0,gr_screen.clip_width, gr_screen.clip_height, GR_RESIZE_NONE);
+	render_colored_rect(&Grey_shader, 0, 0, gr_screen.clip_width, gr_screen.clip_height, GR_RESIZE_NONE);
 }
 
 // launch_context_help() will switch to a context sensitive help state

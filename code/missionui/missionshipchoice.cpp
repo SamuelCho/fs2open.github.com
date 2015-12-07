@@ -383,7 +383,8 @@ const char *ss_tooltip_handler(const char *str)
 		y = SHIP_DESC_Y - h / 2;
 
 		gr_set_color_fast(&Color_black);
-		gr_rect(x - 5, y - 5, w + 10, h + 10, GR_RESIZE_MENU);
+		//gr_rect(x - 5, y - 5, w + 10, h + 10, GR_RESIZE_MENU);
+		render_colored_rect(x - 5, y - 5, w + 10, h + 10, GR_RESIZE_MENU);
 
 		gr_set_color_fast(&Color_bright_white);
 		//gr_string(x, y, str2, GR_RESIZE_MENU);
@@ -1746,7 +1747,8 @@ void draw_ship_icon_with_number(int screen_offset, int ship_class)
 	// blit the number
 	sprintf(buf, "%d", Ss_pool[ship_class] );
 	gr_set_color_fast(&Color_white);
-	gr_string(num_x, num_y, buf, GR_RESIZE_MENU);
+	//gr_string(num_x, num_y, buf, GR_RESIZE_MENU);
+	render_string(num_x, num_y, buf, GR_RESIZE_MENU);
 }
 
 // ------------------------------------------------------------------------
@@ -2122,7 +2124,8 @@ void draw_wing_block(int wb_num, int hot_slot, int selected_slot, int class_sele
 	sx = Wing_icon_coords[gr_screen.res][wb_num*MAX_WING_SLOTS][0] + 16 - w/2;
 	sy = Wing_icon_coords[gr_screen.res][wb_num*MAX_WING_SLOTS + 3][1] + 32 + h;
 	gr_set_color_fast(&Color_normal);
-	gr_string(sx, sy, wp->name, GR_RESIZE_MENU);
+	//gr_string(sx, sy, wp->name, GR_RESIZE_MENU);
+	render_string(sx, sy, wp->name, GR_RESIZE_MENU);
 
 	for ( i = 0; i < MAX_WING_SLOTS; i++ ) {
 		bitmap_to_draw = -1;

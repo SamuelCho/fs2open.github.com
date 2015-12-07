@@ -471,10 +471,12 @@ const char *wl_tooltip_handler(const char *str)
 		y = Wl_weapon_desc_coords[gr_screen.res][1] - h / 2;
 
 		gr_set_color_fast(&Color_black);
-		gr_rect(x - 5, y - 5, w + 10, h + 10, GR_RESIZE_MENU);
+		//gr_rect(x - 5, y - 5, w + 10, h + 10, GR_RESIZE_MENU);
+		render_colored_rect(x - 5, y - 5, w + 10, h + 10, GR_RESIZE_MENU);
 
 		gr_set_color_fast(&Color_bright_white);
-		gr_string(x, y, str2, GR_RESIZE_MENU);
+		//gr_string(x, y, str2, GR_RESIZE_MENU);
+		render_string(x, y, str2, GR_RESIZE_MENU);
 		return NULL;
 	}
 

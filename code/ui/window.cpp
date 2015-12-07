@@ -392,7 +392,8 @@ void UI_WINDOW::render_tooltip(char *str)
 		tty = gr_screen.max_h_unscaled - str_h;
 
 	gr_set_color_fast(&Color_black);
-	gr_rect(ttx - 1, tty - 1, str_w + 2, str_h + 1, GR_RESIZE_MENU);
+	//gr_rect(ttx - 1, tty - 1, str_w + 2, str_h + 1, GR_RESIZE_MENU);
+	render_colored_rect(ttx - 1, tty - 1, str_w + 2, str_h + 1, GR_RESIZE_MENU);
 
 	gr_set_color_fast(&Color_bright_white);
 	//gr_string(ttx, tty, str, GR_RESIZE_MENU);

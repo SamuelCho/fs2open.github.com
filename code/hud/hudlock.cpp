@@ -22,6 +22,7 @@
 #include "object/object.h"
 #include "playerman/player.h"
 #include "render/3d.h"
+#include "render/render.h"
 #include "ship/ship.h"
 #include "weapon/emp.h"
 #include "weapon/weapon.h"
@@ -139,10 +140,15 @@ void hud_draw_diamond(int x, int y, int width, int height)
 	x4=x-width/2;
 	y4=y;
 
-	gr_line(x1,y1,x2,y2);
-	gr_line(x2,y2,x3,y3);
-	gr_line(x3,y3,x4,y4);
-	gr_line(x4,y4,x1,y1);
+// 	gr_line(x1,y1,x2,y2);
+// 	gr_line(x2,y2,x3,y3);
+// 	gr_line(x3,y3,x4,y4);
+// 	gr_line(x4,y4,x1,y1);
+	render_line(x1,y1,x2,y2);
+	render_line(x2,y2,x3,y3);
+	render_line(x3,y3,x4,y4);
+	render_line(x4,y4,x1,y1);
+
 }
 
 HudGaugeLock::HudGaugeLock():

@@ -217,7 +217,8 @@ void UI_INPUTBOX::draw()
 		// draw the entire text box region
 		ui_draw_sunken_border( x-2, y-2, x+w+1, y+h+1 );
 		gr_set_color_fast( &CBLACK );
-		gr_rect( 0, 0, w, h, GR_RESIZE_MENU );
+		//gr_rect( 0, 0, w, h, GR_RESIZE_MENU );
+		render_colored_rect( 0, 0, w, h, GR_RESIZE_MENU );
 		w1 -= 4;
 		h1 -= 4;
 		gr_set_clip( x + 1, y + 1, w1 + 1, h1 + 1, GR_RESIZE_MENU );
@@ -235,7 +236,8 @@ void UI_INPUTBOX::draw()
 		gr_set_color_fast( &CBLACK );
 
 		// color the background behind the text	
-		gr_rect( 0, 0, tw + 1, th, GR_RESIZE_MENU_NO_OFFSET );
+		//gr_rect( 0, 0, tw + 1, th, GR_RESIZE_MENU_NO_OFFSET );
+		render_colored_rect( 0, 0, tw + 1, th, GR_RESIZE_MENU_NO_OFFSET );
 	}
 
 	if	( (my_wnd->selected_gadget == this) || disabled_flag ) {		

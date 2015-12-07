@@ -209,7 +209,8 @@ void dc_draw_cursor( SCP_string &cmd_string, int x, int y )
 
 		w %= (DCOLS * Current_font->w);
 		//gr_string( w, debug_y*16, "_" );
-		gr_rect(gr_screen.center_offset_x + (x + (w + 1)), gr_screen.center_offset_y + (y + (h + 1)), 2, Current_font->h, GR_RESIZE_NONE);
+		//gr_rect(gr_screen.center_offset_x + (x + (w + 1)), gr_screen.center_offset_y + (y + (h + 1)), 2, Current_font->h, GR_RESIZE_NONE);
+		render_colored_rect(gr_screen.center_offset_x + (x + (w + 1)), gr_screen.center_offset_y + (y + (h + 1)), 2, Current_font->h, GR_RESIZE_NONE);
 	}
 }
 

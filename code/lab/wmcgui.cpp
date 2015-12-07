@@ -1405,10 +1405,14 @@ void Window::DoMove(int dx, int dy)
 
 void draw_open_rect(int x1, int y1, int x2, int y2, int resize_mode = GR_RESIZE_NONE)
 {
-	gr_line(x1, y1, x2, y1, resize_mode);
-	gr_line(x2, y1, x2, y2, resize_mode);
-	gr_line(x2, y2, x1, y2, resize_mode);
-	gr_line(x1, y2, x1, y1, resize_mode);
+// 	gr_line(x1, y1, x2, y1, resize_mode);
+// 	gr_line(x2, y1, x2, y2, resize_mode);
+// 	gr_line(x2, y2, x1, y2, resize_mode);
+// 	gr_line(x1, y2, x1, y1, resize_mode);
+	render_line(x1, y1, x2, y1, resize_mode);
+	render_line(x2, y1, x2, y2, resize_mode);
+	render_line(x2, y2, x1, y2, resize_mode);
+	render_line(x1, y2, x1, y1, resize_mode);
 }
 
 extern void gr_opengl_shade(int x, int y, int w, int h, int resize_mode);
@@ -1456,14 +1460,16 @@ void Window::DoDraw(float frametime)
 		IMG_SET(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_TM));
 		gr_bitmap_list(&BorderRectLists[CIE_HANDLE_TM], 1, GR_RESIZE_NONE);
 	} else {
-		gr_line(Coords[0] + BorderSizes[0], Coords[1], Coords[2] - BorderSizes[2], Coords[1], GR_RESIZE_NONE);
+		//gr_line(Coords[0] + BorderSizes[0], Coords[1], Coords[2] - BorderSizes[2], Coords[1], GR_RESIZE_NONE);
+		render_line(Coords[0] + BorderSizes[0], Coords[1], Coords[2] - BorderSizes[2], Coords[1], GR_RESIZE_NONE);
 	}
 
 	if (IMG_HANDLE_IS_VALID(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_BM))) {
 		IMG_SET(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_BM));
 		gr_bitmap_list(&BorderRectLists[CIE_HANDLE_BM], 1, GR_RESIZE_NONE);
 	} else {
-		gr_line(Coords[0] + BorderSizes[0], Coords[3], Coords[2] - BorderSizes[2], Coords[3], GR_RESIZE_NONE);
+		//gr_line(Coords[0] + BorderSizes[0], Coords[3], Coords[2] - BorderSizes[2], Coords[3], GR_RESIZE_NONE);
+		render_line(Coords[0] + BorderSizes[0], Coords[3], Coords[2] - BorderSizes[2], Coords[3], GR_RESIZE_NONE);
 	}
 
 	if (!(Style & GS_HIDDEN)) {
@@ -1471,14 +1477,16 @@ void Window::DoDraw(float frametime)
 			IMG_SET(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_ML));
 			gr_bitmap_list(&BorderRectLists[CIE_HANDLE_ML], 1, GR_RESIZE_NONE);
 		} else {
-			gr_line(Coords[0], Coords[1] + BorderSizes[1], Coords[0], Coords[3] - BorderSizes[3], GR_RESIZE_NONE);
+			//gr_line(Coords[0], Coords[1] + BorderSizes[1], Coords[0], Coords[3] - BorderSizes[3], GR_RESIZE_NONE);
+			render_line(Coords[0], Coords[1] + BorderSizes[1], Coords[0], Coords[3] - BorderSizes[3], GR_RESIZE_NONE);
 		}
 
 		if (IMG_HANDLE_IS_VALID(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_MR))) {
 			IMG_SET(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_MR));
 			gr_bitmap_list(&BorderRectLists[CIE_HANDLE_MR], 1, GR_RESIZE_NONE);
 		} else {
-			gr_line(Coords[2], Coords[1] + BorderSizes[1], Coords[2], Coords[3] - BorderSizes[3], GR_RESIZE_NONE);
+			//gr_line(Coords[2], Coords[1] + BorderSizes[1], Coords[2], Coords[3] - BorderSizes[3], GR_RESIZE_NONE);
+			render_line(Coords[2], Coords[1] + BorderSizes[1], Coords[2], Coords[3] - BorderSizes[3], GR_RESIZE_NONE);
 		}
 	}
 

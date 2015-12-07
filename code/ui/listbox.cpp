@@ -168,7 +168,8 @@ void UI_LISTBOX::draw()
 */
 			if (!uses_bmaps) {
 				gr_set_color_fast( &CBLACK );
-				gr_rect( x1, y1, w1+2, h1, GR_RESIZE_MENU_NO_OFFSET );
+				//gr_rect( x1, y1, w1+2, h1, GR_RESIZE_MENU_NO_OFFSET );
+				render_colored_rect( x1, y1, w1+2, h1, GR_RESIZE_MENU_NO_OFFSET );
 			}
 
 			gr_set_color_fast(&CWHITE);
@@ -176,12 +177,14 @@ void UI_LISTBOX::draw()
 		} else {
 			if (my_wnd->selected_gadget == this) {
 				gr_set_color_fast( &CGRAY );
-				gr_rect( x1, y1, w1+2, h1, GR_RESIZE_MENU_NO_OFFSET );
+				//gr_rect( x1, y1, w1+2, h1, GR_RESIZE_MENU_NO_OFFSET );
+				render_colored_rect( x1, y1, w1+2, h1, GR_RESIZE_MENU_NO_OFFSET );
 				gr_set_color_fast( &CBRIGHT_GREEN );
 
 			} else {
 				gr_set_color_fast( &CGRAY );
-				gr_rect( x1, y1, w1+2, h1, GR_RESIZE_MENU_NO_OFFSET );
+				//gr_rect( x1, y1, w1+2, h1, GR_RESIZE_MENU_NO_OFFSET );
+				render_colored_rect( x1, y1, w1+2, h1, GR_RESIZE_MENU_NO_OFFSET );
 				gr_set_color_fast( &CBLACK );
 			}
 		}

@@ -897,10 +897,15 @@ void multi_ingame_join_display_avail()
 
 		// draw the border
 		gr_set_color_fast(&Color_bright_blue);
-		gr_line(Mi_name_field[gr_screen.res][MI_FIELD_X]-1,y_start-1, (Mi_name_field[gr_screen.res][MI_FIELD_X]-1) + (Mi_width[gr_screen.res]+2),y_start-1, GR_RESIZE_MENU);
-		gr_line(Mi_name_field[gr_screen.res][MI_FIELD_X]-1,y_start + Mi_spacing[gr_screen.res] - 2, (Mi_name_field[gr_screen.res][MI_FIELD_X]-1) + (Mi_width[gr_screen.res]+2),y_start + Mi_spacing[gr_screen.res] - 2, GR_RESIZE_MENU);
-		gr_line(Mi_name_field[gr_screen.res][MI_FIELD_X]-1,y_start, Mi_name_field[gr_screen.res][MI_FIELD_X]-1, y_start + Mi_spacing[gr_screen.res] - 2, GR_RESIZE_MENU);
-		gr_line((Mi_name_field[gr_screen.res][MI_FIELD_X]-1) + (Mi_width[gr_screen.res]+2), y_start,(Mi_name_field[gr_screen.res][MI_FIELD_X]-1) + (Mi_width[gr_screen.res]+2),y_start + Mi_spacing[gr_screen.res] - 2, GR_RESIZE_MENU);
+// 		gr_line(Mi_name_field[gr_screen.res][MI_FIELD_X]-1,y_start-1, (Mi_name_field[gr_screen.res][MI_FIELD_X]-1) + (Mi_width[gr_screen.res]+2),y_start-1, GR_RESIZE_MENU);
+// 		gr_line(Mi_name_field[gr_screen.res][MI_FIELD_X]-1,y_start + Mi_spacing[gr_screen.res] - 2, (Mi_name_field[gr_screen.res][MI_FIELD_X]-1) + (Mi_width[gr_screen.res]+2),y_start + Mi_spacing[gr_screen.res] - 2, GR_RESIZE_MENU);
+// 		gr_line(Mi_name_field[gr_screen.res][MI_FIELD_X]-1,y_start, Mi_name_field[gr_screen.res][MI_FIELD_X]-1, y_start + Mi_spacing[gr_screen.res] - 2, GR_RESIZE_MENU);
+// 		gr_line((Mi_name_field[gr_screen.res][MI_FIELD_X]-1) + (Mi_width[gr_screen.res]+2), y_start,(Mi_name_field[gr_screen.res][MI_FIELD_X]-1) + (Mi_width[gr_screen.res]+2),y_start + Mi_spacing[gr_screen.res] - 2, GR_RESIZE_MENU);
+
+		render_line(Mi_name_field[gr_screen.res][MI_FIELD_X]-1,y_start-1, (Mi_name_field[gr_screen.res][MI_FIELD_X]-1) + (Mi_width[gr_screen.res]+2),y_start-1, GR_RESIZE_MENU);
+		render_line(Mi_name_field[gr_screen.res][MI_FIELD_X]-1,y_start + Mi_spacing[gr_screen.res] - 2, (Mi_name_field[gr_screen.res][MI_FIELD_X]-1) + (Mi_width[gr_screen.res]+2),y_start + Mi_spacing[gr_screen.res] - 2, GR_RESIZE_MENU);
+		render_line(Mi_name_field[gr_screen.res][MI_FIELD_X]-1,y_start, Mi_name_field[gr_screen.res][MI_FIELD_X]-1, y_start + Mi_spacing[gr_screen.res] - 2, GR_RESIZE_MENU);
+		render_line((Mi_name_field[gr_screen.res][MI_FIELD_X]-1) + (Mi_width[gr_screen.res]+2), y_start,(Mi_name_field[gr_screen.res][MI_FIELD_X]-1) + (Mi_width[gr_screen.res]+2),y_start + Mi_spacing[gr_screen.res] - 2, GR_RESIZE_MENU);
 	}
 
 	moveup = GET_FIRST(&Ship_obj_list);	

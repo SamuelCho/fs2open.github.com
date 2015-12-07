@@ -1398,7 +1398,8 @@ void model_draw_paths_htl( int model_num, uint flags )
 			
 			if (j)
 			{
-				g3_draw_htl_line(&prev_pnt, &pnt);
+				//g3_draw_htl_line(&prev_pnt, &pnt);
+				render_line_3d(true, &prev_pnt, &pnt);
 			}
 
 			prev_pnt = pnt;
@@ -1431,7 +1432,8 @@ void model_draw_bay_paths_htl(int model_num)
 
 			// draw the point and normal
 			g3_draw_htl_sphere(&v1, 2.0);
-			g3_draw_htl_line(&v1, &v2);
+			//g3_draw_htl_line(&v1, &v2);
+			render_line_3d(true, &v1, &v2);
 		}
 	}
 
@@ -1445,7 +1447,8 @@ void model_draw_bay_paths_htl(int model_num)
 				v1 = pm->paths[idx].verts[s_idx].pos;
 				v2 = pm->paths[idx].verts[s_idx+1].pos;
 
-				g3_draw_htl_line(&v1, &v2);
+				//g3_draw_htl_line(&v1, &v2);
+				render_line_3d(true, &v1, &v2);
 			}
 		}
 	}	

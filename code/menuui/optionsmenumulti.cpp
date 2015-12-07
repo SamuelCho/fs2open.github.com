@@ -1981,8 +1981,9 @@ void options_multi_vox_process_waveform()
 	}
 
 	// grey the screen
-	gr_set_shader(&Grey_shader);
-	gr_shade(0,0,gr_screen.clip_width, gr_screen.clip_height, GR_RESIZE_NONE);
+	//gr_set_shader(&Grey_shader);
+	//gr_shade(0,0,gr_screen.clip_width, gr_screen.clip_height, GR_RESIZE_NONE);
+	render_colored_rect(&Grey_shader, 0, 0, gr_screen.clip_width, gr_screen.clip_height, GR_RESIZE_NONE);
 
 	switch(Om_vox_test_status){
 	case OM_VOX_TEST_RECORDING:
@@ -2013,7 +2014,8 @@ void options_multi_vox_process_waveform()
 			}
 
 			running_avg /= avg_len;
-			gr_line((gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y, (gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y + running_avg, GR_RESIZE_MENU);
+			//gr_line((gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y, (gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y + running_avg, GR_RESIZE_MENU);
+			render_line((gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y, (gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y + running_avg, GR_RESIZE_MENU);
 		}		
 
 		// if this packet would have been dropped, notify the user
@@ -2046,7 +2048,8 @@ void options_multi_vox_process_waveform()
 			}
 
 			running_avg /= avg_len;			
-			gr_line((gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y, (gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y + running_avg, GR_RESIZE_MENU);
+			//gr_line((gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y, (gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y + running_avg, GR_RESIZE_MENU);
+			render_line((gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y, (gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y + running_avg, GR_RESIZE_MENU);
 		}				
 		break;
 	}

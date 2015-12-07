@@ -824,7 +824,7 @@ void HudGauge::renderBitmapEx(int frame, int x, int y, int w, int h, int sx, int
 
 	emp_hud_jitter(&x, &y); 
 
-	gr_set_bitmap(frame);
+	//gr_set_bitmap(frame);
 
 	if( gr_screen.rendering_to_texture != -1 ) {
 		gr_set_screen_scale(canvas_w, canvas_h, -1, -1, target_w, target_h, target_w, target_h, true);
@@ -841,7 +841,8 @@ void HudGauge::renderBitmapEx(int frame, int x, int y, int w, int h, int sx, int
 		}
 	}
 
-	gr_aabitmap_ex(x + nx, y + ny, w, h, sx, sy);
+	//gr_aabitmap_ex(x + nx, y + ny, w, h, sx, sy);
+	render_aabitmap_ex(frame, x + nx, y + ny, w, h, sx, sy);
 
 	gr_reset_screen_scale();
 }
@@ -865,7 +866,8 @@ void HudGauge::renderLine(int x1, int y1, int x2, int y2)
 		}
 	}
 
-	gr_line(x1+nx, y1+ny, x2+nx, y2+ny);
+	//gr_line(x1+nx, y1+ny, x2+nx, y2+ny);
+	render_line(x1+nx, y1+ny, x2+nx, y2+ny);
 	gr_reset_screen_scale();
 }
 
@@ -912,7 +914,8 @@ void HudGauge::renderRect(int x, int y, int w, int h)
 		}
 	}
 
-	gr_rect(x+nx, y+ny, w, h);
+	//gr_rect(x+nx, y+ny, w, h);
+	render_colored_rect(x+nx, y+ny, w, h);
 	gr_reset_screen_scale();
 }
 
@@ -2259,10 +2262,10 @@ int hud_anim_render(hud_anim *ha, float frametime, int draw_alpha, int loop, int
 
 	// Blit the bitmap for this frame
 	if(emp_should_blit_gauge()){
-		gr_set_bitmap(ha->first_frame + framenum);
+		//gr_set_bitmap(ha->first_frame + framenum);
 		if ( draw_alpha ){
 			//gr_aabitmap(ha->sx, ha->sy, resize_mode, mirror);
-			gr_aabitmap(ha->first_frame + framenum, ha->sx, ha->sy, resize_mode, mirror);
+			render_aabitmap(ha->first_frame + framenum, ha->sx, ha->sy, resize_mode, mirror);
 		} else {
 			//gr_bitmap(ha->sx, ha->sy, resize_mode);
 			render_bitmap(ha->first_frame + framenum, ha->sx, ha->sy, resize_mode);

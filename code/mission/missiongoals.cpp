@@ -350,8 +350,10 @@ void goal_text::display(int n, int y)
 		y1 = y + h / 2 - 1;
 
 		// custom_size me
-		gr_line(Goal_screen_icon_x, y1, Goal_screen_text_x - 2, y1, GR_RESIZE_MENU);
-		gr_line(Goal_screen_text_x + w + 1, y1, Goal_screen_icon_x + Goal_screen_text_w, y1, GR_RESIZE_MENU);
+// 		gr_line(Goal_screen_icon_x, y1, Goal_screen_text_x - 2, y1, GR_RESIZE_MENU);
+// 		gr_line(Goal_screen_text_x + w + 1, y1, Goal_screen_icon_x + Goal_screen_text_w, y1, GR_RESIZE_MENU);
+		render_line(Goal_screen_icon_x, y1, Goal_screen_text_x - 2, y1, GR_RESIZE_MENU);
+		render_line(Goal_screen_text_x + w + 1, y1, Goal_screen_icon_x + Goal_screen_text_w, y1, GR_RESIZE_MENU);
 
 	} else {
 		gr_set_color_fast(&Color_text_normal);

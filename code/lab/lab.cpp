@@ -1171,7 +1171,7 @@ void labviewer_render_bitmap(float frametime)
 
 
 	// draw the primary laser bitmap
-	gr_set_color_fast(&wip->laser_color_1);
+	//gr_set_color_fast(&wip->laser_color_1);
 
 	if (wip->laser_bitmap.num_frames > 1) {
 		current_frame += frametime;
@@ -1195,10 +1195,11 @@ void labviewer_render_bitmap(float frametime)
 	vec3d headp;
 	vm_vec_scale_add(&headp, &vmd_zero_vector, &Lab_viewer_orient.vec.fvec, wip->laser_length);
 
-	gr_set_bitmap(wip->laser_bitmap.first_frame + framenum, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, 0.99999f);
-	if(wip->laser_length > 0.0001f)
-		g3_draw_laser(&headp, wip->laser_head_radius, &vmd_zero_vector, wip->laser_tail_radius, TMAP_FLAG_TEXTURED | TMAP_FLAG_XPARENT | TMAP_HTL_3D_UNLIT);
-
+	//gr_set_bitmap(wip->laser_bitmap.first_frame + framenum, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, 0.99999f);
+	if(wip->laser_length > 0.0001f) {
+		//g3_draw_laser(&headp, wip->laser_head_radius, &vmd_zero_vector, wip->laser_tail_radius, TMAP_FLAG_TEXTURED | TMAP_FLAG_XPARENT | TMAP_HTL_3D_UNLIT);
+		render_laser(wip->laser_bitmap.first_frame + framenum, &wip->laser_color_1, 0.99999f, &headp, wip->laser_head_radius, &vmd_zero_vector, wip->laser_tail_radius);
+	}
 
 	// now draw the laser glow bitmap, if there is one, and if we are supposed to
 	if ( !(Lab_model_flags & MR_NO_GLOWMAPS) && (wip->laser_glow_bitmap.first_frame >= 0) ) {
@@ -1247,9 +1248,11 @@ void labviewer_render_bitmap(float frametime)
 			CLAMP(framenum, 0, wip->laser_glow_bitmap.num_frames-1);
 		}
 
-		gr_set_bitmap(wip->laser_glow_bitmap.first_frame + framenum, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, weapon_glow_alpha);
-		if(wip->laser_length > 0.0001f)
-			g3_draw_laser_rgb(&headp2, wip->laser_head_radius * weapon_glow_scale_f, &tailp, wip->laser_tail_radius * weapon_glow_scale_r, c.red, c.green, c.blue,  TMAP_FLAG_TEXTURED | TMAP_FLAG_XPARENT  | TMAP_FLAG_RGB | TMAP_HTL_3D_UNLIT);
+		//gr_set_bitmap(wip->laser_glow_bitmap.first_frame + framenum, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, weapon_glow_alpha);
+		if(wip->laser_length > 0.0001f) {
+			//g3_draw_laser_rgb(&headp2, wip->laser_head_radius * weapon_glow_scale_f, &tailp, wip->laser_tail_radius * weapon_glow_scale_r, c.red, c.green, c.blue,  TMAP_FLAG_TEXTURED | TMAP_FLAG_XPARENT  | TMAP_FLAG_RGB | TMAP_HTL_3D_UNLIT);
+			render_laser(wip->laser_glow_bitmap.first_frame + framenum, &c, weapon_glow_alpha, &headp2, wip->laser_head_radius * weapon_glow_scale_f, &tailp, wip->laser_tail_radius * weapon_glow_scale_r);
+		}
 	}
 
 	// clean up and move on ...
@@ -2467,8 +2470,9 @@ void lab_do_frame(float frametime)
 
 	if (Lab_in_mission) {
 		gr_restore_screen(Lab_screen_save_bitmap);
-		gr_set_shader(&Lab_shader);
-		gr_shade(0, 0, gr_screen.max_w, gr_screen.max_h, GR_RESIZE_NONE);
+		//gr_set_shader(&Lab_shader);
+		//gr_shade(0, 0, gr_screen.max_w, gr_screen.max_h, GR_RESIZE_NONE);
+		render_colored_rect(&Lab_shader, 0, 0, gr_screen.max_w, gr_screen.max_h, GR_RESIZE_NONE);
 	} else {
 		labviewer_do_render(frametime);
 	}

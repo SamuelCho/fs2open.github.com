@@ -1174,8 +1174,10 @@ void mission_hotkey_do_frame(float frametime)
 
 				gr_get_string_size(&w, &h, Hotkey_lines[line].label);
 				i = y + h / 2 - 1;
-				gr_line(Hotkey_list_coords[gr_screen.res][0], i, Hotkey_ship_x[gr_screen.res] - 2, i, GR_RESIZE_MENU);
-				gr_line(Hotkey_ship_x[gr_screen.res] + w + 1, i, Hotkey_list_coords[gr_screen.res][0] + Hotkey_list_coords[gr_screen.res][2], i, GR_RESIZE_MENU);
+// 				gr_line(Hotkey_list_coords[gr_screen.res][0], i, Hotkey_ship_x[gr_screen.res] - 2, i, GR_RESIZE_MENU);
+// 				gr_line(Hotkey_ship_x[gr_screen.res] + w + 1, i, Hotkey_list_coords[gr_screen.res][0] + Hotkey_list_coords[gr_screen.res][2], i, GR_RESIZE_MENU);
+				render_line(Hotkey_list_coords[gr_screen.res][0], i, Hotkey_ship_x[gr_screen.res] - 2, i, GR_RESIZE_MENU);
+				render_line(Hotkey_ship_x[gr_screen.res] + w + 1, i, Hotkey_list_coords[gr_screen.res][0] + Hotkey_list_coords[gr_screen.res][2], i, GR_RESIZE_MENU);
 				break;
 
 			case HOTKEY_LINE_WING:
