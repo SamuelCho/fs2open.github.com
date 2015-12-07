@@ -262,7 +262,8 @@ void gr_string_win(int x, int y, const char *s)
 {
 	int old_bitmap = gr_screen.current_bitmap; 
 	gr_set_font(FONT1);
-   	gr_string(x,y,s);
+   	//gr_string(x,y,s);
+	render_string(x,y,s);
 	gr_screen.current_bitmap = old_bitmap; 
 }
 
@@ -311,7 +312,8 @@ void _cdecl gr_printf( int x, int y, const char * format, ... )
 	va_end(args);
 	grx_printf_text[sizeof(grx_printf_text)-1] = '\0';
 
-	gr_string(x,y,grx_printf_text);
+	//gr_string(x,y,grx_printf_text);
+	render_string(x,y,grx_printf_text);
 }
 
 void _cdecl gr_printf_menu( int x, int y, const char * format, ... )
@@ -340,7 +342,8 @@ void _cdecl gr_printf_menu_zoomed( int x, int y, const char * format, ... )
 	va_end(args);
 	grx_printf_text[sizeof(grx_printf_text)-1] = '\0';
 
-	gr_string(x,y,grx_printf_text,GR_RESIZE_MENU_ZOOMED);
+	//gr_string(x,y,grx_printf_text,GR_RESIZE_MENU_ZOOMED);
+	render_string(x,y,grx_printf_text,GR_RESIZE_MENU_ZOOMED);
 }
 
 void _cdecl gr_printf_no_resize( int x, int y, const char * format, ... )
@@ -354,7 +357,8 @@ void _cdecl gr_printf_no_resize( int x, int y, const char * format, ... )
 	va_end(args);
 	grx_printf_text[sizeof(grx_printf_text)-1] = '\0';
 
-	gr_string(x,y,grx_printf_text,GR_RESIZE_NONE);
+	//gr_string(x,y,grx_printf_text,GR_RESIZE_NONE);
+	render_string(x,y,grx_printf_text,GR_RESIZE_NONE);
 }
 
 void gr_font_close()

@@ -593,7 +593,8 @@ void game_framerate_check()
 	// display if we're above the critical framerate
 	if(Framerate < Gf_critical){
 		gr_set_color_fast(&Color_bright_red);
-		gr_string(gr_screen.center_offset_x + 200, y_start, "Framerate warning", GR_RESIZE_NONE);
+		//gr_string(gr_screen.center_offset_x + 200, y_start, "Framerate warning", GR_RESIZE_NONE);
+		render_string(gr_screen.center_offset_x + 200, y_start, "Framerate warning", GR_RESIZE_NONE);
 
 		y_start += 10;
 	}
@@ -1189,7 +1190,8 @@ void game_loading_callback(int count)
 		gr_shade(0, 0, gr_screen.max_w_unscaled, 17, GR_RESIZE_MENU); // make sure it goes across the entire width
 
 		gr_set_color_fast(&Color_white);
-		gr_string(5, 5, Processing_filename, GR_RESIZE_MENU);
+		//gr_string(5, 5, Processing_filename, GR_RESIZE_MENU);
+		render_string(5, 5, Processing_filename, GR_RESIZE_MENU);
 
 		do_flip = 1;
 		memset( Processing_filename, 0, MAX_PATH_LEN );
@@ -1226,10 +1228,12 @@ void game_loading_callback(int count)
 				short_name++;
 
 			sprintf(mem_buffer,"%s:\t%d K", short_name, size);
-			gr_string( 20, 220 + (i*line_height), mem_buffer, GR_RESIZE_MENU);
+			//gr_string( 20, 220 + (i*line_height), mem_buffer, GR_RESIZE_MENU);
+			render_string( 20, 220 + (i*line_height), mem_buffer, GR_RESIZE_MENU);
 		}
 		sprintf(mem_buffer,"Total RAM:\t%d K", TotalRam / 1024);
-		gr_string( 20, 230 + (i*line_height), mem_buffer, GR_RESIZE_MENU);
+		//gr_string( 20, 230 + (i*line_height), mem_buffer, GR_RESIZE_MENU);
+		render_string( 20, 230 + (i*line_height), mem_buffer, GR_RESIZE_MENU);
 #endif	// _WIN32
 	}
 #endif	// !NDEBUG
@@ -2183,14 +2187,17 @@ void game_show_framerate()
 		gr_set_color_fast(&HUD_color_debug);
 
 		if (Cmdline_frame_profile) {
-			gr_string(gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 + line_height, profile_output.c_str(), GR_RESIZE_NONE);
+			//gr_string(gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 + line_height, profile_output.c_str(), GR_RESIZE_NONE);
+			render_string(gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 + line_height, profile_output.c_str(), GR_RESIZE_NONE);
 		}
 
 		if (Show_framerate) {
-			if (frametotal != 0.0f)
+			if (frametotal != 0.0f) {
 				gr_printf_no_resize( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100, "FPS: %0.1f", Framerate );
-			else
-				gr_string( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100, "FPS: ?", GR_RESIZE_NONE );
+			} else {
+				//gr_string( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100, "FPS: ?", GR_RESIZE_NONE );
+				render_string( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100, "FPS: ?", GR_RESIZE_NONE );
+			}
 		}
 	}
 
@@ -2219,13 +2226,16 @@ void game_show_framerate()
 		else
 			sprintf(mem_buffer,"Using Physical: %d Meg",(Mem_starttime_phys - mem_stats.dwAvailPhys)/1024/1024);
 
-		gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		//gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		render_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
 		sy += line_height;
 		sprintf(mem_buffer,"Using Pagefile: %d Meg",(Mem_starttime_pagefile - mem_stats.dwAvailPageFile)/1024/1024);
-		gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		//gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		render_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
 		sy += line_height;
 		sprintf(mem_buffer,"Using Virtual:  %d Meg",(Mem_starttime_virtual - mem_stats.dwAvailVirtual)/1024/1024);
-		gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		//gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		render_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
 		sy += line_height * 2;
 
 		if ( ((int)mem_stats.dwAvailPhys == -1) || ((int)mem_stats.dwTotalPhys == -1) )
@@ -2233,13 +2243,16 @@ void game_show_framerate()
 		else
 			sprintf(mem_buffer,"Physical Free: %d / %d Meg",mem_stats.dwAvailPhys/1024/1024, mem_stats.dwTotalPhys/1024/1024);
 
-		gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		//gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		render_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
 		sy += line_height;
 		sprintf(mem_buffer,"Pagefile Free: %d / %d Meg",mem_stats.dwAvailPageFile/1024/1024, mem_stats.dwTotalPageFile/1024/1024);
-		gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		//gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		render_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
 		sy += line_height;
 		sprintf(mem_buffer,"Virtual Free:  %d / %d Meg",mem_stats.dwAvailVirtual/1024/1024, mem_stats.dwTotalVirtual/1024/1024);
-		gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		//gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		render_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
 	}
 #endif
 
@@ -2361,11 +2374,13 @@ void game_show_framerate()
 				short_name++;
 
 			sprintf(mem_buffer,"%s:\t%d K", short_name, size);
-			gr_string( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 + (line_height * 12) + (mi*line_height), mem_buffer, GR_RESIZE_NONE);
+			//gr_string( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 + (line_height * 12) + (mi*line_height), mem_buffer, GR_RESIZE_NONE);
+			render_string( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 + (line_height * 12) + (mi*line_height), mem_buffer, GR_RESIZE_NONE);
 		}
 
 		sprintf(mem_buffer,"Total RAM:\t%d K", TotalRam / 1024);
-		gr_string( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 + (line_height * 13) + (mi*line_height), mem_buffer, GR_RESIZE_NONE);
+		//gr_string( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 + (line_height * 13) + (mi*line_height), mem_buffer, GR_RESIZE_NONE);
+		render_string( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 + (line_height * 13) + (mi*line_height), mem_buffer, GR_RESIZE_NONE);
 	}
 #endif
 

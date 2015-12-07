@@ -36,6 +36,7 @@
 #include "radar/radar.h"
 #include "radar/radarsetup.h"
 #include "render/3d.h"
+#include "render/render.h"
 #include "ship/afterburner.h"
 #include "ship/ship.h"
 #include "weapon/beam.h"
@@ -1582,7 +1583,8 @@ void obj_render_DEPRECATED(object *obj)
 		case OBJ_WAYPOINT:
 			if (Show_waypoints)	{
 				gr_set_color( 128, 128, 128 );
-				g3_draw_sphere_ez( &obj->pos, 5.0f );
+				//g3_draw_sphere_ez( &obj->pos, 5.0f );
+				render_sphere_fast( &obj->pos, 5.0f );
 			}
 			break;
 		case OBJ_GHOST:

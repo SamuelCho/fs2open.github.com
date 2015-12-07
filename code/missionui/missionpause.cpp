@@ -22,6 +22,7 @@
 #include "network/multi_pause.h"
 #include "object/object.h"
 #include "popup/popup.h"
+#include "render/render.h"
 #include "sound/audiostr.h"
 #include "ui/ui.h"
 #include "weapon/weapon.h"	
@@ -150,16 +151,18 @@ void pause_do()
 
 	if(Pause_type == PAUSE_TYPE_NORMAL){
 		if (Pause_background_bitmap >= 0) {
-			gr_set_bitmap(Pause_background_bitmap);
+			//gr_set_bitmap(Pause_background_bitmap);
 
 			// draw the bitmap
-			gr_bitmap(Please_wait_coords[gr_screen.res][0], Please_wait_coords[gr_screen.res][1], GR_RESIZE_MENU);
+			//gr_bitmap(Please_wait_coords[gr_screen.res][0], Please_wait_coords[gr_screen.res][1], GR_RESIZE_MENU);
+			render_bitmap(Pause_background_bitmap, Please_wait_coords[gr_screen.res][0], Please_wait_coords[gr_screen.res][1], GR_RESIZE_MENU);
 			
 			// draw "Paused" on it
 			gr_set_color_fast(&Color_normal);
 			gr_set_font(FONT2);
 			gr_get_string_size(&str_w, &str_h, pause_str);
-			gr_string((gr_screen.max_w_unscaled - str_w) / 2, (gr_screen.max_h_unscaled - str_h) / 2, pause_str, GR_RESIZE_MENU);
+			//gr_string((gr_screen.max_w_unscaled - str_w) / 2, (gr_screen.max_h_unscaled - str_h) / 2, pause_str, GR_RESIZE_MENU);
+			render_string((gr_screen.max_w_unscaled - str_w) / 2, (gr_screen.max_h_unscaled - str_h) / 2, pause_str, GR_RESIZE_MENU);
 			gr_set_font(FONT1);
 		}
 	}

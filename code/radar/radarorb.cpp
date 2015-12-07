@@ -24,6 +24,7 @@
 #include "playerman/player.h"
 #include "radar/radarorb.h"
 #include "render/3d.h"
+#include "render/render.h"
 #include "ship/awacs.h"
 #include "ship/ship.h"
 #include "ship/subsysdamage.h"
@@ -128,14 +129,17 @@ void HudGaugeRadarOrb::drawContact(vec3d *pnt, int rad)
  
 	if (rad == Radar_blip_radius_target)
 	{
-		g3_draw_sphere(&verts[1],size/100.0f);
+		//g3_draw_sphere(&verts[1],size/100.0f);
+		render_sphere_fast(&verts[1],size/100.0f);
 	}
 	else
 	{
-		g3_draw_sphere(&verts[1],size/300.0f);
+		//g3_draw_sphere(&verts[1],size/300.0f);
+		render_sphere_fast(&verts[1],size/300.0f);
 	}
 
-	g3_draw_line(&verts[0],&verts[1]);
+	//g3_draw_line(&verts[0],&verts[1]);
+	render_aaline(&verts[0],&verts[1]);
 }
 
 void HudGaugeRadarOrb::drawContactHtl(vec3d *pnt, int rad)
@@ -370,7 +374,8 @@ void HudGaugeRadarOrb::drawOutlines()
 
 	g3_project_vertex(&center);
 	gr_set_color(255,255,255);
-	g3_draw_sphere(&center, .05f);
+	//g3_draw_sphere(&center, .05f);
+	render_sphere_fast(&center, .05f);
 
 	g3_project_vertex(&proj_orb_lines_xy[0]);
 	g3_project_vertex(&proj_orb_lines_yz[0]);
@@ -387,14 +392,22 @@ void HudGaugeRadarOrb::drawOutlines()
 		g3_project_vertex(&proj_orb_lines_xz[i]);
 		
 		gr_set_color(192,96,32);
-		g3_draw_sphere(&proj_orb_lines_xy[i-1], .01f);
-		g3_draw_sphere(&proj_orb_lines_xz[i-1], .01f);
-		g3_draw_line(&proj_orb_lines_xy[i-1],&proj_orb_lines_xy[i]);
-		g3_draw_line(&proj_orb_lines_xz[i-1],&proj_orb_lines_xz[i]);
+		//g3_draw_sphere(&proj_orb_lines_xy[i-1], .01f);
+		//g3_draw_sphere(&proj_orb_lines_xz[i-1], .01f);
+		//g3_draw_line(&proj_orb_lines_xy[i-1],&proj_orb_lines_xy[i]);
+		//g3_draw_line(&proj_orb_lines_xz[i-1],&proj_orb_lines_xz[i]);
+
+		render_sphere_fast(&proj_orb_lines_xy[i-1], .01f);
+		render_sphere_fast(&proj_orb_lines_xz[i-1], .01f);
+		render_aaline(&proj_orb_lines_xy[i-1],&proj_orb_lines_xy[i]);
+		render_aaline(&proj_orb_lines_xz[i-1],&proj_orb_lines_xz[i]);
 
 		gr_set_color(112,16,192);
-		g3_draw_sphere(&proj_orb_lines_yz[i-1], .01f);
-		g3_draw_line(&proj_orb_lines_yz[i-1],&proj_orb_lines_yz[i]);
+		//g3_draw_sphere(&proj_orb_lines_yz[i-1], .01f);
+		//g3_draw_line(&proj_orb_lines_yz[i-1],&proj_orb_lines_yz[i]);
+
+		render_sphere_fast(&proj_orb_lines_yz[i-1], .01f);
+		render_aaline(&proj_orb_lines_yz[i-1],&proj_orb_lines_yz[i]);
 	}
 
 	g3_done_instance(false);
@@ -583,7 +596,7 @@ void HudGaugeRadarOrb::drawContactImage(vec3d *pnt, int rad, int idx, int clr_id
         aspect_mp = (((float) h) / ((float) w));
     }
 
-    gr_set_bitmap(idx,GR_ALPHABLEND_NONE,GR_BITBLT_MODE_NORMAL,1.0f);
+    //gr_set_bitmap(idx,GR_ALPHABLEND_NONE,GR_BITBLT_MODE_NORMAL,1.0f);
 
     float sizef = fl_sqrt(vm_vec_dist(&Orb_eye_position, pnt) * 8.0f);
 
@@ -617,11 +630,13 @@ void HudGaugeRadarOrb::drawContactImage(vec3d *pnt, int rad, int idx, int clr_id
     tmap_flags = TMAP_FLAG_TEXTURED | TMAP_FLAG_BW_TEXTURE | TMAP_HTL_3D_UNLIT;
 
 	if ( idx >= 0 ) {
-		g3_draw_polygon(pnt, &vmd_identity_matrix, sizef/35.0f, aspect_mp*sizef/35.0f, tmap_flags);
+		//g3_draw_polygon(pnt, &vmd_identity_matrix, sizef/35.0f, aspect_mp*sizef/35.0f, tmap_flags);
+		render_oriented_quad_colored(idx, 1.0f, pnt, &vmd_identity_matrix, sizef / 35.0f, aspect_mp * sizef / 35.0f);
 	}
 
 	if ( clr_idx >= 0 ) {
-		g3_draw_polygon(pnt, &vmd_identity_matrix, sizef/35.0f, aspect_mp*sizef/35.0f, TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT);
+		//g3_draw_polygon(pnt, &vmd_identity_matrix, sizef/35.0f, aspect_mp*sizef/35.0f, TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT);
+		render_oriented_quad(clr_idx, 1.0f, pnt, &vmd_identity_matrix, sizef / 35.0f, aspect_mp * sizef / 35.0f);
 	}
 }
 

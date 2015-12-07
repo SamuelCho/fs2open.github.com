@@ -29,6 +29,7 @@
 #include "parse/parselo.h"
 #include "playerman/player.h"
 #include "render/3d.h"
+#include "render/render.h"
 #include "ship/ship.h"
 #include "sound/audiostr.h"
 #include "sound/fsspeech.h"
@@ -1001,7 +1002,8 @@ void brief_render_icon(int stage_num, int icon_num, float frametime, int selecte
 			// draw text centered over the icon (make text darker)
 			if ( bi->type == ICON_FIGHTER_PLAYER || bi->type == ICON_BOMBER_PLAYER ) {
 				gr_get_string_size(&w,&h,Players[Player_num].callsign);
-				gr_string(bc - fl2i(w/2.0f), by - h, Players[Player_num].callsign, GR_RESIZE_MENU);
+				//gr_string(bc - fl2i(w/2.0f), by - h, Players[Player_num].callsign, GR_RESIZE_MENU);
+				render_string(bc - fl2i(w/2.0f), by - h, Players[Player_num].callsign, GR_RESIZE_MENU);
 			}
 			else {
 				if (Lcl_gr) {
@@ -1009,16 +1011,19 @@ void brief_render_icon(int stage_num, int icon_num, float frametime, int selecte
 					strcpy_s(buf, bi->label);
 					lcl_translate_brief_icon_name_gr(buf);
 					gr_get_string_size(&w, &h, buf);
-					gr_string(bc - fl2i(w/2.0f), by - h, buf, GR_RESIZE_MENU);
+					//gr_string(bc - fl2i(w/2.0f), by - h, buf, GR_RESIZE_MENU);
+					render_string(bc - fl2i(w/2.0f), by - h, buf, GR_RESIZE_MENU);
 				} else if (Lcl_pl) {
 					char buf[128];
 					strcpy_s(buf, bi->label);
 					lcl_translate_brief_icon_name_pl(buf);
 					gr_get_string_size(&w, &h, buf);
-					gr_string(bc - fl2i(w/2.0f), by - h, buf, GR_RESIZE_MENU);
+					//gr_string(bc - fl2i(w/2.0f), by - h, buf, GR_RESIZE_MENU);
+					render_string(bc - fl2i(w/2.0f), by - h, buf, GR_RESIZE_MENU);
 				} else {
 					gr_get_string_size(&w,&h,bi->label);
-					gr_string(bc - fl2i(w/2.0f), by - h, bi->label, GR_RESIZE_MENU);
+					//gr_string(bc - fl2i(w/2.0f), by - h, bi->label, GR_RESIZE_MENU);
+					render_string(bc - fl2i(w/2.0f), by - h, bi->label, GR_RESIZE_MENU);
 				}
 			}
 
@@ -1213,7 +1218,8 @@ void brief_render_line(int line_num, int x, int y, int instance)
 				{	// Draw coloured text, and increment cariage position
 					int w=0,h=0;
 					brief_set_text_color(last_color);        
-					gr_string(x + offset, y, char_seq, GR_RESIZE_MENU);
+					//gr_string(x + offset, y, char_seq, GR_RESIZE_MENU);
+					render_string(x + offset, y, char_seq, GR_RESIZE_MENU);
 					gr_get_string_size(&w, &h, char_seq);
 					offset += w;
 				}
@@ -1231,7 +1237,8 @@ void brief_render_line(int line_num, int x, int y, int instance)
         {	// Draw coloured text, and increment cariage position
 			int w=0,h=0;
 			brief_set_text_color(last_color);        
-			gr_string(x + offset, y, char_seq, GR_RESIZE_MENU);
+			//gr_string(x + offset, y, char_seq, GR_RESIZE_MENU);
+			render_string(x + offset, y, char_seq, GR_RESIZE_MENU);
 			gr_get_string_size(&w, &h, char_seq);
 			offset += w;
 		}
@@ -1246,7 +1253,8 @@ void brief_render_line(int line_num, int x, int y, int instance)
 		Assert(char_seq_pos < (int)sizeof(char_seq));
 		char_seq[char_seq_pos] = 0;
 		gr_set_color_fast(&Color_bright_white);
-		gr_string(x + offset, y, char_seq, GR_RESIZE_MENU);    
+		//gr_string(x + offset, y, char_seq, GR_RESIZE_MENU);    
+		render_string(x + offset, y, char_seq, GR_RESIZE_MENU);    
 	}
 }
 

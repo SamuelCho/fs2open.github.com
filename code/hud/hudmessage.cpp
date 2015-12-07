@@ -1188,7 +1188,8 @@ void hud_scrollback_do_frame(float frametime)
 
 	gr_set_color_fast(&Color_text_heading);
 	gr_print_timestamp(Hud_mission_log_time_coords[gr_screen.res][0], Hud_mission_log_time_coords[gr_screen.res][1] - font_height, Missiontime, GR_RESIZE_MENU);
-	gr_string(Hud_mission_log_time2_coords[gr_screen.res][0], Hud_mission_log_time_coords[gr_screen.res][1] - font_height, XSTR( "Current time", 289), GR_RESIZE_MENU);
+	//gr_string(Hud_mission_log_time2_coords[gr_screen.res][0], Hud_mission_log_time_coords[gr_screen.res][1] - font_height, XSTR( "Current time", 289), GR_RESIZE_MENU);
+	render_string(Hud_mission_log_time2_coords[gr_screen.res][0], Hud_mission_log_time_coords[gr_screen.res][1] - font_height, XSTR( "Current time", 289), GR_RESIZE_MENU);
 	gr_flip();
 }
 

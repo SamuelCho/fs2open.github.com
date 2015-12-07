@@ -2,6 +2,7 @@
 #include "globalincs/globals.h"
 #include "graphics/2d.h"
 #include "graphics/generic.h"
+#include "render/render.h"
 #define BMPMAN_INTERNAL
 #include "bmpman/bm_internal.h"
 #ifdef _WIN32
@@ -484,6 +485,9 @@ void generic_anim_render(generic_anim *ga, float frametime, int x, int y, bool m
 		ga->current_frame += fl2i(ga->anim_time * ga->num_frames / ga->total_time);
 		//sanity check
 		CLAMP(ga->current_frame, 0, ga->num_frames - 1);
+
+		int bitmap_id = -1;
+
 		if(ga->streaming) {
 			//handle streaming - render one frame
 			if(ga->type == BM_TYPE_ANI) {
@@ -491,15 +495,20 @@ void generic_anim_render(generic_anim *ga, float frametime, int x, int y, bool m
 			} else {
 				generic_render_eff_stream(ga);
 			}
-			gr_set_bitmap(ga->bitmap_id);
+			//gr_set_bitmap(ga->bitmap_id);
+			bitmap_id = ga->bitmap_id;
 		}
 		else {
-			gr_set_bitmap(ga->first_frame + ga->current_frame);
+			//gr_set_bitmap(ga->first_frame + ga->current_frame);
+			bitmap_id = ga->first_frame + ga->current_frame;
 		}
 		ga->previous_frame = ga->current_frame;
-		if(ga->use_hud_color)
-			gr_aabitmap(x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
-		else
-			gr_bitmap(x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
+		if(ga->use_hud_color) {
+			//gr_aabitmap(x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
+			render_aabitmap(bitmap_id, x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
+		} else {
+			//gr_bitmap(x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
+			render_bitmap(bitmap_id, x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
+		}
 	}
 }

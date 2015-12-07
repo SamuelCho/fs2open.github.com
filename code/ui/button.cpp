@@ -12,6 +12,7 @@
 #include "gamesnd/gamesnd.h"
 #include "globalincs/alphacolors.h"
 #include "io/timer.h"
+#include "render/render.h"
 #include "ui/ui.h"
 #include "ui/uidefs.h"
 
@@ -105,8 +106,9 @@ void UI_BUTTON::draw_forced(int frame_num)
 {
 	if (uses_bmaps) {
 		if (bmap_ids[frame_num] >= 0) {
-			gr_set_bitmap(bmap_ids[frame_num]);
-			gr_bitmap(x, y, GR_RESIZE_MENU);
+			//gr_set_bitmap(bmap_ids[frame_num]);
+			//gr_bitmap(x, y, GR_RESIZE_MENU);
+			render_bitmap(bmap_ids[frame_num], x, y, GR_RESIZE_MENU);
 			
 			// my_wnd->draw_tooltip();
 
@@ -146,8 +148,9 @@ void UI_BUTTON::draw()
 		}
 
 		if (frame_num >= 0) {
-			gr_set_bitmap(bmap_ids[frame_num]);
-			gr_bitmap(x, y, GR_RESIZE_MENU);
+			//gr_set_bitmap(bmap_ids[frame_num]);
+			//gr_bitmap(x, y, GR_RESIZE_MENU);
+			render_bitmap(bmap_ids[frame_num], x, y, GR_RESIZE_MENU);
 		}
 	} else {
 		gr_set_font(my_wnd->f_id);

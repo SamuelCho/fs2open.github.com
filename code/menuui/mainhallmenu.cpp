@@ -37,6 +37,7 @@
 #include "parse/scripting.h"
 #include "playerman/player.h"
 #include "popup/popup.h"
+#include "render/render.h"
 #include "sound/audiostr.h"
 
 #ifndef NDEBUG
@@ -959,8 +960,9 @@ void main_hall_do(float frametime)
 	gr_reset_clip();
 	GR_MAYBE_CLEAR_RES(Main_hall_bitmap);
 	if (Main_hall_bitmap >= 0) {
-		gr_set_bitmap(Main_hall_bitmap);
-		gr_bitmap(0, 0, GR_RESIZE_MENU);
+		//gr_set_bitmap(Main_hall_bitmap);
+		//gr_bitmap(0, 0, GR_RESIZE_MENU);
+		render_bitmap(Main_hall_bitmap, 0, 0, GR_RESIZE_MENU);
 	}
 
 	// render misc animations
@@ -1706,7 +1708,8 @@ void main_hall_blit_version()
 
 	// print the string near the lower left corner
 	gr_set_color_fast(&Color_bright_white);
-	gr_string(5, gr_screen.max_h_unscaled_zoomed - (h * 2 + 6), version_string, GR_RESIZE_MENU_ZOOMED);
+	//gr_string(5, gr_screen.max_h_unscaled_zoomed - (h * 2 + 6), version_string, GR_RESIZE_MENU_ZOOMED);
+	render_string(5, gr_screen.max_h_unscaled_zoomed - (h * 2 + 6), version_string, GR_RESIZE_MENU_ZOOMED);
 
 	gr_set_font(old_font);
 }
@@ -1747,7 +1750,8 @@ void main_hall_maybe_blit_tooltips()
 		gr_shade(0, shader_y, gr_screen.max_w_unscaled, (gr_screen.max_h_unscaled - shader_y), GR_RESIZE_MENU);
 
 		gr_set_color_fast(&Color_bright_white);
-		gr_string((gr_screen.max_w_unscaled - w)/2, text_y, desc, GR_RESIZE_MENU);
+		//gr_string((gr_screen.max_w_unscaled - w)/2, text_y, desc, GR_RESIZE_MENU);
+		render_string((gr_screen.max_w_unscaled - w)/2, text_y, desc, GR_RESIZE_MENU);
 
 		gr_set_font(old_font);
 	}
@@ -1792,7 +1796,8 @@ void main_hall_process_help_stuff()
 	gr_set_color_fast(&Color_bright_white);
 	gr_set_shader(&Main_hall_tooltip_shader);
 	gr_shade(0, 0, gr_screen.max_w_unscaled_zoomed, (2*Main_hall->tooltip_padding) + h - y_anim_offset, GR_RESIZE_MENU_ZOOMED);
-	gr_string((gr_screen.max_w_unscaled_zoomed - w)/2, Main_hall->tooltip_padding - y_anim_offset, str, GR_RESIZE_MENU_ZOOMED);
+	//gr_string((gr_screen.max_w_unscaled_zoomed - w)/2, Main_hall->tooltip_padding - y_anim_offset, str, GR_RESIZE_MENU_ZOOMED);
+	render_string((gr_screen.max_w_unscaled_zoomed - w)/2, Main_hall->tooltip_padding - y_anim_offset, str, GR_RESIZE_MENU_ZOOMED);
 
 	gr_set_font(old_font);
 }

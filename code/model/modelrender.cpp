@@ -2419,7 +2419,8 @@ void model_render_debug(int model_num, matrix *orient, vec3d * pos, uint flags, 
 	if ( debug_flags & MR_DEBUG_RADIUS ) {
 		if ( !( flags & MR_SHOW_OUTLINE_PRESET ) ) {
 			gr_set_color(0,64,0);
-			g3_draw_sphere_ez(&vmd_zero_vector,pm->rad);
+			//g3_draw_sphere_ez(&vmd_zero_vector,pm->rad);
+			render_sphere_fast(&vmd_zero_vector,pm->rad);
 		}
 	}
 	float depth = model_render_determine_depth(objnum, model_num, orient, pos, detail_level_locked);
@@ -2448,7 +2449,8 @@ void model_render_debug(int model_num, matrix *orient, vec3d * pos, uint flags, 
 
 		if ( pm->flags & PM_FLAG_AUTOCEN ) {
 			gr_set_color(255, 255, 255);
-			g3_draw_sphere_ez(&pm->autocenter, pm->rad / 4.5f);
+			//g3_draw_sphere_ez(&pm->autocenter, pm->rad / 4.5f);
+			render_sphere_fast(&pm->autocenter, pm->rad / 4.5f);
 		}
 	}
 

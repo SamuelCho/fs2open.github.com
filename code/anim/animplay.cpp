@@ -19,7 +19,7 @@
 #include "io/timer.h"
 #include "pcxutils/pcxutils.h"
 #include "render/3d.h"
-
+#include "render/render.h"
 
 
 static color Color_xparent;
@@ -482,7 +482,7 @@ int anim_show_next_frame(anim_instance *instance, float frametime)
 		//       part of the anim_free_list
 	}
 	else {
-		gr_set_bitmap(bitmap_id);
+		//gr_set_bitmap(bitmap_id);
 		
 		// determine x,y to display the bitmap at
 		if ( instance->world_pos == NULL ) {
@@ -493,11 +493,13 @@ int anim_show_next_frame(anim_instance *instance, float frametime)
 			gr_set_screen_scale(instance->base_w, instance->base_h);
 			gr_set_clip(0, 0, instance->base_w, instance->base_h, GR_RESIZE_MENU);
 			if ( instance->aa_color == NULL ) {
-				gr_bitmap(instance->x, instance->y, GR_RESIZE_MENU_NO_OFFSET);
+				//gr_bitmap(instance->x, instance->y, GR_RESIZE_MENU_NO_OFFSET);
+				render_bitmap(bitmap_id, instance->x, instance->y, GR_RESIZE_MENU_NO_OFFSET);
 			}
 			else {
 				gr_set_color_fast( (color*)instance->aa_color );
-				gr_aabitmap(instance->x, instance->y, GR_RESIZE_MENU_NO_OFFSET);
+				//gr_aabitmap(instance->x, instance->y, GR_RESIZE_MENU_NO_OFFSET);
+				render_aabitmap(bitmap_id, instance->x, instance->y, GR_RESIZE_MENU_NO_OFFSET);
 			}
 			gr_set_screen_scale(old_max_w_unscaled, old_max_h_unscaled, old_max_w_unscaled_zoomed, old_max_h_unscaled_zoomed);
 			gr_reset_clip();
@@ -505,7 +507,8 @@ int anim_show_next_frame(anim_instance *instance, float frametime)
 		else {
 			g3_rotate_vertex(&image_vertex,instance->world_pos);
 			Assert(instance->radius != 0.0f);
-			g3_draw_bitmap(&image_vertex, 0, instance->radius*1.5f, TMAP_FLAG_TEXTURED | TMAP_HTL_2D);
+			//g3_draw_bitmap(&image_vertex, 0, instance->radius*1.5f, TMAP_FLAG_TEXTURED | TMAP_HTL_2D);
+			render_oriented_bitmap_2d(bitmap_id, &image_vertex, 0, instance->radius*1.5f);
 		}
 									  
 		instance->last_bitmap = bitmap_id;

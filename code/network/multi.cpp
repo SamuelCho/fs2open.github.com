@@ -50,7 +50,7 @@
 #include "pilotfile/pilotfile.h"
 #include "debugconsole/console.h"
 #include "network/psnet2.h"
-
+#include "render/render.h"
 
 
 // ----------------------------------------------------------------------------------------
@@ -1818,7 +1818,8 @@ void multi_display_netinfo()
 
 	// server or client
 	if(MULTIPLAYER_MASTER){
-		gr_string(sx, sy, "SERVER", GR_RESIZE_NONE); sy += dy;
+		//gr_string(sx, sy, "SERVER", GR_RESIZE_NONE); sy += dy;
+		render_string(sx, sy, "SERVER", GR_RESIZE_NONE); sy += dy;
 
 		for(idx=0; idx<MAX_PLAYERS; idx++){
 			if(MULTI_CONNECTED(Net_players[idx]) && (Net_player != &Net_players[idx]) && (Net_players[idx].m_player != NULL)){
@@ -1832,7 +1833,8 @@ void multi_display_netinfo()
 			}
 		}
 	} else {
-		gr_string(sx, sy, "CLIENT", GR_RESIZE_NONE); sy += dy;
+		//gr_string(sx, sy, "CLIENT", GR_RESIZE_NONE); sy += dy;
+		render_string(sx, sy, "CLIENT", GR_RESIZE_NONE); sy += dy;
 
 		// display PL
 		if(Net_player != NULL){

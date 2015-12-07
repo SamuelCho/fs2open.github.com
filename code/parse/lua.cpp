@@ -13378,7 +13378,8 @@ ADE_FUNC(drawCurve, l_Graphics, "number X, number Y, number Radius", "Draws a cu
 
 	//WMC - direction should be settable at a certain point via enumerations.
 	//Not gonna deal with it now.
-	gr_curve(x,y,ra,0,GR_RESIZE_FULL);
+	//gr_curve(x,y,ra,0,GR_RESIZE_FULL);
+	render_curve(&lua_Color, x, y, ra, 0, GR_RESIZE_FULL);
 
 	return ADE_RETURN_NIL;
 }
@@ -13393,7 +13394,8 @@ ADE_FUNC(drawGradientLine, l_Graphics, "number X1, number Y1, number X2, number 
 	if(!ade_get_args(L, "iiii", &x1, &y1, &x2, &y2))
 		return ADE_RETURN_NIL;
 
-	gr_gradient(x1,y1,x2,y2,GR_RESIZE_NONE);
+	//gr_gradient(x1,y1,x2,y2,GR_RESIZE_NONE);
+	render_gradient(&lua_Color, x1,y1,x2,y2,GR_RESIZE_NONE);
 
 	return ADE_RETURN_NIL;
 }
@@ -13450,8 +13452,13 @@ ADE_FUNC(drawPolygon, l_Graphics, "texture Texture, [vector Position={0,0,0}, or
 	if(!in_frame)
 		g3_start_frame(0);
 
-	gr_set_bitmap(tdx, lua_Opacity_type, GR_BITBLT_MODE_NORMAL, lua_Opacity);
-	g3_draw_polygon(&pos, orip, width, height, TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT);
+	//gr_set_bitmap(tdx, lua_Opacity_type, GR_BITBLT_MODE_NORMAL, lua_Opacity);
+	//g3_draw_polygon(&pos, orip, width, height, TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT);
+	if ( lua_Opacity_type ) {
+		render_oriented_quad(tdx, lua_Opacity, &pos, orip, width, height);
+	} else {
+		render_oriented_quad(tdx, &pos, orip, width, height);
+	}
 
 	if(!in_frame)
 		g3_end_frame();
@@ -13522,7 +13529,8 @@ ADE_FUNC(drawSphere, l_Graphics, "[number Radius = 1.0, vector Position]", "Draw
 	vertex vtx;
 	vtx.world = pos;
 	g3_rotate_vertex(&vtx, &pos);
-	g3_draw_sphere(&vtx, rad);
+	//g3_draw_sphere(&vtx, rad);
+	render_sphere_fast(&vtx, rad);
 
 	if(!in_frame) {
 		gr_end_view_matrix();
@@ -13912,7 +13920,8 @@ ADE_FUNC(drawString, l_Graphics, "string Message, [number X1, number Y1, number 
 	if(x2 < 0)
 	{
 		num_lines = 1;
-		gr_string(x,y,s,GR_RESIZE_NONE);
+		//gr_string(x,y,s,GR_RESIZE_NONE);
+		render_string(&lua_Color, x, y, s, GR_RESIZE_NONE);
 
 		int height = 0;
 		gr_get_string_size(NULL, &height, s);
@@ -13949,7 +13958,8 @@ ADE_FUNC(drawString, l_Graphics, "string Message, [number X1, number Y1, number 
 			buf[len] = '\0';
 
 			//Draw the string
-			gr_string(x,curr_y,buf,GR_RESIZE_NONE);
+			//gr_string(x,curr_y,buf,GR_RESIZE_NONE);
+			render_string(&lua_Color, x, curr_y, buf, GR_RESIZE_NONE);
 
 			//Free the string we made
 			delete[] buf;

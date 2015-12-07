@@ -30,6 +30,7 @@
 #include "playerman/managepilot.h"
 #include "playerman/player.h"
 #include "popup/popup.h"
+#include "render/render.h"
 #include "ship/ship.h"
 #include "ui/ui.h"
 
@@ -1158,8 +1159,9 @@ void barracks_display_pilot_callsigns(int prospective_pilot)
 		}
 
 		gr_printf_menu(Barracks_list_coords[gr_screen.res][BARRACKS_X_COORD], Barracks_list_coords[gr_screen.res][BARRACKS_Y_COORD] + y, Pilots[cur_pilot_idx]);
-		gr_set_bitmap(Rank_pips_bitmaps + Pilot_ranks[cur_pilot_idx]);
-		gr_bitmap(Barracks_list_coords[gr_screen.res][BARRACKS_X_COORD] - 34, Barracks_list_coords[gr_screen.res][BARRACKS_Y_COORD] + y, GR_RESIZE_MENU);
+		//gr_set_bitmap(Rank_pips_bitmaps + Pilot_ranks[cur_pilot_idx]);
+		//gr_bitmap(Barracks_list_coords[gr_screen.res][BARRACKS_X_COORD] - 34, Barracks_list_coords[gr_screen.res][BARRACKS_Y_COORD] + y, GR_RESIZE_MENU);
+		render_bitmap(Rank_pips_bitmaps + Pilot_ranks[cur_pilot_idx], Barracks_list_coords[gr_screen.res][BARRACKS_X_COORD] - 34, Barracks_list_coords[gr_screen.res][BARRACKS_Y_COORD] + y, GR_RESIZE_MENU);
  
 		y += font_height;
 		cur_pilot_idx++;
@@ -1288,8 +1290,9 @@ void barracks_draw_pilot_pic()
 			// JAS: This code is hacked to allow the animation to use all 256 colors
 			extern int Palman_allow_any_color;
 			Palman_allow_any_color = 1;
-			gr_set_bitmap(Pilot_images[Pic_number]);
-			gr_bitmap(Barracks_image_coords[gr_screen.res][BARRACKS_X_COORD], Barracks_image_coords[gr_screen.res][BARRACKS_Y_COORD], GR_RESIZE_MENU);
+			//gr_set_bitmap(Pilot_images[Pic_number]);
+			//gr_bitmap(Barracks_image_coords[gr_screen.res][BARRACKS_X_COORD], Barracks_image_coords[gr_screen.res][BARRACKS_Y_COORD], GR_RESIZE_MENU);
+			render_bitmap(Pilot_images[Pic_number], Barracks_image_coords[gr_screen.res][BARRACKS_X_COORD], Barracks_image_coords[gr_screen.res][BARRACKS_Y_COORD], GR_RESIZE_MENU);
 			Palman_allow_any_color = 0;
 
 			// print number of the current pic
@@ -1313,8 +1316,9 @@ void barracks_draw_squad_pic()
 			// JAS: This code is hacked to allow the animation to use all 256 colors
 			extern int Palman_allow_any_color;
 			Palman_allow_any_color = 1;
-			gr_set_bitmap(Pilot_squad_images[Pic_squad_number]);
-			gr_bitmap(Barracks_squad_coords[gr_screen.res][BARRACKS_X_COORD], Barracks_squad_coords[gr_screen.res][BARRACKS_Y_COORD], GR_RESIZE_MENU);
+			//gr_set_bitmap(Pilot_squad_images[Pic_squad_number]);
+			//gr_bitmap(Barracks_squad_coords[gr_screen.res][BARRACKS_X_COORD], Barracks_squad_coords[gr_screen.res][BARRACKS_Y_COORD], GR_RESIZE_MENU);
+			render_bitmap(Pilot_squad_images[Pic_squad_number], Barracks_squad_coords[gr_screen.res][BARRACKS_X_COORD], Barracks_squad_coords[gr_screen.res][BARRACKS_Y_COORD], GR_RESIZE_MENU);
 			Palman_allow_any_color = 0;
 
 			// print number of current squad pic
@@ -1599,8 +1603,9 @@ void barracks_do_frame(float frametime)
 	gr_reset_clip();	
 	GR_MAYBE_CLEAR_RES(Background_bitmap);
 	if (Background_bitmap >= 0) {
-		gr_set_bitmap(Background_bitmap);
-		gr_bitmap(0, 0, GR_RESIZE_MENU);	
+		//gr_set_bitmap(Background_bitmap);
+		//gr_bitmap(0, 0, GR_RESIZE_MENU);	
+		render_bitmap(Background_bitmap, 0, 0, GR_RESIZE_MENU);	
 	}		
 
 	// draw pilot image and clean up afterwards

@@ -42,6 +42,7 @@
 #include "pilotfile/pilotfile.h"
 #include "playerman/player.h"
 #include "popup/popup.h"
+#include "render/render.h"
 #include "ship/ship.h"
 #include "sound/audiostr.h"
 #include "sound/fsspeech.h"
@@ -1232,31 +1233,36 @@ void debrief_multi_list_draw()
 				if(np->p_info.team == 0){
 					// draw his "selected" icon
 					if(((np->state == NETPLAYER_STATE_DEBRIEF_ACCEPT) || (np->state == NETPLAYER_STATE_DEBRIEF_REPLAY)) && (Multi_common_icons[MICON_TEAM0_SELECT] != -1)){
-						gr_set_bitmap(Multi_common_icons[MICON_TEAM0_SELECT]);
-						gr_bitmap(Debrief_list_coords[gr_screen.res][0], Debrief_list_coords[gr_screen.res][1] + y - 2, GR_RESIZE_MENU);
+						//gr_set_bitmap(Multi_common_icons[MICON_TEAM0_SELECT]);
+						//gr_bitmap(Debrief_list_coords[gr_screen.res][0], Debrief_list_coords[gr_screen.res][1] + y - 2, GR_RESIZE_MENU);
+						render_bitmap(Multi_common_icons[MICON_TEAM0_SELECT], Debrief_list_coords[gr_screen.res][0], Debrief_list_coords[gr_screen.res][1] + y - 2, GR_RESIZE_MENU);
 					} 
 					// draw his "normal" icon
 					else if(Multi_common_icons[MICON_TEAM0] != -1){
-						gr_set_bitmap(Multi_common_icons[MICON_TEAM0]);
-						gr_bitmap(Debrief_list_coords[gr_screen.res][0], Debrief_list_coords[gr_screen.res][1] + y - 2, GR_RESIZE_MENU);
+						//gr_set_bitmap(Multi_common_icons[MICON_TEAM0]);
+						//gr_bitmap(Debrief_list_coords[gr_screen.res][0], Debrief_list_coords[gr_screen.res][1] + y - 2, GR_RESIZE_MENU);
+						render_bitmap(Multi_common_icons[MICON_TEAM0], Debrief_list_coords[gr_screen.res][0], Debrief_list_coords[gr_screen.res][1] + y - 2, GR_RESIZE_MENU);
 					}					
 				} else if(np->p_info.team == 1){
 					// draw his "selected" icon
 					if(((np->state == NETPLAYER_STATE_DEBRIEF_ACCEPT) || (np->state == NETPLAYER_STATE_DEBRIEF_REPLAY)) && (Multi_common_icons[MICON_TEAM1_SELECT] != -1)){						
-						gr_set_bitmap(Multi_common_icons[MICON_TEAM1_SELECT]);
-						gr_bitmap(Debrief_list_coords[gr_screen.res][0], Debrief_list_coords[gr_screen.res][1] + y - 2, GR_RESIZE_MENU);
+						//gr_set_bitmap(Multi_common_icons[MICON_TEAM1_SELECT]);
+						//gr_bitmap(Debrief_list_coords[gr_screen.res][0], Debrief_list_coords[gr_screen.res][1] + y - 2, GR_RESIZE_MENU);
+						render_bitmap(Multi_common_icons[MICON_TEAM1_SELECT], Debrief_list_coords[gr_screen.res][0], Debrief_list_coords[gr_screen.res][1] + y - 2, GR_RESIZE_MENU);
 					} 
 					// draw his "normal" icon
 					else if(Multi_common_icons[MICON_TEAM1] != -1){
-						gr_set_bitmap(Multi_common_icons[MICON_TEAM1]);
-						gr_bitmap(Debrief_list_coords[gr_screen.res][0], Debrief_list_coords[gr_screen.res][1] + y - 2, GR_RESIZE_MENU);
+						//gr_set_bitmap(Multi_common_icons[MICON_TEAM1]);
+						//gr_bitmap(Debrief_list_coords[gr_screen.res][0], Debrief_list_coords[gr_screen.res][1] + y - 2, GR_RESIZE_MENU);
+						render_bitmap(Multi_common_icons[MICON_TEAM1], Debrief_list_coords[gr_screen.res][0], Debrief_list_coords[gr_screen.res][1] + y - 2, GR_RESIZE_MENU);
 					}					
 				}
 			} else {
 				// draw the team 0 selected icon
 				if(((np->state == NETPLAYER_STATE_DEBRIEF_ACCEPT) || (np->state == NETPLAYER_STATE_DEBRIEF_REPLAY)) && (Multi_common_icons[MICON_TEAM0_SELECT] != -1)){
-					gr_set_bitmap(Multi_common_icons[MICON_TEAM0_SELECT]);
-					gr_bitmap(Debrief_list_coords[gr_screen.res][0], Debrief_list_coords[gr_screen.res][1] + y - 2, GR_RESIZE_MENU);
+					//gr_set_bitmap(Multi_common_icons[MICON_TEAM0_SELECT]);
+					//gr_bitmap(Debrief_list_coords[gr_screen.res][0], Debrief_list_coords[gr_screen.res][1] + y - 2, GR_RESIZE_MENU);
+					render_bitmap(Multi_common_icons[MICON_TEAM0_SELECT], Debrief_list_coords[gr_screen.res][0], Debrief_list_coords[gr_screen.res][1] + y - 2, GR_RESIZE_MENU);
 				}
 			}
 		}
@@ -1267,7 +1273,8 @@ void debrief_multi_list_draw()
 		}		
 
 		// bli
-		gr_string(Debrief_list_coords[gr_screen.res][0] + MULTI_LIST_TEAM_OFFSET, Debrief_list_coords[gr_screen.res][1] + y, str, GR_RESIZE_MENU);
+		//gr_string(Debrief_list_coords[gr_screen.res][0] + MULTI_LIST_TEAM_OFFSET, Debrief_list_coords[gr_screen.res][1] + y, str, GR_RESIZE_MENU);
+		render_string(Debrief_list_coords[gr_screen.res][0] + MULTI_LIST_TEAM_OFFSET, Debrief_list_coords[gr_screen.res][1] + y, str, GR_RESIZE_MENU);
 
 		y += font_height;
 		z++;
@@ -1488,15 +1495,18 @@ void debrief_render_stagenum()
 	sprintf(buf, XSTR( "%d of %d", 445), Current_stage + 1, Num_stages);
 	gr_get_string_size(&w, NULL, buf);
 	gr_set_color_fast(&Color_bright_blue);
-	gr_string(Debrief_stage_info_coords[gr_screen.res][0] - w, Debrief_stage_info_coords[gr_screen.res][1], buf, GR_RESIZE_MENU);
+	//gr_string(Debrief_stage_info_coords[gr_screen.res][0] - w, Debrief_stage_info_coords[gr_screen.res][1], buf, GR_RESIZE_MENU);
+	render_string(Debrief_stage_info_coords[gr_screen.res][0] - w, Debrief_stage_info_coords[gr_screen.res][1], buf, GR_RESIZE_MENU);
 	gr_set_color_fast(&Color_white);
 }
 
 // render the mission difficulty at the specified y location
 void debrief_render_mission_difficulty(int y_loc)
 {	
-	gr_string(0, y_loc, XSTR( "Skill Level", 1509), GR_RESIZE_MENU);
-	gr_string(Debrief_text_x2[gr_screen.res], y_loc, Skill_level_names(Game_skill_level), GR_RESIZE_MENU);	
+	//gr_string(0, y_loc, XSTR( "Skill Level", 1509), GR_RESIZE_MENU);
+	render_string(0, y_loc, XSTR( "Skill Level", 1509), GR_RESIZE_MENU);
+	//gr_string(Debrief_text_x2[gr_screen.res], y_loc, Skill_level_names(Game_skill_level), GR_RESIZE_MENU);	
+	render_string(Debrief_text_x2[gr_screen.res], y_loc, Skill_level_names(Game_skill_level), GR_RESIZE_MENU);	
 }
 
 // render the mission time at the specified y location
@@ -1505,8 +1515,10 @@ void debrief_render_mission_time(int y_loc)
 	char time_str[30];
 	
 	game_format_time(Missiontime, time_str);
-	gr_string(0, y_loc, XSTR( "Mission Time", 446), GR_RESIZE_MENU);
-	gr_string(Debrief_text_x2[gr_screen.res], y_loc, time_str, GR_RESIZE_MENU);	
+	//gr_string(0, y_loc, XSTR( "Mission Time", 446), GR_RESIZE_MENU);
+	render_string(0, y_loc, XSTR( "Mission Time", 446), GR_RESIZE_MENU);
+	//gr_string(Debrief_text_x2[gr_screen.res], y_loc, time_str, GR_RESIZE_MENU);	
+	render_string(Debrief_text_x2[gr_screen.res], y_loc, time_str, GR_RESIZE_MENU);	
 }
 
 // render out the stats info to the scroll window
@@ -1517,7 +1529,8 @@ void debrief_stats_render()
 
 	gr_set_color_fast(&Color_blue);
 	gr_set_clip(Debrief_text_wnd_coords[gr_screen.res][0], Debrief_text_wnd_coords[gr_screen.res][1], Debrief_text_wnd_coords[gr_screen.res][2], Debrief_text_wnd_coords[gr_screen.res][3], GR_RESIZE_MENU);
-	gr_string(0, 0, Debrief_current_callsign, GR_RESIZE_MENU);
+	//gr_string(0, 0, Debrief_current_callsign, GR_RESIZE_MENU);
+	render_string(0, 0, Debrief_current_callsign, GR_RESIZE_MENU);
 	font_height = gr_get_font_height();
 	y = 30;
 	
@@ -2222,7 +2235,8 @@ void debrief_draw_award_text()
 		x = (Medal_bitmap < 0) ? (Debrief_award_text_coords[gr_screen.res][0] + (field_width - sw) / 2) : Debrief_award_text_coords[gr_screen.res][0];
 		if (i==AWARD_TEXT_MAX_LINES-1) x += 7;				// hack because of the shape of the box
 		gr_set_color_fast(&Color_white);
-		gr_string(x, curr_y, Debrief_award_text[i], GR_RESIZE_MENU);
+		//gr_string(x, curr_y, Debrief_award_text[i], GR_RESIZE_MENU);
+		render_string(x, curr_y, Debrief_award_text[i], GR_RESIZE_MENU);
 
 		// adjust y pos, including a little extra between the "pairs"
 		curr_y += fh;
@@ -2304,22 +2318,25 @@ void debrief_do_frame(float frametime)
 		// draw the background, etc
 		GR_MAYBE_CLEAR_RES(Background_bitmap);
 		if (Background_bitmap >= 0) {
-			gr_set_bitmap(Background_bitmap);
-			gr_bitmap(0, 0, GR_RESIZE_MENU);
+			//gr_set_bitmap(Background_bitmap);
+			//gr_bitmap(0, 0, GR_RESIZE_MENU);
+			render_bitmap(Background_bitmap, 0, 0, GR_RESIZE_MENU);
 		}
 
 		Debrief_ui_window.draw();
 		chatbox_render();
 		if ( Debrief_multi_loading_bitmap > -1 ){
-			gr_set_bitmap(Debrief_multi_loading_bitmap);		
-			gr_bitmap( Please_wait_coords[gr_screen.res][0], Please_wait_coords[gr_screen.res][1], GR_RESIZE_MENU );
+			//gr_set_bitmap(Debrief_multi_loading_bitmap);		
+			//gr_bitmap( Please_wait_coords[gr_screen.res][0], Please_wait_coords[gr_screen.res][1], GR_RESIZE_MENU );
+			render_bitmap( Debrief_multi_loading_bitmap, Please_wait_coords[gr_screen.res][0], Please_wait_coords[gr_screen.res][1], GR_RESIZE_MENU );
 		}
 
 		// draw "Please Wait"		
 		gr_set_color_fast(&Color_normal);
 		gr_set_font(FONT2);
 		gr_get_string_size(&str_w, &str_h, please_wait_str);
-		gr_string((gr_screen.max_w_unscaled - str_w) / 2, (gr_screen.max_h_unscaled - str_h) / 2, please_wait_str, GR_RESIZE_MENU);
+		//gr_string((gr_screen.max_w_unscaled - str_w) / 2, (gr_screen.max_h_unscaled - str_h) / 2, please_wait_str, GR_RESIZE_MENU);
+		render_string((gr_screen.max_w_unscaled - str_w) / 2, (gr_screen.max_h_unscaled - str_h) / 2, please_wait_str, GR_RESIZE_MENU);
 		gr_set_font(FONT1);
 
 		gr_flip();
@@ -2427,27 +2444,32 @@ void debrief_do_frame(float frametime)
 	// Now do all the rendering for the frame
 	GR_MAYBE_CLEAR_RES(Background_bitmap);
 	if (Background_bitmap >= 0) {
-		gr_set_bitmap(Background_bitmap);
-		gr_bitmap(0, 0, GR_RESIZE_MENU);
+		//gr_set_bitmap(Background_bitmap);
+		//gr_bitmap(0, 0, GR_RESIZE_MENU);
+		render_bitmap(Background_bitmap, 0, 0, GR_RESIZE_MENU);
 	} 
 
 	// draw the awarded stuff, G
 	if ( Award_active && (Award_bg_bitmap >= 0) ) {
-		gr_set_bitmap(Award_bg_bitmap);
-		gr_bitmap(Debrief_award_wnd_coords[gr_screen.res][0], Debrief_award_wnd_coords[gr_screen.res][1], GR_RESIZE_MENU);
+		//gr_set_bitmap(Award_bg_bitmap);
+		//gr_bitmap(Debrief_award_wnd_coords[gr_screen.res][0], Debrief_award_wnd_coords[gr_screen.res][1], GR_RESIZE_MENU);
+		render_bitmap(Award_bg_bitmap, Debrief_award_wnd_coords[gr_screen.res][0], Debrief_award_wnd_coords[gr_screen.res][1], GR_RESIZE_MENU);
 		if (Rank_bitmap >= 0) {
-			gr_set_bitmap(Rank_bitmap);
-			gr_bitmap(Debrief_award_coords[gr_screen.res][0], Debrief_award_coords[gr_screen.res][1], GR_RESIZE_MENU);
+			//gr_set_bitmap(Rank_bitmap);
+			//gr_bitmap(Debrief_award_coords[gr_screen.res][0], Debrief_award_coords[gr_screen.res][1], GR_RESIZE_MENU);
+			render_bitmap(Rank_bitmap, Debrief_award_coords[gr_screen.res][0], Debrief_award_coords[gr_screen.res][1], GR_RESIZE_MENU);
 		}
 
 		if (Medal_bitmap >= 0) {
-			gr_set_bitmap(Medal_bitmap);
-			gr_bitmap(Debrief_award_coords[gr_screen.res][0], Debrief_award_coords[gr_screen.res][1], GR_RESIZE_MENU);
+			//gr_set_bitmap(Medal_bitmap);
+			//gr_bitmap(Debrief_award_coords[gr_screen.res][0], Debrief_award_coords[gr_screen.res][1], GR_RESIZE_MENU);
+			render_bitmap(Medal_bitmap, Debrief_award_coords[gr_screen.res][0], Debrief_award_coords[gr_screen.res][1], GR_RESIZE_MENU);
 		}
 
 		if (Badge_bitmap >= 0) {
-			gr_set_bitmap(Badge_bitmap);
-			gr_bitmap(Debrief_award_coords[gr_screen.res][0], Debrief_award_coords[gr_screen.res][1], GR_RESIZE_MENU);
+			//gr_set_bitmap(Badge_bitmap);
+			//gr_bitmap(Debrief_award_coords[gr_screen.res][0], Debrief_award_coords[gr_screen.res][1], GR_RESIZE_MENU);
+			render_bitmap(Badge_bitmap, Debrief_award_coords[gr_screen.res][0], Debrief_award_coords[gr_screen.res][1], GR_RESIZE_MENU);
 		}
 
 		//  draw medal/badge/rank labels
@@ -2465,7 +2487,8 @@ void debrief_do_frame(float frametime)
 	gr_set_color_fast(&Color_bright_white);
 	strcpy_s(buf, The_mission.name);
 	gr_force_fit_string(buf, 255, Debrief_title_coords[gr_screen.res][2]);
-	gr_string(Debrief_title_coords[gr_screen.res][0], Debrief_title_coords[gr_screen.res][1], buf, GR_RESIZE_MENU);	
+	//gr_string(Debrief_title_coords[gr_screen.res][0], Debrief_title_coords[gr_screen.res][1], buf, GR_RESIZE_MENU);	
+	render_string(Debrief_title_coords[gr_screen.res][0], Debrief_title_coords[gr_screen.res][1], buf, GR_RESIZE_MENU);	
 
 #if !defined(NDEBUG)
 	gr_set_color_fast(&Color_normal);

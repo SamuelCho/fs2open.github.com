@@ -16,6 +16,7 @@
 #include "lab/wmcgui.h"
 #include "localization/localize.h"
 #include "parse/parselo.h"
+#include "render/render.h"
 
 //Gobals
 GUISystem GUI_system;
@@ -1504,7 +1505,8 @@ void Window::DoDraw(float frametime)
 			} else {
 				gr_set_color_fast(&Color_text_normal);
 			}
-			gr_string(CloseCoords[0], CloseCoords[1], "X", GR_RESIZE_NONE);
+			//gr_string(CloseCoords[0], CloseCoords[1], "X", GR_RESIZE_NONE);
+			render_string(CloseCoords[0], CloseCoords[1], "X", GR_RESIZE_NONE);
 		}
 		
 
@@ -1522,13 +1524,15 @@ void Window::DoDraw(float frametime)
 			} else {
 				gr_set_color_fast(&Color_text_normal);
 			}
-			gr_string(HideCoords[0], HideCoords[1], "-", GR_RESIZE_NONE);
+			//gr_string(HideCoords[0], HideCoords[1], "-", GR_RESIZE_NONE);
+			render_string(HideCoords[0], HideCoords[1], "-", GR_RESIZE_NONE);
 		}
 
 		//Caption text
 		gr_set_color_fast(&Color_text_normal);
 
-		gr_string(CaptionCoords[0], CaptionCoords[1], Caption.c_str(), GR_RESIZE_NONE);
+		//gr_string(CaptionCoords[0], CaptionCoords[1], Caption.c_str(), GR_RESIZE_NONE);
+		render_string(CaptionCoords[0], CaptionCoords[1], Caption.c_str(), GR_RESIZE_NONE);
 	}
 }
 
@@ -1629,7 +1633,8 @@ void Button::DoDraw(float frametime)
 		gr_get_string_size(&half_x, &half_y, Caption.c_str());
 		half_x = Coords[0] +(((Coords[2]-Coords[0]) - half_x) / 2);
 		half_y = Coords[1] +(((Coords[3]-Coords[1]) - half_y) / 2);
-		gr_string(half_x, half_y, Caption.c_str(), GR_RESIZE_NONE);
+		//gr_string(half_x, half_y, Caption.c_str(), GR_RESIZE_NONE);
+		render_string(half_x, half_y, Caption.c_str(), GR_RESIZE_NONE);
 	}
 }
 
@@ -1800,7 +1805,8 @@ void Tree::DrawItems(TreeItem *items)
 				gr_set_color_fast(&Color_text_normal);
 			}
 
-			gr_string(tip->Coords[0], tip->Coords[1], tip->Name.c_str(), GR_RESIZE_NONE);
+			//gr_string(tip->Coords[0], tip->Coords[1], tip->Name.c_str(), GR_RESIZE_NONE);
+			render_string(tip->Coords[0], tip->Coords[1], tip->Name.c_str(), GR_RESIZE_NONE);
 
 			if (NOT_EMPTY(&tip->Children) && tip->ShowChildren) {
 				DrawItems((TreeItem*)&tip->Children);
@@ -2029,7 +2035,8 @@ void Text::DoDraw(float frametime)
 	int font_height = gr_get_font_height();
 
 	for (int i = 0; i < NumLines; i++) {
-		gr_string(ChildCoords[0], ChildCoords[1] + (i*font_height), Content.substr(LineStartPoints[i] - Content.c_str(), LineLengths[i]).c_str(), GR_RESIZE_NONE);
+		//gr_string(ChildCoords[0], ChildCoords[1] + (i*font_height), Content.substr(LineStartPoints[i] - Content.c_str(), LineLengths[i]).c_str(), GR_RESIZE_NONE);
+		render_string(ChildCoords[0], ChildCoords[1] + (i*font_height), Content.substr(LineStartPoints[i] - Content.c_str(), LineLengths[i]).c_str(), GR_RESIZE_NONE);
 	}
 }
 
@@ -2402,11 +2409,13 @@ void Checkbox::DoDraw(float frametime)
 	if ( (IsChecked && ((FlagPtr == NULL) && (BoolFlagPtr == NULL)))
 		|| ((FlagPtr != NULL) && ((*FlagPtr) & Flag))
 		|| ((BoolFlagPtr != NULL) && (*BoolFlagPtr)) ) {
-		gr_string(CheckCoords[0], CheckCoords[1], "X", GR_RESIZE_NONE);
+		//gr_string(CheckCoords[0], CheckCoords[1], "X", GR_RESIZE_NONE);
+		render_string(CheckCoords[0], CheckCoords[1], "X", GR_RESIZE_NONE);
 	}
 
 	gr_set_color_fast(&Color_text_normal);
-	gr_string(CheckCoords[2] + CB_TEXTCHECKDIST, CheckCoords[1], Label.c_str(), GR_RESIZE_NONE);
+	//gr_string(CheckCoords[2] + CB_TEXTCHECKDIST, CheckCoords[1], Label.c_str(), GR_RESIZE_NONE);
+	render_string(CheckCoords[2] + CB_TEXTCHECKDIST, CheckCoords[1], Label.c_str(), GR_RESIZE_NONE);
 }
 
 int Checkbox::DoMouseOver(float frametime)

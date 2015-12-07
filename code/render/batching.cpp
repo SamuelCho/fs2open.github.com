@@ -762,7 +762,7 @@ void batching_render_batch_item(primitive_batch_item *item, vertex_layout *layou
 	} else {
 		material material_def;
 
-		render_set_unlit_material(&material_def, item->batch_item_info.texture, true, true);
+		render_set_unlit_material(&material_def, item->batch_item_info.texture, 1.0f, true, true);
 		gr_render_primitives(&material_def, PRIM_TYPE_TRIS, layout, item->offset, item->n_verts, buffer_num);
 	}
 }

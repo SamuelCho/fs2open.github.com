@@ -25,6 +25,7 @@
 #include "graphics/tmapper.h"
 #include "graphics/2d.h"
 #include "render/3d.h"
+#include "render/render.h"
 #include "model/model.h"
 #include "bmpman/bmpman.h"
 #include "io/key.h"
@@ -426,15 +427,18 @@ void render_waypoints(void)
 					else
 						gr_set_color(160, 96, 0);
 
-					g3_draw_sphere(&v, LOLLIPOP_SIZE);
+					//g3_draw_sphere(&v, LOLLIPOP_SIZE);
+					render_sphere_fast(&v, LOLLIPOP_SIZE);
 					if (prev_vec == NULL)
 						gr_set_color(160, 96, 0);
 					else
 						gr_set_color(0, 0, 0);
 
-					g3_draw_sphere(&v, LOLLIPOP_SIZE * 0.66667f);
+					//g3_draw_sphere(&v, LOLLIPOP_SIZE * 0.66667f);
+					render_sphere_fast(&v, LOLLIPOP_SIZE * 0.66667f);
 					gr_set_color(160, 96, 0);
-					g3_draw_sphere(&v, LOLLIPOP_SIZE * 0.33333f);
+					//g3_draw_sphere(&v, LOLLIPOP_SIZE * 0.33333f);
+					render_sphere_fast(&v, LOLLIPOP_SIZE * 0.33333f);
 				}
 			}
 
@@ -1154,10 +1158,12 @@ void draw_orient_sphere(object *obj, int r, int g, int b)
 
 	gr_set_color(r, g, b);
 	g3_rotate_vertex(&v, &obj->pos);
-	if (!(v.codes & CC_BEHIND))
-		if (!(g3_project_vertex(&v) & PF_OVERFLOW))
-			g3_draw_sphere(&v, size);
-
+	if ( !(v.codes & CC_BEHIND) ) {
+		if ( !(g3_project_vertex(&v) & PF_OVERFLOW) ) {
+			//g3_draw_sphere(&v, size);
+			render_sphere_fast(&v, size);
+		}
+	}
 	if (flag)	{
 		gr_set_color(192, 192, 192);
 		rpd_line(&v1, &v2);
@@ -1194,9 +1200,11 @@ void draw_orient_sphere2(int col, object *obj, int r, int g, int b)
 		if (!(g3_project_vertex(&v) & PF_OVERFLOW))
 		{
 			gr_set_color((col >> 16) & 0xff, (col >> 8) & 0xff, col & 0xff);
-			g3_draw_sphere(&v, size);
+			//g3_draw_sphere(&v, size);
+			render_sphere_fast(&v, size);
 			gr_set_color(r, g, b);
-			g3_draw_sphere(&v, size * 0.75f);
+			//g3_draw_sphere(&v, size * 0.75f);
+			render_sphere_fast(&v, size * 0.75f);
 		}
 
 	if (flag)	{
@@ -1829,18 +1837,31 @@ void draw_asteroid_field()
 			for (j=0; j<8; j++)
 				g3_rotate_vertex(&v[j], &p[j]);
 
-			g3_draw_line(&v[0], &v[1]);
-			g3_draw_line(&v[2], &v[3]);
-			g3_draw_line(&v[4], &v[5]);
-			g3_draw_line(&v[6], &v[7]);
-			g3_draw_line(&v[0], &v[2]);
-			g3_draw_line(&v[1], &v[3]);
-			g3_draw_line(&v[4], &v[6]);
-			g3_draw_line(&v[5], &v[7]);
-			g3_draw_line(&v[0], &v[4]);
-			g3_draw_line(&v[1], &v[5]);
-			g3_draw_line(&v[2], &v[6]);
-			g3_draw_line(&v[3], &v[7]);
+// 			g3_draw_line(&v[0], &v[1]);
+// 			g3_draw_line(&v[2], &v[3]);
+// 			g3_draw_line(&v[4], &v[5]);
+// 			g3_draw_line(&v[6], &v[7]);
+// 			g3_draw_line(&v[0], &v[2]);
+// 			g3_draw_line(&v[1], &v[3]);
+// 			g3_draw_line(&v[4], &v[6]);
+// 			g3_draw_line(&v[5], &v[7]);
+// 			g3_draw_line(&v[0], &v[4]);
+// 			g3_draw_line(&v[1], &v[5]);
+// 			g3_draw_line(&v[2], &v[6]);
+// 			g3_draw_line(&v[3], &v[7]);
+
+			render_aaline(&v[0], &v[1]);
+			render_aaline(&v[2], &v[3]);
+			render_aaline(&v[4], &v[5]);
+			render_aaline(&v[6], &v[7]);
+			render_aaline(&v[0], &v[2]);
+			render_aaline(&v[1], &v[3]);
+			render_aaline(&v[4], &v[6]);
+			render_aaline(&v[5], &v[7]);
+			render_aaline(&v[0], &v[4]);
+			render_aaline(&v[1], &v[5]);
+			render_aaline(&v[2], &v[6]);
+			render_aaline(&v[3], &v[7]);
 
 
 			// maybe draw inner box
@@ -1858,18 +1879,31 @@ void draw_asteroid_field()
 				for (j=0; j<8; j++)
 					g3_rotate_vertex(&iv[j], &ip[j]);
 
-				g3_draw_line(&iv[0], &iv[1]);
-				g3_draw_line(&iv[2], &iv[3]);
-				g3_draw_line(&iv[4], &iv[5]);
-				g3_draw_line(&iv[6], &iv[7]);
-				g3_draw_line(&iv[0], &iv[2]);
-				g3_draw_line(&iv[1], &iv[3]);
-				g3_draw_line(&iv[4], &iv[6]);
-				g3_draw_line(&iv[5], &iv[7]);
-				g3_draw_line(&iv[0], &iv[4]);
-				g3_draw_line(&iv[1], &iv[5]);
-				g3_draw_line(&iv[2], &iv[6]);
-				g3_draw_line(&iv[3], &iv[7]);
+// 				g3_draw_line(&iv[0], &iv[1]);
+// 				g3_draw_line(&iv[2], &iv[3]);
+// 				g3_draw_line(&iv[4], &iv[5]);
+// 				g3_draw_line(&iv[6], &iv[7]);
+// 				g3_draw_line(&iv[0], &iv[2]);
+// 				g3_draw_line(&iv[1], &iv[3]);
+// 				g3_draw_line(&iv[4], &iv[6]);
+// 				g3_draw_line(&iv[5], &iv[7]);
+// 				g3_draw_line(&iv[0], &iv[4]);
+// 				g3_draw_line(&iv[1], &iv[5]);
+// 				g3_draw_line(&iv[2], &iv[6]);
+// 				g3_draw_line(&iv[3], &iv[7]);
+
+				render_aaline(&iv[0], &iv[1]);
+				render_aaline(&iv[2], &iv[3]);
+				render_aaline(&iv[4], &iv[5]);
+				render_aaline(&iv[6], &iv[7]);
+				render_aaline(&iv[0], &iv[2]);
+				render_aaline(&iv[1], &iv[3]);
+				render_aaline(&iv[4], &iv[6]);
+				render_aaline(&iv[5], &iv[7]);
+				render_aaline(&iv[0], &iv[4]);
+				render_aaline(&iv[1], &iv[5]);
+				render_aaline(&iv[2], &iv[6]);
+				render_aaline(&iv[3], &iv[7]);
 			}
 
 		}
@@ -2073,7 +2107,8 @@ void draw_compass_arrow(vec3d *v0)
 	g3_project_vertex(&tv1);
 //	tv0.sx = (tv0.sx - tv1.sx) * 1 + tv1.sx;
 //	tv0.sy = (tv0.sy - tv1.sy) * 1 + tv1.sy;
-	g3_draw_line(&tv0, &tv1);
+	//g3_draw_line(&tv0, &tv1);
+	render_aaline(&tv0, &tv1);
 }
 
 

@@ -22,6 +22,7 @@
 #include "parse/parselo.h"
 #include "playerman/player.h"
 #include "popup/popup.h"
+#include "render/render.h"
 #include "ship/ship.h"
 #include "ui/ui.h"
 
@@ -1421,7 +1422,8 @@ void hud_config_render_description()
 		gr_get_string_size(&w, &h, HC_gauge_descriptions(HC_gauge_selected));
 		sx = fl2i(HC_gauge_description_coords[gr_screen.res][0] + (HC_gauge_description_coords[gr_screen.res][2] - w)/2.0f);
 		sy = HC_gauge_description_coords[gr_screen.res][1];
-		gr_string(sx, sy, HC_gauge_descriptions(HC_gauge_selected), GR_RESIZE_MENU);
+		//gr_string(sx, sy, HC_gauge_descriptions(HC_gauge_selected), GR_RESIZE_MENU);
+		render_string(sx, sy, HC_gauge_descriptions(HC_gauge_selected), GR_RESIZE_MENU);
 	}
 }
 
@@ -1486,8 +1488,9 @@ void hud_config_do_frame(float frametime)
 	// set the background
 	GR_MAYBE_CLEAR_RES(HC_background_bitmap);
 	if ( HC_background_bitmap > 0 ) {
-		gr_set_bitmap(HC_background_bitmap);
-		gr_bitmap(0,0,GR_RESIZE_MENU);
+		//gr_set_bitmap(HC_background_bitmap);
+		//gr_bitmap(0,0,GR_RESIZE_MENU);
+		render_bitmap(HC_background_bitmap, 0, 0, GR_RESIZE_MENU);
 	}
 
 	// rgb slider/button stuff

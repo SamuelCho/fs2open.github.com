@@ -26,6 +26,7 @@
 #include "parse/parselo.h"
 #include "playerman/player.h"
 #include "render/3d.h"
+#include "render/render.h"
 #include "ship/ship.h"
 #include "sound/fsspeech.h"
 #include "ui/ui.h"
@@ -382,7 +383,8 @@ void techroom_render_desc(int xo, int yo, int ho)
 
 		strncpy(line, Text_lines[z], len);
 		line[len] = 0;
-		gr_string(xo, yo + y, line, GR_RESIZE_MENU);
+		//gr_string(xo, yo + y, line, GR_RESIZE_MENU);
+		render_string(xo, yo + y, line, GR_RESIZE_MENU);
 
 		y += font_height;
 		z++;
@@ -398,7 +400,8 @@ void techroom_render_desc(int xo, int yo, int ho)
 		gr_set_color_fast(&Color_black);
 		gr_rect(more_txt_x-2, more_txt_y, w+3, h, GR_RESIZE_MENU);
 		gr_set_color_fast(&Color_more_indicator);
-		gr_string(more_txt_x, more_txt_y, XSTR("more", 1469), GR_RESIZE_MENU);  // base location on the input x and y?
+		//gr_string(more_txt_x, more_txt_y, XSTR("more", 1469), GR_RESIZE_MENU);
+		render_string(more_txt_x, more_txt_y, XSTR("more", 1469), GR_RESIZE_MENU);  // base location on the input x and y?
 	}
 
 }
@@ -438,7 +441,8 @@ void tech_common_render()
 			lcl_translate_ship_name_gr(buf);
 
 		gr_force_fit_string(buf, 255, Tech_list_coords[gr_screen.res][SHIP_W_COORD]);
-		gr_string(Tech_list_coords[gr_screen.res][SHIP_X_COORD], Tech_list_coords[gr_screen.res][SHIP_Y_COORD] + y, buf, GR_RESIZE_MENU);
+		//gr_string(Tech_list_coords[gr_screen.res][SHIP_X_COORD], Tech_list_coords[gr_screen.res][SHIP_Y_COORD] + y, buf, GR_RESIZE_MENU);
+		render_string(Tech_list_coords[gr_screen.res][SHIP_X_COORD], Tech_list_coords[gr_screen.res][SHIP_Y_COORD] + y, buf, GR_RESIZE_MENU);
 
 		List_buttons[z - List_offset].update_dimensions(Tech_list_coords[gr_screen.res][SHIP_X_COORD], Tech_list_coords[gr_screen.res][SHIP_Y_COORD] + y, Tech_list_coords[gr_screen.res][SHIP_W_COORD], font_height);
 		List_buttons[z - List_offset].enable(1);
@@ -738,8 +742,9 @@ void techroom_anim_render(float frametime)
 		//get the centre point - adjust
 		x = Tech_ani_centre_coords[gr_screen.res][0] - x / 2;
 		y = Tech_ani_centre_coords[gr_screen.res][1] - y / 2;
-		gr_set_bitmap(Current_list[Cur_entry].bitmap);
-		gr_bitmap(x, y, GR_RESIZE_MENU);
+		//gr_set_bitmap(Current_list[Cur_entry].bitmap);
+		//gr_bitmap(x, y, GR_RESIZE_MENU);
+		render_bitmap(Current_list[Cur_entry].bitmap, x, y, GR_RESIZE_MENU);
 	}
 }
 
@@ -1376,8 +1381,9 @@ void techroom_do_frame(float frametime)
 	// clear & draw bg bitmap
 	GR_MAYBE_CLEAR_RES(Tech_background_bitmap);
 	if (Tech_background_bitmap >= 0) {
-		gr_set_bitmap(Tech_background_bitmap);
-		gr_bitmap(0, 0, GR_RESIZE_MENU);
+		//gr_set_bitmap(Tech_background_bitmap);
+		//gr_bitmap(0, 0, GR_RESIZE_MENU);
+		render_bitmap(Tech_background_bitmap, 0, 0, GR_RESIZE_MENU);
 	}
 
 	// render

@@ -12,7 +12,7 @@
 #include "globalincs/alphacolors.h"
 #include "ui/ui.h"
 #include "ui/uidefs.h"
-
+#include "render/render.h"
 
 
 void ui_hline(int x1, int x2, int y )
@@ -31,7 +31,8 @@ void ui_string_centered( int x, int y, char * s )
 
 	gr_get_string_size( &width, &height, s );
 
-	gr_string(x-((width-1)/2), y-((height-1)/2), s, GR_RESIZE_MENU );
+	//gr_string(x-((width-1)/2), y-((height-1)/2), s, GR_RESIZE_MENU );
+	render_string(x-((width-1)/2), y-((height-1)/2), s, GR_RESIZE_MENU );
 }
 
 

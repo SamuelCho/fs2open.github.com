@@ -42,6 +42,7 @@
 #include "parse/sexp.h"
 #include "popup/popup.h"
 #include "render/3d.h"
+#include "render/render.h"
 #include "ship/ship.h"
 #include "ui/uidefs.h"
 #include "weapon/weapon.h"
@@ -721,8 +722,9 @@ void common_render(float frametime)
 {
 	if ( !Background_playing ) {
 		GR_MAYBE_CLEAR_RES(Brief_background_bitmap);
-		gr_set_bitmap(Brief_background_bitmap);
-		gr_bitmap(0, 0, GR_RESIZE_MENU);
+		//gr_set_bitmap(Brief_background_bitmap);
+		//gr_bitmap(0, 0, GR_RESIZE_MENU);
+		render_bitmap(Brief_background_bitmap, 0, 0, GR_RESIZE_MENU);
 	}
 
 	anim_render_all(0, frametime);

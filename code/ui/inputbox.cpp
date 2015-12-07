@@ -16,7 +16,7 @@
 #include "io/timer.h"
 #include "ui/ui.h"
 #include "ui/uidefs.h"
-
+#include "render/render.h"
 
 
 #define INPUTBOX_PASSWD_CHAR        '*'   // the password protected char
@@ -256,9 +256,11 @@ void UI_INPUTBOX::draw()
 
 	// draw the text
 	if (flags & UI_INPUTBOX_FLAG_PASSWD){
-		gr_string(text_x, text_y, passwd_text, GR_RESIZE_MENU);
+		//gr_string(text_x, text_y, passwd_text, GR_RESIZE_MENU);
+		render_string(text_x, text_y, passwd_text, GR_RESIZE_MENU);
 	} else {
-		gr_string(text_x, text_y, text, GR_RESIZE_MENU);
+		//gr_string(text_x, text_y, text, GR_RESIZE_MENU);
+		render_string(text_x, text_y, text, GR_RESIZE_MENU);
 	}
 
 	// draw the "cursor"
@@ -282,8 +284,9 @@ void UI_INPUTBOX::draw()
 				}
 
 				// draw current frame
-				gr_set_bitmap(cursor_first_frame + cursor_current_frame);
-				gr_bitmap(text_x + tw + 4, 1, GR_RESIZE_MENU_NO_OFFSET);
+				//gr_set_bitmap(cursor_first_frame + cursor_current_frame);
+				//gr_bitmap(text_x + tw + 4, 1, GR_RESIZE_MENU_NO_OFFSET);
+				render_bitmap(cursor_first_frame + cursor_current_frame, text_x + tw + 4, 1, GR_RESIZE_MENU_NO_OFFSET);
 			}
 		}
 	}

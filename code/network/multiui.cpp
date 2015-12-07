@@ -65,6 +65,7 @@
 #include "fs2netd/fs2netd_client.h"
 #include "menuui/mainhallmenu.h"
 #include "debugconsole/console.h"
+#include "render/render.h"
 
 #include <algorithm>
 
@@ -217,13 +218,15 @@ void multi_common_render_text()
 		if ( line_count >= Multi_common_text_max_display[gr_screen.res] ){
 			break;	
 		}
-		gr_string(Multi_common_text_coords[gr_screen.res][0], Multi_common_text_coords[gr_screen.res][1] + (line_count*fh), Multi_common_text[i], GR_RESIZE_MENU);		
+		//gr_string(Multi_common_text_coords[gr_screen.res][0], Multi_common_text_coords[gr_screen.res][1] + (line_count*fh), Multi_common_text[i], GR_RESIZE_MENU);		
+		render_string(Multi_common_text_coords[gr_screen.res][0], Multi_common_text_coords[gr_screen.res][1] + (line_count*fh), Multi_common_text[i], GR_RESIZE_MENU);		
 		line_count++;
 	}
 
 	if ( (Multi_common_num_text_lines - Multi_common_top_text_line) > Multi_common_text_max_display[gr_screen.res] ) {
 		gr_set_color_fast(&Color_more_bright);
-		gr_string(Multi_common_text_coords[gr_screen.res][0], (Multi_common_text_coords[gr_screen.res][1] + Multi_common_text_coords[gr_screen.res][3])-5, XSTR("more",755), GR_RESIZE_MENU);
+		//gr_string(Multi_common_text_coords[gr_screen.res][0], (Multi_common_text_coords[gr_screen.res][1] + Multi_common_text_coords[gr_screen.res][3])-5, XSTR("more",755), GR_RESIZE_MENU);
+		render_string(Multi_common_text_coords[gr_screen.res][0], (Multi_common_text_coords[gr_screen.res][1] + Multi_common_text_coords[gr_screen.res][3])-5, XSTR("more",755), GR_RESIZE_MENU);
 	}
 }
 
@@ -294,7 +297,8 @@ void multi_common_notify_do()
 				break;			
 			}
 			if(y != -1){
-				gr_string((gr_screen.max_w_unscaled - w)/2, y, Multi_common_notify_text, GR_RESIZE_MENU);
+				//gr_string((gr_screen.max_w_unscaled - w)/2, y, Multi_common_notify_text, GR_RESIZE_MENU);
+				render_string((gr_screen.max_w_unscaled - w)/2, y, Multi_common_notify_text, GR_RESIZE_MENU);
 			}
 		}
 	}
@@ -372,16 +376,18 @@ void multi_common_voice_display_status()
 	// i have been denied the voice token
 	case MULTI_VOICE_STATUS_DENIED:
 		if(Multi_common_icons[MICON_VOICE_DENIED] != -1){
-			gr_set_bitmap(Multi_common_icons[MICON_VOICE_DENIED]);
-			gr_bitmap(0,0,GR_RESIZE_MENU);
+			//gr_set_bitmap(Multi_common_icons[MICON_VOICE_DENIED]);
+			//gr_bitmap(0,0,GR_RESIZE_MENU);
+			render_bitmap(Multi_common_icons[MICON_VOICE_DENIED], 0, 0, GR_RESIZE_MENU);
 		}
 		break;
 
 	// i am currently recording
 	case MULTI_VOICE_STATUS_RECORDING:
 		if(Multi_common_icons[MICON_VOICE_RECORDING] != -1){
-			gr_set_bitmap(Multi_common_icons[MICON_VOICE_RECORDING]);
-			gr_bitmap(0,0,GR_RESIZE_MENU);
+			//gr_set_bitmap(Multi_common_icons[MICON_VOICE_RECORDING]);
+			//gr_bitmap(0,0,GR_RESIZE_MENU);
+			render_bitmap(Multi_common_icons[MICON_VOICE_RECORDING], 0, 0, GR_RESIZE_MENU);
 		}
 		break;
 
@@ -1116,8 +1122,9 @@ void multi_join_game_do_frame()
 	gr_reset_clip();
 	GR_MAYBE_CLEAR_RES(Multi_join_bitmap);
 	if(Multi_join_bitmap != -1){		
-		gr_set_bitmap(Multi_join_bitmap);
-		gr_bitmap(0,0,GR_RESIZE_MENU);
+		//gr_set_bitmap(Multi_join_bitmap);
+		//gr_bitmap(0,0,GR_RESIZE_MENU);
+		render_bitmap(Multi_join_bitmap, 0, 0, GR_RESIZE_MENU);
 	}
 	Multi_join_window.draw();
 
@@ -1320,7 +1327,8 @@ void multi_join_display_games()
 			str[0] = '\0';
 			strcpy_s(str, Multi_join_speed_labels[con_type]);
 			gr_set_color_fast(Multi_join_speed_colors[con_type]);
-			gr_string(Mj_speed_coords[gr_screen.res][MJ_X_COORD], y_start, str, GR_RESIZE_MENU);
+			//gr_string(Mj_speed_coords[gr_screen.res][MJ_X_COORD], y_start, str, GR_RESIZE_MENU);
+			render_string(Mj_speed_coords[gr_screen.res][MJ_X_COORD], y_start, str, GR_RESIZE_MENU);
 
 			// we'll want to have different colors for highlighted items, etc.
 			if(moveup == Multi_join_selected_item){
@@ -1348,7 +1356,8 @@ void multi_join_display_games()
 
 			// make sure the string fits in the display area and draw it
 			gr_force_fit_string(str,200,Mj_game_name_coords[gr_screen.res][MJ_W_COORD]);			
-			gr_string(Mj_game_name_coords[gr_screen.res][MJ_X_COORD],y_start,str,GR_RESIZE_MENU);
+			//gr_string(Mj_game_name_coords[gr_screen.res][MJ_X_COORD],y_start,str,GR_RESIZE_MENU);
+			render_string(Mj_game_name_coords[gr_screen.res][MJ_X_COORD],y_start,str,GR_RESIZE_MENU);
 
 			// display the ping time
 			if(moveup->ping.ping_avg > 0){
@@ -1369,7 +1378,8 @@ void multi_join_display_games()
 					strcat_s(str,XSTR(" ms",762));  // [[ Milliseconds ]]
 				}
 
-				gr_string(Mj_ping_coords[gr_screen.res][MJ_X_COORD],y_start,str,GR_RESIZE_MENU);
+				//gr_string(Mj_ping_coords[gr_screen.res][MJ_X_COORD],y_start,str,GR_RESIZE_MENU);
+				render_string(Mj_ping_coords[gr_screen.res][MJ_X_COORD],y_start,str,GR_RESIZE_MENU);
 			}
 
 			// display the number of players (be sure to center it)
@@ -1380,7 +1390,8 @@ void multi_join_display_games()
 			}
 			sprintf(str,"%d",moveup->num_players);			
 			gr_get_string_size(&w,&h,str);
-			gr_string(Mj_players_coords[gr_screen.res][MJ_X_COORD] + (Mj_players_coords[gr_screen.res][MJ_W_COORD] - w)/2,y_start,str,GR_RESIZE_MENU);			
+			//gr_string(Mj_players_coords[gr_screen.res][MJ_X_COORD] + (Mj_players_coords[gr_screen.res][MJ_W_COORD] - w)/2,y_start,str,GR_RESIZE_MENU);			
+			render_string(Mj_players_coords[gr_screen.res][MJ_X_COORD] + (Mj_players_coords[gr_screen.res][MJ_W_COORD] - w)/2,y_start,str,GR_RESIZE_MENU);			
 
 			count++;
 			y_start += line_height;
@@ -1390,7 +1401,8 @@ void multi_join_display_games()
 	// if there are no items on the list, display this info
 	else {
 		gr_set_color_fast(&Color_bright);
-		gr_string(Mj_game_name_coords[gr_screen.res][MJ_X_COORD] - 30,y_start,XSTR("<No game servers found>",763),GR_RESIZE_MENU);
+		//gr_string(Mj_game_name_coords[gr_screen.res][MJ_X_COORD] - 30,y_start,XSTR("<No game servers found>",763),GR_RESIZE_MENU);
+		render_string(Mj_game_name_coords[gr_screen.res][MJ_X_COORD] - 30,y_start,XSTR("<No game servers found>",763),GR_RESIZE_MENU);
 	}
 }
 
@@ -1401,11 +1413,13 @@ void multi_join_blit_game_status(active_game *game, int y)
 
 	// blit the proper icon
 	draw = 0;	
+	int bitmap_id = -1;
 	switch( game->flags & AG_FLAG_TYPE_MASK ){
 	// coop game
 	case AG_FLAG_COOP:
 		if(Multi_common_icons[MICON_COOP] != -1){
-			gr_set_bitmap(Multi_common_icons[MICON_COOP]);		
+			//gr_set_bitmap(Multi_common_icons[MICON_COOP]);		
+			bitmap_id = Multi_common_icons[MICON_COOP];
 			draw = 1;
 		}
 		break;	
@@ -1413,7 +1427,8 @@ void multi_join_blit_game_status(active_game *game, int y)
 	// team vs. team game
 	case AG_FLAG_TEAMS:
 		if(Multi_common_icons[MICON_TVT] != -1){
-			gr_set_bitmap(Multi_common_icons[MICON_TVT]);
+			//gr_set_bitmap(Multi_common_icons[MICON_TVT]);
+			bitmap_id = Multi_common_icons[MICON_TVT];
 			draw = 1;
 		} 
 		break;	
@@ -1421,14 +1436,16 @@ void multi_join_blit_game_status(active_game *game, int y)
 	// dogfight game
 	case AG_FLAG_DOGFIGHT:
 		if(Multi_common_icons[MICON_DOGFIGHT] != -1){
-			gr_set_bitmap(Multi_common_icons[MICON_DOGFIGHT]);
+			//gr_set_bitmap(Multi_common_icons[MICON_DOGFIGHT]);
+			bitmap_id = Multi_common_icons[MICON_DOGFIGHT];
 			draw = 1;
 		} 
 		break;	
 	}
 	// if we're supposed to draw a bitmap
 	if(draw){
-		gr_bitmap(Mj_game_icon_coords[gr_screen.res][MJ_X_COORD],y-1,GR_RESIZE_MENU);
+		//gr_bitmap(Mj_game_icon_coords[gr_screen.res][MJ_X_COORD],y-1,GR_RESIZE_MENU);
+		render_bitmap(bitmap_id, Mj_game_icon_coords[gr_screen.res][MJ_X_COORD], y-1, GR_RESIZE_MENU);
 	}
 
 	// blit the proper status text
@@ -1461,7 +1478,8 @@ void multi_join_blit_game_status(active_game *game, int y)
 		break;
 	}		
 	gr_get_string_size(&str_w,NULL,status_text);
-	gr_string(Mj_status_coords[gr_screen.res][MJ_X_COORD] + ((Mj_status_coords[gr_screen.res][MJ_W_COORD] - str_w)/2),y,status_text,GR_RESIZE_MENU);
+	//gr_string(Mj_status_coords[gr_screen.res][MJ_X_COORD] + ((Mj_status_coords[gr_screen.res][MJ_W_COORD] - str_w)/2),y,status_text,GR_RESIZE_MENU);
+	render_string(Mj_status_coords[gr_screen.res][MJ_X_COORD] + ((Mj_status_coords[gr_screen.res][MJ_W_COORD] - str_w)/2),y,status_text,GR_RESIZE_MENU);
 }
 
 void multi_join_load_tcp_addrs()
@@ -2000,8 +2018,9 @@ void multi_join_blit_top_stuff()
 		int cd_w;
 		bm_get_info(Multi_common_icons[MICON_CD], &cd_w, NULL, NULL, NULL, NULL);
 
-		gr_set_bitmap(Multi_common_icons[MICON_CD]);
-		gr_bitmap((gr_screen.max_w_unscaled / 2) - (cd_w / 2), Mj_cd_coords[gr_screen.res], GR_RESIZE_MENU);
+		//gr_set_bitmap(Multi_common_icons[MICON_CD]);
+		//gr_bitmap((gr_screen.max_w_unscaled / 2) - (cd_w / 2), Mj_cd_coords[gr_screen.res], GR_RESIZE_MENU);
+		render_bitmap(Multi_common_icons[MICON_CD], (gr_screen.max_w_unscaled / 2) - (cd_w / 2), Mj_cd_coords[gr_screen.res], GR_RESIZE_MENU);
 	} 	
 }
 
@@ -2081,11 +2100,13 @@ void multi_join_blit_protocol()
 	switch(Socket_type){
 	case NET_TCP:		
 		// straight TCP		
-		gr_string(5, 2, "TCP", GR_RESIZE_MENU);		
+		//gr_string(5, 2, "TCP", GR_RESIZE_MENU);		
+		render_string(5, 2, "TCP", GR_RESIZE_MENU);		
 		break;
 
 	case NET_IPX:
-		gr_string(5, 2, "IPX", GR_RESIZE_MENU);
+		//gr_string(5, 2, "IPX", GR_RESIZE_MENU);
+		render_string(5, 2, "IPX", GR_RESIZE_MENU);
 		break;
 	}
 }
@@ -2467,8 +2488,9 @@ void multi_start_game_do()
 	gr_reset_clip();
 	GR_MAYBE_CLEAR_RES(Multi_sg_bitmap);
 	if(Multi_sg_bitmap != -1){
-		gr_set_bitmap(Multi_sg_bitmap);
-		gr_bitmap(0,0,GR_RESIZE_MENU);
+		//gr_set_bitmap(Multi_sg_bitmap);
+		//gr_bitmap(0,0,GR_RESIZE_MENU);
+		render_bitmap(Multi_sg_bitmap, 0, 0, GR_RESIZE_MENU);
 	}
 	Multi_sg_window.draw();
 	
@@ -2876,7 +2898,8 @@ void multi_sg_rank_display_stuff()
 
 		// print the text
 		multi_sg_rank_build_name(Ranks[idx].name,rank_name);
-		gr_string(Msg_rank_list_coords[gr_screen.res][MSG_X_COORD],y,rank_name,GR_RESIZE_MENU);
+		//gr_string(Msg_rank_list_coords[gr_screen.res][MSG_X_COORD],y,rank_name,GR_RESIZE_MENU);
+		render_string(Msg_rank_list_coords[gr_screen.res][MSG_X_COORD],y,rank_name,GR_RESIZE_MENU);
 
 		// increment stuff
 		y+=line_height;
@@ -2888,7 +2911,8 @@ void multi_sg_rank_display_stuff()
 	
 	gr_set_color_fast(&Color_bright);
 	multi_sg_rank_build_name(Ranks[Multi_sg_netgame->rank_base].name,rank_name);
-	gr_string(Msg_rank_sel_coords[gr_screen.res][MSG_X_COORD],Msg_rank_sel_coords[gr_screen.res][MSG_Y_COORD],rank_name,GR_RESIZE_MENU);
+	//gr_string(Msg_rank_sel_coords[gr_screen.res][MSG_X_COORD],Msg_rank_sel_coords[gr_screen.res][MSG_Y_COORD],rank_name,GR_RESIZE_MENU);
+	render_string(Msg_rank_sel_coords[gr_screen.res][MSG_X_COORD],Msg_rank_sel_coords[gr_screen.res][MSG_Y_COORD],rank_name,GR_RESIZE_MENU);
 	
 }
 
@@ -3730,20 +3754,23 @@ void multi_create_game_do()
 			gr_reset_clip();
 			GR_MAYBE_CLEAR_RES(Multi_create_bitmap);
 			if(Multi_create_bitmap != -1){
-				gr_set_bitmap(Multi_create_bitmap);
-				gr_bitmap(0, 0, GR_RESIZE_MENU);
+				//gr_set_bitmap(Multi_create_bitmap);
+				//gr_bitmap(0, 0, GR_RESIZE_MENU);
+				render_bitmap(Multi_create_bitmap, 0, 0, GR_RESIZE_MENU);
 			}
 			chatbox_render();
 			if ( loading_bitmap > -1 ){
-				gr_set_bitmap(loading_bitmap);
+				//gr_set_bitmap(loading_bitmap);
+				render_bitmap( loading_bitmap, Please_wait_coords[gr_screen.res][MC_X_COORD], Please_wait_coords[gr_screen.res][MC_Y_COORD], GR_RESIZE_MENU );
 			}
-			gr_bitmap( Please_wait_coords[gr_screen.res][MC_X_COORD], Please_wait_coords[gr_screen.res][MC_Y_COORD], GR_RESIZE_MENU );
+			//gr_bitmap( Please_wait_coords[gr_screen.res][MC_X_COORD], Please_wait_coords[gr_screen.res][MC_Y_COORD], GR_RESIZE_MENU );
 
 			// draw "Loading" on it
 			gr_set_color_fast(&Color_normal);
 			gr_set_font(FONT2);
 			gr_get_string_size(&str_w, &str_h, loading_str);
-			gr_string((gr_screen.max_w_unscaled - str_w) / 2, (gr_screen.max_h_unscaled - str_h) / 2, loading_str, GR_RESIZE_MENU);
+			//gr_string((gr_screen.max_w_unscaled - str_w) / 2, (gr_screen.max_h_unscaled - str_h) / 2, loading_str, GR_RESIZE_MENU);
+			render_string((gr_screen.max_w_unscaled - str_w) / 2, (gr_screen.max_h_unscaled - str_h) / 2, loading_str, GR_RESIZE_MENU);
 			gr_set_font(FONT1);
 
 			gr_flip();
@@ -3819,8 +3846,9 @@ void multi_create_game_do()
 	gr_reset_clip();
 	GR_MAYBE_CLEAR_RES(Multi_create_bitmap);
 	if(Multi_create_bitmap != -1){
-		gr_set_bitmap(Multi_create_bitmap);
-		gr_bitmap(0,0,GR_RESIZE_MENU);
+		//gr_set_bitmap(Multi_create_bitmap);
+		//gr_bitmap(0,0,GR_RESIZE_MENU);
+		render_bitmap(Multi_create_bitmap, 0, 0, GR_RESIZE_MENU);
 	}
 
 	// if we're not in team vs. team mode, don't draw the team buttons
@@ -3842,13 +3870,16 @@ void multi_create_game_do()
 	gr_set_color_fast(&Color_normal);
 
 	// draw Create Game text
-	gr_string(Mc_create_game_text[gr_screen.res][MC_X_COORD], Mc_create_game_text[gr_screen.res][MC_Y_COORD], XSTR("Create Game", 1268), GR_RESIZE_MENU);
+	//gr_string(Mc_create_game_text[gr_screen.res][MC_X_COORD], Mc_create_game_text[gr_screen.res][MC_Y_COORD], XSTR("Create Game", 1268), GR_RESIZE_MENU);
+	render_string(Mc_create_game_text[gr_screen.res][MC_X_COORD], Mc_create_game_text[gr_screen.res][MC_Y_COORD], XSTR("Create Game", 1268), GR_RESIZE_MENU);
 
 	// draw players text
-	gr_string(Mc_players_text[gr_screen.res][MC_X_COORD], Mc_players_text[gr_screen.res][MC_Y_COORD], XSTR("Players", 1269), GR_RESIZE_MENU);
+	//gr_string(Mc_players_text[gr_screen.res][MC_X_COORD], Mc_players_text[gr_screen.res][MC_Y_COORD], XSTR("Players", 1269), GR_RESIZE_MENU);
+	render_string(Mc_players_text[gr_screen.res][MC_X_COORD], Mc_players_text[gr_screen.res][MC_Y_COORD], XSTR("Players", 1269), GR_RESIZE_MENU);
 
 	// draw players text
-	gr_string(Mc_team_text[gr_screen.res][MC_X_COORD], Mc_team_text[gr_screen.res][MC_Y_COORD], XSTR("Team", 1258), GR_RESIZE_MENU);
+	//gr_string(Mc_team_text[gr_screen.res][MC_X_COORD], Mc_team_text[gr_screen.res][MC_Y_COORD], XSTR("Team", 1258), GR_RESIZE_MENU);
+	render_string(Mc_team_text[gr_screen.res][MC_X_COORD], Mc_team_text[gr_screen.res][MC_Y_COORD], XSTR("Team", 1258), GR_RESIZE_MENU);
 
 	// process and display the player list	
 	// NOTE : this must be done before the buttons are checked to insure that a player hasn't dropped 
@@ -3902,7 +3933,8 @@ void multi_create_game_do()
 		} else {
 			gr_set_color_fast(&Color_normal);
 		}
-		gr_string(Multi_create_sw_checkbox_text[gr_screen.res][0], Multi_create_sw_checkbox_text[gr_screen.res][1], "SquadWar", GR_RESIZE_MENU);
+		//gr_string(Multi_create_sw_checkbox_text[gr_screen.res][0], Multi_create_sw_checkbox_text[gr_screen.res][1], "SquadWar", GR_RESIZE_MENU);
+		render_string(Multi_create_sw_checkbox_text[gr_screen.res][0], Multi_create_sw_checkbox_text[gr_screen.res][1], "SquadWar", GR_RESIZE_MENU);
 	}
 
 	// flip the buffer
@@ -4267,8 +4299,9 @@ void multi_create_plist_blit_normal()
 			
 			// optionally draw his CD status
 			if((Net_players[idx].flags & NETINFO_FLAG_HAS_CD) && (Multi_common_icons[MICON_CD] != -1)){
-				gr_set_bitmap(Multi_common_icons[MICON_CD]);
-				gr_bitmap(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset,y_start - 1,GR_RESIZE_MENU);
+				//gr_set_bitmap(Multi_common_icons[MICON_CD]);
+				//gr_bitmap(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset,y_start - 1,GR_RESIZE_MENU);
+				render_bitmap(Multi_common_icons[MICON_CD], Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset,y_start - 1,GR_RESIZE_MENU);
 
 				total_offset += Multi_common_icon_dims[MICON_CD][0] + 1;
 			}			
@@ -4279,7 +4312,8 @@ void multi_create_plist_blit_normal()
 				strcat_s(str,XSTR("(O)",787));  // [[ Observer ]]
 			}
 			gr_force_fit_string(str,CALLSIGN_LEN,Mc_players_coords[gr_screen.res][MC_W_COORD] - total_offset);
-			gr_string(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset,y_start,str,GR_RESIZE_MENU);
+			//gr_string(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset,y_start,str,GR_RESIZE_MENU);
+			render_string(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset,y_start,str,GR_RESIZE_MENU);
 
 			y_start += line_height;			
 		}
@@ -4324,8 +4358,9 @@ void multi_create_plist_blit_team()
 
 			// optionally draw his CD status
 			if((Net_players[idx].flags & NETINFO_FLAG_HAS_CD) && (Multi_common_icons[MICON_CD] != -1)){
-				gr_set_bitmap(Multi_common_icons[MICON_CD]);				
-				gr_bitmap(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset,y_start - 1,GR_RESIZE_MENU);
+				//gr_set_bitmap(Multi_common_icons[MICON_CD]);				
+				//gr_bitmap(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset,y_start - 1,GR_RESIZE_MENU);
+				render_bitmap(Multi_common_icons[MICON_CD], Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset,y_start - 1,GR_RESIZE_MENU);
 
 				total_offset += Multi_common_icon_dims[MICON_CD][0] + 1;
 			}			
@@ -4333,15 +4368,17 @@ void multi_create_plist_blit_team()
 			// blit the red team indicator			
 			if(Net_players[idx].flags & NETINFO_FLAG_TEAM_CAPTAIN){
 				if(Multi_common_icons[MICON_TEAM0_SELECT] != -1){
-					gr_set_bitmap(Multi_common_icons[MICON_TEAM0_SELECT]);
-					gr_bitmap(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset, y_start-2, GR_RESIZE_MENU);
+					//gr_set_bitmap(Multi_common_icons[MICON_TEAM0_SELECT]);
+					//gr_bitmap(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset, y_start-2, GR_RESIZE_MENU);
+					render_bitmap(Multi_common_icons[MICON_TEAM0_SELECT], Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset, y_start-2, GR_RESIZE_MENU);
 
 					total_offset += Multi_common_icon_dims[MICON_TEAM0_SELECT][0] + 1;			
 				}
 			} else {
 				if(Multi_common_icons[MICON_TEAM0] != -1){
-					gr_set_bitmap(Multi_common_icons[MICON_TEAM0]);
-					gr_bitmap(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset, y_start-2, GR_RESIZE_MENU);
+					//gr_set_bitmap(Multi_common_icons[MICON_TEAM0]);
+					//gr_bitmap(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset, y_start-2, GR_RESIZE_MENU);
+					render_bitmap(Multi_common_icons[MICON_TEAM0], Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset, y_start-2, GR_RESIZE_MENU);
 
 					total_offset += Multi_common_icon_dims[MICON_TEAM0][0] + 1;			
 				}				
@@ -4355,7 +4392,8 @@ void multi_create_plist_blit_team()
 			gr_force_fit_string(str,CALLSIGN_LEN,Mc_players_coords[gr_screen.res][MC_W_COORD] - total_offset);
 
 			// display him in the correct half of the list depending on his team
-			gr_string(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset,y_start,str,GR_RESIZE_MENU);
+			//gr_string(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset,y_start,str,GR_RESIZE_MENU);
+			render_string(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset,y_start,str,GR_RESIZE_MENU);
 			y_start += line_height;
 		}
 	}	
@@ -4390,8 +4428,9 @@ void multi_create_plist_blit_team()
 
 			// optionally draw his CD status
 			if((Net_players[idx].flags & NETINFO_FLAG_HAS_CD) && (Multi_common_icons[MICON_CD] != -1)){
-				gr_set_bitmap(Multi_common_icons[MICON_CD]);
-				gr_bitmap(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset,y_start - 1,GR_RESIZE_MENU);
+				//gr_set_bitmap(Multi_common_icons[MICON_CD]);
+				//gr_bitmap(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset,y_start - 1,GR_RESIZE_MENU);
+				render_bitmap(Multi_common_icons[MICON_CD], Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset,y_start - 1,GR_RESIZE_MENU);
 
 				total_offset += Multi_common_icon_dims[MICON_CD][0] + 1;
 			}			
@@ -4399,15 +4438,17 @@ void multi_create_plist_blit_team()
 			// blit the red team indicator			
 			if(Net_players[idx].flags & NETINFO_FLAG_TEAM_CAPTAIN){
 				if(Multi_common_icons[MICON_TEAM1_SELECT] != -1){
-					gr_set_bitmap(Multi_common_icons[MICON_TEAM1_SELECT]);
-					gr_bitmap(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset, y_start-2, GR_RESIZE_MENU);
+					//gr_set_bitmap(Multi_common_icons[MICON_TEAM1_SELECT]);
+					//gr_bitmap(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset, y_start-2, GR_RESIZE_MENU);
+					render_bitmap(Multi_common_icons[MICON_TEAM1_SELECT], Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset, y_start-2, GR_RESIZE_MENU);
 
 					total_offset += Multi_common_icon_dims[MICON_TEAM1_SELECT][0] + 1;
 				}				
 			} else {
 				if(Multi_common_icons[MICON_TEAM1] != -1){
-					gr_set_bitmap(Multi_common_icons[MICON_TEAM1]);
-					gr_bitmap(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset, y_start-2, GR_RESIZE_MENU);
+					//gr_set_bitmap(Multi_common_icons[MICON_TEAM1]);
+					//gr_bitmap(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset, y_start-2, GR_RESIZE_MENU);
+					render_bitmap(Multi_common_icons[MICON_TEAM1], Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset, y_start-2, GR_RESIZE_MENU);
 
 					total_offset += Multi_common_icon_dims[MICON_TEAM1][0] + 1;
 				}
@@ -4421,7 +4462,8 @@ void multi_create_plist_blit_team()
 			gr_force_fit_string(str,CALLSIGN_LEN,Mc_players_coords[gr_screen.res][MC_W_COORD] - total_offset);
 
 			// display him in the correct half of the list depending on his team
-			gr_string(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset,y_start,str,GR_RESIZE_MENU);
+			//gr_string(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset,y_start,str,GR_RESIZE_MENU);
+			render_string(Mc_players_coords[gr_screen.res][MC_X_COORD] + total_offset,y_start,str,GR_RESIZE_MENU);
 			y_start += line_height;
 		}
 	}			
@@ -4700,16 +4742,19 @@ void multi_create_list_do()
 		// force fit the mission name string
 		strcpy_s(selected_name, mcip->name);
 		gr_force_fit_string(selected_name, 255, Mc_column1_w[gr_screen.res]);
-		gr_string(Mc_mission_name_x[gr_screen.res], y_start, selected_name, GR_RESIZE_MENU);
+		//gr_string(Mc_mission_name_x[gr_screen.res], y_start, selected_name, GR_RESIZE_MENU);
+		render_string(Mc_mission_name_x[gr_screen.res], y_start, selected_name, GR_RESIZE_MENU);
 
 		// draw the max players if in mission mode		
 		sprintf(selected_name, "%d", (int)mcip->max_players);
-		gr_string(Mc_mission_count_x[gr_screen.res], y_start, selected_name, GR_RESIZE_MENU);		
+		//gr_string(Mc_mission_count_x[gr_screen.res], y_start, selected_name, GR_RESIZE_MENU);		
+		render_string(Mc_mission_count_x[gr_screen.res], y_start, selected_name, GR_RESIZE_MENU);
 
 		// force fit the mission filename string
 		strcpy_s(selected_name, mcip->filename);
 		gr_force_fit_string(selected_name, 255, Mc_column3_w[gr_screen.res]);
-		gr_string(Mc_mission_fname_x[gr_screen.res], y_start, selected_name, GR_RESIZE_MENU);
+		//gr_string(Mc_mission_fname_x[gr_screen.res], y_start, selected_name, GR_RESIZE_MENU);
+		render_string(Mc_mission_fname_x[gr_screen.res], y_start, selected_name, GR_RESIZE_MENU);
 
 		y_start += line_height;
 		count++;
@@ -4896,26 +4941,30 @@ void multi_create_list_blit_icons(int list_index, int y_start)
 	// blit the multiplayer type icons
 	if(mcip->flags & MISSION_TYPE_MULTI_COOP){
 		if(Multi_common_icons[MICON_COOP] >= 0){
-			gr_set_bitmap(Multi_common_icons[MICON_COOP]);
-			gr_bitmap(Mc_icon_type_coords[gr_screen.res][MC_X_COORD],y_start + Mc_icon_type_coords[gr_screen.res][MC_Y_COORD],GR_RESIZE_MENU);
+			//gr_set_bitmap(Multi_common_icons[MICON_COOP]);
+			//gr_bitmap(Mc_icon_type_coords[gr_screen.res][MC_X_COORD],y_start + Mc_icon_type_coords[gr_screen.res][MC_Y_COORD],GR_RESIZE_MENU);
+			render_bitmap(Multi_common_icons[MICON_COOP], Mc_icon_type_coords[gr_screen.res][MC_X_COORD],y_start + Mc_icon_type_coords[gr_screen.res][MC_Y_COORD],GR_RESIZE_MENU);
 		}
 	} else if(mcip->flags & MISSION_TYPE_MULTI_TEAMS){
 		if(Multi_common_icons[MICON_TVT] >= 0){
-			gr_set_bitmap(Multi_common_icons[MICON_TVT]);
-			gr_bitmap(Mc_icon_type_coords[gr_screen.res][MC_X_COORD],y_start + Mc_icon_type_coords[gr_screen.res][MC_Y_COORD],GR_RESIZE_MENU);
+			//gr_set_bitmap(Multi_common_icons[MICON_TVT]);
+			//gr_bitmap(Mc_icon_type_coords[gr_screen.res][MC_X_COORD],y_start + Mc_icon_type_coords[gr_screen.res][MC_Y_COORD],GR_RESIZE_MENU);
+			render_bitmap(Multi_common_icons[MICON_TVT], Mc_icon_type_coords[gr_screen.res][MC_X_COORD],y_start + Mc_icon_type_coords[gr_screen.res][MC_Y_COORD],GR_RESIZE_MENU);
 		}
 	} else if(mcip->flags & MISSION_TYPE_MULTI_DOGFIGHT){
 		if(Multi_common_icons[MICON_DOGFIGHT] >= 0){
-			gr_set_bitmap(Multi_common_icons[MICON_DOGFIGHT]);
-			gr_bitmap(Mc_icon_type_coords[gr_screen.res][MC_X_COORD],y_start + Mc_icon_type_coords[gr_screen.res][MC_Y_COORD],GR_RESIZE_MENU);
+			//gr_set_bitmap(Multi_common_icons[MICON_DOGFIGHT]);
+			//gr_bitmap(Mc_icon_type_coords[gr_screen.res][MC_X_COORD],y_start + Mc_icon_type_coords[gr_screen.res][MC_Y_COORD],GR_RESIZE_MENU);
+			render_bitmap(Multi_common_icons[MICON_DOGFIGHT], Mc_icon_type_coords[gr_screen.res][MC_X_COORD],y_start + Mc_icon_type_coords[gr_screen.res][MC_Y_COORD],GR_RESIZE_MENU);
 		}
 	} 
 
 	// if its a valid mission, blit the valid mission icon
 	if(MULTI_IS_TRACKER_GAME && (mcip->valid_status == MVALID_STATUS_VALID)){
 		if(Multi_common_icons[MICON_VALID] >= 0){
-			gr_set_bitmap(Multi_common_icons[MICON_VALID]);
-			gr_bitmap(Mc_icon_valid_coords[gr_screen.res][MC_X_COORD],y_start + Mc_icon_valid_coords[gr_screen.res][MC_Y_COORD],GR_RESIZE_MENU);
+			//gr_set_bitmap(Multi_common_icons[MICON_VALID]);
+			//gr_bitmap(Mc_icon_valid_coords[gr_screen.res][MC_X_COORD],y_start + Mc_icon_valid_coords[gr_screen.res][MC_Y_COORD],GR_RESIZE_MENU);
+			render_bitmap(Multi_common_icons[MICON_VALID], Mc_icon_valid_coords[gr_screen.res][MC_X_COORD],y_start + Mc_icon_valid_coords[gr_screen.res][MC_Y_COORD],GR_RESIZE_MENU);
 		}
 	}
 
@@ -4924,8 +4973,9 @@ void multi_create_list_blit_icons(int list_index, int y_start)
 	// if the mission is from volition, blit the volition icon
 	if((fb != NULL) && (fb->flags & FSB_FROM_VOLITION)){
 		if(Multi_common_icons[MICON_VOLITION] >= 0){
-			gr_set_bitmap(Multi_common_icons[MICON_VOLITION]);
-			gr_bitmap(Mc_icon_volition_coords[gr_screen.res][MC_X_COORD],y_start + Mc_icon_volition_coords[gr_screen.res][MC_Y_COORD],GR_RESIZE_MENU);
+			//gr_set_bitmap(Multi_common_icons[MICON_VOLITION]);
+			//gr_bitmap(Mc_icon_volition_coords[gr_screen.res][MC_X_COORD],y_start + Mc_icon_volition_coords[gr_screen.res][MC_Y_COORD],GR_RESIZE_MENU);
+			render_bitmap(Multi_common_icons[MICON_VOLITION], Mc_icon_volition_coords[gr_screen.res][MC_X_COORD],y_start + Mc_icon_volition_coords[gr_screen.res][MC_Y_COORD],GR_RESIZE_MENU);
 		}
 	}	
 }
@@ -5989,8 +6039,9 @@ void multi_host_options_do()
 	gr_reset_clip();
 	GR_MAYBE_CLEAR_RES(Multi_ho_bitmap);
 	if(Multi_ho_bitmap != -1){
-		gr_set_bitmap(Multi_ho_bitmap);
-		gr_bitmap(0,0,GR_RESIZE_MENU);
+		//gr_set_bitmap(Multi_ho_bitmap);
+		//gr_bitmap(0,0,GR_RESIZE_MENU);
+		render_bitmap(Multi_ho_bitmap, 0, 0, GR_RESIZE_MENU);
 	}
 	Multi_ho_window.draw();
 	
@@ -6386,7 +6437,8 @@ void multi_ho_display_record_time()
 	// format the string
 	sprintf(time_str,"%d.%d",full_seconds,half_seconds);
 	gr_set_color_fast(&Color_bright);
-	gr_string(Ho_vd_coords[gr_screen.res][MULTI_HO_X_COORD],Ho_vd_coords[gr_screen.res][MULTI_HO_Y_COORD],time_str,GR_RESIZE_MENU);
+	//gr_string(Ho_vd_coords[gr_screen.res][MULTI_HO_X_COORD],Ho_vd_coords[gr_screen.res][MULTI_HO_Y_COORD],time_str,GR_RESIZE_MENU);
+	render_string(Ho_vd_coords[gr_screen.res][MULTI_HO_X_COORD],Ho_vd_coords[gr_screen.res][MULTI_HO_Y_COORD],time_str,GR_RESIZE_MENU);
 }
 
 int multi_ho_check_values()
@@ -6501,7 +6553,8 @@ void multi_ho_blit_max_respawns()
 	// otherwise blit the max as specified by the current mission file	
 	sprintf(string,"(%d)",Multi_ho_mission_respawn);	
 	gr_set_color_fast(&Color_normal);
-	gr_string(Ho_max_rsp_coords[gr_screen.res][MULTI_HO_X_COORD], Ho_max_rsp_coords[gr_screen.res][MULTI_HO_Y_COORD], string, GR_RESIZE_MENU);
+	//gr_string(Ho_max_rsp_coords[gr_screen.res][MULTI_HO_X_COORD], Ho_max_rsp_coords[gr_screen.res][MULTI_HO_Y_COORD], string, GR_RESIZE_MENU);
+	render_string(Ho_max_rsp_coords[gr_screen.res][MULTI_HO_X_COORD], Ho_max_rsp_coords[gr_screen.res][MULTI_HO_Y_COORD], string, GR_RESIZE_MENU);
 }
 
 void multi_ho_display_skill_level()
@@ -6515,7 +6568,8 @@ void multi_ho_display_skill_level()
 	}
 
 	gr_set_color_fast(&Color_bright);
-	gr_string(Ho_st_coords[gr_screen.res][0], Ho_st_coords[gr_screen.res][1], Skill_level_names(skill_level, 1), GR_RESIZE_MENU);
+	//gr_string(Ho_st_coords[gr_screen.res][0], Ho_st_coords[gr_screen.res][1], Skill_level_names(skill_level, 1), GR_RESIZE_MENU);
+	render_string(Ho_st_coords[gr_screen.res][0], Ho_st_coords[gr_screen.res][1], Skill_level_names(skill_level, 1), GR_RESIZE_MENU);
 }
 
 // -------------------------------------------------------------------------------------------------------------
@@ -6767,8 +6821,9 @@ void multi_game_client_setup_do_frame()
 	gr_reset_clip();
 	GR_MAYBE_CLEAR_RES(Multi_jw_bitmap);
 	if(Multi_jw_bitmap != -1){		
-		gr_set_bitmap(Multi_jw_bitmap);
-		gr_bitmap(0,0,GR_RESIZE_MENU);
+		//gr_set_bitmap(Multi_jw_bitmap);
+		//gr_bitmap(0,0,GR_RESIZE_MENU);
+		render_bitmap(Multi_jw_bitmap, 0, 0, GR_RESIZE_MENU);
 	}
 
 	// if we're not in team vs. team mode, don't draw the team buttons
@@ -6794,7 +6849,8 @@ void multi_game_client_setup_do_frame()
 			gr_set_color_fast(&Color_normal);
 		}
 				
-		gr_string(Multi_jw_sw_checkbox_text[gr_screen.res][0], Multi_jw_sw_checkbox_text[gr_screen.res][1], "SquadWar", GR_RESIZE_MENU);
+		//gr_string(Multi_jw_sw_checkbox_text[gr_screen.res][0], Multi_jw_sw_checkbox_text[gr_screen.res][1], "SquadWar", GR_RESIZE_MENU);
+		render_string(Multi_jw_sw_checkbox_text[gr_screen.res][0], Multi_jw_sw_checkbox_text[gr_screen.res][1], "SquadWar", GR_RESIZE_MENU);
 	}	
 
 	// draw the UI window
@@ -6826,7 +6882,8 @@ void multi_game_client_setup_do_frame()
 			}
 
 			gr_set_color_fast(&Color_bright_white);
-			gr_string(Mjw_mission_name_coords[gr_screen.res][MJW_X_COORD],Mjw_mission_name_coords[gr_screen.res][MJW_Y_COORD],mission_text,GR_RESIZE_MENU);
+			//gr_string(Mjw_mission_name_coords[gr_screen.res][MJW_X_COORD],Mjw_mission_name_coords[gr_screen.res][MJW_Y_COORD],mission_text,GR_RESIZE_MENU);
+			render_string(Mjw_mission_name_coords[gr_screen.res][MJW_X_COORD],Mjw_mission_name_coords[gr_screen.res][MJW_Y_COORD],mission_text,GR_RESIZE_MENU);
 		}								
 	} else {
 		if(Netgame.mission_name[0] != '\0'){			
@@ -6838,7 +6895,8 @@ void multi_game_client_setup_do_frame()
 			}			
 
 			gr_set_color_fast(&Color_bright_white);
-			gr_string(Mjw_mission_name_coords[gr_screen.res][MJW_X_COORD],Mjw_mission_name_coords[gr_screen.res][MJW_Y_COORD],mission_text,GR_RESIZE_MENU);
+			//gr_string(Mjw_mission_name_coords[gr_screen.res][MJW_X_COORD],Mjw_mission_name_coords[gr_screen.res][MJW_Y_COORD],mission_text,GR_RESIZE_MENU);
+			render_string(Mjw_mission_name_coords[gr_screen.res][MJW_X_COORD],Mjw_mission_name_coords[gr_screen.res][MJW_Y_COORD],mission_text,GR_RESIZE_MENU);
 		}
 	}	
 
@@ -7027,8 +7085,9 @@ void multi_jw_plist_blit_normal()
 
 			// optionally draw his CD status
 			if((Net_players[idx].flags & NETINFO_FLAG_HAS_CD) && (Multi_common_icons[MICON_CD] != -1)){
-				gr_set_bitmap(Multi_common_icons[MICON_CD]);
-				gr_bitmap(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start - 1,GR_RESIZE_MENU);
+				//gr_set_bitmap(Multi_common_icons[MICON_CD]);
+				//gr_bitmap(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start - 1,GR_RESIZE_MENU);
+				render_bitmap(Multi_common_icons[MICON_CD], Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start - 1,GR_RESIZE_MENU);
 
 				total_offset += Multi_common_icon_dims[MICON_CD][0] + 1;
 			}			
@@ -7039,7 +7098,8 @@ void multi_jw_plist_blit_normal()
 				strcat_s(str,"(0)");
 			}
 			gr_force_fit_string(str,CALLSIGN_LEN,Mjw_players_coords[gr_screen.res][MJW_W_COORD] - total_offset);
-			gr_string(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start,str,GR_RESIZE_MENU);
+			//gr_string(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start,str,GR_RESIZE_MENU);
+			render_string(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start,str,GR_RESIZE_MENU);
 
 			y_start += line_height;			
 		}
@@ -7085,8 +7145,9 @@ void multi_jw_plist_blit_team()
 
 			// optionally draw his CD status
 			if((Net_players[idx].flags & NETINFO_FLAG_HAS_CD) && (Multi_common_icons[MICON_CD] != -1)){
-				gr_set_bitmap(Multi_common_icons[MICON_CD]);
-				gr_bitmap(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start - 1, GR_RESIZE_MENU);
+				//gr_set_bitmap(Multi_common_icons[MICON_CD]);
+				//gr_bitmap(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start - 1, GR_RESIZE_MENU);
+				render_bitmap(Multi_common_icons[MICON_CD], Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start - 1, GR_RESIZE_MENU);
 
 				total_offset += Multi_common_icon_dims[MICON_CD][0] + 1;
 			}			
@@ -7094,15 +7155,17 @@ void multi_jw_plist_blit_team()
 			// blit the red team indicator
 			if(Net_players[idx].flags & NETINFO_FLAG_TEAM_CAPTAIN){
 				if(Multi_common_icons[MICON_TEAM0_SELECT] != -1){
-					gr_set_bitmap(Multi_common_icons[MICON_TEAM0_SELECT]);
-					gr_bitmap(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start-2,GR_RESIZE_MENU);
+					//gr_set_bitmap(Multi_common_icons[MICON_TEAM0_SELECT]);
+					//gr_bitmap(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start-2,GR_RESIZE_MENU);
+					render_bitmap(Multi_common_icons[MICON_TEAM0_SELECT], Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start-2,GR_RESIZE_MENU);
 
 					total_offset += Multi_common_icon_dims[MICON_TEAM0_SELECT][0] + 1;
 				}				
 			} else {
 				if(Multi_common_icons[MICON_TEAM0] != -1){
-					gr_set_bitmap(Multi_common_icons[MICON_TEAM0]);
-					gr_bitmap(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start-2,GR_RESIZE_MENU);
+					//gr_set_bitmap(Multi_common_icons[MICON_TEAM0]);
+					//gr_bitmap(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start-2,GR_RESIZE_MENU);
+					render_bitmap(Multi_common_icons[MICON_TEAM0], Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start-2,GR_RESIZE_MENU);
 
 					total_offset += Multi_common_icon_dims[MICON_TEAM0][0] + 1;
 				}
@@ -7113,7 +7176,8 @@ void multi_jw_plist_blit_team()
 			gr_force_fit_string(str,CALLSIGN_LEN,Mjw_players_coords[gr_screen.res][MJW_W_COORD] - total_offset);
 
 			// display him in the correct half of the list depending on his team
-			gr_string(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start,str,GR_RESIZE_MENU);
+			//gr_string(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start,str,GR_RESIZE_MENU);
+			render_string(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start,str,GR_RESIZE_MENU);
 			y_start += line_height;
 		}
 	}	
@@ -7142,8 +7206,9 @@ void multi_jw_plist_blit_team()
 
 			// optionally draw his CD status
 			if((Net_players[idx].flags & NETINFO_FLAG_HAS_CD) && (Multi_common_icons[MICON_CD] != -1)){
-				gr_set_bitmap(Multi_common_icons[MICON_CD]);
-				gr_bitmap(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start - 1,GR_RESIZE_MENU);
+				//gr_set_bitmap(Multi_common_icons[MICON_CD]);
+				//gr_bitmap(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start - 1,GR_RESIZE_MENU);
+				render_bitmap(Multi_common_icons[MICON_CD], Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start - 1,GR_RESIZE_MENU);
 
 				total_offset += Multi_common_icon_dims[MICON_CD][0] + 1;
 			}			
@@ -7151,15 +7216,17 @@ void multi_jw_plist_blit_team()
 			// blit the red team indicator
 			if(Net_players[idx].flags & NETINFO_FLAG_TEAM_CAPTAIN){
 				if(Multi_common_icons[MICON_TEAM1_SELECT] != -1){
-					gr_set_bitmap(Multi_common_icons[MICON_TEAM1_SELECT]);
-					gr_bitmap(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start-2,GR_RESIZE_MENU);
+					//gr_set_bitmap(Multi_common_icons[MICON_TEAM1_SELECT]);
+					//gr_bitmap(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start-2,GR_RESIZE_MENU);
+					render_bitmap(Multi_common_icons[MICON_TEAM1_SELECT], Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start-2,GR_RESIZE_MENU);
 
 					total_offset += Multi_common_icon_dims[MICON_TEAM1_SELECT][0] + 1;
 				}
 			} else {
 				if(Multi_common_icons[MICON_TEAM1] != -1){
-					gr_set_bitmap(Multi_common_icons[MICON_TEAM1]);
-					gr_bitmap(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start-2,GR_RESIZE_MENU);
+					//gr_set_bitmap(Multi_common_icons[MICON_TEAM1]);
+					//gr_bitmap(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start-2,GR_RESIZE_MENU);
+					render_bitmap(Multi_common_icons[MICON_TEAM1], Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start-2,GR_RESIZE_MENU);
 
 					total_offset += Multi_common_icon_dims[MICON_TEAM1][0] + 1;
 				}
@@ -7173,7 +7240,8 @@ void multi_jw_plist_blit_team()
 			gr_force_fit_string(str,CALLSIGN_LEN,Mjw_players_coords[gr_screen.res][MJW_W_COORD] - total_offset);
 
 			// display him in the correct half of the list depending on his team
-			gr_string(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start,str,GR_RESIZE_MENU);
+			//gr_string(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start,str,GR_RESIZE_MENU);
+			render_string(Mjw_players_coords[gr_screen.res][MJW_X_COORD] + total_offset,y_start,str,GR_RESIZE_MENU);
 			y_start += line_height;
 		}
 	}			
@@ -7490,8 +7558,9 @@ void multi_sync_do()
 		gr_reset_clip();		
 		GR_MAYBE_CLEAR_RES(Multi_sync_bitmap);
 		if(Multi_sync_bitmap != -1){
-			gr_set_bitmap(Multi_sync_bitmap);
-			gr_bitmap(0,0,GR_RESIZE_MENU);
+			//gr_set_bitmap(Multi_sync_bitmap);
+			//gr_bitmap(0,0,GR_RESIZE_MENU);
+			render_bitmap(Multi_sync_bitmap, 0, 0, GR_RESIZE_MENU);
 		}
 		Multi_sync_window.draw();
 
@@ -8121,8 +8190,9 @@ void multi_sync_pre_do()
 		gr_reset_clip();
 		GR_MAYBE_CLEAR_RES(Multi_sync_bitmap);
 		if(Multi_sync_bitmap != -1){
-			gr_set_bitmap(Multi_sync_bitmap);
-			gr_bitmap(0,0,GR_RESIZE_MENU);
+			//gr_set_bitmap(Multi_sync_bitmap);
+			//gr_bitmap(0,0,GR_RESIZE_MENU);
+			render_bitmap(Multi_sync_bitmap, 0, 0, GR_RESIZE_MENU);
 		}
 		Multi_sync_window.draw();
 
@@ -8309,8 +8379,9 @@ void multi_sync_post_do()
 		gr_reset_clip();	
 		GR_MAYBE_CLEAR_RES(Multi_sync_bitmap);
 		if(Multi_sync_bitmap != -1){
-			gr_set_bitmap(Multi_sync_bitmap);
-			gr_bitmap(0,0,GR_RESIZE_MENU);
+			//gr_set_bitmap(Multi_sync_bitmap);
+			//gr_bitmap(0,0,GR_RESIZE_MENU);
+			render_bitmap(Multi_sync_bitmap, 0, 0, GR_RESIZE_MENU);
 		}
 		Multi_sync_window.draw();
 
@@ -8367,7 +8438,8 @@ void multi_sync_display_name(const char *name,int index,int np_index)
 		}
 
 		// blit the string
-		gr_string(Ms_status_coords[gr_screen.res][0] + Ms_cd_icon_offset[gr_screen.res] + Ms_team_icon_offset[gr_screen.res], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height),fit,GR_RESIZE_MENU);
+		//gr_string(Ms_status_coords[gr_screen.res][0] + Ms_cd_icon_offset[gr_screen.res] + Ms_team_icon_offset[gr_screen.res], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height),fit,GR_RESIZE_MENU);
+		render_string(Ms_status_coords[gr_screen.res][0] + Ms_cd_icon_offset[gr_screen.res] + Ms_team_icon_offset[gr_screen.res], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height),fit,GR_RESIZE_MENU);
 
 		// blit his team icon 
 		// team 0		
@@ -8375,15 +8447,17 @@ void multi_sync_display_name(const char *name,int index,int np_index)
 			// blit the team captain icon
 			if(Net_players[np_index].flags & NETINFO_FLAG_TEAM_CAPTAIN){				
 				if(Multi_common_icons[MICON_TEAM0_SELECT] != -1){
-					gr_set_bitmap(Multi_common_icons[MICON_TEAM0_SELECT]);
-					gr_bitmap(Ms_status_coords[gr_screen.res][MS_X_COORD] + Ms_cd_icon_offset[gr_screen.res], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height) - 2, GR_RESIZE_MENU);
+					//gr_set_bitmap(Multi_common_icons[MICON_TEAM0_SELECT]);
+					//gr_bitmap(Ms_status_coords[gr_screen.res][MS_X_COORD] + Ms_cd_icon_offset[gr_screen.res], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height) - 2, GR_RESIZE_MENU);
+					render_bitmap(Multi_common_icons[MICON_TEAM0_SELECT], Ms_status_coords[gr_screen.res][MS_X_COORD] + Ms_cd_icon_offset[gr_screen.res], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height) - 2, GR_RESIZE_MENU);
 				} 
 			}
 			// normal team member icon
 			else {
 				if(Multi_common_icons[MICON_TEAM0] != -1){
-					gr_set_bitmap(Multi_common_icons[MICON_TEAM0]);
-					gr_bitmap(Ms_status_coords[gr_screen.res][MS_X_COORD] + Ms_cd_icon_offset[gr_screen.res], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height) - 2, GR_RESIZE_MENU);
+					//gr_set_bitmap(Multi_common_icons[MICON_TEAM0]);
+					//gr_bitmap(Ms_status_coords[gr_screen.res][MS_X_COORD] + Ms_cd_icon_offset[gr_screen.res], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height) - 2, GR_RESIZE_MENU);
+					render_bitmap(Multi_common_icons[MICON_TEAM0], Ms_status_coords[gr_screen.res][MS_X_COORD] + Ms_cd_icon_offset[gr_screen.res], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height) - 2, GR_RESIZE_MENU);
 				}
 			}
 		}
@@ -8392,15 +8466,17 @@ void multi_sync_display_name(const char *name,int index,int np_index)
 			// blit the team captain icon
 			if(Net_players[np_index].flags & NETINFO_FLAG_TEAM_CAPTAIN){
 				if(Multi_common_icons[MICON_TEAM1_SELECT] != -1){
-					gr_set_bitmap(Multi_common_icons[MICON_TEAM1_SELECT]);
-					gr_bitmap(Ms_status_coords[gr_screen.res][MS_X_COORD] + Ms_cd_icon_offset[gr_screen.res], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height) - 2, GR_RESIZE_MENU);
+					//gr_set_bitmap(Multi_common_icons[MICON_TEAM1_SELECT]);
+					//gr_bitmap(Ms_status_coords[gr_screen.res][MS_X_COORD] + Ms_cd_icon_offset[gr_screen.res], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height) - 2, GR_RESIZE_MENU);
+					render_bitmap(Multi_common_icons[MICON_TEAM1_SELECT], Ms_status_coords[gr_screen.res][MS_X_COORD] + Ms_cd_icon_offset[gr_screen.res], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height) - 2, GR_RESIZE_MENU);
 				}
 			}
 			// normal team member icon
 			else {
 				if(Multi_common_icons[MICON_TEAM1] != -1){
-					gr_set_bitmap(Multi_common_icons[MICON_TEAM1]);
-					gr_bitmap(Ms_status_coords[gr_screen.res][MS_X_COORD] + Ms_cd_icon_offset[gr_screen.res], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height) - 2, GR_RESIZE_MENU);
+					//gr_set_bitmap(Multi_common_icons[MICON_TEAM1]);
+					//gr_bitmap(Ms_status_coords[gr_screen.res][MS_X_COORD] + Ms_cd_icon_offset[gr_screen.res], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height) - 2, GR_RESIZE_MENU);
+					render_bitmap(Multi_common_icons[MICON_TEAM1], Ms_status_coords[gr_screen.res][MS_X_COORD] + Ms_cd_icon_offset[gr_screen.res], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height) - 2, GR_RESIZE_MENU);
 				}
 			}
 		}		
@@ -8415,13 +8491,15 @@ void multi_sync_display_name(const char *name,int index,int np_index)
 		}
 
 		// blit the string
-		gr_string(Ms_status_coords[gr_screen.res][MS_X_COORD] + Ms_cd_icon_offset[gr_screen.res], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height),fit,GR_RESIZE_MENU);
+		//gr_string(Ms_status_coords[gr_screen.res][MS_X_COORD] + Ms_cd_icon_offset[gr_screen.res], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height),fit,GR_RESIZE_MENU);
+		render_string(Ms_status_coords[gr_screen.res][MS_X_COORD] + Ms_cd_icon_offset[gr_screen.res], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height),fit,GR_RESIZE_MENU);
 	}
 
 	// maybe blit his CD status icon
 	if((Net_players[np_index].flags & NETINFO_FLAG_HAS_CD) && (Multi_common_icons[MICON_CD] != -1)){
-		gr_set_bitmap(Multi_common_icons[MICON_CD]);
-		gr_bitmap(Ms_status_coords[gr_screen.res][MS_X_COORD], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height), GR_RESIZE_MENU);
+		//gr_set_bitmap(Multi_common_icons[MICON_CD]);
+		//gr_bitmap(Ms_status_coords[gr_screen.res][MS_X_COORD], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height), GR_RESIZE_MENU);
+		render_bitmap(Multi_common_icons[MICON_CD], Ms_status_coords[gr_screen.res][MS_X_COORD], Ms_status_coords[gr_screen.res][MS_Y_COORD] + (index * line_height), GR_RESIZE_MENU);
 	}
 }
 
@@ -8433,7 +8511,8 @@ void multi_sync_display_status(const char *status,int index)
 	strcpy_s(fit, status);
 	gr_force_fit_string(fit, 250, Ms_status2_coords[gr_screen.res][MS_W_COORD] - 20);
 	gr_set_color_fast(&Color_bright);	
-	gr_string(Ms_status2_coords[gr_screen.res][MS_X_COORD], Ms_status2_coords[gr_screen.res][MS_Y_COORD] + (index * (gr_get_font_height() + 1)), fit, GR_RESIZE_MENU);		
+	//gr_string(Ms_status2_coords[gr_screen.res][MS_X_COORD], Ms_status2_coords[gr_screen.res][MS_Y_COORD] + (index * (gr_get_font_height() + 1)), fit, GR_RESIZE_MENU);		
+	render_string(Ms_status2_coords[gr_screen.res][MS_X_COORD], Ms_status2_coords[gr_screen.res][MS_Y_COORD] + (index * (gr_get_font_height() + 1)), fit, GR_RESIZE_MENU);		
 }
 
 void multi_sync_force_start_pre()
@@ -9252,8 +9331,9 @@ void multi_passwd_do(char *passwd)
 		if(Multi_passwd_background >= 0){
 			gr_restore_screen(Multi_passwd_background);		
 		}
-		gr_set_bitmap(Multi_pwd_bitmap);
-		gr_bitmap(0,0,GR_RESIZE_MENU);
+		//gr_set_bitmap(Multi_pwd_bitmap);
+		//gr_bitmap(0,0,GR_RESIZE_MENU);
+		render_bitmap(Multi_pwd_bitmap, 0, 0, GR_RESIZE_MENU);
 		Multi_pwd_window.draw();
 			
 		// flip the buffer

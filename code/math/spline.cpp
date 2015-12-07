@@ -13,7 +13,7 @@
 #include "graphics/2d.h"
 #include "math/spline.h"
 #include "render/3d.h"
-
+#include "render/render.h"
 
 
 // -------------------------------------------------------------------------------------------------
@@ -149,7 +149,8 @@ void bez_spline::bez_render(int divs, color *c)
 		g3_rotate_vertex(&b, &pt);
 
 		// draw the line
-		g3_draw_line(&a, &b);
+		//g3_draw_line(&a, &b);
+		render_aaline(&a, &b);
 
 		// store b
 		a = b;
@@ -158,7 +159,8 @@ void bez_spline::bez_render(int divs, color *c)
 	// draw the control points
 	gr_set_color_fast(&Color_bright_green);
 	for(idx=0; idx<num_pts; idx++){
-		g3_draw_sphere_ez(&pts[idx], 0.75f);
+		//g3_draw_sphere_ez(&pts[idx], 0.75f);
+		render_sphere_fast(&pts[idx], 0.75f);
 	}
 }
 
@@ -277,7 +279,8 @@ void herm_spline::herm_render(int divs, color *clc)
 		herm_get_deriv(&d_pt, 0.0f, idx);
 		vm_vec_add2(&d_pt, &pt);
 		g3_rotate_vertex(&c, &d_pt);
-		g3_draw_line(&a, &c);
+		//g3_draw_line(&a, &c);
+		render_aaline(&a, &c);
 
 		for(s_idx=1; s_idx<divs * 2; s_idx++){
 			// second point
@@ -287,13 +290,15 @@ void herm_spline::herm_render(int divs, color *clc)
 			g3_rotate_vertex(&b, &pt);
 
 			// draw the line
-			g3_draw_line(&a, &b);
+			//g3_draw_line(&a, &b);
+			render_aaline(&a, &b);
 
 			// draw the deriv line
 			herm_get_deriv(&d_pt, (float)s_idx * inc, idx);			
 			vm_vec_add2(&d_pt, &pt);
 			g3_rotate_vertex(&c, &d_pt);
-			g3_draw_line(&b, &c);
+			//g3_draw_line(&b, &c);
+			render_aaline(&b, &c);
 
 			// store b
 			a = b;
@@ -303,6 +308,7 @@ void herm_spline::herm_render(int divs, color *clc)
 	// draw the control points
 	gr_set_color_fast(&Color_bright_green);
 	for(idx=0; idx<num_pts; idx++){
-		g3_draw_sphere_ez(&pts[idx], 0.75f);
+		//g3_draw_sphere_ez(&pts[idx], 0.75f);
+		render_sphere_fast(&pts[idx], 0.75f);
 	}
 }

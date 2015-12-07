@@ -18,7 +18,8 @@
 #include "graphics/gropenglextension.h"
 #include "object/object.h"
 #include "particle/particle.h"
-#include "render/3d.h" 
+#include "render/3d.h"
+#include "render/render.h"
 
 #ifndef NDEBUG
 #include "io/timer.h"
@@ -428,7 +429,8 @@ void particle_render_all()
 
 		if (part->type == PARTICLE_DEBUG) {
 			gr_set_color( 255, 0, 0 );
-			g3_draw_sphere_ez( &p_pos, part->radius );
+			//g3_draw_sphere_ez( &p_pos, part->radius );
+			render_sphere_fast( &p_pos, part->radius );
 		} else {
 			framenum = part->optional_data;
 

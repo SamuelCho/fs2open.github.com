@@ -20,6 +20,7 @@
 #include "palman/palman.h"
 #include "parse/parselo.h"
 #include "playerman/player.h"
+#include "render/render.h"
 #include "stats/medals.h"
 #include "ui/ui.h"
 
@@ -649,7 +650,8 @@ void blit_label(char *label, int num)
 	y = Medals_label_coords[gr_screen.res].y;
 
 	// do it
-	gr_string(x, y, text, GR_RESIZE_MENU);
+	//gr_string(x, y, text, GR_RESIZE_MENU);
+	render_string(x, y, text, GR_RESIZE_MENU);
 }
 
 void blit_callsign()
@@ -664,7 +666,8 @@ void blit_callsign()
 
 	// nothing special, just do it.
 	// Goober5000 - from previous code revisions, I assume 0x8000 means center it on-screen...
-	gr_string((x < 0) ? 0x8000 : x, y, Medals_player->callsign, GR_RESIZE_MENU);
+	//gr_string((x < 0) ? 0x8000 : x, y, Medals_player->callsign, GR_RESIZE_MENU);
+	render_string((x < 0) ? 0x8000 : x, y, Medals_player->callsign, GR_RESIZE_MENU);
 }
 
 int medal_main_do()
@@ -681,8 +684,9 @@ int medal_main_do()
 	gr_reset_clip();
 	GR_MAYBE_CLEAR_RES(Medals_bitmap);
 	if (Medals_bitmap != -1) {
-		gr_set_bitmap(Medals_bitmap);
-		gr_bitmap(0,0,GR_RESIZE_MENU);
+		//gr_set_bitmap(Medals_bitmap);
+		//gr_bitmap(0,0,GR_RESIZE_MENU);
+		render_bitmap(Medals_bitmap, 0, 0, GR_RESIZE_MENU);
 	}
 
 	// check to see if a button was pressed
@@ -845,14 +849,16 @@ void blit_medals()
 				continue;
 			}
 #endif
-			gr_set_bitmap(Medal_display_info[idx].bitmap);
-			gr_bitmap(Medal_display_info[idx].coords[gr_screen.res].x, Medal_display_info[idx].coords[gr_screen.res].y, GR_RESIZE_MENU);
+			//gr_set_bitmap(Medal_display_info[idx].bitmap);
+			//gr_bitmap(Medal_display_info[idx].coords[gr_screen.res].x, Medal_display_info[idx].coords[gr_screen.res].y, GR_RESIZE_MENU);
+			render_bitmap(Medal_display_info[idx].bitmap, Medal_display_info[idx].coords[gr_screen.res].x, Medal_display_info[idx].coords[gr_screen.res].y, GR_RESIZE_MENU);
 		}
 	}
 
 	// now blit rank, since that "medal" doesn't get loaded (or drawn) the normal way
-	gr_set_bitmap(Rank_bm);
-	gr_bitmap(Medal_display_info[Rank_medal_index].coords[gr_screen.res].x, Medal_display_info[Rank_medal_index].coords[gr_screen.res].y, GR_RESIZE_MENU);
+	//gr_set_bitmap(Rank_bm);
+	//gr_bitmap(Medal_display_info[Rank_medal_index].coords[gr_screen.res].x, Medal_display_info[Rank_medal_index].coords[gr_screen.res].y, GR_RESIZE_MENU);
+	render_bitmap(Rank_bm, Medal_display_info[Rank_medal_index].coords[gr_screen.res].x, Medal_display_info[Rank_medal_index].coords[gr_screen.res].y, GR_RESIZE_MENU);
 }
 
 int medals_info_lookup(const char *name)

@@ -25,6 +25,7 @@
 #include "object/object.h"
 #include "parse/parselo.h"
 #include "playerman/player.h"
+#include "render/render.h"
 #include "ship/ship.h"
 #include "sound/audiostr.h"
 #include "ui/ui.h"
@@ -1144,8 +1145,9 @@ void mission_hotkey_do_frame(float frametime)
 
 	GR_MAYBE_CLEAR_RES(Background_bitmap);
 	if (Background_bitmap >= 0) {
-		gr_set_bitmap(Background_bitmap);
-		gr_bitmap(0, 0, GR_RESIZE_MENU);
+		//gr_set_bitmap(Background_bitmap);
+		//gr_bitmap(0, 0, GR_RESIZE_MENU);
+		render_bitmap(Background_bitmap, 0, 0, GR_RESIZE_MENU);
 
 	} else
 		gr_clear();
@@ -1177,10 +1179,11 @@ void mission_hotkey_do_frame(float frametime)
 				break;
 
 			case HOTKEY_LINE_WING:
-				gr_set_bitmap(Wing_bmp);
+				//gr_set_bitmap(Wing_bmp);
 				bm_get_info(Wing_bmp, NULL, &h, NULL);
 				i = y + font_height / 2 - h / 2 - 1;
-				gr_bitmap(Hotkey_wing_icon_x[gr_screen.res], i, GR_RESIZE_MENU);
+				//gr_bitmap(Hotkey_wing_icon_x[gr_screen.res], i, GR_RESIZE_MENU);
+				render_bitmap(Wing_bmp, Hotkey_wing_icon_x[gr_screen.res], i, GR_RESIZE_MENU);
 
 //				i = y + font_height / 2 - 1;
 //				gr_set_color_fast(&circle_color);

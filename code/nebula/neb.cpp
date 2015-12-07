@@ -1100,8 +1100,9 @@ void neb2_render_player()
 #ifdef NEB2_THUMBNAIL
 	extern int tbmap;
 	if (tbmap != -1) {
-		gr_set_bitmap(tbmap);
-		gr_bitmap(0, 0);
+		//gr_set_bitmap(tbmap);
+		//gr_bitmap(0, 0);
+		render_bitmap(tbmap, 0, 0);
 	}
 #endif
 }

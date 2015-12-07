@@ -21,6 +21,7 @@
 #include "parse/parselo.h"
 #include "playerman/player.h"
 #include "render/3d.h"
+#include "render/render.h"
 #include "ship/ship.h"
 #include "weapon/emp.h"
 #include "weapon/weapon.h"
@@ -67,24 +68,32 @@ void draw_brackets_square(int x1, int y1, int x2, int y2, int resize_mode)
 
 	// horizontal lines
 	if ( (x1 + bracket_width > 0) && (x1 < gr_screen.clip_width) ){
-		gr_gradient(x1,y1,x1+bracket_width-1,y1,GR_RESIZE_NONE);	// top left
-		gr_gradient(x1,y2,x1+bracket_width-1,y2,GR_RESIZE_NONE);	// bottom left
+		//gr_gradient(x1,y1,x1+bracket_width-1,y1,GR_RESIZE_NONE);	// top left
+		//gr_gradient(x1,y2,x1+bracket_width-1,y2,GR_RESIZE_NONE);	// bottom left
+		render_gradient(x1,y1,x1+bracket_width-1,y1,GR_RESIZE_NONE);	// top left
+		render_gradient(x1,y2,x1+bracket_width-1,y2,GR_RESIZE_NONE);	// bottom left
 	}
 
 	if ( (x2 - bracket_width < gr_screen.clip_width) && (x2 > 0) )	{
-		gr_gradient(x2, y1, x2-bracket_width+1,y1,GR_RESIZE_NONE);	// top right
-		gr_gradient(x2, y2, x2-bracket_width+1,y2,GR_RESIZE_NONE);	// bottom right
+		//gr_gradient(x2, y1, x2-bracket_width+1,y1,GR_RESIZE_NONE);	// top right
+		//gr_gradient(x2, y2, x2-bracket_width+1,y2,GR_RESIZE_NONE);	// bottom right
+		render_gradient(x2, y1, x2-bracket_width+1,y1,GR_RESIZE_NONE);	// top right
+		render_gradient(x2, y2, x2-bracket_width+1,y2,GR_RESIZE_NONE);	// bottom right
 	}
 
 	// vertical lines
 	if ( (y1 + bracket_height > 0) && (y1 < gr_screen.clip_height) ) {
-		gr_gradient(x1,y1,x1,y1+bracket_height-1,GR_RESIZE_NONE);		// top left
-		gr_gradient(x2,y1,x2,y1+bracket_height-1,GR_RESIZE_NONE);		// top right
+		//gr_gradient(x1,y1,x1,y1+bracket_height-1,GR_RESIZE_NONE);		// top left
+		//gr_gradient(x2,y1,x2,y1+bracket_height-1,GR_RESIZE_NONE);		// top right
+		render_gradient(x1,y1,x1,y1+bracket_height-1,GR_RESIZE_NONE);		// top left
+		render_gradient(x2,y1,x2,y1+bracket_height-1,GR_RESIZE_NONE);		// top right
 	}
 
 	if ( (y2 - bracket_height < gr_screen.clip_height) && (y2 > 0) )	{
-		gr_gradient(x1,y2,x1,y2-bracket_height+1,GR_RESIZE_NONE);	// bottom left
-		gr_gradient(x2,y2,x2,y2-bracket_height+1,GR_RESIZE_NONE);	// bottom right
+		//gr_gradient(x1,y2,x1,y2-bracket_height+1,GR_RESIZE_NONE);	// bottom left
+		//gr_gradient(x2,y2,x2,y2-bracket_height+1,GR_RESIZE_NONE);	// bottom right
+		render_gradient(x1,y2,x1,y2-bracket_height+1,GR_RESIZE_NONE);	// bottom left
+		render_gradient(x2,y2,x2,y2-bracket_height+1,GR_RESIZE_NONE);	// bottom right
 	}
 }
 
@@ -231,20 +240,28 @@ void draw_brackets_diamond(int x1, int y1, int x2, int y2)
 	center_y = y1 + half_height;
 
 	// top left line
-	gr_gradient(center_x - x_delta, y1 + y_delta,center_x, y1);
-	gr_gradient(x1 + x_delta, center_y - y_delta, x1, center_y);
+	//gr_gradient(center_x - x_delta, y1 + y_delta,center_x, y1);
+	//gr_gradient(x1 + x_delta, center_y - y_delta, x1, center_y);
+	render_gradient(center_x - x_delta, y1 + y_delta,center_x, y1);
+	render_gradient(x1 + x_delta, center_y - y_delta, x1, center_y);
 
 	// top right line
-	gr_gradient(center_x + x_delta, y1 + y_delta,center_x, y1);
-	gr_gradient(x2 - x_delta, center_y - y_delta, x2, center_y);
+	//gr_gradient(center_x + x_delta, y1 + y_delta,center_x, y1);
+	//gr_gradient(x2 - x_delta, center_y - y_delta, x2, center_y);
+	render_gradient(center_x + x_delta, y1 + y_delta,center_x, y1);
+	render_gradient(x2 - x_delta, center_y - y_delta, x2, center_y);
 
 	// bottom left line
-	gr_gradient(x1 + x_delta, center_y + y_delta, x1, center_y);
-	gr_gradient(center_x - x_delta, y2 - y_delta, center_x, y2);
+	//gr_gradient(x1 + x_delta, center_y + y_delta, x1, center_y);
+	//gr_gradient(center_x - x_delta, y2 - y_delta, center_x, y2);
+	render_gradient(x1 + x_delta, center_y + y_delta, x1, center_y);
+	render_gradient(center_x - x_delta, y2 - y_delta, center_x, y2);
 
 	// bottom right line
-	gr_gradient(x2 - x_delta, center_y + y_delta, x2, center_y);
-	gr_gradient(center_x + x_delta, y2 - y_delta, center_x, y2);
+	//gr_gradient(x2 - x_delta, center_y + y_delta, x2, center_y);
+	//gr_gradient(center_x + x_delta, y2 - y_delta, center_x, y2);
+	render_gradient(x2 - x_delta, center_y + y_delta, x2, center_y);
+	render_gradient(center_x + x_delta, y2 - y_delta, center_x, y2);
 }
 
 void draw_brackets_diamond_quick(int x1, int y1, int x2, int y2)
@@ -407,7 +424,8 @@ void hud_target_show_dist_on_bracket(int x, int y, float distance, int font_num)
 		y += 4;
 	}
 
-	gr_string(x - w+2, y+y_delta, text_dist);
+	//gr_string(x - w+2, y+y_delta, text_dist);
+	render_string(x - w+2, y+y_delta, text_dist);
 }
 
 
@@ -881,7 +899,8 @@ void HudGaugeBrackets::renderNavBrackets(vec3d* nav_pos, vertex* nav_point, colo
 
 	// draw the nav name
 	if(string) {
-		gr_string(x-(box_scale+10), y-(box_scale+20), string);
+		//gr_string(x-(box_scale+10), y-(box_scale+20), string);
+		render_string(x-(box_scale+10), y-(box_scale+20), string);
 	}
 
 	// draw distance to target in lower right corner of box
@@ -1034,10 +1053,12 @@ void HudGaugeBrackets::renderBoundingBrackets(int x1, int y1, int x2, int y2, in
 		}
 
 		if(tinfo_name && (flags & TARGET_DISPLAY_NAME)) {
-			gr_string(x2+3, y1, tinfo_name);
+			//gr_string(x2+3, y1, tinfo_name);
+			render_string(x2+3, y1, tinfo_name);
 		} 
 		if(tinfo_class && (flags & TARGET_DISPLAY_CLASS)) {
-			gr_string(x2+3, y1+9, tinfo_class);
+			//gr_string(x2+3, y1+9, tinfo_class);
+			render_string(x2+3, y1+9, tinfo_class);
 		}
 	}
 

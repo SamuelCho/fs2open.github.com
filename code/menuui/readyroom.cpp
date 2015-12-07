@@ -1085,8 +1085,9 @@ void sim_room_init()
 	// HACK
 	GR_MAYBE_CLEAR_RES(Background_bitmap);
 	if(Background_bitmap != -1){
-		gr_set_bitmap(Background_bitmap);
-		gr_bitmap(0, 0, GR_RESIZE_MENU);
+		//gr_set_bitmap(Background_bitmap);
+		//gr_bitmap(0, 0, GR_RESIZE_MENU);
+		render_bitmap(Background_bitmap, 0, 0, GR_RESIZE_MENU);
 	}
 	Ui_window.draw();
 	gr_flip();		
@@ -1263,8 +1264,9 @@ void sim_room_do_frame(float frametime)
 
 	GR_MAYBE_CLEAR_RES(Background_bitmap);
 	if (Background_bitmap >= 0) {
-		gr_set_bitmap(Background_bitmap);
-		gr_bitmap(0, 0, GR_RESIZE_MENU);
+		//gr_set_bitmap(Background_bitmap);
+		//gr_bitmap(0, 0, GR_RESIZE_MENU);
+		render_bitmap(Background_bitmap, 0, 0, GR_RESIZE_MENU);
 	}
 
 	Ui_window.draw();
@@ -1367,8 +1369,9 @@ void sim_room_blit_icons(int line_index, int y_start, fs_builtin_mission *fb, in
 
 	// if the line is flagged as a volition file
 	if(is_from_volition && (Mission_icon_bitmaps[MISSION_ICON_VOLITION] >= 0)){		
-		gr_set_bitmap(Mission_icon_bitmaps[MISSION_ICON_VOLITION]);
-		gr_bitmap(Sim_volition_icon_x[gr_screen.res], y_start + MISSION_ICON_VOLITION_Y_OFFSET, GR_RESIZE_MENU);
+		//gr_set_bitmap(Mission_icon_bitmaps[MISSION_ICON_VOLITION]);
+		//gr_bitmap(Sim_volition_icon_x[gr_screen.res], y_start + MISSION_ICON_VOLITION_Y_OFFSET, GR_RESIZE_MENU);
+		render_bitmap(Mission_icon_bitmaps[MISSION_ICON_VOLITION], Sim_volition_icon_x[gr_screen.res], y_start + MISSION_ICON_VOLITION_Y_OFFSET, GR_RESIZE_MENU);
 	}	
 }
 

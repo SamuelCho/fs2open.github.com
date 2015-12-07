@@ -27,6 +27,7 @@
 #include "object/objectsnd.h"
 #include "playerman/managepilot.h"
 #include "render/3d.h"
+#include "render/render.h"
 #include "ship/ship.h"
 #include "species_defs/species_defs.h"
 #include "weapon/beam.h"
@@ -1268,7 +1269,8 @@ void labviewer_do_render(float frametime)
 	if ( (Lab_model_num < 0) && (Lab_bitmap_id < 0) ) {
 		gr_get_string_size(&w, &h, "Viewer off");
 		gr_set_color_fast(&Color_white);
-		gr_string(gr_screen.center_offset_x + gr_screen.center_w - w, gr_screen.center_offset_y + gr_screen.center_h - h, "Viewer off", GR_RESIZE_NONE);
+		//gr_string(gr_screen.center_offset_x + gr_screen.center_w - w, gr_screen.center_offset_y + gr_screen.center_h - h, "Viewer off", GR_RESIZE_NONE);
+		render_string(gr_screen.center_offset_x + gr_screen.center_w - w, gr_screen.center_offset_y + gr_screen.center_h - h, "Viewer off", GR_RESIZE_NONE);
 
 		return;
 	}
@@ -1286,7 +1288,8 @@ void labviewer_do_render(float frametime)
 		if ( strlen(Lab_model_filename) ) {
 			gr_get_string_size(&w, &h, Lab_model_filename);
 			gr_set_color_fast(&Color_white);
-			gr_string(gr_screen.center_offset_x + gr_screen.center_w - w, gr_screen.center_offset_y + gr_screen.center_h - h, Lab_model_filename, GR_RESIZE_NONE);
+			//gr_string(gr_screen.center_offset_x + gr_screen.center_w - w, gr_screen.center_offset_y + gr_screen.center_h - h, Lab_model_filename, GR_RESIZE_NONE);
+			render_string(gr_screen.center_offset_x + gr_screen.center_w - w, gr_screen.center_offset_y + gr_screen.center_h - h, Lab_model_filename, GR_RESIZE_NONE);
 		}
 	} else if (Lab_bitmap_id >= 0) {
 		gr_scene_texture_begin();
@@ -1299,7 +1302,8 @@ void labviewer_do_render(float frametime)
 		if ( strlen(Lab_bitmap_filename) ) {
 			gr_get_string_size(&w, &h, Lab_bitmap_filename);
 			gr_set_color_fast(&Color_white);
-			gr_string(gr_screen.center_offset_x + gr_screen.center_w - w, gr_screen.center_offset_y + gr_screen.center_h - h, Lab_bitmap_filename, GR_RESIZE_NONE);
+			//gr_string(gr_screen.center_offset_x + gr_screen.center_w - w, gr_screen.center_offset_y + gr_screen.center_h - h, Lab_bitmap_filename, GR_RESIZE_NONE);
+			render_string(gr_screen.center_offset_x + gr_screen.center_w - w, gr_screen.center_offset_y + gr_screen.center_h - h, Lab_bitmap_filename, GR_RESIZE_NONE);
 		}
 	}
 
@@ -1315,7 +1319,8 @@ void labviewer_do_render(float frametime)
 	if (frametotal != 0.0f) {
 		gr_printf_no_resize(gr_screen.center_offset_x + 2, gr_screen.center_offset_y + gr_screen.center_h - gr_get_font_height(), "FPS: %i", fl2i(Framerate + 0.5f));
 	} else {
-		gr_string(gr_screen.center_offset_x + 10, gr_screen.center_offset_y + gr_screen.center_h - gr_get_font_height(), "FPS: ?", GR_RESIZE_NONE);
+		//gr_string(gr_screen.center_offset_x + 10, gr_screen.center_offset_y + gr_screen.center_h - gr_get_font_height(), "FPS: ?", GR_RESIZE_NONE);
+		render_string(gr_screen.center_offset_x + 10, gr_screen.center_offset_y + gr_screen.center_h - gr_get_font_height(), "FPS: ?", GR_RESIZE_NONE);
 	}
 
 	//Print FXAA preset

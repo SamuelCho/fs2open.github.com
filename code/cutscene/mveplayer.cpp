@@ -18,6 +18,7 @@
 #include "graphics/gropengltexture.h"
 #include "io/key.h"
 #include "io/timer.h"
+#include "render/render.h"
 #include "osapi/osapi.h"
 #include "sound/openal.h"
 #include "sound/sound.h"
@@ -606,8 +607,9 @@ void mve_video_display()
 	} else {
 		// DDOI - This is probably really fricking slow
 		int bitmap = bm_create (16, g_screenWidth, g_screenHeight, pixelbuf, 0);
-		gr_set_bitmap (bitmap);
-		gr_bitmap ((int)g_screenX, (int)g_screenY, GR_RESIZE_FULL);
+		//gr_set_bitmap (bitmap);
+		//gr_bitmap ((int)g_screenX, (int)g_screenY, GR_RESIZE_FULL);
+		render_bitmap(bitmap, (int)g_screenX, (int)g_screenY, GR_RESIZE_FULL);
 		bm_release (bitmap);
 	}
 

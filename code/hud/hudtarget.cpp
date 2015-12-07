@@ -39,6 +39,7 @@
 #include "parse/parselo.h"
 #include "playerman/player.h"
 #include "render/3dinternal.h"
+#include "render/render.h"
 #include "ship/awacs.h"
 #include "ship/ship.h"
 #include "ship/subsysdamage.h"
@@ -6507,7 +6508,8 @@ void HudGaugeOffscreen::renderOffscreenIndicator(vec2d *coords, int dir, float d
 		y6 = y5 + Offscreen_tri_base;
 
 		if ( buf[0] ) {
-			gr_string( fl2i(xpos - w - 10), fl2i(ypos - h/2.0f+0.5f), buf);
+			//gr_string( fl2i(xpos - w - 10), fl2i(ypos - h/2.0f+0.5f), buf);
+			render_string( fl2i(xpos - w - 10), fl2i(ypos - h/2.0f+0.5f), buf);
 		}
 	} else if (dir == 1) {
 		x1 = x4 = (xpos-1);
@@ -6520,7 +6522,8 @@ void HudGaugeOffscreen::renderOffscreenIndicator(vec2d *coords, int dir, float d
 		y6 = y5 + Offscreen_tri_base;
 
 		if ( buf[0] ) {
-			gr_string(fl2i(xpos + 10), fl2i(ypos - h/2.0f+0.5f), buf);
+			//gr_string(fl2i(xpos + 10), fl2i(ypos - h/2.0f+0.5f), buf);
+			render_string(fl2i(xpos + 10), fl2i(ypos - h/2.0f+0.5f), buf);
 		}
 	} else if (dir == 2) {
 		y1 = y4 = (ypos-1);
@@ -6533,7 +6536,8 @@ void HudGaugeOffscreen::renderOffscreenIndicator(vec2d *coords, int dir, float d
 		x6 = x5 + Offscreen_tri_base;
 
 		if ( buf[0] ) {
-			gr_string(fl2i(xpos - w/2.0f+0.5f), fl2i(ypos+10), buf);
+			//gr_string(fl2i(xpos - w/2.0f+0.5f), fl2i(ypos+10), buf);
+			render_string(fl2i(xpos - w/2.0f+0.5f), fl2i(ypos+10), buf);
 		}
 	} else if (dir == 3) {
 		y1 = y4 = (ypos+2);
@@ -6546,7 +6550,8 @@ void HudGaugeOffscreen::renderOffscreenIndicator(vec2d *coords, int dir, float d
 		x6 = x5 + Offscreen_tri_base;
 
 		if ( buf[0] ) {
-			gr_string(fl2i(xpos - w/2.0f+0.5f), fl2i(ypos-h-10), buf);
+			//gr_string(fl2i(xpos - w/2.0f+0.5f), fl2i(ypos-h-10), buf);
+			render_string(fl2i(xpos - w/2.0f+0.5f), fl2i(ypos-h-10), buf);
 		}
 	}
 
@@ -6559,11 +6564,14 @@ void HudGaugeOffscreen::renderOffscreenIndicator(vec2d *coords, int dir, float d
 	}
 
 	if (dir == 0 || dir == 3){
-		gr_line(fl2i(x2),fl2i(y2),fl2i(x5),fl2i(y5));
+		//gr_line(fl2i(x2),fl2i(y2),fl2i(x5),fl2i(y5));
+		render_line(fl2i(x2),fl2i(y2),fl2i(x5),fl2i(y5));
 	} else if (dir == 1) {
-		gr_line(fl2i(x2-1),fl2i(y2),fl2i(x5-1),fl2i(y5));
+		//gr_line(fl2i(x2-1),fl2i(y2),fl2i(x5-1),fl2i(y5));
+		render_line(fl2i(x2-1),fl2i(y2),fl2i(x5-1),fl2i(y5));
 	} else {
-		gr_line(fl2i(x2),fl2i(y2-1),fl2i(x5),fl2i(y5-1));
+		//gr_line(fl2i(x2),fl2i(y2-1),fl2i(x5),fl2i(y5-1));
+		render_line(fl2i(x2),fl2i(y2-1),fl2i(x5),fl2i(y5-1));
 	}
 
 	gr_reset_screen_scale();

@@ -303,7 +303,6 @@ public:
 	void setGaugeColor(int bright_index = -4);
 	
 	// rendering functions
-	void renderBitmap(int x, int y);
 	void renderBitmap(int frame, int x, int y);
 	void renderBitmapColor(int frame, int x, int y);
 	void renderBitmapUv(int frame, int x, int y, int w, int h, float u0, float v0, float u1, float v1);

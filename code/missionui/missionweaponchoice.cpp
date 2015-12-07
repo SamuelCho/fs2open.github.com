@@ -815,8 +815,9 @@ void wl_render_overhead_view(float frametime)
 	//Maybe do 2D
 	if(display_type == 0 && wl_ship->overhead_bitmap > -1)
 	{
-		gr_set_bitmap(wl_ship->overhead_bitmap);
-		gr_bitmap(Wl_overhead_coords[gr_screen.res][0], Wl_overhead_coords[gr_screen.res][1], GR_RESIZE_MENU);
+		//gr_set_bitmap(wl_ship->overhead_bitmap);
+		//gr_bitmap(Wl_overhead_coords[gr_screen.res][0], Wl_overhead_coords[gr_screen.res][1], GR_RESIZE_MENU);
+		render_bitmap(wl_ship->overhead_bitmap, Wl_overhead_coords[gr_screen.res][0], Wl_overhead_coords[gr_screen.res][1], GR_RESIZE_MENU);
 	}
 	else
 	{
@@ -2276,8 +2277,9 @@ void weapon_select_render(float frametime)
 {
 	if ( !Background_playing ) {
 		GR_MAYBE_CLEAR_RES(Weapon_select_background_bitmap);
-		gr_set_bitmap(Weapon_select_background_bitmap);
-		gr_bitmap(0, 0, GR_RESIZE_MENU);
+		//gr_set_bitmap(Weapon_select_background_bitmap);
+		//gr_bitmap(0, 0, GR_RESIZE_MENU);
+		render_bitmap(Weapon_select_background_bitmap, 0, 0, GR_RESIZE_MENU);
 	}
 }
 
@@ -2320,7 +2322,8 @@ void wl_render_weapon_desc(float frametime)
 
 				// draw the strings
 				gr_set_color_fast(&Color_white);			
-				gr_string(weapon_title_coords[0], weapon_title_coords[1]+(line_height*i), Weapon_desc_lines[i], GR_RESIZE_MENU);
+				//gr_string(weapon_title_coords[0], weapon_title_coords[1]+(line_height*i), Weapon_desc_lines[i], GR_RESIZE_MENU);
+				render_string(weapon_title_coords[0], weapon_title_coords[1]+(line_height*i), Weapon_desc_lines[i], GR_RESIZE_MENU);
 
 				// draw the bright letters
 				gr_set_color_fast(&Color_bright_white);
@@ -2333,7 +2336,8 @@ void wl_render_weapon_desc(float frametime)
 			} else {
 				// draw the string
 				gr_set_color_fast(&Color_white);
-				gr_string(weapon_title_coords[0], weapon_title_coords[1]+(line_height*i), Weapon_desc_lines[i], GR_RESIZE_MENU);
+				//gr_string(weapon_title_coords[0], weapon_title_coords[1]+(line_height*i), Weapon_desc_lines[i], GR_RESIZE_MENU);
+				render_string(weapon_title_coords[0], weapon_title_coords[1]+(line_height*i), Weapon_desc_lines[i], GR_RESIZE_MENU);
 			}
 		}
 
@@ -2348,7 +2352,8 @@ void wl_render_weapon_desc(float frametime)
 
 				// draw the string
 				gr_set_color_fast(&Color_white);
-				gr_string(weapon_desc_coords[0], weapon_desc_coords[1]+(line_height*(i-2)), Weapon_desc_lines[i], GR_RESIZE_MENU);
+				//gr_string(weapon_desc_coords[0], weapon_desc_coords[1]+(line_height*(i-2)), Weapon_desc_lines[i], GR_RESIZE_MENU);
+				render_string(weapon_desc_coords[0], weapon_desc_coords[1]+(line_height*(i-2)), Weapon_desc_lines[i], GR_RESIZE_MENU);
 
 				// draw the bright letters
 				gr_set_color_fast(&Color_bright_white);
@@ -2361,7 +2366,8 @@ void wl_render_weapon_desc(float frametime)
 			} else {
 				// draw the string
 				gr_set_color_fast(&Color_white);
-				gr_string(weapon_desc_coords[0], weapon_desc_coords[1]+(line_height*(i-2)), Weapon_desc_lines[i], GR_RESIZE_MENU);
+				//gr_string(weapon_desc_coords[0], weapon_desc_coords[1]+(line_height*(i-2)), Weapon_desc_lines[i], GR_RESIZE_MENU);
+				render_string(weapon_desc_coords[0], weapon_desc_coords[1]+(line_height*(i-2)), Weapon_desc_lines[i], GR_RESIZE_MENU);
 			}
 		}
 
@@ -2377,12 +2383,18 @@ void wl_render_weapon_desc(float frametime)
 		// draw full version
 		// FIXME - change to use a for loop 
 		gr_set_color_fast(&Color_white);
-		gr_string(weapon_title_coords[0], weapon_title_coords[1], Weapon_desc_lines[0], GR_RESIZE_MENU);
-		gr_string(weapon_title_coords[0], weapon_title_coords[1] + line_height, Weapon_desc_lines[1], GR_RESIZE_MENU);
-		gr_string(weapon_desc_coords[0], weapon_desc_coords[1], Weapon_desc_lines[2], GR_RESIZE_MENU);
-		gr_string(weapon_desc_coords[0], weapon_desc_coords[1] + line_height, Weapon_desc_lines[3], GR_RESIZE_MENU);
-		gr_string(weapon_desc_coords[0], weapon_desc_coords[1] + line_height * 2, Weapon_desc_lines[4], GR_RESIZE_MENU);
-		gr_string(weapon_desc_coords[0], weapon_desc_coords[1] + line_height * 3, Weapon_desc_lines[5], GR_RESIZE_MENU);
+// 		gr_string(weapon_title_coords[0], weapon_title_coords[1], Weapon_desc_lines[0], GR_RESIZE_MENU);
+// 		gr_string(weapon_title_coords[0], weapon_title_coords[1] + line_height, Weapon_desc_lines[1], GR_RESIZE_MENU);
+// 		gr_string(weapon_desc_coords[0], weapon_desc_coords[1], Weapon_desc_lines[2], GR_RESIZE_MENU);
+// 		gr_string(weapon_desc_coords[0], weapon_desc_coords[1] + line_height, Weapon_desc_lines[3], GR_RESIZE_MENU);
+// 		gr_string(weapon_desc_coords[0], weapon_desc_coords[1] + line_height * 2, Weapon_desc_lines[4], GR_RESIZE_MENU);
+// 		gr_string(weapon_desc_coords[0], weapon_desc_coords[1] + line_height * 3, Weapon_desc_lines[5], GR_RESIZE_MENU);
+		render_string(weapon_title_coords[0], weapon_title_coords[1], Weapon_desc_lines[0], GR_RESIZE_MENU);
+		render_string(weapon_title_coords[0], weapon_title_coords[1] + line_height, Weapon_desc_lines[1], GR_RESIZE_MENU);
+		render_string(weapon_desc_coords[0], weapon_desc_coords[1], Weapon_desc_lines[2], GR_RESIZE_MENU);
+		render_string(weapon_desc_coords[0], weapon_desc_coords[1] + line_height, Weapon_desc_lines[3], GR_RESIZE_MENU);
+		render_string(weapon_desc_coords[0], weapon_desc_coords[1] + line_height * 2, Weapon_desc_lines[4], GR_RESIZE_MENU);
+		render_string(weapon_desc_coords[0], weapon_desc_coords[1] + line_height * 3, Weapon_desc_lines[5], GR_RESIZE_MENU);
 	}
 }
 
@@ -2752,8 +2764,9 @@ void weapon_select_do(float frametime)
 			if(icon->icon_bmaps[WEAPON_ICON_FRAME_SELECTED] != -1)
 			{
 				gr_set_color_fast(&Color_blue);
-				gr_set_bitmap(icon->icon_bmaps[WEAPON_ICON_FRAME_SELECTED]);
-				gr_bitmap(sx, sy, GR_RESIZE_MENU);
+				//gr_set_bitmap(icon->icon_bmaps[WEAPON_ICON_FRAME_SELECTED]);
+				//gr_bitmap(sx, sy, GR_RESIZE_MENU);
+				render_bitmap(icon->icon_bmaps[WEAPON_ICON_FRAME_SELECTED], sx, sy, GR_RESIZE_MENU);
 			}
 			else
 			{
@@ -2770,8 +2783,9 @@ void weapon_select_do(float frametime)
 				{
 					//Draw laser bitmap
 					gr_set_clip(sx, sy, 56, 24, GR_RESIZE_MENU);
-					gr_set_bitmap(icon->laser_bmap);
-					gr_bitmap(0, 0, GR_RESIZE_MENU);
+					//gr_set_bitmap(icon->laser_bmap);
+					//gr_bitmap(0, 0, GR_RESIZE_MENU);
+					render_bitmap(icon->laser_bmap, 0, 0, GR_RESIZE_MENU);
 					gr_reset_clip();
 				}
 				else
@@ -2787,7 +2801,8 @@ void weapon_select_do(float frametime)
 					gr_get_string_size(&half_x, &half_y, print_name);
 					half_x = sx +((56 - half_x) / 2);
 					half_y = sy +((28 - half_y) / 2); // Was ((24 - half_y) / 2) Zacam
-					gr_string(half_x, half_y, print_name, GR_RESIZE_MENU);
+					//gr_string(half_x, half_y, print_name, GR_RESIZE_MENU);
+					render_string(half_x, half_y, print_name, GR_RESIZE_MENU);
 				}
 			}
 		}
@@ -2926,7 +2941,8 @@ void wl_render_icon_count(int num, int x, int y)
 
 	// render
 	gr_set_color_fast(&Color_white);
-	gr_string(x-num_w-4, y+8, buf, GR_RESIZE_MENU);
+	//gr_string(x-num_w-4, y+8, buf, GR_RESIZE_MENU);
+	render_string(x-num_w-4, y+8, buf, GR_RESIZE_MENU);
 }
 
 
@@ -2996,8 +3012,9 @@ void wl_render_icon(int index, int x, int y, int num, int draw_num_flag, int hot
 	if(bitmap_id != -1)
 	{
 		gr_set_color_fast(&Color_blue);
-		gr_set_bitmap(bitmap_id);
-		gr_bitmap(x, y, GR_RESIZE_MENU);
+		//gr_set_bitmap(bitmap_id);
+		//gr_bitmap(x, y, GR_RESIZE_MENU);
+		render_bitmap(bitmap_id, x, y, GR_RESIZE_MENU);
 	}
 	else
 	{
@@ -3012,8 +3029,9 @@ void wl_render_icon(int index, int x, int y, int num, int draw_num_flag, int hot
 		else if(icon->laser_bmap != -1)
 		{
 			gr_set_clip(x, y, 56, 24, GR_RESIZE_MENU);
-			gr_set_bitmap(icon->laser_bmap);
-			gr_bitmap(0, 0, GR_RESIZE_MENU);
+			//gr_set_bitmap(icon->laser_bmap);
+			//gr_bitmap(0, 0, GR_RESIZE_MENU);
+			render_bitmap(icon->laser_bmap, 0, 0, GR_RESIZE_MENU);
 			gr_reset_clip();
 		}
 		else
@@ -3029,7 +3047,8 @@ void wl_render_icon(int index, int x, int y, int num, int draw_num_flag, int hot
 			gr_get_string_size(&half_x, &half_y, print_name);
 			half_x = x +((56 - half_x) / 2);
 			half_y = y +((28 - half_y) / 2); // Was ((24 - half_y) / 2) Zacam
-			gr_string(half_x, half_y, print_name, GR_RESIZE_MENU);
+			//gr_string(half_x, half_y, print_name, GR_RESIZE_MENU);
+			render_string(half_x, half_y, print_name, GR_RESIZE_MENU);
 		}
 	}
 
@@ -3064,8 +3083,9 @@ void wl_draw_ship_weapons(int index)
 		{
 			if(Weapon_slot_bitmap != -1)
 			{
-				gr_set_bitmap(Weapon_slot_bitmap);
-				gr_bitmap( Wl_bank_coords[gr_screen.res][i][0] - 2,  Wl_bank_coords[gr_screen.res][i][1] - 2, GR_RESIZE_MENU);
+				//gr_set_bitmap(Weapon_slot_bitmap);
+				//gr_bitmap( Wl_bank_coords[gr_screen.res][i][0] - 2,  Wl_bank_coords[gr_screen.res][i][1] - 2, GR_RESIZE_MENU);
+				render_bitmap( Weapon_slot_bitmap, Wl_bank_coords[gr_screen.res][i][0] - 2,  Wl_bank_coords[gr_screen.res][i][1] - 2, GR_RESIZE_MENU);
 			}
 			else
 			{

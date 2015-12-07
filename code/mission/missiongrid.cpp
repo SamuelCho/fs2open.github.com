@@ -14,7 +14,7 @@
 #include "math/fvi.h"
 #include "mission/missiongrid.h"
 #include "render/3d.h"
-
+#include "render/render.h"
 
 grid	Global_grid;
 grid	*The_grid;
@@ -248,7 +248,8 @@ void rpd_line(vec3d *v0, vec3d *v1)
 
    	g3_rotate_vertex(&tv0, v0);
   	g3_rotate_vertex(&tv1, v1);
-  	g3_draw_line(&tv0, &tv1);
+  	//g3_draw_line(&tv0, &tv1);
+	render_aaline(&tv0, &tv1);
 }
 
 
