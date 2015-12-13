@@ -875,6 +875,7 @@ typedef struct screen {
 
 	void (*gf_line_htl)(vec3d *start, vec3d* end);
 	void (*gf_sphere_htl)(float rad);
+	void (*gf_sphere)(material *material_def, float rad);
 
 	int (*gf_maybe_create_shader)(shader_type type, unsigned int flags);
 
@@ -1220,6 +1221,7 @@ __inline void gr_render_buffer(int start, const vertex_buffer *bufferp, int texi
 
 #define gr_line_htl						GR_CALL(*gr_screen.gf_line_htl)
 #define gr_sphere_htl					GR_CALL(*gr_screen.gf_sphere_htl)
+#define gr_sphere						GR_CALL(*gr_screen.gf_sphere)
 
 #define gr_maybe_create_shader			GR_CALL(*gr_screen.gf_maybe_create_shader)
 #define gr_set_animated_effect			GR_CALL(*gr_screen.gf_set_animated_effect)

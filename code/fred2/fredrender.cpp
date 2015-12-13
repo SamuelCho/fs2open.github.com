@@ -1005,12 +1005,12 @@ void render_one_model_htl(object *objp)
 		if (Fred_outline)
 		{
 			gr_set_color(__min(r*2,255),__min(g*2,255),__min(b*2,255));
-			g3_draw_htl_sphere(&objp->pos,  size * 1.5f);
+			render_sphere(&objp->pos,  size * 1.5f);
 		}
 		else
 		{
 			gr_set_color(r,g,b);
-			g3_draw_htl_sphere(&objp->pos, size);
+			render_sphere(&objp->pos, size);
 		}
 	}
 
@@ -1580,7 +1580,7 @@ void render_frame()
 
 	if (Show_horizon) {
 		gr_set_color(128, 128, 64);
-		g3_draw_horizon_line();
+		render_horizon_line();
 	}
 
 	if (Show_asteroid_field) {

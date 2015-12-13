@@ -1394,7 +1394,7 @@ void model_draw_paths_htl( int model_num, uint flags )
 				gr_set_color( 255, 0, 0 );
 			}
 
-			g3_draw_htl_sphere(&pnt, 0.5f);
+			render_sphere(&pnt, 0.5f);
 			
 			if (j)
 			{
@@ -1431,7 +1431,7 @@ void model_draw_bay_paths_htl(int model_num)
 			vm_vec_scale_add(&v2, &v1, &pm->docking_bays[idx].norm[s_idx], 10.0f);
 
 			// draw the point and normal
-			g3_draw_htl_sphere(&v1, 2.0);
+			render_sphere(&v1, 2.0);
 			//g3_draw_htl_line(&v1, &v2);
 			render_line_3d(true, &v1, &v2);
 		}

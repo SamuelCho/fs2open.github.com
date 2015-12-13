@@ -1178,7 +1178,7 @@ void beam_render(beam *b, float u_offset)
 	vm_vec_normalize_quick(&fvec);		
 
 	// turn off backface culling
-	int cull = gr_set_cull(0);
+	//int cull = gr_set_cull(0);
 
 	length = vm_vec_dist(&b->last_start, &b->last_shot);					// beam tileing -Bobboau
 
@@ -1268,135 +1268,19 @@ void beam_render(beam *b, float u_offset)
 			CLAMP(framenum, 0, bwsi->texture.num_frames-1);
 		}
 
-		gr_set_bitmap(bwsi->texture.first_frame + framenum, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, 0.9999f);
+		//gr_set_bitmap(bwsi->texture.first_frame + framenum, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, 0.9999f);
 
 		// added TMAP_FLAG_TILED flag for beam texture tileing -Bobboau			
 		// added TMAP_FLAG_RGB and TMAP_FLAG_GOURAUD so the beam would apear to fade along it's length-Bobboau
-		g3_draw_poly( 4, verts, TMAP_FLAG_TEXTURED | TMAP_FLAG_RGB | TMAP_FLAG_GOURAUD | TMAP_FLAG_TILED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT ); 
+		//g3_draw_poly( 4, verts, TMAP_FLAG_TEXTURED | TMAP_FLAG_RGB | TMAP_FLAG_GOURAUD | TMAP_FLAG_TILED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT ); 
+
+		material material_params;
+		render_set_unlit_material(&material_params, bwsi->texture.first_frame + framenum, 0.9999f, true, true);
+		render_primitives_colored_textured(&material_params, h1, 4, PRIM_TYPE_TRIFAN, false);
 	}		
 	
 	// turn backface culling back on
-	gr_set_cull(cull);
-}
-
-void beam_render_new(beam *b, float u_offset)
-{
-	int idx, s_idx;
-	vertex h1[4];				// halves of a beam section
-	vertex *verts[4] = { &h1[0], &h1[1], &h1[2], &h1[3] };
-	vec3d fvec, top1, bottom1, top2, bottom2;
-	float scale;
-	float u_scale;	// beam tileing -Bobboau
-	float length;	// beam tileing -Bobboau
-	beam_weapon_section_info *bwsi;
-	beam_weapon_info *bwi;
-
-	memset( h1, 0, sizeof(vertex) * 4 );
-
-	// bogus weapon info index
-	if ( (b == NULL) || (b->weapon_info_index < 0) )
-		return;
-
-	// if the beam start and endpoints are the same
-	if ( vm_vec_same(&b->last_start, &b->last_shot) )
-		return;
-
-	// get beam direction
-	vm_vec_sub(&fvec, &b->last_shot, &b->last_start);
-	vm_vec_normalize_quick(&fvec);		
-	
-	length = vm_vec_dist(&b->last_start, &b->last_shot);					// beam tileing -Bobboau
-
-	bwi = &Weapon_info[b->weapon_info_index].b_info;
-
-	// draw all sections	
-	for (s_idx = 0; s_idx < bwi->beam_num_sections; s_idx++) {
-		bwsi = &bwi->sections[s_idx];
-
-		if ( (bwsi->texture.first_frame < 0) || (bwsi->width <= 0.0f) )
-			continue;
-
-		// calculate the beam points
-		scale = frand_range(1.0f - bwsi->flicker, 1.0f + bwsi->flicker);
-		beam_calc_facing_pts(&top1, &bottom1, &fvec, &b->last_start, bwsi->width * scale * b->shrink, bwsi->z_add);	
-		beam_calc_facing_pts(&top2, &bottom2, &fvec, &b->last_shot, bwsi->width * scale * scale * b->shrink, bwsi->z_add);
-
-		if (Cmdline_nohtl) {
-			g3_rotate_vertex(verts[0], &bottom1); 
-			g3_rotate_vertex(verts[1], &bottom2);	
-			g3_rotate_vertex(verts[2], &top2); 
-			g3_rotate_vertex(verts[3], &top1);
-		} else {
-			g3_transfer_vertex(verts[0], &bottom1); 
-			g3_transfer_vertex(verts[1], &bottom2);	
-			g3_transfer_vertex(verts[2], &top2); 
-			g3_transfer_vertex(verts[3], &top1);
-		}
-
-		P_VERTICES();						
-		STUFF_VERTICES();		// stuff the beam with creamy goodness (texture coords)
-
-		if (bwsi->tile_type == 1)
-			u_scale = length / (bwsi->width * 0.5f) / bwsi->tile_factor;	// beam tileing, might make a tileing factor in beam index later -Bobboau
-		else
-			u_scale = bwsi->tile_factor;
-
-		verts[1]->texture_position.u = (u_scale + (u_offset * bwsi->translation));	// beam tileing -Bobboau
-		verts[2]->texture_position.u = (u_scale + (u_offset * bwsi->translation));	// beam tileing -Bobboau
-		verts[3]->texture_position.u = (0 + (u_offset * bwsi->translation));
-		verts[0]->texture_position.u = (0 + (u_offset * bwsi->translation));
-
-		float per = 1.0f;
-		if (bwi->range)
-			per -= length / bwi->range;
-
-		//this should never happen but, just to be safe
-		CLAMP(per, 0.0f, 1.0f);
-
-		ubyte alpha = (ubyte)(255.0f * per);
-
-		verts[1]->r = alpha;
-		verts[2]->r = alpha;
-		verts[1]->g = alpha;
-		verts[2]->g = alpha;
-		verts[1]->b = alpha;
-		verts[2]->b = alpha;
-		verts[1]->a = alpha;
-		verts[2]->a = alpha;
-
-		verts[0]->r = 255;
-		verts[3]->r = 255;
-		verts[0]->g = 255;
-		verts[3]->g = 255;
-		verts[0]->b = 255;
-		verts[3]->b = 255;
-		verts[0]->a = 255;
-		verts[3]->a = 255;
-
-		// set the right texture with additive alpha, and draw the poly
-		int framenum = 0;
-
-		if (bwsi->texture.num_frames > 1) {
-			b->beam_section_frame[s_idx] += flFrametime;
-
-			// Sanity checks
-			if (b->beam_section_frame[s_idx] < 0.0f)
-				b->beam_section_frame[s_idx] = 0.0f;
-			if (b->beam_section_frame[s_idx] > 100.0f)
-				b->beam_section_frame[s_idx] = 0.0f;
-
-			while (b->beam_section_frame[s_idx] > bwsi->texture.total_time)
-				b->beam_section_frame[s_idx] -= bwsi->texture.total_time;
-
-			framenum = fl2i( (b->beam_section_frame[s_idx] * bwsi->texture.num_frames) / bwsi->texture.total_time );
-
-			CLAMP(framenum, 0, bwsi->texture.num_frames-1);
-		}
-
-		material material_params;
-		render_set_unlit_material(&material_params, bwsi->texture.first_frame + framenum, 1.0f, true, true);
-		render_primitives_colored_textured(&material_params, h1, 4, PRIM_TYPE_TRIFAN, false);
-	}
+	//gr_set_cull(cull);
 }
 
 // generate particles for the muzzle glow

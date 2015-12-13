@@ -1923,6 +1923,7 @@ void opengl_setup_function_pointers()
 
 	gr_screen.gf_line_htl			= gr_opengl_line_htl;
 	gr_screen.gf_sphere_htl			= gr_opengl_sphere_htl;
+	gr_screen.gf_sphere				= gr_opengl_sphere;
 
 	gr_screen.gf_set_animated_effect = gr_opengl_shader_set_animated_effect;
 

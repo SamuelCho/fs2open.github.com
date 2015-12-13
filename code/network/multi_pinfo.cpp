@@ -391,7 +391,8 @@ void multi_pinfo_popup_do()
 		// draw the background bitmap and the ui window over it
 		Assert(Multi_pinfo_screen_save != -1);
 		gr_reset_clip();
-		gr_restore_screen(Multi_pinfo_screen_save);		
+		//gr_restore_screen(Multi_pinfo_screen_save);
+		render_bitmap(Multi_pinfo_screen_save, 0, 0, GR_RESIZE_NONE);
 
 		// grey the screen
 		//gr_set_shader(&Grey_shader);

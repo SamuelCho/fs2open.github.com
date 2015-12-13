@@ -369,6 +369,11 @@ void g3_draw_htl_line(vec3d *start, vec3d *end);
  */
 void g3_draw_htl_sphere(vec3d *position, float radius);
 
+typedef struct horz_pt {
+	float x, y;
+	int edge;
+} horz_pt;
+
 /**
  * Flash ball
  *

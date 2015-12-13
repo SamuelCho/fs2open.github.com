@@ -868,7 +868,8 @@ void game_flash_diminish(float frametime)
 		if ( b < 0 ) b = 0; else if ( b > 255 ) b = 255;
 
 		if ( (r!=0) || (g!=0) || (b!=0) ) {
-			gr_flash( r, g, b );
+			//gr_flash( r, g, b );
+			render_flash( r, g, b );
 		}
 	}
 	
@@ -4362,7 +4363,7 @@ void game_shade_frame(float frametime)
 		}
 	}
 
-	gr_flash_alpha(Viewer_shader.r, Viewer_shader.g, Viewer_shader.b, Viewer_shader.c);
+	render_flash_alpha(Viewer_shader.r, Viewer_shader.g, Viewer_shader.b, Viewer_shader.c);
 }
 
 const static int CUTSCENE_BAR_DIVISOR = 8;

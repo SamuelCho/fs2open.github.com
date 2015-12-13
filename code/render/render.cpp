@@ -2822,11 +2822,6 @@ void render_sphere_fast(color *clr, vertex *pnt, float rad)
 	}
 }
 
-void render_sphere_fast(vertex *pnt, float rad)
-{
-	render_sphere_fast(&gr_screen.current_color, pnt, rad);
-}
-
 // adapted from g3_draw_sphere_ez()
 void render_sphere_fast(color *clr, vec3d *pnt, float rad)
 {
@@ -2846,6 +2841,11 @@ void render_sphere_fast(color *clr, vec3d *pnt, float rad)
 	}
 }
 
+void render_sphere_fast(vertex *pnt, float rad)
+{
+	render_sphere_fast(&gr_screen.current_color, pnt, rad);
+}
+
 void render_sphere_fast(vec3d *pnt, float rad)
 {
 	render_sphere_fast(&gr_screen.current_color, pnt, rad);
@@ -2855,4 +2855,167 @@ void render_cross_fade(int bmap1, int bmap2, int x1, int y1, int x2, int y2, flo
 {
 	render_bitmap(bmap1, 1.0f - pct, x1, y1, resize_mode);
 	render_bitmap(bmap2, pct, x2, y2, resize_mode);
+}
+
+void render_sphere(color *clr, vec3d* position, float radius)
+{
+	g3_start_instance_matrix(position, &vmd_identity_matrix, true);
+
+	material material_def;
+
+	material_def.set_texture_source(TEXTURE_SOURCE_NONE);
+	material_def.set_blend_mode(ALPHA_BLEND_NONE);
+	material_def.set_depth_mode(ZBUFFER_TYPE_FULL);
+	material_def.set_color(*clr);
+
+	gr_sphere(&material_def, radius);
+
+	g3_done_instance(true);
+}
+
+void render_sphere(vec3d* position, float radius)
+{
+	render_sphere(&gr_screen.current_color, position, radius);
+}
+
+//draws a horizon. takes eax=sky_color, edx=ground_color
+void render_horizon_line()
+{
+	int s1, s2;
+	int cpnt;
+	horz_pt horz_pts[4];		// 0 = left, 1 = right
+	vec3d horizon_vec;
+	float up_right, down_right,down_left,up_left;
+
+	Assert( G3_count == 1 );
+
+	//compute horizon_vector	
+	horizon_vec.xyz.x = Unscaled_matrix.vec.rvec.xyz.y*Matrix_scale.xyz.y*Matrix_scale.xyz.z;
+	horizon_vec.xyz.y = Unscaled_matrix.vec.uvec.xyz.y*Matrix_scale.xyz.x*Matrix_scale.xyz.z;
+	horizon_vec.xyz.z = Unscaled_matrix.vec.fvec.xyz.y*Matrix_scale.xyz.x*Matrix_scale.xyz.y;
+
+	// now compute values & flag for 4 corners.
+	up_right = horizon_vec.xyz.x + horizon_vec.xyz.y + horizon_vec.xyz.z;
+	down_right = horizon_vec.xyz.x - horizon_vec.xyz.y + horizon_vec.xyz.z;
+	down_left = -horizon_vec.xyz.x - horizon_vec.xyz.y + horizon_vec.xyz.z;
+	up_left = -horizon_vec.xyz.x + horizon_vec.xyz.y + horizon_vec.xyz.z;
+
+	//check flags for all sky or all ground.
+	if ( (up_right<0.0f)&&(down_right<0.0f)&&(down_left<0.0f)&&(up_left<0.0f) )	{
+		return;
+	}
+
+	if ( (up_right>0.0f)&&(down_right>0.0f)&&(down_left>0.0f)&&(up_left>0.0f) )	{
+		return;
+	}
+
+	// check for intesection with each of four edges & compute horizon line
+	cpnt = 0;
+	
+	// check intersection with left edge
+	s1 = up_left > 0.0f;
+	s2 = down_left > 0.0f;
+	if ( s1 != s2 )	{
+		horz_pts[cpnt].x = 0.0f;
+		horz_pts[cpnt].y = fl_abs(up_left * Canv_h2 / horizon_vec.xyz.y);
+		horz_pts[cpnt].edge = 0;
+		cpnt++;
+	}
+
+	// check intersection with top edge
+	s1 = up_left > 0.0f;
+	s2 = up_right > 0.0f;
+	if ( s1 != s2 )	{
+		horz_pts[cpnt].x = fl_abs(up_left * Canv_w2 / horizon_vec.xyz.x);
+		horz_pts[cpnt].y = 0.0f;
+		horz_pts[cpnt].edge = 1;
+		cpnt++;
+	}
+
+	// check intersection with right edge
+	s1 = up_right > 0.0f;
+	s2 = down_right > 0.0f;
+	if ( s1 != s2 )	{
+		horz_pts[cpnt].x = i2fl(Canvas_width)-1;
+		horz_pts[cpnt].y = fl_abs(up_right * Canv_h2 / horizon_vec.xyz.y);
+		horz_pts[cpnt].edge = 2;
+		cpnt++;
+	}
+	
+	//check intersection with bottom edge
+	s1 = down_right > 0.0f;
+	s2 = down_left > 0.0f;
+	if ( s1 != s2 )	{
+		horz_pts[cpnt].x = fl_abs(down_left * Canv_w2 / horizon_vec.xyz.x);
+		horz_pts[cpnt].y = i2fl(Canvas_height)-1;
+		horz_pts[cpnt].edge = 3;
+		cpnt++;
+	}
+
+	if ( cpnt != 2 )	{
+		mprintf(( "HORZ: Wrong number of points (%d)\n", cpnt ));
+		return;
+	}
+
+	//make sure first edge is left
+	if ( horz_pts[0].x > horz_pts[1].x )	{
+		horz_pt tmp;
+		tmp = horz_pts[0];
+		horz_pts[0] = horz_pts[1];
+		horz_pts[1] = tmp;
+	}
+
+	// draw from left to right.
+	render_line( fl2i(horz_pts[0].x),fl2i(horz_pts[0].y),fl2i(horz_pts[1].x),fl2i(horz_pts[1].y), GR_RESIZE_NONE );
+}
+
+void render_flash(int r, int g, int b)
+{
+	if ( !(r || g || b) ) {
+		return;
+	}
+
+	CLAMP(r, 0, 255);
+	CLAMP(g, 0, 255);
+	CLAMP(b, 0, 255);
+	
+	material material_def;
+
+	material_def.set_texture_source(TEXTURE_SOURCE_NONE);
+	material_def.set_blend_mode(ALPHA_BLEND_ALPHA_ADDITIVE);
+	material_def.set_depth_mode(ZBUFFER_TYPE_NONE);
+	material_def.set_color( r, g, b, 255 );
+
+	int x1 = (gr_screen.clip_left + gr_screen.offset_x);
+	int y1 = (gr_screen.clip_top + gr_screen.offset_y);
+	int x2 = (gr_screen.clip_right + gr_screen.offset_x) + 1;
+	int y2 = (gr_screen.clip_bottom + gr_screen.offset_y) + 1;
+
+	render_screen_points(&material_def, x1, y1, x2, y2);
+}
+
+void render_flash_alpha(int r, int g, int b, int a)
+{
+	if ( !(r || g || b || a) ) {
+		return;
+	}
+
+	CLAMP(r, 0, 255);
+	CLAMP(g, 0, 255);
+	CLAMP(b, 0, 255);
+	CLAMP(a, 0, 255);
+
+	material material_def;
+
+	material_def.set_texture_source(TEXTURE_SOURCE_NONE);
+	material_def.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+	material_def.set_depth_mode(ZBUFFER_TYPE_NONE);
+	material_def.set_color( r, g, b, a );
+
+	int x1 = (gr_screen.clip_left + gr_screen.offset_x);
+	int y1 = (gr_screen.clip_top + gr_screen.offset_y);
+	int x2 = (gr_screen.clip_right + gr_screen.offset_x) + 1;
+	int y2 = (gr_screen.clip_bottom + gr_screen.offset_y) + 1;
+
+	render_screen_points(&material_def, x1, y1, x2, y2);
 }

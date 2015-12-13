@@ -505,6 +505,10 @@ void gr_stub_draw_htl_sphere(float rad)
 {
 }
 
+void gr_stub_draw_sphere(material *material_def, float rad)
+{
+}
+
 void gr_stub_draw_line_list(colored_vector *lines, int num)
 {
 }
@@ -963,6 +967,7 @@ bool gr_stub_init()
 
 	gr_screen.gf_line_htl			= gr_stub_draw_htl_line;
 	gr_screen.gf_sphere_htl			= gr_stub_draw_htl_sphere;
+	gr_screen.gf_sphere				= gr_stub_draw_sphere;
 
 	gr_screen.gf_shadow_map_start	= gr_stub_shadow_map_start;
 	gr_screen.gf_shadow_map_end		= gr_stub_shadow_map_end;

@@ -174,57 +174,6 @@ void nebula_get_color_from_palette(ubyte *r, ubyte *g, ubyte *b, ubyte index)
 void nebula_render()
 {
 	int i;
-	// int r, g, b;
-
-	if (Fred_running) {
-	// no nebula for you!
-	return;
-	}
-
-	if ( !Nebula_loaded ) {
-		return;
-	}
-
-	if ( !Detail.planets_suns )	{
-		return;
-	}	
-
-	// Rotate the nebula.
-	g3_start_instance_matrix( NULL, &Nebula_orient, false);
-
-	for (i=0; i<num_pts; i++ )	{
-		g3_rotate_faraway_vertex( &nebula_verts[i], &nebula_vecs[i] );
-		g3_project_vertex( &nebula_verts[i] );
-	}
-
-	int saved_gr_zbuffering = gr_zbuffer_get();
-
-	gr_zbuffer_set(GR_ZBUFF_NONE);
-
-	for (i=0; i<num_tris; i++ ) {
-
-		vertex * verts[3];
-
-		verts[0] = &nebula_verts[tri[i][0]];
-		verts[1] = &nebula_verts[tri[i][1]];
-		verts[2] = &nebula_verts[tri[i][2]];
-
-		g3_draw_poly(3, verts, TMAP_FLAG_RAMP | TMAP_FLAG_GOURAUD | TMAP_FLAG_NEBULA );
-	}		
-
-	g3_done_instance(false);
-
-	gr_zbuffer_set(saved_gr_zbuffering);
-
-	// always switch off fogging for good measure
-	if((The_mission.flags & MISSION_FLAG_FULLNEB) && (Neb2_render_mode == NEB2_RENDER_NONE)){
-		gr_fog_set(GR_FOGMODE_NONE, 0, 0, 0);
-	}
-}
-
-void nebula_render_new()
-{
-	int i;
 
 	if (Fred_running) {
 		// no nebula for you!

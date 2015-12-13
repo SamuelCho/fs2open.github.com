@@ -163,11 +163,11 @@ void HudGaugeRadarOrb::drawContactHtl(vec3d *pnt, int rad)
 			if (Missiontime & 8192)
 				return;
 		}
-		g3_draw_htl_sphere(pnt,size/100.0f);
+		render_sphere(pnt,size/100.0f);
 	}
 	else
 	{
-		g3_draw_htl_sphere(pnt,size/300.0f);
+		render_sphere(pnt,size/300.0f);
 	}
 
 	//g3_draw_htl_line(&p,pnt);
@@ -440,7 +440,7 @@ void HudGaugeRadarOrb::drawOutlinesHtl()
 	g3_start_instance_matrix(&vmd_zero_vector, &Player_obj->orient, true);
 
 	gr_set_color(255, 255, 255);
-	g3_draw_htl_sphere(&vmd_zero_vector, .05f);
+	render_sphere(&vmd_zero_vector, .05f);
 
     gr_set_line_width(2.0f);
 

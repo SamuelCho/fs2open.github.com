@@ -2469,7 +2469,9 @@ void lab_do_frame(float frametime)
 	gr_clear();
 
 	if (Lab_in_mission) {
-		gr_restore_screen(Lab_screen_save_bitmap);
+		gr_reset_clip();
+		render_bitmap(Lab_screen_save_bitmap, 0, 0, GR_RESIZE_NONE);
+		//gr_restore_screen(Lab_screen_save_bitmap);
 		//gr_set_shader(&Lab_shader);
 		//gr_shade(0, 0, gr_screen.max_w, gr_screen.max_h, GR_RESIZE_NONE);
 		render_colored_rect(&Lab_shader, 0, 0, gr_screen.max_w, gr_screen.max_h, GR_RESIZE_NONE);

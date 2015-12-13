@@ -26,6 +26,8 @@ void render_laser(int texture, color *clr, float alpha, vec3d *headp, float head
 void render_laser_2d(int texture, color* clr, float alpha, vec3d *headp, float head_width, vec3d *tailp, float tail_width, float max_len);
 void render_laser_2d(int texture, float alpha, vec3d *headp, float head_width, vec3d *tailp, float tail_width, float max_len);
 
+void render_rotated_bitmap(int texture, float alpha, vertex *pnt, float angle, float rad);
+
 void render_oriented_bitmap(int texture, float alpha, vertex *pnt, int orient, float rad, float depth = 0.0f);
 void render_oriented_bitmap_2d(int texture, float alpha, vertex *pnt, int orient, float rad);
 void render_oriented_bitmap_2d(int texture, vertex *pnt, int orient, float rad);
@@ -69,6 +71,8 @@ void render_colored_rect(int x, int y, int w, int h, int resize_mode = GR_RESIZE
 void render_line(color *clr, int x1,int y1,int x2,int y2, int resize_mode = GR_RESIZE_FULL);
 void render_line(int x1,int y1,int x2,int y2, int resize_mode = GR_RESIZE_FULL);
 
+void render_horizon_line();
+
 void render_line_3d(color *clr, bool depth_testing, vec3d *start, vec3d *end);
 void render_line_3d(bool depth_testing, vec3d *start, vec3d *end);
 
@@ -85,5 +89,15 @@ void render_sphere_fast(color *clr, vec3d *pnt, float rad);
 void render_sphere_fast(vertex *pnt, float rad);
 void render_sphere_fast(vec3d *pnt, float rad);
 
+void render_sphere(color *clr, vec3d* position, float radius);
+void render_sphere(vec3d* position, float radius);
+
 void render_shield_icon(color *clr, coord2d coords[6], int resize_mode = GR_RESIZE_FULL);
 void render_shield_icon(coord2d coords[6], int resize_mode = GR_RESIZE_FULL);
+
+void render_bitmap_list(bitmap_rect_list* list, int n_bm, int texture, float alpha, bool blending, int resize_mode = GR_RESIZE_FULL);
+
+void render_cross_fade(int bmap1, int bmap2, int x1, int y1, int x2, int y2, float pct, int resize_mode = GR_RESIZE_FULL);
+
+void render_flash(int r, int g, int b);
+void render_flash_alpha(int r, int g, int b, int a);

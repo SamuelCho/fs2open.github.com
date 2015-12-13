@@ -1159,10 +1159,6 @@ float g3_draw_rotated_bitmap_area(vertex *pnt,float angle, float rad,uint tmap_f
 
 
 #include "graphics/2d.h"
-typedef struct horz_pt {
-	float x, y;
-	int edge;
-} horz_pt;
 
 //draws a horizon. takes eax=sky_color, edx=ground_color
 void g3_draw_horizon_line()
@@ -1252,9 +1248,7 @@ void g3_draw_horizon_line()
 	}
 
 	// draw from left to right.
-	//gr_line( fl2i(horz_pts[0].x),fl2i(horz_pts[0].y),fl2i(horz_pts[1].x),fl2i(horz_pts[1].y), GR_RESIZE_NONE );
-	render_line( fl2i(horz_pts[0].x),fl2i(horz_pts[0].y),fl2i(horz_pts[1].x),fl2i(horz_pts[1].y), GR_RESIZE_NONE );
-	
+	gr_line( fl2i(horz_pts[0].x),fl2i(horz_pts[0].y),fl2i(horz_pts[1].x),fl2i(horz_pts[1].y), GR_RESIZE_NONE );
 }
 
 // Draws a polygon always facing the viewer.

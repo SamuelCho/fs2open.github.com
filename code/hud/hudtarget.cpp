@@ -2871,16 +2871,23 @@ void hud_tri(float x1,float y1,float x2,float y2,float x3,float y3)
 	for (i=0; i<3; i++)
 		gr_resize_screen_posf(&verts[i].screen.xyw.x, &verts[i].screen.xyw.y);
 
-	uint saved_mode = gr_zbuffer_get();
-	int cull = gr_set_cull(0);
+	//uint saved_mode = gr_zbuffer_get();
+	//int cull = gr_set_cull(0);
 	
-	gr_zbuffer_set( GR_ZBUFF_NONE );
+	//gr_zbuffer_set( GR_ZBUFF_NONE );
 	
-	//gr_tmapper( 3, vertlist, TMAP_FLAG_TRILIST );
-	g3_draw_poly_constant_sw(3, vertlist, TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_FLAG_ALPHA, 0.1f);	
+	material material_def;
 
-	gr_zbuffer_set( saved_mode );
-	gr_set_cull(cull);
+	material_def.set_blend_mode(ALPHA_BLEND_NONE);
+	material_def.set_depth_mode(ZBUFFER_TYPE_NONE);
+	material_def.set_texture_source(TEXTURE_SOURCE_NONE);
+
+	render_primitives_colored(&material_def, verts, 3, PRIM_TYPE_TRIFAN, true);
+
+	//g3_draw_poly_constant_sw(3, vertlist, TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_FLAG_ALPHA, 0.1f);	
+
+	//gr_zbuffer_set( saved_mode );
+	//gr_set_cull(cull);
 }
 
 

@@ -632,7 +632,7 @@ void brief_preload_fade_anim(brief_icon *bi)
 
 	//gr_set_bitmap(ha->first_frame);
 	//gr_aabitmap(0, 0);
-	gr_aabitmap(ha->first_frame, 0, 0);
+	render_aabitmap(ha->first_frame, 0, 0);
 }
 
 void brief_preload_highlight_anim(brief_icon *bi)
@@ -2116,7 +2116,8 @@ void brief_rpd_line(vec3d *v0, vec3d *v1)
 	g3_rotate_vertex(&tv1, v1);
 
 	gr_set_color_fast(&Color_briefing_grid);
-	g3_draw_line(&tv0, &tv1);
+	//g3_draw_line(&tv0, &tv1);
+	render_aaline(&tv0, &tv1);
 }
 
 /**

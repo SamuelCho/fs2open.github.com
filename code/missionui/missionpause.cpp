@@ -145,7 +145,9 @@ void pause_do()
 			Pause_type = PAUSE_TYPE_VIEWER;
 		}
 		else if(Pause_type == PAUSE_TYPE_NORMAL)	{
-			gr_restore_screen(Pause_saved_screen);
+			//gr_restore_screen(Pause_saved_screen);
+			gr_reset_clip();
+			render_bitmap(Pause_saved_screen, 0, 0, GR_RESIZE_NONE);
 		}
 	}
 

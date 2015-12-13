@@ -14112,9 +14112,10 @@ ADE_FUNC(drawImage, l_Graphics, "string Filename/texture Texture, [number X1=0, 
 	if(y2!=INT_MAX)
 		h = y2-y1;
 
-	gr_set_bitmap(idx, lua_Opacity_type, GR_BITBLT_MODE_NORMAL, alpha);
+	//gr_set_bitmap(idx, lua_Opacity_type, GR_BITBLT_MODE_NORMAL, alpha);
 	bitmap_rect_list brl = bitmap_rect_list(x1, y1, w, h, uv_x1, uv_y1, uv_x2, uv_y2);
-	gr_bitmap_list(&brl, 1, GR_RESIZE_NONE);
+	//gr_bitmap_list(&brl, 1, GR_RESIZE_NONE);
+	render_bitmap_list(&brl, 1, idx, alpha, lua_Opacity_type == GR_ALPHABLEND_FILTER ? true : false, GR_RESIZE_NONE);
 
 	return ADE_RETURN_TRUE;
 }
@@ -14220,7 +14221,8 @@ ADE_FUNC(flashScreen, l_Graphics, "number Red, number Green, number Blue", "Flas
 	if(!ade_get_args(L, "iii", &r, &g, &b))
 		return ADE_RETURN_NIL;
 
-	gr_flash(r,g,b);
+	//gr_flash(r,g,b);
+	render_flash(r, g, b);
 
 	return ADE_RETURN_NIL;
 }

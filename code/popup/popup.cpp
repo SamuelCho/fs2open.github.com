@@ -866,7 +866,9 @@ int popup_do(popup_info *pi, int flags)
 
 		// don't draw anything 
 		if(!(flags & PF_RUN_STATE)){
-			gr_restore_screen(screen_id);
+			//gr_restore_screen(screen_id);
+			gr_reset_clip();
+			render_bitmap(screen_id, 0, 0, GR_RESIZE_NONE);
 		}
 
 		// if this is an input popup, store the input text
@@ -909,7 +911,9 @@ int popup_do_with_condition(popup_info *pi, int flags, int(*condition)())
 		
 		game_set_frametime(-1);
 		game_do_state_common(gameseq_get_state());	// do stuff common to all states 
-		gr_restore_screen(screen_id);
+		//gr_restore_screen(screen_id);
+		gr_reset_clip();
+		render_bitmap(screen_id, 0, 0, GR_RESIZE_NONE);
 
 		// draw one frame first
 		Popup_window.draw();

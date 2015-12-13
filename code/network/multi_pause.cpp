@@ -394,7 +394,8 @@ void multi_pause_do()
 	if (!(Game_mode & GM_STANDALONE_SERVER)) {
 		// restore saved screen data if any
 		if (Multi_paused_screen_id >= 0) {
-			gr_restore_screen(Multi_paused_screen_id);
+			//gr_restore_screen(Multi_paused_screen_id);
+			render_bitmap(Multi_paused_screen_id, 0, 0, GR_RESIZE_NONE);
 		}
 
 		// set the background image

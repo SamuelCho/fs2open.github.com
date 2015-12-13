@@ -9329,7 +9329,9 @@ void multi_passwd_do(char *passwd)
 		gr_reset_clip();
 		gr_clear();
 		if(Multi_passwd_background >= 0){
-			gr_restore_screen(Multi_passwd_background);		
+			//gr_restore_screen(Multi_passwd_background);
+			gr_reset_clip();
+			render_bitmap(Multi_passwd_background, 0, 0, GR_RESIZE_NONE);
 		}
 		//gr_set_bitmap(Multi_pwd_bitmap);
 		//gr_bitmap(0,0,GR_RESIZE_MENU);
