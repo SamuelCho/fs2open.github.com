@@ -603,13 +603,14 @@ void bm_set_components_argb_32_tex(ubyte *pixel, ubyte *r, ubyte *g, ubyte *b, u
  */
 void bm_get_components(ubyte *pixel, ubyte *r, ubyte *g, ubyte *b, ubyte *a);
 
-extern int ALBEDOMAP; //this holds a reference to a map that is for PBR diffuse maps that are used instead of the base map if the base map is needed for fixed func rendering
+extern int UNLITMAP; //this holds a reference to a map that is optional used instead of the base map for unlit rendering
 extern int GLOWMAP;	//this holds a reference to a map that is a fully lit version of its index -Bobboau
 extern int SPECMAP;	//this holds a reference to a map that is for specular mapping -Bobboau
 extern int SPECGLOSSMAP;	//this holds a reference to a map that is for specular mapping -Bobboau
 extern int ENVMAP;	//this holds a reference to a map that is for environment mapping -Bobboau
 extern int NORMMAP;	// normal mapping
 extern int HEIGHTMAP;	// height map for normal mapping
+extern int AMBIENTMAP; // ambient occluion map. red channel affects ambient lighting, green channel affects diffuse and specular
 extern int MISCMAP; // Utility map, to be utilized for various things shader authors can come up with
 
 /**

@@ -357,11 +357,13 @@ void draw_list::reset()
 	Current_render_state = render_state();
 
 	Current_textures[TM_BASE_TYPE] = -1;
-	Current_textures[TM_ALBEDO_TYPE] = -1;
+	Current_textures[TM_UNLIT_TYPE] = -1;
 	Current_textures[TM_GLOW_TYPE] = -1;
 	Current_textures[TM_SPECULAR_TYPE] = -1;
+	Current_textures[TM_SPEC_GLOSS_TYPE] = -1;
 	Current_textures[TM_NORMAL_TYPE] = -1;
 	Current_textures[TM_HEIGHT_TYPE] = -1;
+	Current_textures[TM_AMBIENT_TYPE] = -1;
 	Current_textures[TM_MISC_TYPE] = -1;
 
 	Clip_planes.clear();
@@ -511,12 +513,13 @@ void draw_list::add_buffer_draw(vertex_buffer *buffer, int texi, uint tmap_flags
 	}
 	
 	draw_data.texture_maps[TM_BASE_TYPE] = Current_textures[TM_BASE_TYPE];
-	draw_data.texture_maps[TM_ALBEDO_TYPE] = Current_textures[TM_ALBEDO_TYPE];
+	draw_data.texture_maps[TM_UNLIT_TYPE] = Current_textures[TM_UNLIT_TYPE];
 	draw_data.texture_maps[TM_GLOW_TYPE] = Current_textures[TM_GLOW_TYPE];
 	draw_data.texture_maps[TM_SPECULAR_TYPE] = Current_textures[TM_SPECULAR_TYPE];
 	draw_data.texture_maps[TM_SPEC_GLOSS_TYPE] = Current_textures[TM_SPEC_GLOSS_TYPE];
 	draw_data.texture_maps[TM_NORMAL_TYPE] = Current_textures[TM_NORMAL_TYPE];
 	draw_data.texture_maps[TM_HEIGHT_TYPE] = Current_textures[TM_HEIGHT_TYPE];
+	draw_data.texture_maps[TM_AMBIENT_TYPE] = Current_textures[TM_AMBIENT_TYPE];
 	draw_data.texture_maps[TM_MISC_TYPE] = Current_textures[TM_MISC_TYPE];
 
 	draw_data.sdr_flags = determine_shader_flags(&Current_render_state, &draw_data, buffer, tmap_flags);
@@ -553,6 +556,7 @@ uint draw_list::determine_shader_flags(render_state *state, queued_buffer_draw *
 		draw_info->texture_maps[TM_GLOW_TYPE],
 		draw_info->texture_maps[TM_NORMAL_TYPE],
 		draw_info->texture_maps[TM_HEIGHT_TYPE],
+		draw_info->texture_maps[TM_AMBIENT_TYPE],
 		ENVMAP,
 		draw_info->texture_maps[TM_MISC_TYPE]
 	);
@@ -628,22 +632,24 @@ void draw_list::render_buffer(queued_buffer_draw &render_elements)
 
 	gr_set_bitmap(render_elements.texture_maps[TM_BASE_TYPE], render_elements.blend_filter, GR_BITBLT_MODE_NORMAL, render_elements.alpha);
 
-	ALBEDOMAP = render_elements.texture_maps[TM_ALBEDO_TYPE];
+	UNLITMAP = render_elements.texture_maps[TM_UNLIT_TYPE];
 	GLOWMAP = render_elements.texture_maps[TM_GLOW_TYPE];
 	SPECMAP = render_elements.texture_maps[TM_SPECULAR_TYPE];
 	SPECGLOSSMAP = render_elements.texture_maps[TM_SPEC_GLOSS_TYPE];
 	NORMMAP = render_elements.texture_maps[TM_NORMAL_TYPE];
 	HEIGHTMAP = render_elements.texture_maps[TM_HEIGHT_TYPE];
+	AMBIENTMAP = render_elements.texture_maps[TM_AMBIENT_TYPE];
 	MISCMAP = render_elements.texture_maps[TM_MISC_TYPE];
 
 	gr_render_buffer(0, render_elements.buffer, render_elements.texi, render_elements.flags);
 
-	ALBEDOMAP = -1;
+	UNLITMAP = -1;
 	GLOWMAP = -1;
 	SPECMAP = -1;
 	SPECGLOSSMAP = -1;
 	NORMMAP = -1;
 	HEIGHTMAP = -1;
+	AMBIENTMAP = -1;
 	MISCMAP = -1;
 
 	gr_pop_scale_matrix();
@@ -1012,6 +1018,10 @@ bool draw_list::sort_draw_pair(const int a, const int b)
 		return draw_call_a->texture_maps[TM_SPECULAR_TYPE] < draw_call_b->texture_maps[TM_SPECULAR_TYPE];
 	}
 
+	if ( draw_call_a->texture_maps[TM_SPEC_GLOSS_TYPE] != draw_call_b->texture_maps[TM_SPEC_GLOSS_TYPE] ) {
+		return draw_call_a->texture_maps[TM_SPEC_GLOSS_TYPE] < draw_call_b->texture_maps[TM_SPEC_GLOSS_TYPE];
+	}
+
 	if ( draw_call_a->texture_maps[TM_GLOW_TYPE] != draw_call_b->texture_maps[TM_GLOW_TYPE] ) {
 		return draw_call_a->texture_maps[TM_GLOW_TYPE] < draw_call_b->texture_maps[TM_GLOW_TYPE];
 	}
@@ -1022,6 +1032,10 @@ bool draw_list::sort_draw_pair(const int a, const int b)
 
 	if ( draw_call_a->texture_maps[TM_HEIGHT_TYPE] != draw_call_b->texture_maps[TM_HEIGHT_TYPE] ) {
 		return draw_call_a->texture_maps[TM_HEIGHT_TYPE] < draw_call_b->texture_maps[TM_HEIGHT_TYPE];
+	}
+
+	if ( draw_call_a->texture_maps[TM_AMBIENT_TYPE] != draw_call_b->texture_maps[TM_AMBIENT_TYPE] ) {
+		return draw_call_a->texture_maps[TM_AMBIENT_TYPE] < draw_call_b->texture_maps[TM_AMBIENT_TYPE];
 	}
 
 	if ( draw_call_a->texture_maps[TM_MISC_TYPE] != draw_call_b->texture_maps[TM_MISC_TYPE] ) {
@@ -1268,7 +1282,8 @@ void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_
 		texture_maps[TM_HEIGHT_TYPE] = -1;
 		texture_maps[TM_MISC_TYPE] = -1;
 		texture_maps[TM_SPEC_GLOSS_TYPE] = -1;
-		texture_maps[TM_ALBEDO_TYPE] = -1;
+		texture_maps[TM_UNLIT_TYPE] = -1;
+		texture_maps[TM_AMBIENT_TYPE] = -1;
 
 		if (forced_texture != -2) {
 			texture_maps[TM_BASE_TYPE] = forced_texture;
@@ -1291,11 +1306,16 @@ void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_
 				continue;
 			}
 
-			if (replacement_textures != NULL && replacement_textures[rt_begin_index + TM_ALBEDO_TYPE] >= 0) {
-				tex_replace[TM_ALBEDO_TYPE] = texture_info(replacement_textures[rt_begin_index + TM_ALBEDO_TYPE]);
-				texture_maps[TM_ALBEDO_TYPE] = model_interp_get_texture(&tex_replace[TM_ALBEDO_TYPE], base_frametime);
+			if (replacement_textures != NULL && replacement_textures[rt_begin_index + TM_UNLIT_TYPE] >= 0) {
+				tex_replace[TM_UNLIT_TYPE] = texture_info(replacement_textures[rt_begin_index + TM_UNLIT_TYPE]);
+				texture_maps[TM_UNLIT_TYPE] = model_interp_get_texture(&tex_replace[TM_UNLIT_TYPE], base_frametime);
 			} else {
-				texture_maps[TM_ALBEDO_TYPE] = model_interp_get_texture(&tmap->textures[TM_ALBEDO_TYPE], base_frametime);
+				texture_maps[TM_UNLIT_TYPE] = model_interp_get_texture(&tmap->textures[TM_UNLIT_TYPE], base_frametime);
+			}
+
+			if ( (texture_maps[TM_UNLIT_TYPE] >= 0) && (model_flags & MR_NO_LIGHTING) && (buffer->flags & VB_FLAG_TRANS) ) {
+				// don't render transparent buffers for unlit textures in no lighting mode.
+				continue;
 			}
 
 			// doing glow maps?
@@ -1321,6 +1341,7 @@ void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_
 				texture_info *specgloss_map = &tmap->textures[TM_SPEC_GLOSS_TYPE];
 				texture_info *norm_map = &tmap->textures[TM_NORMAL_TYPE];
 				texture_info *height_map = &tmap->textures[TM_HEIGHT_TYPE];
+				texture_info *ambient_map = &tmap->textures[TM_AMBIENT_TYPE];
 				texture_info *misc_map = &tmap->textures[TM_MISC_TYPE];
 
 				if (replacement_textures != NULL) {
@@ -1345,6 +1366,11 @@ void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_
 						height_map = &tex_replace[TM_HEIGHT_TYPE];
 					}
 
+					if ( replacement_textures[rt_begin_index + TM_AMBIENT_TYPE] >= 0 ) {
+						tex_replace[TM_AMBIENT_TYPE] = texture_info(replacement_textures[rt_begin_index + TM_AMBIENT_TYPE]);
+						ambient_map = &tex_replace[TM_AMBIENT_TYPE];
+					}
+
 					if (replacement_textures[rt_begin_index + TM_MISC_TYPE] >= 0) {
 						tex_replace[TM_MISC_TYPE] = texture_info(replacement_textures[rt_begin_index + TM_MISC_TYPE]);
 						misc_map = &tex_replace[TM_MISC_TYPE];
@@ -1355,6 +1381,7 @@ void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_
 				texture_maps[TM_SPEC_GLOSS_TYPE] = model_interp_get_texture(specgloss_map, base_frametime);
 				texture_maps[TM_NORMAL_TYPE] = model_interp_get_texture(norm_map, base_frametime);
 				texture_maps[TM_HEIGHT_TYPE] = model_interp_get_texture(height_map, base_frametime);
+				texture_maps[TM_AMBIENT_TYPE] = model_interp_get_texture(ambient_map, base_frametime);
 				texture_maps[TM_MISC_TYPE] = model_interp_get_texture(misc_map, base_frametime);
 			}
 		} else {
@@ -1409,12 +1436,13 @@ void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_
 		scene->set_blend_filter(blend_filter, alpha);
 
 		scene->set_texture(TM_BASE_TYPE,	texture_maps[TM_BASE_TYPE]);
-		scene->set_texture(TM_ALBEDO_TYPE,	texture_maps[TM_ALBEDO_TYPE]);
+		scene->set_texture(TM_UNLIT_TYPE,	texture_maps[TM_UNLIT_TYPE]);
 		scene->set_texture(TM_GLOW_TYPE,	texture_maps[TM_GLOW_TYPE]);
 		scene->set_texture(TM_SPECULAR_TYPE, texture_maps[TM_SPECULAR_TYPE]);
 		scene->set_texture(TM_SPEC_GLOSS_TYPE, texture_maps[TM_SPEC_GLOSS_TYPE]);
 		scene->set_texture(TM_NORMAL_TYPE, texture_maps[TM_NORMAL_TYPE]);
 		scene->set_texture(TM_HEIGHT_TYPE, texture_maps[TM_HEIGHT_TYPE]);
+		scene->set_texture(TM_AMBIENT_TYPE, texture_maps[TM_AMBIENT_TYPE]);
 		scene->set_texture(TM_MISC_TYPE,	texture_maps[TM_MISC_TYPE]);
 
 		scene->add_buffer_draw(buffer, i, tmap_flags | alpha_flag, interp);

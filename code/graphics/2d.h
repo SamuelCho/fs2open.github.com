@@ -67,6 +67,7 @@ enum shader_type {
 #define SDR_FLAG_MODEL_THRUSTER		(1<<16)
 #define SDR_FLAG_MODEL_CLIP			(1<<17)
 #define SDR_FLAG_MODEL_HDR			(1<<18)
+#define SDR_FLAG_MODEL_AMBIENT_MAP	(1<<19)
 
 #define SDR_FLAG_PARTICLE_POINT_GEN			(1<<0)
 
@@ -1026,6 +1027,7 @@ uint gr_determine_model_shader_flags(
 	int glow_map, 
 	int normal_map, 
 	int height_map,
+	int ambient_map,
 	int env_map,
 	int misc_map
 );

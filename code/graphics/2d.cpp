@@ -2133,6 +2133,7 @@ uint gr_determine_model_shader_flags(
 	int glow_map, 
 	int normal_map, 
 	int height_map,
+	int ambient_map,
 	int env_map,
 	int misc_map
 ) {
@@ -2190,6 +2191,10 @@ uint gr_determine_model_shader_flags(
 
 			if ( ( height_map > 0) && !Heightmap_override ) {
 				shader_flags |= SDR_FLAG_MODEL_HEIGHT_MAP;
+			}
+
+			if ( ambient_map > 0 ) {
+				shader_flags |= SDR_FLAG_MODEL_AMBIENT_MAP;
 			}
 
 			if ( Cmdline_shadow_quality && !in_shadow_map && !Shadow_override) {

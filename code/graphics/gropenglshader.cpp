@@ -163,6 +163,9 @@ static opengl_shader_variant_t GL_shader_variants[] = {
 
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_HDR, "FLAG_HDR",
 		0, { NULL }, 0, { NULL}, "High Dynamic Range" },
+
+	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_AMBIENT_MAP, "FLAG_AMBIENT_MAP",
+		1, { "sAmbientmap" }, 0, { NULL }, "Ambient Occlusion Map" },
 	
 	{ SDR_TYPE_EFFECT_PARTICLE, true, SDR_FLAG_PARTICLE_POINT_GEN, "FLAG_EFFECT_GEOMETRY", 
 		0, { NULL }, 1, { "uvec" },

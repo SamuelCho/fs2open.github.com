@@ -2284,14 +2284,14 @@ void model_load_texture(polymodel *pm, int i, char *file)
 
 	// base maps ---------------------------------------------------------------
 	texture_info *tbase = &tmap->textures[TM_BASE_TYPE];
-	texture_info *talbedo = &tmap->textures[TM_ALBEDO_TYPE];
+	texture_info *tunlit = &tmap->textures[TM_UNLIT_TYPE];
 
 	if (strstr(tmp_name, "thruster") || strstr(tmp_name, "invisible") || strstr(tmp_name, "warpmap"))
 	{
 		// Don't load textures for thruster animations or invisible textures
 		// or warp models!-Bobboau
 		tbase->clear();
-		talbedo->clear();
+		tunlit->clear();
 	}
 	else
 	{
@@ -2310,12 +2310,12 @@ void model_load_texture(polymodel *pm, int i, char *file)
 			Warning(LOCATION, "Couldn't open texture '%s'\nreferenced by model '%s'\n", tmp_name, pm->filename);
 		}
 
-		// look for albedo map as well (For PBR)
+		// look for unlit map as well in case this texture needs a different diffuse response when rendered in no lighting
 		strcpy_s(tmp_name, file);
-		strcat_s(tmp_name, "-albedo");
+		strcat_s(tmp_name, "-unlit");
 		strlwr(tmp_name);
 
-		talbedo->LoadTexture(tmp_name, pm->filename);
+		tunlit->LoadTexture(tmp_name, pm->filename);
 	}
 	// -------------------------------------------------------------------------
 
@@ -2386,6 +2386,15 @@ void model_load_texture(polymodel *pm, int i, char *file)
 		theight->LoadTexture(tmp_name, pm->filename);
 	}
 
+	// ambient occlusion maps
+	texture_info *tambient = &tmap->textures[TM_AMBIENT_TYPE];
+
+	strcpy_s(tmp_name, file);
+	strcat_s(tmp_name, "-ao");
+	strlwr(tmp_name);
+
+	tambient->LoadTexture(tmp_name, pm->filename);
+
 	// Utility map -------------------------------------------------------------
 	texture_info *tmisc = &tmap->textures[TM_MISC_TYPE];
 
@@ -2414,6 +2423,8 @@ void model_load_texture(polymodel *pm, int i, char *file)
 		shader_flags |= SDR_FLAG_MODEL_ENV_MAP;
 	if (tmisc->GetTexture() > 0)
 		shader_flags |= SDR_FLAG_MODEL_MISC_MAP;
+	if (tambient->GetTexture() >0)
+		shader_flags |= SDR_FLAG_MODEL_AMBIENT_MAP;
 	
 	gr_maybe_create_shader(SDR_TYPE_MODEL, SDR_FLAG_MODEL_SHADOW_MAP);
 

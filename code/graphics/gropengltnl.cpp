@@ -829,6 +829,7 @@ static void opengl_render_pipeline_program(int start, const vertex_buffer *buffe
 		GLOWMAP, 
 		NORMMAP, 
 		HEIGHTMAP, 
+		AMBIENTMAP,
 		ENVMAP, 
 		MISCMAP
 	);
@@ -2057,21 +2058,30 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 			GL_state.Uniform.setUniformi("desaturate", 0);
 		}
 
-		int diffuse_map = gr_screen.current_bitmap;
-
-		if ( ALBEDOMAP >= 0 && lighting_is_enabled ) {
-			diffuse_map = ALBEDOMAP;
-		}
-
-		if ( flags & TMAP_FLAG_ALPHA ) {
-			if ( bm_has_alpha_channel(diffuse_map) ) {
+		if ( UNLITMAP >= 0 && !lighting_is_enabled ) {
+			// make sure we allow transparent fragments to render since we're not going to have a separate alpha pass for unlit objects
+			if ( bm_has_alpha_channel(UNLITMAP) ) {
 				GL_state.SetAlphaBlendMode(ALPHA_BLEND_PREMULTIPLIED);
 				GL_state.Uniform.setUniformi("blend_alpha", 1);
 			} else {
 				GL_state.Uniform.setUniformi("blend_alpha", 2);
 			}
+
+			gr_opengl_tcache_set(UNLITMAP, tmap_type, &u_scale, &v_scale, render_pass);
 		} else {
-			GL_state.Uniform.setUniformi("blend_alpha", 0);
+			if ( flags & TMAP_FLAG_ALPHA ) {
+				if ( bm_has_alpha_channel(gr_screen.current_bitmap) ) {
+					GL_state.SetAlphaBlendMode(ALPHA_BLEND_PREMULTIPLIED);
+					GL_state.Uniform.setUniformi("blend_alpha", 1);
+				} else {
+					GL_state.Uniform.setUniformi("blend_alpha", 2);
+				}
+			} else {
+				// don't render any transparent pixels if this isn't an alpha pass
+				GL_state.Uniform.setUniformi("blend_alpha", 0);
+			}
+
+			gr_opengl_tcache_set(gr_screen.current_bitmap, tmap_type, &u_scale, &v_scale, render_pass);
 		}
 
 		if ( Basemap_color_override_set ) {
@@ -2080,8 +2090,6 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 		} else {
 			GL_state.Uniform.setUniformi("overrideDiffuse", 0);
 		}
-
-		gr_opengl_tcache_set(diffuse_map, tmap_type, &u_scale, &v_scale, render_pass);
 
 		++render_pass;
 	}
@@ -2164,6 +2172,14 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 		GL_state.Uniform.setUniformi("sHeightmap", render_pass);
 		
 		gr_opengl_tcache_set(HEIGHTMAP, tmap_type, &u_scale, &v_scale, render_pass);
+
+		++render_pass;
+	}
+
+	if ( shader_flags & SDR_FLAG_MODEL_AMBIENT_MAP ) {
+		GL_state.Uniform.setUniformi("sAmbientmap", render_pass);
+
+		gr_opengl_tcache_set(AMBIENTMAP, tmap_type, &u_scale, &v_scale, render_pass);
 
 		++render_pass;
 	}
