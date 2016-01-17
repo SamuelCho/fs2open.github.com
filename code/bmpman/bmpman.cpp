@@ -126,7 +126,7 @@ bitmap_lookup::bitmap_lookup(int bitmap_num):
 	Width = be->bm.w;
 	Height = be->bm.h;
 
-	Bitmap_data = (float*)vm_malloc(Width * Height * Num_channels * sizeof(float));
+	Bitmap_data = (ubyte*)vm_malloc(Width * Height * Num_channels * sizeof(ubyte));
 
 	gr_get_bitmap_from_texture((void*)Bitmap_data, bitmap_num);
 }
@@ -159,7 +159,7 @@ float bitmap_lookup::get_channel_red(float u, float v)
 	int x = fl2i(map_texture_address(u) * (Width-1));
 	int y = fl2i(map_texture_address(v) * (Height-1));
 
-	return Bitmap_data[(y*Width + x)*Num_channels];
+	return i2fl(Bitmap_data[(y*Width + x)*Num_channels]) / 255.0f;
 }
 
 float bitmap_lookup::get_channel_green(float u, float v)
@@ -172,7 +172,7 @@ float bitmap_lookup::get_channel_green(float u, float v)
 	int x = fl2i(map_texture_address(u) * (Width-1));
 	int y = fl2i(map_texture_address(v) * (Height-1));
 
-	return Bitmap_data[(y*Width + x)*Num_channels + 1];
+	return i2fl(Bitmap_data[(y*Width + x)*Num_channels + 1]) / 255.0f;
 }
 
 float bitmap_lookup::get_channel_blue(float u, float v)
@@ -182,7 +182,7 @@ float bitmap_lookup::get_channel_blue(float u, float v)
 	int x = fl2i(map_texture_address(u) * (Width-1));
 	int y = fl2i(map_texture_address(v) * (Height-1));
 
-	return Bitmap_data[(y*Width + x)*Num_channels + 2];
+	return i2fl(Bitmap_data[(y*Width + x)*Num_channels + 2]) / 255.0f;
 }
 
 float bitmap_lookup::get_channel_alpha(float u, float v)
@@ -192,7 +192,7 @@ float bitmap_lookup::get_channel_alpha(float u, float v)
 	int x = fl2i(map_texture_address(u) * (Width-1));
 	int y = fl2i(map_texture_address(v) * (Height-1));
 
-	return Bitmap_data[(y*Width + x)*Num_channels + 3];
+	return i2fl(Bitmap_data[(y*Width + x)*Num_channels + 3]) / 255.0f;
 }
 
 /**
@@ -1244,6 +1244,9 @@ int bm_load_animation(const char *real_filename, int *nframes, int *fps, int *ke
 			}
 			//some retail anis have their keyframes reversed
 			key = MAX(the_anim.keys[0].frame_num, the_anim.keys[1].frame_num);
+			
+			vm_free(the_anim.keys);
+			the_anim.keys = nullptr;
 		}
 	} else {
 		return -1;
@@ -1506,8 +1509,8 @@ bitmap * bm_lock(int handle, ubyte bpp, ubyte flags, bool nodebug) {
 	// read the file data
 	if (gr_bm_lock(be->filename, handle, bitmapnum, bpp, flags, nodebug) == -1) {
 		// oops, this isn't good - reset and return NULL
-		bm_unlock(bitmapnum);
-		bm_unload(bitmapnum);
+		bm_unlock( handle );
+		bm_unload( handle );
 
 		return NULL;
 	}
@@ -2100,7 +2103,9 @@ void bm_page_in_stop() {
 					}
 				} else {
 					bm_lock(bm_bitmaps[i].handle, (bm_bitmaps[i].used_flags == BMP_AABITMAP) ? 8 : 16, bm_bitmaps[i].used_flags);
-					bm_unlock(bm_bitmaps[i].handle);
+					if (bm_bitmaps[i].ref_count >= 1) {
+						bm_unlock( bm_bitmaps[i].handle );
+					}
 				}
 
 				n++;

@@ -145,10 +145,9 @@ Flag exe_params[] =
 	{ "-nolightshafts",		"Disable lightshafts",						true,	EASY_DEFAULT,		EASY_DEFAULT,		"Graphics",		"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-flightshaftsoff"},
 	{ "-fb_explosions",		"Enable Framebuffer Shockwaves",			true,	EASY_ALL_ON,		EASY_DEFAULT,		"Graphics",		"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-fb_explosions", },
 	{ "-no_deferred",		"Disable Deferred Lighting",				true,	EASY_DEFAULT_MEM,	EASY_DEFAULT,		"Graphics",		"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-no_deferred"},
-	{ "-disable_shadows",	"Disable Shadows",							true,	EASY_DEFAULT_MEM,	EASY_DEFAULT,		"Graphics",		"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-no_shadows"},
+	{ "-enable_shadows",	"Enable Shadows",							true,	EASY_MEM_ALL_ON,	EASY_DEFAULT,		"Graphics",		"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-no_shadows"},
 	{ "-img2dds",			"Compress non-compressed images",			true,	0,					EASY_DEFAULT,		"Game Speed",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-img2dds", },
 	{ "-no_vsync",			"Disable vertical sync",					true,	0,					EASY_DEFAULT,		"Game Speed",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-no_vsync", },
-	{ "-no_fps_capping",	"Don't limit frames-per-second",			true,	0,					EASY_DEFAULT,		"Game Speed",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-no_fps_capping", },
 	{ "-cache_bitmaps",		"Cache bitmaps between missions",			true,	0,					EASY_DEFAULT_MEM,	"Game Speed",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-cache_bitmaps", },
 
 	{ "-dualscanlines",		"Add another pair of scanning lines",		true,	0,					EASY_DEFAULT,		"HUD",			"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-dualscanlines", },
@@ -231,6 +230,7 @@ Flag exe_params[] =
 	{ "-profile_frame_time", "Profile engine subsystems",				true,	0,					EASY_DEFAULT,		"Dev Tool",		"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-profile_frame_timings", },
 	{ "-profile_write_file", "Write profiling information to file",		true,	0,					EASY_DEFAULT,		"Dev Tool",		"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-profile_write_file", },
 	{ "-no_unfocused_pause","Don't pause if the window isn't focused",	true,	0,					EASY_DEFAULT,		"Dev Tool",		"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-no_unfocused_pause", },
+	{ "-benchmark_mode",	"Puts the game into benchmark mode",		true,	0,					EASY_DEFAULT,		"Dev Tool",		"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-benchmark_mode", },
 };
 
 // forward declaration
@@ -311,8 +311,8 @@ cmdline_parm fb_explosions_arg("-fb_explosions", NULL, AT_NONE);
 cmdline_parm flightshaftsoff_arg("-nolightshafts", NULL, AT_NONE);
 cmdline_parm brieflighting_arg("-brief_lighting", NULL, AT_NONE);
 cmdline_parm no_batching("-no_batching", NULL, AT_NONE);
-cmdline_parm shadow_quality_arg("-shadow_quality", NULL, AT_NONE);
-cmdline_parm disable_shadows_arg("-disable_shadows", NULL, AT_NONE);
+cmdline_parm shadow_quality_arg("-shadow_quality", NULL, AT_INT);
+cmdline_parm enable_shadows_arg("-enable_shadows", NULL, AT_NONE);
 cmdline_parm no_deferred_lighting_arg("-no_deferred", NULL, AT_NONE);	// Cmdline_no_deferred
 
 float Cmdline_clip_dist = Default_min_draw_distance;
@@ -340,7 +340,7 @@ bool Cmdline_fb_explosions = 0;
 bool Cmdline_no_batching = false;
 extern bool ls_force_off;
 bool Cmdline_brief_lighting = 0;
-int Cmdline_shadow_quality = 2;
+int Cmdline_shadow_quality = 0;
 int Cmdline_no_deferred_lighting = 0;
 
 // Game Speed related
@@ -479,6 +479,8 @@ cmdline_parm reparse_mainhall_arg("-reparse_mainhall", NULL, AT_NONE); //Cmdline
 cmdline_parm frame_profile_arg("-profile_frame_time", NULL, AT_NONE); //Cmdline_frame_profile
 cmdline_parm frame_profile_write_file("-profile_write_file", NULL, AT_NONE); // Cmdline_profile_write_file
 cmdline_parm no_unfocused_pause_arg("-no_unfocused_pause", NULL, AT_NONE); //Cmdline_no_unfocus_pause
+cmdline_parm benchmark_mode_arg("-benchmark_mode", NULL, AT_NONE); //Cmdline_benchmark_mode
+
 
 char *Cmdline_start_mission = NULL;
 int Cmdline_old_collision_sys = 0;
@@ -506,6 +508,7 @@ int Cmdline_reparse_mainhall = 0;
 bool Cmdline_frame_profile = false;
 bool Cmdline_profile_write_file = false;
 bool Cmdline_no_unfocus_pause = false;
+bool Cmdline_benchmark_mode = false;
 
 // Other
 cmdline_parm get_flags_arg("-get_flags", "Output the launcher flags file", AT_NONE);
@@ -849,20 +852,21 @@ void os_init_cmdline(char *cmdline)
 			size_t len = filelength( fileno(fp) ) + 2;
 			buf = new char [len];
 
-			fgets(buf, len-1, fp);
-
-			// replace the newline character with a NULL
-			if ( (p = strrchr(buf, '\n')) != NULL ) {
-				*p = '\0';
-			}
+			if (fgets(buf, len-1, fp) != nullptr)
+			{
+				// replace the newline character with a NULL
+				if ( (p = strrchr(buf, '\n')) != NULL ) {
+					*p = '\0';
+				}
 
 #ifdef SCP_UNIX
-			// append a space for the os_parse_parms() check
-			strcat_s(buf, len, " ");
+				// append a space for the os_parse_parms() check
+				strcat_s(buf, len, " ");
 #endif
 
-			os_parse_parms(buf);
-			os_validate_parms(buf);
+				os_parse_parms(buf);
+				os_validate_parms(buf);
+			}
 			delete [] buf;
 			fclose(fp);
 		}
@@ -887,18 +891,20 @@ void os_init_cmdline(char *cmdline)
 			size_t len = filelength( fileno(fp) ) + 2;
 			buf = new char [len];
 
-			fgets(buf, len-1, fp);
+			if (fgets(buf, len-1, fp) != nullptr)
+			{
+				// replace the newline character with a NULL
+				if ( (p = strrchr(buf, '\n')) != NULL ) {
+					*p = '\0';
+				}
 
-			// replace the newline character with a NULL
-			if ( (p = strrchr(buf, '\n')) != NULL ) {
-				*p = '\0';
+				// append a space for the os_parse_parms() check
+				strcat_s(buf, len, " ");
+
+				os_parse_parms(buf);
+				os_validate_parms(buf);
 			}
 
-			// append a space for the os_parse_parms() check
-			strcat_s(buf, len, " ");
-
-			os_parse_parms(buf);
-			os_validate_parms(buf);
 			delete [] buf;
 			fclose(fp);
 		}
@@ -1032,6 +1038,100 @@ char *cmdline_parm::str()
 
 	return args;
 }
+
+#ifdef SCP_UNIX
+// Return a vector with all filesystem names of "parent/dir" relative to parent.
+// dir must not contain a slash.
+static SCP_vector<SCP_string> unix_get_single_dir_names(SCP_string parent, SCP_string dir)
+{
+	SCP_vector<SCP_string> ret;
+
+	DIR *dp;
+	if ((dp = opendir(parent.c_str())) == NULL) {
+		Warning(LOCATION, "Can't open directory '%s' when searching mod paths. Ignoring. errno=%d", parent.c_str(), errno);
+		return ret;
+	}
+
+	dirent *dirp;
+	while ((dirp = readdir(dp)) != NULL) {
+		if (!stricmp(dirp->d_name, dir.c_str())) {
+			ret.push_back(dirp->d_name);
+		}
+	}
+	(void)closedir(dp);
+
+	return ret;
+}
+
+// Return a vector with all filesystem names of "parent/dir" relative to parent.
+// Recurses to deal with slashes in dir.
+static SCP_vector<SCP_string> unix_get_dir_names(SCP_string parent, SCP_string dir)
+{
+	size_t slash = dir.find_first_of("/\\");
+
+	// no subdirectories, no need to recurse
+	if (slash == std::string::npos) {
+		return unix_get_single_dir_names(parent, dir);
+	}
+
+	// get the names of the first component of dir
+	SCP_vector<SCP_string> this_dir_names = unix_get_single_dir_names(parent, dir.substr(0, slash));
+
+	SCP_string rest = dir.substr(slash + 1);
+
+	SCP_vector<SCP_string> ret;
+
+	// search for the rest of dir in each of these
+	SCP_vector<SCP_string>::iterator ii, end = this_dir_names.end();
+	for (ii = this_dir_names.begin(); ii != end; ++ii) {
+		SCP_string this_dir_path = parent + "/" + *ii;
+		SCP_vector<SCP_string> mod_path = unix_get_dir_names(this_dir_path, rest);
+
+		// add all found paths relative to parent
+		SCP_vector<SCP_string>::iterator ii2, end2 = mod_path.end();
+		for (ii2 = mod_path.begin(); ii2 != end2; ++ii2) {
+			ret.push_back(*ii + "/" + *ii2);
+		}
+	}
+
+	return ret;
+}
+
+// For case sensitive filesystems (e.g. Linux/BSD) perform case-insensitive dir matches.
+static void handle_unix_modlist(char **modlist, int *len)
+{
+	// search filesystem for given paths
+	SCP_vector<SCP_string> mod_paths;
+	for (char *cur_mod = strtok(*modlist, ","); cur_mod != NULL; cur_mod = strtok(NULL, ","))
+	{
+		SCP_vector<SCP_string> this_mod_paths = unix_get_dir_names(".", cur_mod);
+		if (this_mod_paths.empty()) {
+			ReleaseWarning(LOCATION, "Can't find mod '%s'. Ignoring.", cur_mod);
+		}
+		mod_paths.insert(mod_paths.end(), this_mod_paths.begin(), this_mod_paths.end());
+	}
+
+	// create new char[] to replace modlist
+	size_t total_len = 0;
+	SCP_vector<SCP_string>::iterator ii, end = mod_paths.end();
+	for (ii = mod_paths.begin(); ii != end; ++ii) {
+		total_len += ii->length() + 1;
+	}
+
+	char *new_modlist = new char[total_len + 1];
+	memset(new_modlist, 0, total_len + 1);
+	end = mod_paths.end();
+	for (ii = mod_paths.begin(); ii != end; ++ii) {
+		strcat_s(new_modlist, total_len + 1, ii->c_str());
+		strcat_s(new_modlist, total_len + 1, ","); // replace later with NUL
+	}
+
+	// make the rest of the modlist manipulation unaware that anything happened here
+	delete [] *modlist;
+	*modlist = new_modlist;
+	*len = total_len;
+}
+#endif /* SCP_UNIX */
 
 // external entry point into this modules
 
@@ -1315,47 +1415,8 @@ bool SetCmdlineParams()
 		strcpy_s(modlist, len+2, Cmdline_mod);
 
 #ifdef SCP_UNIX
-		// for case sensitive filesystems (e.g. Linux/BSD) perform case-insensitive dir matches
-		DIR *dp;
-		dirent *dirp;
-		char *cur_pos, *temp;
-		char cur_dir[CF_MAX_PATHNAME_LENGTH], delim[] = ",";
-		SCP_vector<SCP_string> temp_modlist;
-		size_t total_len = 0;
-
-		if ( !_getcwd(cur_dir, CF_MAX_PATHNAME_LENGTH ) ) {
-			Error(LOCATION, "Can't get current working directory -- %d", errno );
-		}
-
-		for (cur_pos = strtok(modlist, delim); cur_pos != NULL; cur_pos = strtok(NULL, delim))
-		{
-			if ((dp = opendir(cur_dir)) == NULL) {
-				Error(LOCATION, "Can't open directory '%s' -- %d", cur_dir, errno );
-			}
-
-			while ((dirp = readdir(dp)) != NULL) {
-				if (!stricmp(dirp->d_name, cur_pos)) {
-					temp_modlist.push_back(dirp->d_name);
-					total_len += (strlen(dirp->d_name) + 1);
-				}
-			}
-			(void)closedir(dp);
-		}
-
-		// create new char[] to replace modlist
-		char *new_modlist = new char[total_len+1];
-		memset( new_modlist, 0, total_len + 1 );
-		SCP_vector<SCP_string>::iterator ii, end = temp_modlist.end();
-		for (ii = temp_modlist.begin(); ii != end; ++ii) {
-			strcat_s(new_modlist, total_len+1, ii->c_str());
-			strcat_s(new_modlist, total_len+1, ","); // replace later with NUL
-		}
-
-		// make the rest of the function unaware that anything happened here
-		temp = modlist;
-		modlist = new_modlist;
-		delete [] temp;
-		len = total_len;
+		// handle case-insensitive searching
+		handle_unix_modlist(&modlist, &len);
 #endif
 
 		// null terminate each individual
@@ -1677,14 +1738,13 @@ bool SetCmdlineParams()
 		Cmdline_reparse_mainhall = 1;
 	}
 
-	if( shadow_quality_arg.found() )
+	if( enable_shadows_arg.found() )
 	{
-		Cmdline_shadow_quality = shadow_quality_arg.get_int();
-	}
-
-	if( disable_shadows_arg.found() )
-	{
-		Cmdline_shadow_quality = 0;
+		Cmdline_shadow_quality = 2;
+		if( shadow_quality_arg.found() )
+		{
+			Cmdline_shadow_quality = shadow_quality_arg.get_int();
+		}
 	}
 
 	if( no_deferred_lighting_arg.found() )
@@ -1706,6 +1766,11 @@ bool SetCmdlineParams()
 	if (no_unfocused_pause_arg.found())
 	{
 		Cmdline_no_unfocus_pause = true;
+	}
+	
+	if (benchmark_mode_arg.found())
+	{
+		Cmdline_benchmark_mode = true;
 	}
 
 	//Deprecated flags - CommanderDJ

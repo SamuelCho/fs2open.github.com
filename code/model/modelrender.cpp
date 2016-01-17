@@ -1449,7 +1449,7 @@ void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_
 	}
 }
 
-void model_render_children_buffers(draw_list* scene, model_render_params* interp, polymodel* pm, int mn, int detail_level, uint tmap_flags, bool trans_buffer)
+void model_render_children_buffers(draw_list* scene, model_render_params* interp, polymodel* pm, polymodel_instance *pmi, int mn, int detail_level, uint tmap_flags, bool trans_buffer)
 {
 	int i;
 
@@ -1459,9 +1459,19 @@ void model_render_children_buffers(draw_list* scene, model_render_params* interp
 	}
 
 	bsp_info *model = &pm->submodel[mn];
+	submodel_instance *smi = NULL;
 
-	if (model->blown_off)
+	if ( pmi != NULL ) {
+		smi = &pmi->submodel[mn];
+	}
+
+	if ( smi != NULL ) {
+		if ( smi->blown_off ) {
+			return;
+		}
+	} else if ( model->blown_off ) {
 		return;
+	}
 
 	const uint model_flags = interp->get_model_flags();
 
@@ -1484,6 +1494,10 @@ void model_render_children_buffers(draw_list* scene, model_render_params* interp
 	// the submodel relative to its parent
 	angles ang = model->angs;
 
+	if ( smi != NULL ) {
+		ang = smi->angs;
+	}
+
 	// Add barrel rotation if needed
 	if ( model->gun_rotation ) {
 		if ( pm->gun_submodel_rotation > PI2 ) {
@@ -1504,7 +1518,7 @@ void model_render_children_buffers(draw_list* scene, model_render_params* interp
 	vm_rotate_matrix_by_angles(&rotation_matrix, &ang);
 
 	matrix inv_orientation;
-	vm_copy_transpose_matrix(&inv_orientation, &model->orientation);
+	vm_copy_transpose(&inv_orientation, &model->orientation);
 
 	matrix submodel_matrix;
 	vm_matrix_x_matrix(&submodel_matrix, &rotation_matrix, &inv_orientation);
@@ -1531,7 +1545,7 @@ void model_render_children_buffers(draw_list* scene, model_render_params* interp
 
 	while ( i >= 0 ) {
 		if ( !pm->submodel[i].is_thruster ) {
-			model_render_children_buffers( scene, interp, pm, i, detail_level, tmap_flags, trans_buffer );
+			model_render_children_buffers( scene, interp, pm, pmi, i, detail_level, tmap_flags, trans_buffer );
 		}
 
 		i = pm->submodel[i].next_sibling;
@@ -2584,7 +2598,7 @@ void model_render_debug_children(polymodel *pm, int mn, int detail_level, uint d
 	vm_rotate_matrix_by_angles(&rotation_matrix, &ang);
 
 	matrix inv_orientation;
-	vm_copy_transpose_matrix(&inv_orientation, &model->orientation);
+	vm_copy_transpose(&inv_orientation, &model->orientation);
 
 	matrix submodel_matrix;
 	vm_matrix_x_matrix(&submodel_matrix, &rotation_matrix, &inv_orientation);
@@ -2724,6 +2738,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 	const int model_flags = interp->get_model_flags();
 
 	polymodel *pm = model_get(model_num);
+	polymodel_instance *pmi = NULL;
 		
 	model_do_dumb_rotation(model_num);
 
@@ -2768,6 +2783,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 
 		if (objp->type == OBJ_SHIP) {
 			shipp = &Ships[objp->instance];
+			pmi = model_get_instance(shipp->model_instance_num);
 		}
 	}
 	
@@ -2903,7 +2919,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 
 	while( i >= 0 )	{
 		if ( !pm->submodel[i].is_thruster ) {
-			model_render_children_buffers( scene, interp, pm, i, detail_level, tmap_flags, trans_buffer );
+			model_render_children_buffers( scene, interp, pm, pmi, i, detail_level, tmap_flags, trans_buffer );
 		} else {
 			draw_thrusters = true;
 		}
@@ -2940,7 +2956,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 
 		while( i >= 0 )	{
 			if ( !pm->submodel[i].is_thruster ) {
-				model_render_children_buffers( scene, interp, pm, i, detail_level, tmap_flags, trans_buffer );
+				model_render_children_buffers( scene, interp, pm, pmi, i, detail_level, tmap_flags, trans_buffer );
 			}
 
 			i = pm->submodel[i].next_sibling;
@@ -2961,7 +2977,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 
 		while( i >= 0 ) {
 			if (pm->submodel[i].is_thruster) {
-				model_render_children_buffers( scene, interp, pm, i, detail_level, tmap_flags, trans_buffer );
+				model_render_children_buffers( scene, interp, pm, pmi, i, detail_level, tmap_flags, trans_buffer );
 			}
 			i = pm->submodel[i].next_sibling;
 		}

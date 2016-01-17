@@ -140,6 +140,9 @@ typedef struct polymodel_instance {
 #define MSS_FLAG2_COLLIDE_SUBMODEL				 (1 << 3)	// subsystem takes damage only from hits which impact the associated submodel
 #define MSS_FLAG2_DESTROYED_ROTATION			 (1 << 4)   // allows subobjects to continue to rotate even if they have been destroyed
 #define MSS_FLAG2_TURRET_USE_AMMO				 (1 << 5)	// enables ammo consumption for turrets (DahBlount)
+#define MSS_FLAG2_AUTOREPAIR_IF_DISABLED		 (1 << 6)	// Allows the subsystem to repair itself even if disabled (MageKing17)
+#define MSS_FLAG2_NO_AUTOREPAIR_IF_DISABLED		 (1 << 7)	// Inversion of the previous; disallows this particular subsystem if the ship-wide flag is set (MageKing17)
+#define MSS_FLAG2_SHARE_FIRE_DIRECTION			 (1 << 8)	// (DahBlount) Whenever the turret fires, make all firing points fire in the same direction.
 
 #define NUM_SUBSYSTEM_FLAGS			33
 
@@ -830,7 +833,7 @@ void model_instance_free_all();
 // Loads a model from disk and returns the model number it loaded into.
 int model_load(char *filename, int n_subsystems, model_subsystem *subsystems, int ferror = 1, int duplicate = 0);
 
-int model_create_instance(int model_num, int submodel_num = -1);
+int model_create_instance(int model_num);
 void model_delete_instance(int model_instance_num);
 
 // Goober5000
@@ -1043,7 +1046,7 @@ extern void model_instance_find_world_dir(vec3d * out_dir, vec3d *in_dir,int mod
 // Clears all the submodel instances stored in a model to their defaults.
 extern void model_clear_instance(int model_num);
 
-void model_clear_submodel_instance( submodel_instance *sm_instance );
+void model_clear_submodel_instance( submodel_instance *sm_instance, bsp_info *sm );
 void model_clear_submodel_instances( int model_instance_num );
 
 // Sets rotating submodel turn info to that stored in model
@@ -1056,7 +1059,7 @@ extern void model_clear_instance_info(submodel_instance_info * sii);
 extern void model_set_instance(int model_num, int sub_model_num, submodel_instance_info * sii, int flags = 0 );
 extern void model_set_instance_techroom(int model_num, int sub_model_num, float angle_1, float angle_2 );
 
-void model_update_instance(int model_instance_num, int sub_model_num, submodel_instance_info *sii);
+void model_update_instance(int model_instance_num, int sub_model_num, submodel_instance_info *sii, int flags);
 void model_instance_dumb_rotation(int model_instance_num);
 
 // Adds an electrical arcing effect to a submodel
@@ -1138,7 +1141,29 @@ typedef struct mc_info {
 
 inline void mc_info_init(mc_info *mc)
 {
-	memset(mc, -1, sizeof(mc_info));
+	mc->model_instance_num = -1;
+	mc->model_num = -1;
+	mc->submodel_num = -1;
+	mc->orient = nullptr;
+	mc->pos = nullptr;
+	mc->p0 = nullptr;
+	mc->p1 = nullptr;
+	mc->flags = 0;
+	mc->lod = 0;
+	mc->radius = 0;
+	mc->num_hits = 0; 
+	mc->hit_dist = 0;
+	mc->hit_point = vmd_zero_vector;
+	mc->hit_point_world = vmd_zero_vector;
+	mc->hit_submodel = -1;
+	mc->hit_bitmap = -1;
+	mc->hit_u = 0; mc->hit_v = 0;
+	mc->shield_hit_tri = -1;
+	mc->hit_normal = vmd_zero_vector;
+	mc->edge_hit = 0;
+	mc->f_poly = nullptr;
+	mc->t_poly = nullptr;
+	mc->bsp_leaf = nullptr;
 }
 
 

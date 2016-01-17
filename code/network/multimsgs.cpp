@@ -6035,7 +6035,10 @@ void process_post_sync_data_packet(ubyte *data, header *hinfo)
 		objp = multi_get_network_object(net_sig);
 
 		// make sure we found a ship
-		Assert((objp != NULL) && (objp->type == OBJ_SHIP));
+		Assertion(objp != NULL, "idx: %d, ship_count: %d, sinfo_index: %u, ts_index: %u, net_sig: %u",
+			idx, ship_count, sinfo_index, ts_index, net_sig);
+		Assertion(objp->type == OBJ_SHIP, "type: %d, idx: %d, ship_count: %d, sinfo_index: %u, ts_index: %u, net_sig: %u",
+			objp->type, idx, ship_count, sinfo_index, ts_index, net_sig);
 
 		// set the ship to be the right class
 		change_ship_type(objp->instance,(int)sinfo_index);
@@ -7330,7 +7333,7 @@ void send_homing_weapon_info( int weapon_num )
 	// homing signature.
 	homing_signature = 0;
 	homing_object = wp->homing_object;
-	if ( homing_object != NULL ) {
+	if ( homing_object != &obj_used_list ) {
 		homing_signature = homing_object->net_signature;
 
 		// get the subsystem index.

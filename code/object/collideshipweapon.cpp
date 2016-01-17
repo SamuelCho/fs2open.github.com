@@ -74,11 +74,9 @@ void ship_weapon_do_hit_stuff(object *pship_obj, object *weapon_obj, vec3d *worl
 	// Apply hit & damage & stuff to weapon
 	weapon_hit(weapon_obj, pship_obj,  world_hitpos, quadrant_num);
 
-	if (wip->damage_time != 0.0f && wp->lifeleft <= wip->damage_time) {
-		if (wip->min_damage != 0.0f) {
-			damage = (((wip->damage - wip->min_damage) * (wp->lifeleft / wip->damage_time)) + wip->min_damage);
-		} else if (wip->max_damage != 0.0f) {
-			damage = (((wip->damage - wip->max_damage) * (wp->lifeleft / wip->damage_time)) + wip->max_damage);
+	if (wip->damage_time >= 0.0f && wp->lifeleft <= wip->damage_time) {
+		if (wip->atten_damage >= 0.0f) {
+			damage = (((wip->damage - wip->atten_damage) * (wp->lifeleft / wip->damage_time)) + wip->atten_damage);
 		} else {
 			damage = wip->damage * (wp->lifeleft / wip->damage_time);
 		}
@@ -559,7 +557,7 @@ int check_inside_radius_for_big_ships( object *ship, object *weapon_obj, obj_pai
 	ship_speed_at_exit_sphere = estimate_ship_speed_upper_limit( ship, time_to_exit_sphere );
 	// update estimated time to exit sphere
 	time_to_exit_sphere = (ship->radius + vm_vec_dist(&ship->pos, &weapon_obj->pos)) / (weapon_obj->phys_info.max_vel.xyz.z - ship_speed_at_exit_sphere);
-	vm_vec_scale_add( &error_vel, &ship->phys_info.vel, &weapon_obj->orient.vec.fvec, -vm_vec_dotprod(&ship->phys_info.vel, &weapon_obj->orient.vec.fvec) );
+	vm_vec_scale_add( &error_vel, &ship->phys_info.vel, &weapon_obj->orient.vec.fvec, -vm_vec_dot(&ship->phys_info.vel, &weapon_obj->orient.vec.fvec) );
 	error_vel_mag = vm_vec_mag_quick( &error_vel );
 	error_vel_mag += 0.5f * (ship->phys_info.max_vel.xyz.z - error_vel_mag)*(time_to_exit_sphere/ship->phys_info.forward_accel_time_const);
 	// error_vel_mag is now average velocity over period

@@ -294,6 +294,8 @@ typedef struct cockpit_display_info {
 #define SSF_NO_AGGREGATE		(1 << 12)		// exclude this subsystem from the aggregate subsystem-info tracking - Goober5000
 #define SSF_PLAY_SOUND_FOR_PLAYER	( 1 << 13)	// If this subsystem is a turret on a player ship, play firing sounds - The E 
 #define SSF_NO_DISAPPEAR		( 1 << 14)		// prevents submodel from disappearing when subsys destroyed
+#define SSF_AUTOREPAIR_IF_DISABLED	(1 << 15)	// Allows the subsystem to repair itself even when disabled - MageKing17
+#define SSF_NO_AUTOREPAIR_IF_DISABLED (1 << 16) // Inversion of the above; allow a specific subsystem not to repair itself after being disabled if the ship has the "repair disabled subsystems" flag - MageKing17
 
 
 // Wanderer 
@@ -424,7 +426,7 @@ typedef struct ship_flag_name {
 	int flag_list;						// is this flag in the 1st or 2nd ship flags list?
 } ship_flag_name;
 
-#define MAX_SHIP_FLAG_NAMES					18
+#define MAX_SHIP_FLAG_NAMES					19
 extern ship_flag_name Ship_flag_names[];
 
 // states for the flags variable within the ship structure
@@ -506,6 +508,7 @@ extern ship_flag_name Ship_flag_names[];
 #define SF2_SHIP_SELECTIVE_LINKING			(1<<26)		// RSAXVC - Allow pilot to pick firing configuration
 #define SF2_SCRAMBLE_MESSAGES				(1<<27)		// Goober5000 - all messages sent from this ship appear scrambled
 #define SF2_NO_SECONDARY_LOCKON				(1<<28)		// zookeeper - secondary lock-on disabled
+#define SF2_NO_DISABLED_SELF_DESTRUCT		(1<<29)		// Goober5000 - ship will not self-destruct after 90 seconds if engines or weapons destroyed (c.f. ai_maybe_self_destruct)
 
 // If any of these bits in the ship->flags are set, ignore this ship when targeting
 extern int TARGET_SHIP_IGNORE_FLAGS;
@@ -931,6 +934,7 @@ extern int ship_find_exited_ship_by_signature( int signature);
 #define SIF2_AUTO_SPREAD_SHIELDS			(1 << 16)	// zookeeper - auto spread shields
 #define SIF2_DRAW_WEAPON_MODELS				(1 << 17)	// the ship draws weapon models of any sort (used to be a boolean)
 #define SIF2_MODEL_POINT_SHIELDS			(1 << 18)	// zookeeper - uses model-defined shield points instead of quadrants
+#define SIF2_SUBSYS_REPAIR_WHEN_DISABLED	(1 << 19)	// MageKing17 - Subsystems auto-repair themselves even when disabled.
 
 #define	SIF_DEFAULT_VALUE		0
 #define SIF2_DEFAULT_VALUE		0
@@ -1506,8 +1510,7 @@ extern SCP_vector<engine_wash_info> Engine_wash_info;
 #define WF_NO_DEPARTURE_WARP		(1<<9)		// don't play warp effect for any departing ships in this wing.
 #define WF_NO_DYNAMIC				(1<<10)		// members of this wing relentlessly pursue their ai goals
 #define WF_DEPARTURE_ORDERED		(1<<11)		// departure of this wing was ordered by player
-#define WF_NEVER_EXISTED			(1<<12)		// this wing never existed because something prevented it from being created (like its mother ship being destroyed)
-#define WF_NAV_CARRY				(1<<13)		// Kazan - Wing has nav-carry-status
+#define WF_NAV_CARRY				(1<<12)		// Kazan - Wing has nav-carry-status
 
 //	Defines a wing of ships.
 typedef struct wing {

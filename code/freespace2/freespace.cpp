@@ -752,7 +752,9 @@ void game_sunspot_process(float frametime)
 
 			// check
 			for(idx=0; idx<n_lights; idx++)	{
-				if ( (ls_on && !ls_force_off) || !shipfx_eye_in_shadow( &Eye_position, Viewer_obj, idx ) )	{
+				bool in_shadow = shipfx_eye_in_shadow(&Eye_position, Viewer_obj, idx);
+
+				if ( (ls_on && !ls_force_off) || !in_shadow )	{
 					vec3d light_dir;				
 					light_get_global_dir(&light_dir, idx);
 
@@ -762,10 +764,10 @@ void game_sunspot_process(float frametime)
 						Sun_spot_goal += (float)pow(dot,85.0f);
 					}
 				}
-			if (!shipfx_eye_in_shadow( &Eye_position, Viewer_obj, idx ) )	{
-			// draw the glow for this sun
-			stars_draw_sun_glow(idx);				
-			}
+				if ( !in_shadow )	{
+					// draw the glow for this sun
+					stars_draw_sun_glow(idx);				
+				}
 			}
 
 			Sun_drew = 0;
@@ -1263,7 +1265,7 @@ void game_loading_callback_close()
 	// Make sure bar shows all the way over.
 	game_loading_callback(COUNT_ESTIMATE);
 	
-	int real_count __attribute__((__unused__)) = game_busy_callback( NULL );
+	int real_count __UNUSED = game_busy_callback( NULL );
  	Mouse_hidden = 0;
 
 	Game_loading_callback_inited = 0;
@@ -1427,7 +1429,7 @@ int game_start_mission()
 {
 	mprintf(( "=================== STARTING LEVEL LOAD ==================\n" ));
 
-	int s1 __attribute__((__unused__)) = timer_get_milliseconds();
+	int s1 __UNUSED = timer_get_milliseconds();
 
 	// clear post processing settings
 	gr_post_process_set_defaults();
@@ -1484,7 +1486,7 @@ int game_start_mission()
 
 	bm_print_bitmaps();
 
-	int e1 __attribute__((__unused__)) = timer_get_milliseconds();
+	int e1 __UNUSED = timer_get_milliseconds();
 
 	mprintf(("Level load took %f seconds.\n", (e1 - s1) / 1000.0f ));
 
@@ -1743,7 +1745,7 @@ char full_path[1024];
  */
 void game_init()
 {
-	int s1 __attribute__((__unused__)), e1 __attribute__((__unused__));
+	int s1 __UNUSED, e1 __UNUSED;
 	const char *ptr;
 	char whee[MAX_PATH_LEN];
 
@@ -3275,16 +3277,16 @@ void setup_environment_mapping(camid cid)
 
 	// face 3 (py / up)
 	memset( &new_orient, 0, sizeof(matrix) );
-	new_orient.vec.fvec.xyz.y =  (gr_screen.mode == GR_OPENGL) ? -1.0f :  1.0f;
-	new_orient.vec.uvec.xyz.z =  (gr_screen.mode == GR_OPENGL) ?  1.0f : -1.0f;
+	new_orient.vec.fvec.xyz.y =  (gr_screen.mode == GR_OPENGL) ?  1.0f : -1.0f;
+	new_orient.vec.uvec.xyz.z =  (gr_screen.mode == GR_OPENGL) ? -1.0f :  1.0f;
 	new_orient.vec.rvec.xyz.x =  1.0f;
 	render_environment(i, &cam_pos, &new_orient, new_zoom);
 	i++; // bump!
 
 	// face 4 (ny / down)
 	memset( &new_orient, 0, sizeof(matrix) );
-	new_orient.vec.fvec.xyz.y =  (gr_screen.mode == GR_OPENGL) ?  1.0f : -1.0f;
-	new_orient.vec.uvec.xyz.z =  (gr_screen.mode == GR_OPENGL) ? -1.0f :  1.0f;
+	new_orient.vec.fvec.xyz.y =  (gr_screen.mode == GR_OPENGL) ? -1.0f :  1.0f;
+	new_orient.vec.uvec.xyz.z =  (gr_screen.mode == GR_OPENGL) ?  1.0f : -1.0f;
 	new_orient.vec.rvec.xyz.x =  1.0f;
 	render_environment(i, &cam_pos, &new_orient, new_zoom);
 	i++; // bump!
@@ -5762,6 +5764,10 @@ void game_leave_state( int old_state, int new_state )
 				snd_aav_init();
 
 				freespace_stop_mission();
+				
+				if (Cmdline_benchmark_mode) {
+					gameseq_post_event( GS_EVENT_QUIT_GAME );
+				}
 			}
 			break;
 
@@ -5964,6 +5970,10 @@ void game_leave_state( int old_state, int new_state )
 
 		case GS_STATE_FICTION_VIEWER:
 			fiction_viewer_close();
+			common_select_close();
+			if (new_state == GS_STATE_MAIN_MENU) {
+				freespace_stop_mission();
+			}
 			break;
 
 		case GS_STATE_LAB:
@@ -7435,6 +7445,7 @@ void game_shutdown(void)
 	// free left over memory from table parsing
 	player_tips_close();
 
+	control_config_common_close();
 	joy_close();
 
 	audiostream_close();

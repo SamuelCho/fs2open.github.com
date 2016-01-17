@@ -3995,11 +3995,6 @@ int sexp_query_has_yet_to_arrive(char *name)
 
 	i = wing_name_lookup(name, 1);
 
-	// has not arrived yet, and never will arrive
-	if ((i >= 0) && (Wings[i].num_waves >= 0) && (Wings[i].flags & WF_NEVER_EXISTED)){
-		return 1;
-	}
-
 	// has not arrived yet
 	if ((i >= 0) && (Wings[i].num_waves >= 0) && !Wings[i].total_arrived_count){
 		return 1;
@@ -5639,7 +5634,7 @@ int sexp_special_warp_dist( int n)
 	}
 
 	// check if within 45 degree half-angle cone of facing 
-	float dot = fl_abs(vm_vec_dotprod(&warp_objp->orient.vec.fvec, &ship_objp->orient.vec.fvec));
+	float dot = fl_abs(vm_vec_dot(&warp_objp->orient.vec.fvec, &ship_objp->orient.vec.fvec));
 	if (dot < 0.707f) {
 		return SEXP_NAN;
 	}
@@ -15355,7 +15350,7 @@ int sexp_facing(int node)
 	vm_vec_sub(&v2, &Objects[target_shipp->objnum].pos, &Player_obj->pos);
 	vm_vec_normalize(&v2);
 
-	a1 = vm_vec_dotprod(&v1, &v2);
+	a1 = vm_vec_dot(&v1, &v2);
 	a2 = (float) cos(ANG_TO_RAD(angle));
 	if (a1 >= a2){
 		return SEXP_TRUE;
@@ -15415,7 +15410,7 @@ int sexp_is_facing(int node)
 	vm_vec_sub(&v2, &target_objp->pos, &origin_objp->pos);
 	vm_vec_normalize(&v2);
 
-	a1 = vm_vec_dotprod(&v1, &v2);
+	a1 = vm_vec_dot(&v1, &v2);
 	a2 = (float) cos(ANG_TO_RAD(angle));
 	if (a1 >= a2){
 		return SEXP_TRUE;
@@ -15451,7 +15446,7 @@ int sexp_facing2(int node)
 
 	vm_vec_sub(&v2, wp_list->get_waypoints().front().get_pos(), &Player_obj->pos);
 	vm_vec_normalize(&v2);
-	a1 = vm_vec_dotprod(&v1, &v2);
+	a1 = vm_vec_dot(&v1, &v2);
 	a2 = (float) cos(ANG_TO_RAD(atof(CTEXT(CDR(node)))));
 	if (a1 >= a2){
 		return SEXP_TRUE;
@@ -17790,6 +17785,7 @@ void sexp_turret_set_target_order(int node)
 		}
 
 		oindex++;
+		node = CDR(node);
 	}
 }
 void sexp_turret_set_direction_preference(int node)
@@ -17807,7 +17803,9 @@ void sexp_turret_set_direction_preference(int node)
 	}
 
 	//store direction preference
-	int dirpref = eval_num(CDR(node));
+	node = CDR(node);
+	int dirpref = eval_num(node);
+	node = CDR(node);
 
 	//Set range
 	while(node != -1){
@@ -17849,7 +17847,9 @@ void sexp_turret_set_rate_of_fire(int node)
 	}
 
 	//store rof
-	float rof = (float)eval_num(CDR(node));
+	node = CDR(node);
+	float rof = (float)eval_num(node);
+	node = CDR(node);
 
 	//Set rof
 	while(node != -1){
@@ -17886,7 +17886,9 @@ void sexp_turret_set_optimum_range(int node)
 	}
 
 	//store range
-	float range = (float)eval_num(CDR(node));
+	node = CDR(node);
+	float range = (float)eval_num(node);
+	node = CDR(node);
 
 	//Set range
 	while(node != -1){
@@ -17980,6 +17982,11 @@ void sexp_ship_turret_target_order(int node)
 		return;
 	}
 	
+	//Reset order
+	for(i = 0; i < NUM_TURRET_ORDER_TYPES; i++) {
+		new_target_order[i] = -1;
+	}
+
 	oindex = 0;
 	node = CDR(node);
 	while(node != -1)
@@ -17995,16 +18002,12 @@ void sexp_ship_turret_target_order(int node)
 		}
 
 		oindex++;
+		node = CDR(node);
 	}
 
 	turret = GET_FIRST(&Ships[sindex].subsys_list);
 	while(turret != END_OF_LIST(&Ships[sindex].subsys_list))
 	{
-		//Reset order
-		for(i = 0; i < NUM_TURRET_ORDER_TYPES; i++) {
-			turret->turret_targeting_order[i] = -1;
-		}
-
 		memcpy(turret->turret_targeting_order, new_target_order, NUM_TURRET_ORDER_TYPES*sizeof(int));
 
 		// next item
@@ -18028,6 +18031,8 @@ int sexp_get_turret_primary_ammo(int node)
 		return 0;
 	}
 
+	node = CDR(node);
+
 	turret = ship_get_subsys(&Ships[sindex], CTEXT(node));
 	if (turret == NULL) {
 		return 0;
@@ -18038,7 +18043,9 @@ int sexp_get_turret_primary_ammo(int node)
 
 	swp = &turret->weapons;
 
-	check = eval_num(CDR(node));
+	node = CDR(node);
+
+	check = eval_num(node);
 	if (check < 0) {
 		return 0;
 	}
@@ -18079,14 +18086,19 @@ void sexp_set_turret_primary_ammo(int node)
 		return;
 	}
 
+	node = CDR(node);
+
 	// Get the turret
-	turret = ship_get_subsys(&Ships[sindex], CTEXT(node));
+	char *subsys = CTEXT(node);
+	turret = ship_get_subsys(&Ships[sindex], subsys);
 	if (turret == NULL) {
 		return;
 	}
 
+	node = CDR(node);
+
 	// Get the bank to set the number on
-	requested_bank = eval_num(CDR(node));
+	requested_bank = eval_num(node);
 	if (requested_bank < 0)
 	{
 		return;
@@ -18094,7 +18106,7 @@ void sexp_set_turret_primary_ammo(int node)
 
 	//  Get the number of weapons requested	
 	node = CDR(node);
-	requested_weapons = eval_num(CDR(node));
+	requested_weapons = eval_num(node);
 	if (requested_weapons < 0)
 	{
 		return;
@@ -18103,7 +18115,6 @@ void sexp_set_turret_primary_ammo(int node)
 	set_turret_primary_ammo(turret, requested_bank, requested_weapons);
 
 	// Multiplayer call back
-	char *subsys = CTEXT(node);
 	multi_start_callback();
 	multi_send_int(sindex);
 	multi_send_string(subsys);
@@ -18175,6 +18186,8 @@ int sexp_get_turret_secondary_ammo(int node)
 		return 0;
 	}
 
+	node = CDR(node);
+
 	turret = ship_get_subsys(&Ships[sindex], CTEXT(node));
 	if (turret == NULL) {
 		return 0;
@@ -18185,7 +18198,9 @@ int sexp_get_turret_secondary_ammo(int node)
 
 	swp = &turret->weapons;
 
-	check = eval_num(CDR(node));
+	node = CDR(node);
+
+	check = eval_num(node);
 	if (check < 0) {
 		return 0;
 	}
@@ -18218,22 +18233,29 @@ void sexp_set_turret_secondary_ammo(int node)
 		return;
 	}
 
+	node = CDR(node);
+
 	// Get the turret
-	turret = ship_get_subsys(&Ships[sindex], CTEXT(node));
+	char *subsys = CTEXT(node);
+	turret = ship_get_subsys(&Ships[sindex], subsys);
 	if (turret == NULL) {
 		return;
 	}
 
+	node = CDR(node);
+
 	// Get the bank to set the number on
-	requested_bank = eval_num(CDR(node));
+	requested_bank = eval_num(node);
 	if (requested_bank < 0)
 	{
 		return;
 	}
 
-	//  Get the number of weapons requested	
+	//  Get the number of weapons requested
+
 	node = CDR(node);
-	requested_weapons = eval_num(CDR(node));
+
+	requested_weapons = eval_num(node);
 	if (requested_weapons < 0)
 	{
 		return;
@@ -18242,7 +18264,6 @@ void sexp_set_turret_secondary_ammo(int node)
 	set_turret_secondary_ammo(turret, requested_bank, requested_weapons);
 
 	// Multiplayer call back
-	char *subsys = CTEXT(node);
 	multi_start_callback();
 	multi_send_int(sindex);
 	multi_send_string(subsys);
@@ -20567,7 +20588,7 @@ void sexp_debug(int node)
 		Warning(LOCATION, "%s", temp_buf);
     #else	
 	if (!no_release_message) {	
-		Warning(LOCATION, "%s", temp_buf);
+		ReleaseWarning(LOCATION, "%s", temp_buf);
 	}
 	#endif
 }
@@ -32848,7 +32869,7 @@ sexp_help_struct Sexp_help[] = {
 		"\t1: Ship or wing name\r\n"
 		"\t2: Arrival location\r\n"
 		"\t3: Arrival anchor (optional; only required for certain locations)\r\n"
-		"\t4: Arrival path mask (optional; defaults to 0; note that this is a bitfield)\r\n"
+		"\t4: Arrival path mask (optional; this is a bitfield where the bits set to 1 correspond to the paths to use; defaults to 0 which is a special case that means all paths can be used)\r\n"
 		"\t5: Arrival distance (optional; defaults to 0)\r\n"
 		"\t6: Arrival delay (optional; defaults to 0)\r\n"
 		"\t7: Whether to show a jump effect if arriving from subspace (optional; defaults to true)\r\n"
@@ -32860,7 +32881,7 @@ sexp_help_struct Sexp_help[] = {
 		"\t1: Ship or wing name\r\n"
 		"\t2: Departure location\r\n"
 		"\t3: Departure anchor (optional; only required for certain locations)\r\n"
-		"\t4: Departure path mask (optional; defaults to 0; note that this is a bitfield)\r\n"
+		"\t4: Departure path mask (optional; this is a bitfield where the bits set to 1 correspond to the paths to use; defaults to 0 which is a special case that means all paths can be used)\r\n"
 		"\t5: Departure delay (optional; defaults to 0)\r\n"
 		"\t6: Whether to show a jump effect if departing to subspace (optional; defaults to true)\r\n"
 	},

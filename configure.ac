@@ -81,6 +81,27 @@ AC_ARG_ENABLE(gprof,
 		[fs2_gprof=no],
 )
 
+AC_ARG_ENABLE(fatal-warnings,
+	AC_HELP_STRING([--enable-fatal-warnings],
+		[Make warnings fatal]),
+		[fs2_fatal_warnings=$enableval],
+		[fs2_fatal_warnings=no],
+)
+
+AC_ARG_ENABLE(generic-architecture,
+	AC_HELP_STRING([--enable-generic-architecture],
+		[Only use generic architecture optimizations]),
+		[fs2_generic_architecture=$enableval],
+		[fs2_generic_architecture=no],
+)
+
+AC_ARG_ENABLE(asan,
+	AC_HELP_STRING([--enable-asan],
+		[Attempt to link against AddressSanitizer library (https://github.com/google/sanitizers/wiki/AddressSanitizer)]),
+		[fs2_asan=$enableval],
+		[fs2_asan=no],
+)
+
 AC_ARG_WITH(static-ogg,
 	AC_HELP_STRING([--with-static-ogg=DIR],
 		[Link staticly with OGG, Vorbis and Theora libs from this directory]),
@@ -121,14 +142,28 @@ case "$target" in
 		# linux
 		echo "Using 64-bit Unix defines (for $host_os)"
 		fs2_os_linux="yes"
-		D_CFLAGS="$D_CFLAGS -m64 -mtune=generic -msse -msse2 -ansi -pipe"
+
+		if test "$fs2_generic_architecture" = "yes" ; then
+			D_CFLAGS="$D_CFLAGS -m64 -mtune=generic -mfpmath=sse -msse -msse2"
+		else
+			D_CFLAGS="$D_CFLAGS -march=native"
+		fi
+
+		D_CFLAGS="$D_CFLAGS -pipe"
 		D_CFLAGS="$D_CFLAGS -DLUA_USE_LINUX"
 		;;
 	*-*-linux*)
 		# linux
 		echo "Using Unix defines (for $host_os)"
 		fs2_os_linux="yes"
-		D_CFLAGS="$D_CFLAGS -mtune=generic -mfpmath=sse -msse -msse2 -ansi -pipe"
+
+		if test "$fs2_generic_architecture" = "yes" ; then
+			D_CFLAGS="$D_CFLAGS -mtune=generic -mfpmath=sse -msse -msse2"
+		else
+			D_CFLAGS="$D_CFLAGS -march=native"
+		fi
+
+		D_CFLAGS="$D_CFLAGS -pipe"
 		D_CFLAGS="$D_CFLAGS -DLUA_USE_LINUX"
 		;;
 	*-*-darwin*)
@@ -221,9 +256,14 @@ if test "$fs2_fred" = "yes" ; then
 	FS2_LIBS="$FS2_LIBS $WX_LIBS"
 fi
 
+if test "$fs2_asan" = "yes" ; then
+	D_CFLAGS="$D_CFLAGS -fsanitize=address -fno-omit-frame-pointer"
+	D_LDFLAGS="$D_LDFLAGS -fsanitize=address"
+fi
+
 if test "$fs2_debug" = "yes" ; then
 	AC_DEFINE([_DEBUG])
-	D_CFLAGS="$D_CFLAGS -O0 -g -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-write-strings -Wshadow -funroll-loops"
+	D_CFLAGS="$D_CFLAGS -O0 -g -Wall -Wextra -Wno-unused-parameter -Wno-write-strings -Wshadow -funroll-loops"
 	D_LDFLAGS="$D_LDFLAGS -g"
 
 	if test "$fs2_fred" = "yes" ; then
@@ -234,7 +274,7 @@ if test "$fs2_debug" = "yes" ; then
 else
 	AC_DEFINE([NDEBUG])
 	D_CFLAGS="$D_CFLAGS -O2 -Wall -funroll-loops"
-	D_CFLAGS="$D_CFLAGS -Wno-unused-function -Wno-write-strings -Wno-unused-variable"
+	D_CFLAGS="$D_CFLAGS -Wno-write-strings -Wno-unused-variable"
 	
 	AC_C_COMPILE_FLAGS([-Wno-unused-but-set-variable])
 	
@@ -245,6 +285,10 @@ else
 	else
 		AC_SUBST(FS2_BINARY, ["fs2_open_${PACKAGE_VERSION}"])
 	fi
+fi
+
+if test "$fs2_fatal_warnings" = "yes" ; then
+	FS2_CXXFLAGS="$FS2_CXXFLAGS -Werror"
 fi
 
 if test "$fs2_gprof" = "yes" ; then
@@ -516,4 +560,8 @@ echo Text-to-speech enabled . : $fs2_speech
 echo NoWarn Allowed ......... : $fs2_nowarn
 echo Debug build ............ : $fs2_debug
 echo GProf support .......... : $fs2_gprof
+echo Fatal warnings ......... : $fs2_fatal_warnings
+echo Generic build .......... : $fs2_generic_architecture
+echo ASan enabled ........... : $fs2_asan
+echo Building wxFred2 ....... : $fs2_fred
 echo

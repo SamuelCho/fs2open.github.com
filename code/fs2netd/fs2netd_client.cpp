@@ -737,7 +737,7 @@ static void fs2netd_handle_messages()
 
 			case PCKT_SLIST_REPLY: {
 				int numServers = 0;
-				int svr_flags __attribute__((__unused__)); // gcc [-Wunused-but-set-variable] doesn't like MACROs
+				int svr_flags __UNUSED; // gcc [-Wunused-but-set-variable] doesn't like MACROs
 				ushort svr_port;
 				char svr_ip[16];
 				active_game ag;
@@ -1207,7 +1207,7 @@ void fs2netd_update_ban_list()
 
 		if (banlist_cfg != NULL) {
 			for (SCP_vector<SCP_string>::iterator bl = FS2NetD_ban_list.begin(); bl != FS2NetD_ban_list.end(); ++bl) {
-				cfputs( const_cast<char*>(bl->c_str()), banlist_cfg );
+				cfputs( bl->c_str(), banlist_cfg );
 			}
 
 			cfclose(banlist_cfg);

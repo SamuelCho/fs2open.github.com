@@ -717,7 +717,7 @@ void mix_two_team_colors(team_color* dest, team_color* a, team_color* b, float m
 	dest->stripe.b = a->stripe.b * (1.0f - mix_factor) + b->stripe.b * mix_factor;
 }
 
-void gr_opengl_set_team_color(team_color *colors)
+void gr_opengl_set_team_color(const team_color *colors)
 {
 	if ( colors == NULL ) {
 		Using_Team_Color = false;
@@ -1485,7 +1485,7 @@ void gr_opengl_render_stream_buffer(int buffer_handle, int offset, int n_verts, 
 	GL_CHECK_FOR_ERRORS("end of render3d()");
 }
 
-void gr_opengl_start_instance_matrix(vec3d *offset, matrix *rotation)
+void gr_opengl_start_instance_matrix(const vec3d *offset, const matrix *rotation)
 {
 	if (Cmdline_nohtl) {
 		return;
@@ -1520,7 +1520,7 @@ void gr_opengl_start_instance_matrix(vec3d *offset, matrix *rotation)
 	GL_modelview_matrix_depth++;
 }
 
-void gr_opengl_start_instance_angles(vec3d *pos, angles *rotation)
+void gr_opengl_start_instance_angles(const vec3d *pos, const angles *rotation)
 {
 	if (Cmdline_nohtl)
 		return;
@@ -1611,7 +1611,7 @@ void gr_opengl_end_projection_matrix()
 	GL_htl_projection_matrix_set = 0;
 }
 
-void gr_opengl_set_view_matrix(vec3d *pos, matrix *orient)
+void gr_opengl_set_view_matrix(const vec3d *pos, const matrix *orient)
 {
 	if (Cmdline_nohtl)
 		return;
@@ -1703,15 +1703,15 @@ void gr_opengl_set_view_matrix(vec3d *pos, matrix *orient)
 
 			// r.xyz  <--  r.x, u.x, f.x
 			GL_env_texture_matrix[0]  =  mview[0];
-			GL_env_texture_matrix[1]  = -mview[4];
+			GL_env_texture_matrix[1]  =  mview[4];
 			GL_env_texture_matrix[2]  =  mview[8];
 			// u.xyz  <--  r.y, u.y, f.y
 			GL_env_texture_matrix[4]  =  mview[1];
-			GL_env_texture_matrix[5]  = -mview[5];
+			GL_env_texture_matrix[5]  =  mview[5];
 			GL_env_texture_matrix[6]  =  mview[9];
 			// f.xyz  <--  r.z, u.z, f.z
 			GL_env_texture_matrix[8]  =  mview[2];
-			GL_env_texture_matrix[9]  = -mview[6];
+			GL_env_texture_matrix[9]  =  mview[6];
 			GL_env_texture_matrix[10] =  mview[10];
 
 			GL_env_texture_matrix[15] = 1.0f;
@@ -1813,7 +1813,7 @@ void gr_opengl_end_2d_matrix()
 
 static bool GL_scale_matrix_set = false;
 
-void gr_opengl_push_scale_matrix(vec3d *scale_factor)
+void gr_opengl_push_scale_matrix(const vec3d *scale_factor)
 {
 	if ( (scale_factor->xyz.x == 1) && (scale_factor->xyz.y == 1) && (scale_factor->xyz.z == 1) )
 		return;
@@ -1944,7 +1944,7 @@ void gr_opengl_set_state_block(int handle)
 extern bool Glowpoint_override;
 bool Glowpoint_override_save;
 
-void gr_opengl_shadow_map_start(matrix4 *shadow_view_matrix, matrix *light_orient)
+void gr_opengl_shadow_map_start(const matrix4 *shadow_view_matrix, const matrix *light_orient)
 {
 	if(!Cmdline_shadow_quality)
 		return;
@@ -2254,7 +2254,7 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 	// Team colors are passed to the shader here, but the shader needs to handle their application.
 	// By default, this is handled through the r and g channels of the misc map, but this can be changed
 	// in the shader; test versions of this used the normal map r and b channels
-	if ( shader_flags & SDR_FLAG_MODEL_TEAMCOLOR ) {
+	if ( (shader_flags & SDR_FLAG_MODEL_TEAMCOLOR) && (shader_flags & SDR_FLAG_MODEL_MISC_MAP) ) {
 		vec3d stripe_color;
 		vec3d base_color;
 
@@ -2268,6 +2268,12 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 
 		GL_state.Uniform.setUniform3f("stripe_color", stripe_color);
 		GL_state.Uniform.setUniform3f("base_color", base_color);
+
+		if ( bm_has_alpha_channel(MISCMAP) ) {
+			GL_state.Uniform.setUniformi("team_glow_enabled", 1);
+		} else {
+			GL_state.Uniform.setUniformi("team_glow_enabled", 0);
+		}
 	}
 
 	if ( shader_flags & SDR_FLAG_MODEL_THRUSTER ) {

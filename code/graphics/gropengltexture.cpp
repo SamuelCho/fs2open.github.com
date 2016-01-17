@@ -1330,12 +1330,12 @@ void gr_opengl_get_bitmap_from_texture(void* data_out, int bitmap_num)
 	tcache_slot_opengl *ts = &Textures[n];
 	
 	GLenum pixel_format = GL_RGB;
-	GLenum data_format = GL_FLOAT;
-	int bytes_per_pixel = 3 * sizeof(float);
+	GLenum data_format = GL_UNSIGNED_BYTE;
+	int bytes_per_pixel = 3 * sizeof(ubyte);
 
 	if ( bm_has_alpha_channel(bitmap_num) ) {
 		pixel_format = GL_RGBA;
-		bytes_per_pixel = 4 * sizeof(float);
+		bytes_per_pixel = 4 * sizeof(ubyte);
 	}
 
 	opengl_get_texture(ts->texture_target, pixel_format, data_format, 1, ts->w, ts->h, bytes_per_pixel, data_out, 0);
@@ -1441,7 +1441,7 @@ size_t opengl_export_render_target( int slot, int width, int height, int alpha, 
 	return (size_t)m_offset;
 }
 
-void gr_opengl_update_texture(int bitmap_handle, int bpp, ubyte* data, int width, int height)
+void gr_opengl_update_texture(int bitmap_handle, int bpp, const ubyte* data, int width, int height)
 {
 	GLenum texFormat, glFormat;
 	int n = bm_get_cache_slot (bitmap_handle, 1);

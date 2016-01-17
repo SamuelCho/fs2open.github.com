@@ -629,9 +629,20 @@ int mission_campaign_load( char *filename, player *pl, int load_savefile, bool r
 				cm->num_variables = 0;
 			}
 
-			cm->goals = NULL;
-			cm->events = NULL;
-			cm->variables = NULL;
+			// it's possible to have data already loaded from the pilotfile
+			// if so free it to avoid memory leaks
+			if (cm->goals != nullptr) {
+				vm_free(cm->goals);
+				cm->goals = nullptr;
+			}
+			if (cm->events != nullptr) {
+				vm_free(cm->events);
+				cm->events = nullptr;
+			}
+			if (cm->variables != nullptr) {
+				vm_free(cm->variables);
+				cm->variables = nullptr;
+			}
 
 			Campaign.num_missions++;
 		}
@@ -869,7 +880,7 @@ void mission_campaign_delete_all_savefiles( char *pilot_name )
 	// be.  I have to save any file filters
 	filter_save = Get_file_list_filter;
 	Get_file_list_filter = NULL;
-	num_files = cf_get_file_list(names, dir_type, const_cast<char *>(file_spec));
+	num_files = cf_get_file_list(names, dir_type, file_spec);
 	Get_file_list_filter = filter_save;
 
 	for (i=0; i<num_files; i++) {
@@ -1855,7 +1866,7 @@ void mission_campaign_exit_loop()
  * all previous missions marked skipped
  * this relies on correct mission ordering in the campaign file
  */
-void mission_campaign_jump_to_mission(char *name)
+void mission_campaign_jump_to_mission(char *name, bool no_skip)
 {
 	int i = 0, mission_num = -1;
 	char dest_name[64], *p;
@@ -1875,10 +1886,10 @@ void mission_campaign_jump_to_mission(char *name)
 		if ((Campaign.missions[i].name != NULL) && !stricmp(Campaign.missions[i].name, dest_name)) {
 			mission_num = i;
 			break;
-		} else {
+		} else if (!no_skip) {
 			Campaign.missions[i].flags |= CMISSION_FLAG_SKIPPED;
 			Campaign.num_missions_completed = i;
-		}
+		}	
 	}
 
 	if (mission_num < 0) {
@@ -1887,10 +1898,11 @@ void mission_campaign_jump_to_mission(char *name)
 		mission_campaign_savefile_delete(Campaign.filename);
 		mission_campaign_load(Campaign.filename);
 	} else {
-		for (i = 0; i < MAX_SHIP_CLASSES; i++) {
+		for (SCP_vector<ship_info>::iterator it = Ship_info.begin(); it != Ship_info.end(); it++) {
+			i = static_cast<int>(std::distance(Ship_info.begin(), it));
 			Campaign.ships_allowed[i] = 1;
 		}
-		for (i = 0; i < MAX_WEAPON_TYPES; i++) {
+		for (i = 0; i < Num_weapon_types; i++) {
 			Campaign.weapons_allowed[i] = 1;
 		}
 

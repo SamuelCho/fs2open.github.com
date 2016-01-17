@@ -1472,8 +1472,8 @@ int read_model_file(polymodel * pm, char *filename, int n_subsystems, model_subs
 						vm_vec_normalize(&orient->vec.uvec);
 						vm_vec_normalize(&orient->vec.fvec);
 
-						vm_vec_crossprod(&orient->vec.rvec, &orient->vec.uvec, &orient->vec.fvec);
-						vm_vec_crossprod(&orient->vec.fvec, &orient->vec.rvec, &orient->vec.uvec);
+						vm_vec_cross(&orient->vec.rvec, &orient->vec.uvec, &orient->vec.fvec);
+						vm_vec_cross(&orient->vec.fvec, &orient->vec.rvec, &orient->vec.uvec);
 
 						vm_vec_normalize(&orient->vec.fvec);
 						vm_vec_normalize(&orient->vec.rvec);
@@ -1725,7 +1725,7 @@ int read_model_file(polymodel * pm, char *filename, int n_subsystems, model_subs
 
 						vec3d diff;
 						vm_vec_normalized_dir(&diff, &bay->pnt[0], &bay->pnt[1]);
-						float dot = vm_vec_dotprod(&diff, &bay->norm[0]);
+						float dot = vm_vec_dot(&diff, &bay->norm[0]);
 						if(fl_abs(dot) > 0.99f) {
 							Warning(LOCATION, "Model '%s', docking port '%s' has docking slot positions that lie on the same axis as the docking normal.  This will cause a NULL VEC crash when docked to another ship.  A new docking normal will be generated.", filename, bay->name);
 
@@ -2502,10 +2502,11 @@ int model_load(char *filename, int n_subsystems, model_subsystem *subsystems, in
 	pm->n_paths = 0;
 	pm->paths = NULL;
 
-	int org_sig = Model_signature;
-	Model_signature+=MAX_POLYGON_MODELS;
-	if ( Model_signature < org_sig )	{
-		Model_signature = 0;
+	uint org_sig = static_cast<uint>(Model_signature);
+	if ( org_sig + MAX_POLYGON_MODELS > INT_MAX || org_sig + MAX_POLYGON_MODELS < org_sig )	{
+		Model_signature = 0; // Overflow
+	} else {
+		Model_signature+=MAX_POLYGON_MODELS; // No overflow
 	}
 	Assert( (Model_signature % MAX_POLYGON_MODELS) == 0 );
 	pm->id = Model_signature + num;
@@ -2742,7 +2743,7 @@ int model_load(char *filename, int n_subsystems, model_subsystem *subsystems, in
 	return pm->id;
 }
 
-int model_create_instance(int model_num, int submodel_num)
+int model_create_instance(int model_num)
 {
 	int i = 0;
 	int open_slot = -1;
@@ -2770,7 +2771,7 @@ int model_create_instance(int model_num, int submodel_num)
 	pmi->submodel = (submodel_instance*)vm_malloc( sizeof(submodel_instance)*pm->n_models );
 
 	for ( i = 0; i < pm->n_models; i++ ) {
-		model_clear_submodel_instance( &pmi->submodel[i] );
+		model_clear_submodel_instance( &pmi->submodel[i], &pm->submodel[i] );
 	}
 
 	pmi->model_num = model_num;
@@ -2809,7 +2810,9 @@ void model_maybe_fixup_subsys_path(polymodel *pm, int path_num)
 	mp = &pm->paths[path_num];
 
 	Assert(mp != NULL);
-	Assert(mp->nverts > 1);
+	if (mp->nverts <= 1 ) {
+		Error(LOCATION, "Subsystem Path (%s) Parent (%s) in model (%s) has less than 2 vertices/points!", mp->name, mp->parent_name, pm->filename);
+	}
 	
 	index_1 = 1;
 	index_2 = 0;
@@ -3265,7 +3268,7 @@ void model_find_obj_dir(vec3d *w_vec, vec3d *m_vec, object *pship_obj, int sub_m
 		vm_rotate_matrix_by_angles(&rotation_matrix, &pm->submodel[mn].angs);
 
 		matrix inv_orientation;
-		vm_copy_transpose_matrix(&inv_orientation, &pm->submodel[mn].orientation);
+		vm_copy_transpose(&inv_orientation, &pm->submodel[mn].orientation);
 
 		vm_matrix_x_matrix(&m, &rotation_matrix, &inv_orientation);
 
@@ -3301,7 +3304,7 @@ void model_instance_find_obj_dir(vec3d *w_vec, vec3d *m_vec, object *pship_obj, 
 		vm_rotate_matrix_by_angles(&rotation_matrix, &pmi->submodel[mn].angs);
 
 		matrix inv_orientation;
-		vm_copy_transpose_matrix(&inv_orientation, &pm->submodel[mn].orientation);
+		vm_copy_transpose(&inv_orientation, &pm->submodel[mn].orientation);
 
 		vm_matrix_x_matrix(&m, &rotation_matrix, &inv_orientation);
 
@@ -3337,7 +3340,7 @@ void model_rot_sub_into_obj(vec3d * outpnt, vec3d *mpnt,polymodel *pm, int sub_m
 		vm_rotate_matrix_by_angles(&rotation_matrix, &pm->submodel[mn].angs);
  
 		matrix inv_orientation;
-		vm_copy_transpose_matrix(&inv_orientation, &pm->submodel[mn].orientation);
+		vm_copy_transpose(&inv_orientation, &pm->submodel[mn].orientation);
 
 		vm_matrix_x_matrix(&m, &rotation_matrix, &inv_orientation);
 
@@ -3567,8 +3570,8 @@ void submodel_look_at(polymodel *pm, int mn)
 	vm_vec_normalize(&l);
 
 	vec3d c;
-	vm_vec_crossprod(&c, &l, &mp);
-	float dot=vm_vec_dotprod(&l,&mp);
+	vm_vec_cross(&c, &l, &mp);
+	float dot=vm_vec_dot(&l,&mp);
 	if (dot>=0.0f) {
 		*a = asin(c.a1d[axis]);
 	} else {
@@ -3963,7 +3966,7 @@ void make_submodel_world_matrix(polymodel *pm, int sn, vec3d*v){
 	vm_angles_2_matrix(&a, &pm->submodel[sn].angs);
 	if (!IS_MAT_NULL(&pm->submodel[sn].orientation)) {
 		matrix inv, f;
-		vm_copy_transpose_matrix(&inv, &pm->submodel[sn].orientation);
+		vm_copy_transpose(&inv, &pm->submodel[sn].orientation);
 		vm_matrix_x_matrix(&f, &a, &inv);
 		vm_matrix_x_matrix(&a, &pm->submodel[sn].orientation, &f);
 	}
@@ -4013,7 +4016,7 @@ void model_find_world_point(vec3d * outpnt, vec3d *mpnt,int model_num,int sub_mo
 		vm_rotate_matrix_by_angles(&rotation_matrix, &pm->submodel[mn].angs);
 
 		matrix inv_orientation;
-		vm_copy_transpose_matrix(&inv_orientation, &pm->submodel[mn].orientation);
+		vm_copy_transpose(&inv_orientation, &pm->submodel[mn].orientation);
 
 		vm_matrix_x_matrix(&m, &rotation_matrix, &inv_orientation);
 
@@ -4050,7 +4053,7 @@ void model_instance_find_world_point(vec3d * outpnt, vec3d *mpnt, int model_num,
 		vm_rotate_matrix_by_angles(&rotation_matrix, &pmi->submodel[mn].angs);
 
 		matrix inv_orientation;
-		vm_copy_transpose_matrix(&inv_orientation, &pm->submodel[mn].orientation);
+		vm_copy_transpose(&inv_orientation, &pm->submodel[mn].orientation);
 
 		vm_matrix_x_matrix(&m, &rotation_matrix, &inv_orientation);
 
@@ -4102,7 +4105,7 @@ void world_find_model_point(vec3d *out, vec3d *world_pt, polymodel *pm, int subm
 	vm_rotate_matrix_by_angles(&rotation_matrix, &pm->submodel[submodel_num].angs);
 
 	matrix inv_orientation;
-	vm_copy_transpose_matrix(&inv_orientation, &pm->submodel[submodel_num].orientation);
+	vm_copy_transpose(&inv_orientation, &pm->submodel[submodel_num].orientation);
 
 	vm_matrix_x_matrix(&m, &rotation_matrix, &inv_orientation);
 
@@ -4135,7 +4138,7 @@ void world_find_model_instance_point(vec3d *out, vec3d *world_pt, polymodel *pm,
 	vm_rotate_matrix_by_angles(&rotation_matrix, &pmi->submodel[submodel_num].angs);
 
 	matrix inv_orientation;
-	vm_copy_transpose_matrix(&inv_orientation, &pm->submodel[submodel_num].orientation);
+	vm_copy_transpose(&inv_orientation, &pm->submodel[submodel_num].orientation);
 
 	vm_matrix_x_matrix(&m, &rotation_matrix, &inv_orientation);
 
@@ -4170,7 +4173,7 @@ void find_submodel_instance_point(vec3d *outpnt, object *pship_obj, int submodel
 			rotation_matrix = pm->submodel[parent_mn].orientation;
 			vm_rotate_matrix_by_angles(&rotation_matrix, &pmi->submodel[parent_mn].angs);
 
-			vm_copy_transpose_matrix(&inv_orientation, &pm->submodel[parent_mn].orientation);
+			vm_copy_transpose(&inv_orientation, &pm->submodel[parent_mn].orientation);
 
 			vm_matrix_x_matrix(&submodel_instance_matrix, &rotation_matrix, &inv_orientation);
 
@@ -4217,7 +4220,7 @@ void find_submodel_instance_point_normal(vec3d *outpnt, vec3d *outnorm, object *
 			rotation_matrix = pm->submodel[submodel_num].orientation;
 			vm_rotate_matrix_by_angles(&rotation_matrix, &pmi->submodel[submodel_num].angs);
 
-			vm_copy_transpose_matrix(&inv_orientation, &pm->submodel[submodel_num].orientation);
+			vm_copy_transpose(&inv_orientation, &pm->submodel[submodel_num].orientation);
 
 			vm_matrix_x_matrix(&submodel_instance_matrix, &rotation_matrix, &inv_orientation);
 
@@ -4235,7 +4238,7 @@ void find_submodel_instance_point_normal(vec3d *outpnt, vec3d *outnorm, object *
 		rotation_matrix = pm->submodel[parent_model_num].orientation;
 		vm_rotate_matrix_by_angles(&rotation_matrix, &pmi->submodel[parent_model_num].angs);
 
-		vm_copy_transpose_matrix(&inv_orientation, &pm->submodel[parent_model_num].orientation);
+		vm_copy_transpose(&inv_orientation, &pm->submodel[parent_model_num].orientation);
 
 		vm_matrix_x_matrix(&submodel_instance_matrix, &rotation_matrix, &inv_orientation);
 
@@ -4287,7 +4290,7 @@ void find_submodel_instance_point_orient(vec3d *outpnt, matrix *outorient, objec
 			rotation_matrix = pm->submodel[submodel_num].orientation;
 			vm_rotate_matrix_by_angles(&rotation_matrix, &pmi->submodel[submodel_num].angs);
 
-			vm_copy_transpose_matrix(&inv_orientation, &pm->submodel[submodel_num].orientation);
+			vm_copy_transpose(&inv_orientation, &pm->submodel[submodel_num].orientation);
 
 			vm_matrix_x_matrix(&submodel_instance_matrix, &rotation_matrix, &inv_orientation);
 
@@ -4305,7 +4308,7 @@ void find_submodel_instance_point_orient(vec3d *outpnt, matrix *outorient, objec
 		rotation_matrix = pm->submodel[parent_model_num].orientation;
 		vm_rotate_matrix_by_angles(&rotation_matrix, &pmi->submodel[parent_model_num].angs);
 
-		vm_copy_transpose_matrix(&inv_orientation, &pm->submodel[parent_model_num].orientation);
+		vm_copy_transpose(&inv_orientation, &pm->submodel[parent_model_num].orientation);
 
 		vm_matrix_x_matrix(&submodel_instance_matrix, &rotation_matrix, &inv_orientation);
 
@@ -4461,7 +4464,7 @@ void model_find_world_dir(vec3d * out_dir, vec3d *in_dir,int model_num, int sub_
 		vm_rotate_matrix_by_angles(&rotation_matrix, &pm->submodel[mn].angs);
 
 		matrix inv_orientation;
-		vm_copy_transpose_matrix(&inv_orientation, &pm->submodel[mn].orientation);
+		vm_copy_transpose(&inv_orientation, &pm->submodel[mn].orientation);
 
 		vm_matrix_x_matrix(&m, &rotation_matrix, &inv_orientation);
 
@@ -4498,7 +4501,7 @@ void model_instance_find_world_dir(vec3d * out_dir, vec3d *in_dir,int model_num,
 		vm_rotate_matrix_by_angles(&rotation_matrix, &pmi->submodel[mn].angs);
 
 		matrix inv_orientation;
-		vm_copy_transpose_matrix(&inv_orientation, &pm->submodel[mn].orientation);
+		vm_copy_transpose(&inv_orientation, &pm->submodel[mn].orientation);
 
 		vm_matrix_x_matrix(&m, &rotation_matrix, &inv_orientation);
 
@@ -4577,12 +4580,14 @@ void model_clear_instance_info( submodel_instance_info * sii )
 	sii->turn_accel = 0.0f;
 }
 
-void model_clear_submodel_instance( submodel_instance *sm_instance )
+void model_clear_submodel_instance( submodel_instance *sm_instance, bsp_info *sm )
 {
 	sm_instance->angs.p = 0.0f;
 	sm_instance->angs.b = 0.0f;
 	sm_instance->angs.h = 0.0f;
-	sm_instance->blown_off = false;
+
+	sm_instance->blown_off = sm->is_damaged ? true : false;
+
 	sm_instance->collision_checked = false;
 }
 
@@ -4593,7 +4598,7 @@ void model_clear_submodel_instances( int model_instance_num )
 	polymodel *pm = model_get(pmi->model_num);
 
 	for ( i = 0; i < pm->n_models; i++ ) {
-		model_clear_submodel_instance(&pmi->submodel[i]);
+		model_clear_submodel_instance(&pmi->submodel[i], &pm->submodel[i]);
 	}
 }
 
@@ -4633,13 +4638,11 @@ void model_set_instance(int model_num, int sub_model_num, submodel_instance_info
 	bsp_info *sm = &pm->submodel[sub_model_num];
 
 	if (flags & SSF_NO_DISAPPEAR) {
-		// If the submodel is to not disappear when the subsystem is destroyed, we simply
-		// make the submodel act as its own replacement as well
-		sm->my_replacement = sub_model_num;
+		sm->blown_off = 0;
+	} else {
+		// Set the "blown out" flags
+		sm->blown_off = sii->blown_off;
 	}
-
-	// Set the "blown out" flags	
-	sm->blown_off = sii->blown_off;
 
 	if ( (sm->blown_off) && (!(flags & SSF_NO_REPLACE)) )	{
 		if ( sm->my_replacement > -1 )	{
@@ -4692,7 +4695,7 @@ void model_set_instance_techroom(int model_num, int sub_model_num, float angle_1
 	sm->angs.h = angle_2;
 }
 
-void model_update_instance(int model_instance_num, int sub_model_num, submodel_instance_info *sii)
+void model_update_instance(int model_instance_num, int sub_model_num, submodel_instance_info *sii, int flags)
 {
 	int i;
 	polymodel *pm;
@@ -4700,20 +4703,25 @@ void model_update_instance(int model_instance_num, int sub_model_num, submodel_i
 
 	pmi = model_get_instance(model_instance_num);
 	pm = model_get(pmi->model_num);
-
-	Assert( sub_model_num >= 0 );
-	Assert( sub_model_num < pm->n_models );
+	
+	Assertion(sub_model_num >= 0 && sub_model_num < pm->n_models,
+		"Sub model number (%d) which should be updated is out of range! Must be between 0 and %d. This happend on model %s.",
+		sub_model_num, pm->n_models - 1, pm->filename);
 
 	if ( sub_model_num < 0 ) return;
 	if ( sub_model_num >= pm->n_models ) return;
 
 	submodel_instance *smi = &pmi->submodel[sub_model_num];
 	bsp_info *sm = &pm->submodel[sub_model_num];
+	
+	// Set the "blown out" flags
+	if ( flags & SSF_NO_DISAPPEAR ) {
+		smi->blown_off = false;
+	} else {
+		smi->blown_off = sii->blown_off ? true : false;
+	}
 
-	// Set the "blown out" flags	
-	smi->blown_off = sii->blown_off ? true : false;
-
-	if ( smi->blown_off )	{
+	if ( smi->blown_off && !(flags & SSF_NO_REPLACE) )	{
 		if ( sm->my_replacement > -1 )	{
 			pmi->submodel[sm->my_replacement].blown_off = false;
 			pmi->submodel[sm->my_replacement].angs = sii->angs;
@@ -4733,7 +4741,7 @@ void model_update_instance(int model_instance_num, int sub_model_num, submodel_i
 
 	// For all the detail levels of this submodel, set them also.
 	for (i=0; i<sm->num_details; i++ )	{
-		model_update_instance(model_instance_num, sm->details[i], sii );
+		model_update_instance(model_instance_num, sm->details[i], sii, flags );
 	}
 }
 
