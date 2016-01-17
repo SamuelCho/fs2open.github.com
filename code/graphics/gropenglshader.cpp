@@ -1000,7 +1000,7 @@ void opengl_shader_compile_passthrough_shader()
 
 void opengl_shader_set_passthrough(bool textured, bool alpha, float color_scale)
 {
-	if (Use_GLSL < 2) {
+	if ( !is_minimum_GLSL_version() ) {
 		return;
 	}
 
