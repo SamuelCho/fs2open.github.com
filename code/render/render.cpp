@@ -1462,7 +1462,7 @@ void render_bitmap_ex_internal(int texture, int x, int y, int w, int h, int sx, 
 		return;
 	}
 
-	float u_scale, v_scale;
+	float u_scale = 1.0f, v_scale = 1.0f;
 	float u0, u1, v0, v1;
 	float x1, x2, y1, y2;
 	int bw, bh, do_resize;
@@ -1641,8 +1641,6 @@ void render_aabitmap_ex_internal(int texture, color *clr, int x, int y, int w, i
 		mprintf(("WARNING: trying to draw with invalid texture (%i)!\n", texture));
 		return;
 	}
-
-	float u_scale, v_scale;
 
 	material mat;
 
@@ -1910,7 +1908,7 @@ void render_string(color *clr, float sx, float sy, const char *s, int resize_mod
 	float bw, bh;
 	float u0, u1, v0, v1;
 	float x1, x2, y1, y2;
-	float u_scale, v_scale;
+	float u_scale = 1.0f, v_scale = 1.0f;
 
 	if ( !Current_font || (*s == 0) ) {
 		return;
@@ -2487,7 +2485,7 @@ void render_unfilled_circle(color *clr, float linewidth, int xc, int yc, int d, 
 	delete [] circle;
 }
 
-void render_unfilled_circle(color *clr, float linewidth, int xc, int yc, int d, int resize_mode)
+void render_unfilled_circle(float linewidth, int xc, int yc, int d, int resize_mode)
 {
 	render_unfilled_circle(&gr_screen.current_color, linewidth, xc, yc, d, resize_mode);
 }

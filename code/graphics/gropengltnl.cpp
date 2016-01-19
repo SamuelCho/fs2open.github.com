@@ -2489,7 +2489,6 @@ void opengl_tnl_set_material(material* material_info, bool set_base_map)
 			mprintf(("WARNING: Error setting bitmap texture (%i)!\n", base_map));
 		}
 	}
-	}
 }
 
 void opengl_tnl_set_model_material(model_material *material_info)

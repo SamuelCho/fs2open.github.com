@@ -19,6 +19,7 @@
 #include "object/object.h"
 #include "particle/particle.h"
 #include "render/3d.h"
+#include "render/batching.h"
 #include "render/render.h"
 
 #ifndef NDEBUG
@@ -438,11 +439,11 @@ void particle_render_all()
 
 			// if this is a tracer style particle
 			if (part->tracer_length > 0.0f) {
-				batch_add_laser( framenum + cur_frame, &ts, part->radius, &te, part->radius );
+				batching_add_laser(framenum + cur_frame, &ts, part->radius, &te, part->radius);
 			}
 			// draw as a regular bitmap
 			else {
-				batch_add_bitmap( framenum + cur_frame, tmap_flags | TMAP_FLAG_VERTEX_GEN, &pos, part->particle_index % 8, part->radius, alpha );
+				batching_add_volume_bitmap(framenum + cur_frame, &pos, part->particle_index % 8, part->radius, alpha);
 			}
 
 			render_batch = true;
@@ -451,8 +452,9 @@ void particle_render_all()
 
 	profile_begin("Batch Render");
 	if (render_batch) {
-		geometry_batch_render(Geometry_shader_buffer_object);
-		batch_render_all(Particle_buffer_object);
+		//geometry_batch_render(Geometry_shader_buffer_object);
+		//batch_render_all(Particle_buffer_object);
+		batching_render_all();
 	}
 	profile_end("Batch Render");
 }

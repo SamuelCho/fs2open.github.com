@@ -509,4 +509,6 @@ int distortion_material::get_shader_handle()
 	}
 
 	set_shader_handle(gr_maybe_create_shader(SDR_TYPE_EFFECT_DISTORTION, 0));
+
+	return handle;
 }

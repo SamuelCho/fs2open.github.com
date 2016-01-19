@@ -1931,7 +1931,7 @@ void stars_draw(int show_stars, int show_suns, int show_nebulas, int show_subspa
 #endif
 
 	if ( show_nebulas && (Game_detail_flags & DETAIL_FLAG_NEBULAS) && (Neb2_render_mode != NEB2_RENDER_POF) && (Neb2_render_mode != NEB2_RENDER_LAME))	{
-		nebula_render_new();
+		nebula_render();
 	}
 
 	// draw background stuff

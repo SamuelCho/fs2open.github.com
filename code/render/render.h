@@ -7,7 +7,11 @@
  *
 */
 
+#ifndef _RENDER_H
+#define _RENDER_H
+
 #include "graphics/grinternal.h"
+#include "graphics/material.h"
 
 gr_alpha_blend render_determine_blend_mode(int base_bitmap, bool is_transparent);
 gr_zbuffer_type render_determine_depth_mode(bool depth_testing, bool is_transparent);
@@ -101,3 +105,5 @@ void render_cross_fade(int bmap1, int bmap2, int x1, int y1, int x2, int y2, flo
 
 void render_flash(int r, int g, int b);
 void render_flash_alpha(int r, int g, int b, int a);
+
+#endif

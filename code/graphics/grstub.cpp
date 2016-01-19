@@ -782,6 +782,11 @@ void gr_stub_render_primitives_distortion(distortion_material* material_info, pr
 
 }
 
+bool gr_stub_is_capable(gr_capability capability)
+{
+	return false;
+}
+
 bool gr_stub_init() 
 {
 	if (gr_screen.res != GR_640) {
@@ -988,6 +993,8 @@ bool gr_stub_init()
 	gr_screen.gf_render_primitives_2d	= gr_stub_render_primitives_2d;
 	gr_screen.gf_render_primitives_particle	= gr_stub_render_primitives_particle;
 	gr_screen.gf_render_primitives_distortion = gr_stub_render_primitives_distortion;
+
+	gr_screen.gf_is_capable = gr_stub_is_capable;
 
 	return true;
 }

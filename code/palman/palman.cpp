@@ -12,6 +12,7 @@
 #include "bmpman/bmpman.h"
 #include "cfile/cfile.h"
 #include "debugconsole/console.h"
+#include "graphics/2d.h"
 #include "graphics/grinternal.h"
 #include "palman/palman.h"
 #include "parse/parselo.h"

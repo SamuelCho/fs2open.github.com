@@ -33,6 +33,7 @@
 #include "parse/parselo.h"
 #include "pcxutils/pcxutils.h"
 #include "pngutils/pngutils.h"
+#include "render/render.h"
 #include "ship/ship.h"
 #include "tgautils/tgautils.h"
 

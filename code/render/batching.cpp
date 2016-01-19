@@ -156,7 +156,7 @@ uint batching_determine_vertex_layout(batch_info *info)
 	}
 }
 
-void batching_add_bitmap(primitive_batch *batch, vertex *pnt, int orient, float rad, color *clr, float depth)
+void batching_add_bitmap_internal(primitive_batch *batch, vertex *pnt, int orient, float rad, color *clr, float depth)
 {
 	Assert(batch->get_render_info().prim_type == PRIM_TYPE_TRIS);
 
@@ -321,7 +321,7 @@ void batching_add_point_bitmap(primitive_batch *batch, vertex *position, int ori
 	batch->add_point_sprite(&new_particle);
 }
 
-void batching_add_bitmap(primitive_batch *batch, vertex *pnt, float rad, float angle, color *clr, float depth)
+void batching_add_bitmap_rotated_internal(primitive_batch *batch, vertex *pnt, float angle, float rad, color *clr, float depth)
 {
 	Assert(batch->get_render_info().prim_type == PRIM_TYPE_TRIS);
 
@@ -424,7 +424,7 @@ void batching_add_point_bitmap(primitive_batch *batch, vertex *position, float r
 	batch->add_point_sprite(&new_particle);
 }
 
-void batching_add_polygon(primitive_batch *batch, int texture, vec3d *pos, matrix *orient, float width, float height, color *clr)
+void batching_add_polygon_internal(primitive_batch *batch, int texture, vec3d *pos, matrix *orient, float width, float height, color *clr)
 {
 	Assert(batch->get_render_info().prim_type == PRIM_TYPE_TRIS);
 
@@ -486,7 +486,54 @@ void batching_add_polygon(primitive_batch *batch, int texture, vec3d *pos, matri
 	batch->add_triangle(&v[0], &v[2], &v[3]);
 }
 
-void batching_add_beam(primitive_batch *batch, vec3d *start, vec3d *end, float width, color *clr, float offset)
+void batching_add_quad_internal(primitive_batch *batch, int texture, vertex *verts)
+{
+	Assert(batch->get_render_info().prim_type == PRIM_TYPE_TRIS);
+
+	const int NUM_VERTICES = 4;
+	vec3d p[NUM_VERTICES] = { ZERO_VECTOR };
+	batch_vertex v[NUM_VERTICES];
+
+	for ( int i = 0; i < NUM_VERTICES; i++ ) {
+		v[i].position = verts[i].world;
+		
+		v[i].r = verts[i].r;
+		v[i].g = verts[i].g;
+		v[i].b = verts[i].b;
+		v[i].a = verts[i].a;
+
+		v[i].tex_coord.u = verts[i].texture_position.u;
+		v[i].tex_coord.v = verts[i].texture_position.v;
+	}
+
+	batch->add_triangle(&v[0], &v[1], &v[2]);
+	batch->add_triangle(&v[0], &v[2], &v[3]);
+}
+
+void batching_add_tri_internal(primitive_batch *batch, int texture, vertex *verts)
+{
+	Assert(batch->get_render_info().prim_type == PRIM_TYPE_TRIS);
+
+	const int NUM_VERTICES = 3;
+	vec3d p[NUM_VERTICES] = { ZERO_VECTOR };
+	batch_vertex v[NUM_VERTICES];
+
+	for ( int i = 0; i < NUM_VERTICES; i++ ) {
+		v[i].position = verts[i].world;
+
+		v[i].r = verts[i].r;
+		v[i].g = verts[i].g;
+		v[i].b = verts[i].b;
+		v[i].a = verts[i].a;
+
+		v[i].tex_coord.u = verts[i].texture_position.u;
+		v[i].tex_coord.v = verts[i].texture_position.v;
+	}
+
+	batch->add_triangle(&v[0], &v[1], &v[2]);
+}
+
+void batching_add_beam_internal(primitive_batch *batch, vec3d *start, vec3d *end, float width, color *clr, float offset)
 {
 	Assert(batch->get_render_info().prim_type == PRIM_TYPE_TRIS);
 
@@ -554,7 +601,7 @@ void batching_add_beam(primitive_batch *batch, vec3d *start, vec3d *end, float w
 	batch->add_triangle(&verts[3], &verts[4], &verts[5]);
 }
 
-void batching_add_laser(primitive_batch *batch, vec3d *p0, float width1, vec3d *p1, float width2, int r, int g, int b)
+void batching_add_laser_internal(primitive_batch *batch, vec3d *p0, float width1, vec3d *p1, float width2, int r, int g, int b)
 {
 	Assert(batch->get_render_info().prim_type == PRIM_TYPE_TRIS);
 
@@ -646,7 +693,7 @@ void batching_add_laser(primitive_batch *batch, vec3d *p0, float width1, vec3d *
 	batch->add_triangle(&verts[3], &verts[4], &verts[5]);
 }
 
-void batching_add_bitmap(int texture, vertex *pnt, int orient, float rad, float alpha)
+void batching_add_bitmap(int texture, vertex *pnt, int orient, float rad, float alpha, float depth)
 {
 	if (texture < 0) {
 		Int3();
@@ -658,28 +705,74 @@ void batching_add_bitmap(int texture, vertex *pnt, int orient, float rad, float 
 	color clr;
 	batching_determine_blend_color(&clr, texture, alpha);
 
-	batching_add_bitmap(batch, pnt, orient, rad, &clr, 0.0f);
+	batching_add_bitmap_internal(batch, pnt, orient, rad, &clr, depth);
 }
 
-void batching_add_volume_bitmap(int texture, vertex *pnt, int orient, float rad, float alpha)
+void batching_add_bitmap_rotated(int texture, vertex *pnt, float angle, float rad, float alpha, float depth)
+{
+	if ( texture < 0 ) {
+		Int3();
+		return;
+	}
+
+	primitive_batch *batch = batching_find_batch(texture, batch_info::FLAT_EMISSIVE);
+
+	color clr;
+	batching_determine_blend_color(&clr, texture, alpha);
+
+	batching_add_bitmap_rotated_internal(batch, pnt, angle, rad, &clr, depth);
+}
+
+void batching_add_volume_bitmap(int texture, vertex *pnt, int orient, float rad, float alpha, float depth)
 {
 	if (texture < 0) {
 		Int3();
 		return;
 	}
 
-	primitive_batch *batch = batching_find_batch(texture, batch_info::VOLUME_EMISSIVE);
+	primitive_batch *batch;
+	
+	if ( gr_is_capable(CAPABILITY_SOFT_PARTICLES) ) {
+		batch = batching_find_batch(texture, batch_info::VOLUME_EMISSIVE);
+	} else {
+		batch = batching_find_batch(texture, batch_info::FLAT_EMISSIVE);
+	}
 
 	color clr;
 	batching_determine_blend_color(&clr, texture, alpha);
 
-	batching_add_bitmap(batch, pnt, orient, rad, &clr, 0.0f);
+	batching_add_bitmap_internal(batch, pnt, orient, rad, &clr, depth);
 }
 
-void batching_add_distortion_bitmap(int texture, vertex *pnt, int orient, float rad, float alpha)
+void batching_add_volume_bitmap_rotated(int texture, vertex *pnt, float angle, float rad, float alpha, float depth)
+{
+	if ( texture < 0 ) {
+		Int3();
+		return;
+	}
+
+	primitive_batch *batch;
+
+	if ( gr_is_capable(CAPABILITY_SOFT_PARTICLES) ) {
+		batch = batching_find_batch(texture, batch_info::VOLUME_EMISSIVE);
+	} else {
+		batch = batching_find_batch(texture, batch_info::FLAT_EMISSIVE);
+	}
+
+	color clr;
+	batching_determine_blend_color(&clr, texture, alpha);
+
+	batching_add_bitmap_rotated_internal(batch, pnt, angle, rad, &clr, depth);
+}
+
+void batching_add_distortion_bitmap_rotated(int texture, vertex *pnt, float angle, float rad, float alpha, float depth)
 {
 	if (texture < 0) {
 		Int3();
+		return;
+	}
+
+	if ( !gr_is_capable(CAPABILITY_DISTORTION) ) {
 		return;
 	}
 
@@ -688,7 +781,7 @@ void batching_add_distortion_bitmap(int texture, vertex *pnt, int orient, float 
 	color clr;
 	batching_determine_blend_color(&clr, texture, alpha);
 
-	batching_add_bitmap(batch, pnt, orient, rad, &clr, 0.0f);
+	batching_add_bitmap_rotated_internal(batch, pnt, angle, rad, &clr, depth);
 }
 
 void batching_add_distortion_beam(int texture, vec3d *start, vec3d *end, float width, float intensity, float offset)
@@ -698,12 +791,16 @@ void batching_add_distortion_beam(int texture, vec3d *start, vec3d *end, float w
 		return;
 	}
 
+	if ( !gr_is_capable(CAPABILITY_DISTORTION) ) {
+		return;
+	}
+
 	primitive_batch *batch = batching_find_batch(texture, batch_info::DISTORTION, PRIM_TYPE_TRIS, true);
 
 	color clr;
 	batching_determine_blend_color(&clr, texture, intensity);
 
-	batching_add_beam(batch, start, end, width, &clr, offset);
+	batching_add_beam_internal(batch, start, end, width, &clr, offset);
 }
 
 void batching_add_beam(int texture, vec3d *start, vec3d *end, float width, float intensity)
@@ -718,7 +815,7 @@ void batching_add_beam(int texture, vec3d *start, vec3d *end, float width, float
 	color clr;
 	batching_determine_blend_color(&clr, texture, intensity);
 
-	batching_add_beam(batch, start, end, width, &clr, 0.0f);
+	batching_add_beam_internal(batch, start, end, width, &clr, 0.0f);
 }
 
 void batching_add_laser(int texture, vec3d *p0, float width1, vec3d *p1, float width2, int r, int g, int b)
@@ -729,7 +826,7 @@ void batching_add_laser(int texture, vec3d *p0, float width1, vec3d *p1, float w
 
 	primitive_batch *batch = batching_find_batch(texture, batch_info::FLAT_EMISSIVE);
 
-	batching_add_laser(batch, p0, width1, p1, width2, r, g, b);
+	batching_add_laser_internal(batch, p0, width1, p1, width2, r, g, b);
 }
 
 void batching_add_polygon(int texture, vec3d *pos, matrix *orient, float width, float height, float alpha)
@@ -744,7 +841,31 @@ void batching_add_polygon(int texture, vec3d *pos, matrix *orient, float width, 
 	color clr;
 	batching_determine_blend_color(&clr, texture, alpha);
 
-	batching_add_polygon(batch, texture, pos, orient, width, height, &clr);
+	batching_add_polygon_internal(batch, texture, pos, orient, width, height, &clr);
+}
+
+void batching_add_quad(int texture, vertex *verts)
+{
+	if ( texture < 0 ) {
+		Int3();
+		return;
+	}
+
+	primitive_batch *batch = batching_find_batch(texture, batch_info::FLAT_EMISSIVE);
+
+	batching_add_quad_internal(batch, texture, verts);
+}
+
+void batching_add_tri(int texture, vertex *verts)
+{
+	if ( texture < 0 ) {
+		Int3();
+		return;
+	}
+
+	primitive_batch *batch = batching_find_batch(texture, batch_info::FLAT_EMISSIVE);
+
+	batching_add_tri_internal(batch, texture, verts);
 }
 
 void batching_render_batch_item(primitive_batch_item *item, vertex_layout *layout, primitive_type prim_type, int buffer_num)
@@ -878,4 +999,9 @@ void batching_render_all(bool render_distortions)
 	}
 	
 	gr_clear_states();
+}
+
+void batching_render_distortions_all()
+{
+	batching_render_all(true);
 }

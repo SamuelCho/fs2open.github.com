@@ -27,6 +27,7 @@
 #include "object/objectsnd.h"
 #include "playerman/managepilot.h"
 #include "render/3d.h"
+#include "render/batching.h"
 #include "render/render.h"
 #include "ship/ship.h"
 #include "species_defs/species_defs.h"
@@ -1074,9 +1075,9 @@ void labviewer_render_model(float frametime)
 		Glowpoint_override = gpo_save;
 	}
 
-	batch_render_all();
+	batching_render_all();
 	gr_copy_effect_texture();
-	batch_render_distortion_map_bitmaps();
+	batching_render_distortions_all();
 	if ( !Cmdline_nohtl ) {
 		gr_end_view_matrix();
 		gr_end_proj_matrix();

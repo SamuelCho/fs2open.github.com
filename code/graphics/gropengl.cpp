@@ -1944,6 +1944,8 @@ void opengl_setup_function_pointers()
 	gr_screen.gf_render_primitives_particle	= gr_opengl_render_primitives_particle;
 	gr_screen.gf_render_primitives_distortion = gr_opengl_render_primitives_distortion;
 
+	gr_screen.gf_is_capable = gr_opengl_is_capable;
+
 	// NOTE: All function pointers here should have a Cmdline_nohtl check at the top
 	//       if they shouldn't be run in non-HTL mode, Don't keep separate entries.
 	// *****************************************************************************
@@ -2103,6 +2105,45 @@ bool gr_opengl_init()
         GL_read_format = GL_RGBA;
 
 	return true;
+}
+
+bool gr_opengl_is_capable(gr_capability capability)
+{
+	if ( !Use_GLSL ) {
+		return false;
+	}
+
+	if ( GL_version < 20 ) {
+		return false;
+	}
+
+	if ( !Is_Extension_Enabled(OGL_EXT_FRAMEBUFFER_OBJECT) || !Is_Extension_Enabled(OGL_ARB_TEXTURE_NON_POWER_OF_TWO) ) {
+		return false;
+	}
+
+	switch ( capability ) {
+	case CAPABILITY_ENVIRONMENT_MAP:
+		return Is_Extension_Enabled(OGL_ARB_TEXTURE_CUBE_MAP) && Is_Extension_Enabled(OGL_ARB_TEXTURE_ENV_COMBINE);
+	case CAPABILITY_NORMAL_MAP:
+		return Cmdline_normal ? true : false;
+	case CAPABILITY_HEIGHT_MAP:
+		return Cmdline_height ? true : false;
+	case CAPABILITY_SOFT_PARTICLES:
+	case CAPABILITY_DISTORTION:
+		return Cmdline_softparticles && (Use_GLSL >= 2) && !Cmdline_no_fbo;
+	case CAPABILITY_POST_PROCESSING:
+		return Cmdline_postprocess && (Use_GLSL >= 2) && !Cmdline_no_fbo;
+	case CAPABILITY_DEFERRED_LIGHTING:
+		return !Cmdline_no_fbo && !Cmdline_no_deferred_lighting && (Use_GLSL >= 2);
+	case CAPABILITY_SHADOWS:
+		return Is_Extension_Enabled(OGL_EXT_GEOMETRY_SHADER4) && Is_Extension_Enabled(OGL_EXT_TEXTURE_ARRAY) && Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) && (Use_GLSL >= 2);
+	case CAPABILITY_BATCHED_SUBMODELS:
+		return (Use_GLSL >= 3) && Is_Extension_Enabled(OGL_ARB_TEXTURE_BUFFER) && Is_Extension_Enabled(OGL_ARB_FLOATING_POINT_TEXTURES);
+	case CAPABILITY_POINT_PARTICLES:
+		return Is_Extension_Enabled(OGL_EXT_GEOMETRY_SHADER4) && !Cmdline_no_geo_sdr_effects;
+	}
+
+	return false;
 }
 
 DCF(ogl_minimize, "Minimizes opengl")

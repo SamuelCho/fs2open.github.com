@@ -16,6 +16,7 @@
 #include "cfile/cfile.h"
 #include "globalincs/pstypes.h"
 #include "graphics/tmapper.h"
+#include "graphics/grinternal.h"
 #include "cfile/cfile.h"
 #include "bmpman/bmpman.h"
 #include "math/vecmat.h"
@@ -897,6 +898,8 @@ typedef struct screen {
 	void (*gf_render_primitives_particle)(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
 	void (*gf_render_primitives_distortion)(distortion_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
 	void (*gf_render_primitives_2d)(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
+
+	bool (*gf_is_capable)(gr_capability capability);
 } screen;
 
 // handy macro
@@ -1258,6 +1261,11 @@ __inline void gr_render_primitives_2d(material* material_info, primitive_type pr
 __inline void gr_render_model(model_material* material_info, vertex_buffer* bufferp, int texi)
 {
 	(*gr_screen.gf_render_model)(material_info, bufferp, texi);
+}
+
+__inline bool gr_is_capable(gr_capability capability)
+{
+	return (*gr_screen.gf_is_capable)(capability);
 }
 
 // color functions

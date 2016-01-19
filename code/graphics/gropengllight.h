@@ -14,7 +14,7 @@
 #define _GROPENGLLIGHT_H
 
 #include "graphics/gropengl.h"
-
+#include "lighting/lighting.h"
 
 struct ogl_light_color {
 	float r,g,b,a;

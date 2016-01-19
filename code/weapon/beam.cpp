@@ -1592,8 +1592,7 @@ void beam_render_all()
 				continue;
 			}
 
-			//beam_render(moveup, u_offset);
-			beam_render_new(moveup, u_offset);
+			beam_render(moveup, u_offset);
 		}
 
 		// render the muzzle glow

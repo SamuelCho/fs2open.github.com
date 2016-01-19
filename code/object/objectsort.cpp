@@ -24,6 +24,7 @@
 #include "object/object.h"
 #include "parse/scripting.h"
 #include "render/3d.h"
+#include "render/batching.h"
 #include "ship/ship.h"
 #include "weapon/weapon.h"
 
@@ -427,15 +428,15 @@ void obj_render_queue_all()
 	gr_set_lighting(false, false);
 
 	//WMC - draw maneuvering thrusters
- 	extern void batch_render_man_thrusters();
- 	batch_render_man_thrusters();
+ 	//extern void batch_render_man_thrusters();
+ 	//batch_render_man_thrusters();
 
 	// if we're fullneb, switch off the fog effet
 	if((The_mission.flags & MISSION_FLAG_FULLNEB) && (Neb2_render_mode != NEB2_RENDER_NONE)){
 		gr_fog_set(GR_FOGMODE_NONE, 0, 0, 0);
 	}
 
-	PROFILE("Draw Effects", batch_render_all());
+	PROFILE("Draw Effects", batching_render_all());
 
 	gr_zbias(0);
 	gr_zbuffer_set(ZBUFFER_TYPE_READ);

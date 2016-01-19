@@ -21,6 +21,7 @@
 #include "nebula/neb.h"
 #include "particle/particle.h"
 #include "render/3dinternal.h"
+#include "render/batching.h"
 #include "render/render.h"
 #include "math/staticrand.h"
 #include "ship/ship.h"
@@ -1113,20 +1114,18 @@ void model_render_buffers(draw_list* scene, model_material *rendering_material, 
 			}
 		}
 
-		rendering_material->set_depth_mode(render_determine_depth_mode(use_depth_test, use_blending));
-
 		gr_alpha_blend blend_mode = render_determine_blend_mode(texture_maps[TM_BASE_TYPE], use_blending);
+		gr_zbuffer_type depth_mode = render_determine_depth_mode(use_depth_test, use_blending);
+
+		rendering_material->set_depth_mode(depth_mode);
 		rendering_material->set_blend_mode(blend_mode);
+		
+		color clr = interp->get_color();
+		clr.alpha = fl2i(alpha * 255.0f);
 
-		const color &clr = interp->get_color();
-		ubyte r = clr.red;
-		ubyte g = clr.green;
-		ubyte b = clr.blue;
-		ubyte a = (ubyte)alpha * 255.0f;
+		model_render_determine_color(&clr, blend_mode, no_texturing ? true : false);
 
-		model_render_determine_color(r, g, b, a, blend_mode, no_texturing ? true : false);
-
-		rendering_material->set_color(r, g, b, a);
+		rendering_material->set_color(clr);
 
 		if ( (tmap_flags & TMAP_FLAG_TEXTURED) && (buffer->flags & VB_FLAG_UV1) ) {
 			rendering_material->set_texture_map(TM_BASE_TYPE,	texture_maps[TM_BASE_TYPE]);
@@ -1320,16 +1319,18 @@ bool model_render_determine_autocenter(vec3d *auto_back, polymodel *pm, int deta
 	return false;
 }
 
-void model_render_determine_color(ubyte &r, ubyte &g, ubyte &b, ubyte &a, gr_alpha_blend blend_mode, bool texturing)
+void model_render_determine_color(color *clr, gr_alpha_blend blend_mode, bool texturing)
 {
-	if(!texturing)
+	if ( !texturing ) {
+		// if we're not texturing, don't override the given color
 		return;
+	}
 
 	if (blend_mode == ALPHA_BLEND_ADDITIVE) {
-		r = g = b = a;
-		a = 255;
+		clr->red = clr->green = clr->blue = clr->alpha;
+		clr->alpha = 255;
 	} else {
-		r = g = b = 255;
+		clr->red = clr->green = clr->blue = 255;
 	}
 }
 
@@ -1634,15 +1635,13 @@ void model_render_glowpoint(int point_num, vec3d *pos, matrix *orient, glow_poin
 					if (use_depth_buffer)
 						gpflags |= TMAP_FLAG_SOFT_QUAD;
 
-					batch_add_bitmap(
-						(gpo && gpo->glow_bitmap_override)?gpo->glow_bitmap:bank->glow_bitmap,
-						gpflags,  
-						&p,
-						0,
-						(w * 0.5f),
-						d * pulse,
-						w
-						);
+					int bitmap_id = (gpo && gpo->glow_bitmap_override) ? gpo->glow_bitmap : bank->glow_bitmap;
+
+					if ( use_depth_buffer ) {
+						batching_add_volume_bitmap(bitmap_id, &p, 0, (w * 0.5f), d * pulse, w);
+					} else {
+						batching_add_bitmap(bitmap_id, &p, 0, (w * 0.5f), d * pulse, w);
+					}
 				}
 			} //d>0.0f
 			if ( gpo && gpo->pulse_type ) {
@@ -1776,9 +1775,9 @@ void model_render_glowpoint(int point_num, vec3d *pos, matrix *orient, glow_poin
 			vm_vec_normalize(&tempv);
 
 			if ( The_mission.flags & MISSION_FLAG_FULLNEB ) {
-				batch_add_quad(bank->glow_neb_bitmap, TMAP_FLAG_TILED | TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT, verts);
+				batching_add_quad(bank->glow_neb_bitmap, verts);
 			} else {
-				batch_add_quad(bank->glow_bitmap, TMAP_FLAG_TILED | TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT, verts);
+				batching_add_quad(bank->glow_bitmap, verts);
 			}
 
 			break;
@@ -2119,30 +2118,14 @@ void model_queue_render_thrusters(model_render_params *interp, polymodel *pm, in
 			// start primary thruster glows
 			if ( (thruster_info.primary_glow_bitmap >= 0) && (d > 0.0f) ) {
 				p.r = p.g = p.b = p.a = (ubyte)(255.0f * d);
-				batch_add_bitmap(
-					thruster_info.primary_glow_bitmap, 
-					TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT | TMAP_FLAG_SOFT_QUAD, 
-					&p,
-					0,
-					(w * 0.5f * thruster_info.glow_rad_factor),
-					1.0f,
-					(w * 0.325f)
-					);
+				batching_add_volume_bitmap(thruster_info.primary_glow_bitmap, &p, 0, (w * 0.5f * thruster_info.glow_rad_factor), 1.0f, w * 0.325f);
 			}
 
 			// start tertiary thruster glows
 			if (thruster_info.tertiary_glow_bitmap >= 0) {
 				p.screen.xyw.w -= w;
 				p.r = p.g = p.b = p.a = (ubyte)(255.0f * fog_int);
-				batch_add_bitmap_rotated(
-					thruster_info.tertiary_glow_bitmap,
-					TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT | TMAP_FLAG_SOFT_QUAD,
-					&p,
-					(magnitude * 4),
-					(w * 0.6f * thruster_info.tertiary_glow_rad_factor),
-					1.0f,
-					(-(D > 0) ? D : -D)
-					);
+				batching_add_volume_bitmap_rotated(thruster_info.tertiary_glow_bitmap, &p, magnitude * 4, w * 0.6f * thruster_info.tertiary_glow_rad_factor, 1.0f, -(D > 0) ? D : -D);
 			}
 
 			// begin secondary glows
@@ -2171,10 +2154,8 @@ void model_queue_render_thrusters(model_render_params *interp, polymodel *pm, in
 						d *= fog_int;
 					}
 
-					batch_add_beam(thruster_info.secondary_glow_bitmap,
-						TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT,
-						&pnt, &norm2, wVal*thruster_info.secondary_glow_rad_factor*0.5f, d
-						);
+					batching_add_beam(thruster_info.secondary_glow_bitmap, &pnt, &norm2, wVal*thruster_info.secondary_glow_rad_factor*0.5f, d);
+
 					if (Scene_framebuffer_in_frame && thruster_info.draw_distortion) {
 						vm_vec_scale_add(&norm2, &pnt, &fvec, wVal * 2 * thruster_info.distortion_length_factor);
 						int dist_bitmap;
@@ -2184,12 +2165,11 @@ void model_queue_render_thrusters(model_render_params *interp, polymodel *pm, in
 						else {
 							dist_bitmap = thruster_info.secondary_glow_bitmap;
 						}
+
 						float mag = vm_vec_mag(&gpt->pnt); 
 						mag -= (float)((int)mag);//Valathil - Get a fairly random but constant number to offset the distortion texture
-						distortion_add_beam(dist_bitmap,
-							TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT | TMAP_FLAG_DISTORTION_THRUSTER | TMAP_FLAG_SOFT_QUAD,
-							&pnt, &norm2, wVal*thruster_info.distortion_rad_factor*0.5f, 1.0f, mag
-							);
+
+						batching_add_distortion_beam(dist_bitmap, &pnt, &norm2, wVal*thruster_info.distortion_rad_factor*0.5f, 1.0f, mag);
 					}
 				}
 			}

@@ -42,6 +42,7 @@
 #include "parse/sexp.h"
 #include "popup/popup.h"
 #include "render/3d.h"
+#include "render/batching.h"
 #include "render/render.h"
 #include "ship/ship.h"
 #include "ui/uidefs.h"
@@ -1853,7 +1854,7 @@ void draw_model_rotating(model_render_params *render_info, int model_id, int x1,
 
 		gr_zbuffer_set(GR_ZBUFF_FULL); // Turn off depthbuffer again
 
-		batch_render_all();
+		batching_render_all();
 		Glowpoint_use_depth_buffer = true; // Back to normal
 
 		gr_end_view_matrix();
@@ -1935,7 +1936,7 @@ void draw_model_rotating(model_render_params *render_info, int model_id, int x1,
 
 		model_render_immediate(render_info, model_id, &model_orient, &vmd_zero_vector);
 
-		batch_render_all();
+		batching_render_all();
 
 		gr_end_view_matrix();
 		gr_end_proj_matrix();

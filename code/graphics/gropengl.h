@@ -655,6 +655,7 @@ const ubyte GL_zero_3ub[3] = { 0, 0, 0 };
 bool gr_opengl_init();
 void gr_opengl_cleanup(int minimize=1);
 int opengl_check_for_errors(char *err_at = NULL);
+bool gr_opengl_is_capable(gr_capability capability);
 
 #ifndef NDEBUG
 #define GL_CHECK_FOR_ERRORS(s)	opengl_check_for_errors((s))
