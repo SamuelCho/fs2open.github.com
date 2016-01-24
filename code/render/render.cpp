@@ -1140,7 +1140,6 @@ void render_colored_rect(color *clr, int x, int y, int w, int h, int resize_mode
 		gr_resize_screen_pos(&x, &y, &w, &h, resize_mode);
 	}
 
-	int saved_zbuf;
 	vertex v[4];
 	vertex *verts[4] = {&v[0], &v[1], &v[2], &v[3]};
 
@@ -1222,7 +1221,6 @@ void render_colored_rect(shader *shade_clr, int x, int y, int w, int h, int resi
 // adapted from g3_draw_2d_shield_icon()
 void render_shield_icon(color *clr, coord2d coords[6], int resize_mode)
 {
-	int saved_zbuf;
 	vertex v[6];
 	vertex *verts[6] = {&v[0], &v[1], &v[2], &v[3], &v[4], &v[5]};
 
@@ -1404,7 +1402,7 @@ void render_line(color *clr, int x1,int y1,int x2,int y2, int resize_mode)
 
 	vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, line);
 
-	gr_render_primitives_2d(&mat, PRIM_TYPE_POINTS, &vert_def, 0, 2);
+	gr_render_primitives_2d(&mat, PRIM_TYPE_LINES, &vert_def, 0, 2);
 }
 
 void render_line(int x1, int y1, int x2, int y2, int resize_mode)
@@ -1456,7 +1454,7 @@ void render_pixel(int x, int y, int resize_mode)
 }
 
 // adapted from opengl_bitmap_ex_internal()
-void render_bitmap_ex_internal(int texture, int x, int y, int w, int h, int sx, int sy, int resize_mode)
+void render_bitmap_ex_internal(int texture, float alpha, int x, int y, int w, int h, int sx, int sy, int resize_mode)
 {
 	if ( (w < 1) || (h < 1) ) {
 		return;
@@ -1475,7 +1473,7 @@ void render_bitmap_ex_internal(int texture, int x, int y, int w, int h, int sx, 
 	mat.set_cull_mode(false);
 
 	mat.set_texture_map(TM_BASE_TYPE, texture);
-	mat.set_color(255, 255, 255, (ubyte)(gr_screen.current_alpha * 255));
+	mat.set_color(255, 255, 255, (ubyte)fl2i(alpha * 255.0f));
 
 	if ( resize_mode != GR_RESIZE_NONE && (gr_screen.custom_size || (gr_screen.rendering_to_texture != -1)) ) {
 		do_resize = 1;
@@ -1483,7 +1481,7 @@ void render_bitmap_ex_internal(int texture, int x, int y, int w, int h, int sx, 
 		do_resize = 0;
 	}
 
-	bm_get_info(gr_screen.current_bitmap, &bw, &bh);
+	bm_get_info(texture, &bw, &bh);
 
 	u0 = u_scale * (i2fl(sx) / i2fl(bw));
 	v0 = v_scale * (i2fl(sy) / i2fl(bh));
@@ -1504,7 +1502,7 @@ void render_bitmap_ex_internal(int texture, int x, int y, int w, int h, int sx, 
 	render_screen_points_textured(&mat, x1, y1, u0, v0, x2, y2, u1, v1);
 }
 
-void render_bitmap_ex(int texture, int x, int y, int w, int h, int sx, int sy, int resize_mode)
+void render_bitmap_ex(int texture, float alpha, int x, int y, int w, int h, int sx, int sy, int resize_mode)
 {
 	if ( texture < 0 ) {
 		mprintf(("WARNING: trying to draw with invalid texture (%i)!\n", texture));
@@ -1623,7 +1621,7 @@ void render_bitmap_ex(int texture, int x, int y, int w, int h, int sx, int sy, i
 #endif
 
 	// We now have dx1,dy1 and dx2,dy2 and sx, sy all set validly within clip regions.
-	render_bitmap_ex_internal(texture, dx1, dy1, (dx2 - dx1 + 1), (dy2 - dy1 + 1), sx, sy, resize_mode);
+	render_bitmap_ex_internal(texture, alpha, dx1, dy1, (dx2 - dx1 + 1), (dy2 - dy1 + 1), sx, sy, resize_mode);
 }
 
 // adapted from opengl_aabitmap_ex_internal()
@@ -1665,7 +1663,7 @@ void render_aabitmap_ex_internal(int texture, color *clr, int x, int y, int w, i
 		do_resize = 0;
 	}
 
-	bm_get_info(gr_screen.current_bitmap, &bw, &bh);
+	bm_get_info(texture, &bw, &bh);
 
 	u0 = u_scale * (i2fl(sx) / i2fl(bw));
 	v0 = v_scale * (i2fl(sy) / i2fl(bh));
@@ -1918,6 +1916,7 @@ void render_string(color *clr, float sx, float sy, const char *s, int resize_mod
 
 	mat.set_texture_map(TM_BASE_TYPE, Current_font->bitmap_id);
 	mat.set_texture_source(TEXTURE_SOURCE_NO_FILTERING);
+	mat.set_texture_type(material::TEX_TYPE_AABITMAP);
 	mat.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
 	mat.set_depth_mode(ZBUFFER_TYPE_NONE);
 	mat.set_cull_mode(false);
@@ -2643,7 +2642,7 @@ void render_pline_special(color *clr, SCP_vector<vec3d> *pts, int thickness,int 
 	vec3d last_e1, last_e2;
 	vertex v[4];
 	vertex *verts[4] = {&v[0], &v[1], &v[2], &v[3]};
-	int saved_zbuffer_mode, idx;
+	int idx;
 	int started_frame = 0;
 
 	int num_pts = pts->size();

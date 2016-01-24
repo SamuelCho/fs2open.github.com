@@ -30,6 +30,7 @@
 #include "osapi/osregistry.h"
 #include "palman/palman.h"
 #include "render/3d.h"
+#include "render/render.h"
 
 
 #if defined(_WIN32)
@@ -342,8 +343,9 @@ void gr_opengl_flip()
 	//	opengl_save_mouse_area(mx, my, Gr_cursor_size, Gr_cursor_size);
 
 		if (Gr_cursor != -1 && bm_is_valid(Gr_cursor)) {
-			gr_set_bitmap(Gr_cursor);
-			gr_bitmap( mx, my, GR_RESIZE_NONE);
+			//gr_set_bitmap(Gr_cursor);
+			//gr_bitmap( mx, my, GR_RESIZE_NONE);
+			render_bitmap(Gr_cursor, mx, my, GR_RESIZE_NONE);
 		}
 	}
 

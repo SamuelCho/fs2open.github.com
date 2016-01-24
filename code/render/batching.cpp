@@ -986,6 +986,8 @@ void batching_render_buffer(primitive_batch_buffer *buffer)
 			batching_render_batch_item(&buffer->items[i], &buffer->layout, buffer->prim_type, buffer->buffer_num);
 		}
 	}
+
+	buffer->items.clear();
 }
 
 void batching_render_all(bool render_distortions)
