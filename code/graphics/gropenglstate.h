@@ -288,143 +288,54 @@ class opengl_array_state
 		void BindUniformBufferBindingIndex(GLuint id, GLuint index);
 };
 
+struct uniform_bind
+{
+	SCP_string name;
+
+	enum data_type {
+		INT,
+		FLOAT,
+		VEC2,
+		VEC3,
+		VEC4,
+		MATRIX4
+	};
+
+	uniform_bind::data_type type;
+	int index;
+
+	int count;
+	int tranpose;
+};
+
 class opengl_uniform_state
 {
-	uniform_data uniform_data_pool;
+	SCP_vector<uniform_bind> uniforms;
 
-	SCP_map<SCP_string, uniform> uniform_lookup;
-	
-	template <class T> void setDeviceUniform(GLint uniform_location, const T& val);
-	template <class T> void setDeviceUniform(GLint uniform_location, T* val, int size);
+	SCP_vector<int> uniform_data_ints;
+	SCP_vector<float> uniform_data_floats;
+	SCP_vector<vec2d> uniform_data_vec2d;
+	SCP_vector<vec3d> uniform_data_vec3d;
+	SCP_vector<vec4> uniform_data_vec4;
+	SCP_vector<matrix4> uniform_data_matrix4;
 
-	template <> void setDeviceUniform<int>(GLint uniform_location, const int& val)
-	{
-		vglUniform1iARB(uniform_location, val);
-	}
+	SCP_map<SCP_string, int> uniform_lookup;
 
-	template <> void setDeviceUniform<float>(GLint uniform_location, const float& val)
-	{
-		vglUniform1fARB(uniform_location, val);
-	}
-
-	template <> void setDeviceUniform<vec2d>(GLint uniform_location, const vec2d& val)
-	{
-		vglUniform2fARB(uniform_location, val.x, val.y);
-	}
-
-	template <> void setDeviceUniform<vec3d>(GLint uniform_location, const vec3d& val)
-	{
-		vglUniform3fARB(uniform_location, val.xyz.x, val.xyz.y, val.xyz.z);
-	}
-
-	template <> void setDeviceUniform<matrix4>(GLint uniform_location, const matrix4& val)
-	{
-		vglUniformMatrix4fvARB(uniform_location, 1, GL_FALSE, (const GLfloat*)&val);
-	}
-
-	template <> void setDeviceUniform<matrix4>(GLint uniform_location, matrix4* val, int size)
-	{
-		vglUniformMatrix4fvARB(uniform_location, size, GL_FALSE, (const GLfloat*)val);
-	}
-
-	uniform* findUniform(const SCP_string& name)
-	{
-		SCP_map<SCP_string, uniform>::iterator iter = uniform_lookup.find(name);
-
-		if ( iter == uniform_lookup.end() ) {
-			return NULL;
-		}
-
-		return &iter->second;
-	}
+	int findUniform(const SCP_string &name);
 public:
-	opengl_uniform_state()
-	{
-		reset();
-	}
+	opengl_uniform_state();
 
-	void setUniform(const SCP_string &name, float x, float y)
-	{
-		vec2d temp;
+	void setUniformi(const SCP_string &name, const int value);
+	void setUniformf(const SCP_string &name, const float value);
+	void setUniform2f(const SCP_string &name, const float x, const float y);
+	void setUniform2f(const SCP_string &name, const vec2d &val);
+	void setUniform3f(const SCP_string &name, const float x, const float y, const float z);
+	void setUniform3f(const SCP_string &name, const vec3d &value);
+	void setUniform4f(const SCP_string &name, const vec4 &val);
+	void setUniformMatrix4fv(const SCP_string &name, const int count, const matrix4 *value);
+	void setUniformMatrix4f(const SCP_string &name, const matrix4 &val);
 
-		temp.x = x;
-		temp.y = y;
-
-		setUniform(name, temp);
-	}
-
-	void setUniform(const SCP_string &name, float x, float y, float z)
-	{
-		vec3d temp;
-
-		temp.xyz.x = x;
-		temp.xyz.y = y;
-		temp.xyz.z = z;
-
-		setUniform(name, temp);
-	}
-
-	void setUniform(const SCP_string &name, bool val)
-	{
-		setUniform(name, val ? 1 : 0);
-	}
-
-	template <class T> void setUniform(const SCP_string &name, const T& val)
-	{
-		GLint uniform_location = opengl_shader_get_uniform(name.c_str());
-
-		if ( uniform_location < 0 ) {
-			return;
-		}
-
-		uniform* ptr = findUniform(name);
-
-		if ( ptr != NULL ) {
-			if ( !ptr->update(val) ) {
-				return;
-			}
-		} else {
-			uniform u(&uniform_data_pool);
-
-			u.init(name, val);
-
-			uniform_lookup[name] = u;
-		}
-
-		setDeviceUniform(uniform_location, val);
-	}
-
-	template <class T> void setUniform(const SCP_string &name, T* val, int size)
-	{
-		GLint uniform_location = opengl_shader_get_uniform(name.c_str());
-
-		if ( uniform_location < 0 ) {
-			return;
-		}
-
-		uniform* ptr = findUniform(name);
-
-		if ( ptr != NULL ) {
-			if ( !ptr->update(val, size) ) {
-				return;
-			}
-		}
-		else {
-			uniform u(&uniform_data_pool);
-
-			u.init(name, val, size);
-
-			uniform_lookup[name] = u;
-		}
-
-		setDeviceUniform(uniform_location, val, size);
-	}
-
-	void reset()
-	{
-		uniform_data_pool.clear();
-		uniform_lookup.clear();
-	}
+	void reset();
 };
 
 class opengl_state

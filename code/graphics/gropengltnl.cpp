@@ -2510,46 +2510,46 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	GL_state.Texture.SetShaderMode(GL_TRUE);
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_ANIMATED ) {
-		GL_state.Uniform.setUniform("anim_timer", material_info->get_animated_effect_time());
-		GL_state.Uniform.setUniform("effect_num", material_info->get_animated_effect());
-		GL_state.Uniform.setUniform("vpwidth", 1.0f / gr_screen.max_w);
-		GL_state.Uniform.setUniform("vpheight", 1.0f / gr_screen.max_h);
+		GL_state.Uniform.setUniformf("anim_timer", material_info->get_animated_effect_time());
+		GL_state.Uniform.setUniformi("effect_num", material_info->get_animated_effect());
+		GL_state.Uniform.setUniformf("vpwidth", 1.0f / gr_screen.max_w);
+		GL_state.Uniform.setUniformf("vpheight", 1.0f / gr_screen.max_h);
 	}
 	
 	if ( Current_shader->flags & SDR_FLAG_MODEL_CLIP ) {
 		material::clip_plane &clip_info = material_info->get_clip_plane();
 
-		GL_state.Uniform.setUniform("clip_normal", clip_info.normal);
-		GL_state.Uniform.setUniform("clip_position", clip_info.position);
+		GL_state.Uniform.setUniform3f("clip_normal", clip_info.normal);
+		GL_state.Uniform.setUniform3f("clip_position", clip_info.position);
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_LIGHT ) {
 		int num_lights = MIN(Num_active_gl_lights, GL_max_lights) - 1;
-		GL_state.Uniform.setUniform("n_lights", num_lights);
-		GL_state.Uniform.setUniform("light_factor", material_info->get_light_factor());
+		GL_state.Uniform.setUniformi("n_lights", num_lights);
+		GL_state.Uniform.setUniformf("light_factor", material_info->get_light_factor());
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_DIFFUSE_MAP ) {
-		GL_state.Uniform.setUniform("sBasemap", render_pass);
+		GL_state.Uniform.setUniformi("sBasemap", render_pass);
 
 		if ( material_info->is_desaturated() ) {
 			color &clr = material_info->get_color();
-			GL_state.Uniform.setUniform("desaturate_clr", clr.red / 255.0f, clr.green / 255.0f, clr.blue / 255.0f);
+			GL_state.Uniform.setUniform3f("desaturate_clr", clr.red / 255.0f, clr.green / 255.0f, clr.blue / 255.0f);
 
-			GL_state.Uniform.setUniform("desaturate", 1);
+			GL_state.Uniform.setUniformi("desaturate", 1);
 		} else {
-			GL_state.Uniform.setUniform("desaturate", 0);
+			GL_state.Uniform.setUniformi("desaturate", 0);
 		}
 
 		switch ( material_info->get_blend_mode() ) {
 		case ALPHA_BLEND_PREMULTIPLIED:
-			GL_state.Uniform.setUniform("blend_alpha", 1);
+			GL_state.Uniform.setUniformi("blend_alpha", 1);
 			break;
 		case ALPHA_BLEND_ALPHA_ADDITIVE:
-			GL_state.Uniform.setUniform("blend_alpha", 2);
+			GL_state.Uniform.setUniformi("blend_alpha", 2);
 			break;
 		default:
-			GL_state.Uniform.setUniform("blend_alpha", 0);
+			GL_state.Uniform.setUniformi("blend_alpha", 0);
 			break;
 		}
 
@@ -2559,7 +2559,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_GLOW_MAP ) {
-		GL_state.Uniform.setUniform("sGlowmap", render_pass);
+		GL_state.Uniform.setUniformi("sGlowmap", render_pass);
 
 		gr_opengl_tcache_set(material_info->get_texture_map(TM_GLOW_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
 
@@ -2567,7 +2567,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_SPEC_MAP ) {
-		GL_state.Uniform.setUniform("sSpecmap", render_pass);
+		GL_state.Uniform.setUniformi("sSpecmap", render_pass);
 
 		gr_opengl_tcache_set(material_info->get_texture_map(TM_SPECULAR_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
 
@@ -2583,9 +2583,9 @@ void opengl_tnl_set_model_material(model_material *material_info)
 				texture_mat.a1d[i] = GL_env_texture_matrix[i];
 			}
 
-			GL_state.Uniform.setUniform("alpha_spec", alpha_spec);
-			GL_state.Uniform.setUniform("envMatrix", texture_mat);
-			GL_state.Uniform.setUniform("sEnvmap", render_pass);
+			GL_state.Uniform.setUniformi("alpha_spec", alpha_spec);
+			GL_state.Uniform.setUniformMatrix4f("envMatrix", texture_mat);
+			GL_state.Uniform.setUniformi("sEnvmap", render_pass);
 
 			gr_opengl_tcache_set(ENVMAP, TCACHE_TYPE_CUBEMAP, &u_scale, &v_scale, render_pass);
 
@@ -2594,7 +2594,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_NORMAL_MAP ) {
-		GL_state.Uniform.setUniform("sNormalmap", render_pass);
+		GL_state.Uniform.setUniformi("sNormalmap", render_pass);
 
 		gr_opengl_tcache_set(material_info->get_texture_map(TM_NORMAL_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
 
@@ -2602,7 +2602,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_HEIGHT_MAP ) {
-		GL_state.Uniform.setUniform("sHeightmap", render_pass);
+		GL_state.Uniform.setUniformi("sHeightmap", render_pass);
 
 		gr_opengl_tcache_set(material_info->get_texture_map(TM_HEIGHT_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
 
@@ -2610,7 +2610,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_MISC_MAP ) {
-		GL_state.Uniform.setUniform("sMiscmap", render_pass);
+		GL_state.Uniform.setUniformi("sMiscmap", render_pass);
 
 		gr_opengl_tcache_set(material_info->get_texture_map(TM_MISC_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
 
@@ -2629,14 +2629,14 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		model_matrix.a1d[14] = Object_position.xyz.z;
 		model_matrix.a1d[15] = 1.0f;
 
-		GL_state.Uniform.setUniform("shadow_mv_matrix", Shadow_view_matrix);
-		GL_state.Uniform.setUniform("shadow_proj_matrix", Shadow_proj_matrix, MAX_SHADOW_CASCADES);
-		GL_state.Uniform.setUniform("model_matrix", model_matrix);
-		GL_state.Uniform.setUniform("veryneardist", Shadow_cascade_distances[0]);
-		GL_state.Uniform.setUniform("neardist", Shadow_cascade_distances[1]);
-		GL_state.Uniform.setUniform("middist", Shadow_cascade_distances[2]);
-		GL_state.Uniform.setUniform("fardist", Shadow_cascade_distances[3]);
-		GL_state.Uniform.setUniform("shadow_map", render_pass);
+		GL_state.Uniform.setUniformMatrix4f("shadow_mv_matrix", Shadow_view_matrix);
+		GL_state.Uniform.setUniformMatrix4fv("shadow_proj_matrix", MAX_SHADOW_CASCADES, Shadow_proj_matrix);
+		GL_state.Uniform.setUniformMatrix4f("model_matrix", model_matrix);
+		GL_state.Uniform.setUniformf("veryneardist", Shadow_cascade_distances[0]);
+		GL_state.Uniform.setUniformf("neardist", Shadow_cascade_distances[1]);
+		GL_state.Uniform.setUniformf("middist", Shadow_cascade_distances[2]);
+		GL_state.Uniform.setUniformf("fardist", Shadow_cascade_distances[3]);
+		GL_state.Uniform.setUniformi("shadow_map", render_pass);
 
 		GL_state.Texture.SetActiveUnit(render_pass);
 		GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY_EXT);
@@ -2646,11 +2646,11 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_SHADOW_MAP ) {
-		GL_state.Uniform.setUniform("shadow_proj_matrix", Shadow_proj_matrix, MAX_SHADOW_CASCADES);
+		GL_state.Uniform.setUniformMatrix4fv("shadow_proj_matrix", MAX_SHADOW_CASCADES, Shadow_proj_matrix);
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_ANIMATED ) {
-		GL_state.Uniform.setUniform("sFramebuffer", render_pass);
+		GL_state.Uniform.setUniformi("sFramebuffer", render_pass);
 
 		GL_state.Texture.SetActiveUnit(render_pass);
 		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
@@ -2666,8 +2666,8 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_TRANSFORM ) {
-		GL_state.Uniform.setUniform("transform_tex", render_pass);
-		GL_state.Uniform.setUniform("buffer_matrix_offset", GL_transform_buffer_offset);
+		GL_state.Uniform.setUniformi("transform_tex", render_pass);
+		GL_state.Uniform.setUniformi("buffer_matrix_offset", GL_transform_buffer_offset);
 
 		GL_state.Texture.SetActiveUnit(render_pass);
 		GL_state.Texture.SetTarget(GL_TEXTURE_BUFFER_ARB);
@@ -2692,12 +2692,12 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		base_color.xyz.y = tm_clr.base.g;
 		base_color.xyz.z = tm_clr.base.b;
 
-		GL_state.Uniform.setUniform("stripe_color", stripe_color);
-		GL_state.Uniform.setUniform("base_color", base_color);
+		GL_state.Uniform.setUniform3f("stripe_color", stripe_color);
+		GL_state.Uniform.setUniform3f("base_color", base_color);
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_THRUSTER ) {
-		GL_state.Uniform.setUniform("thruster_scale", material_info->get_thrust_scale());
+		GL_state.Uniform.setUniformf("thruster_scale", material_info->get_thrust_scale());
 	}
 }
 
@@ -2714,46 +2714,46 @@ void opengl_tnl_set_model_material_fixed(model_material *material_info)
 	Assert( Current_shader->shader == SDR_TYPE_MODEL );
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_ANIMATED ) {
-		GL_state.Uniform.setUniform("anim_timer", material_info->get_animated_effect_time());
-		GL_state.Uniform.setUniform("effect_num", material_info->get_animated_effect());
-		GL_state.Uniform.setUniform("vpwidth", 1.0f / gr_screen.max_w);
-		GL_state.Uniform.setUniform("vpheight", 1.0f / gr_screen.max_h);
+		GL_state.Uniform.setUniformf("anim_timer", material_info->get_animated_effect_time());
+		GL_state.Uniform.setUniformi("effect_num", material_info->get_animated_effect());
+		GL_state.Uniform.setUniformf("vpwidth", 1.0f / gr_screen.max_w);
+		GL_state.Uniform.setUniformf("vpheight", 1.0f / gr_screen.max_h);
 	}
 	
 	if ( Current_shader->flags & SDR_FLAG_MODEL_CLIP ) {
 		material::clip_plane &clip_info = material_info->get_clip_plane();
 
-		GL_state.Uniform.setUniform("clip_normal", clip_info.normal);
-		GL_state.Uniform.setUniform("clip_position", clip_info.position);
+		GL_state.Uniform.setUniform3f("clip_normal", clip_info.normal);
+		GL_state.Uniform.setUniform3f("clip_position", clip_info.position);
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_LIGHT ) {
 		int num_lights = MIN(Num_active_gl_lights, GL_max_lights) - 1;
-		GL_state.Uniform.setUniform("n_lights", num_lights);
-		GL_state.Uniform.setUniform("light_factor", material_info->get_light_factor());
+		GL_state.Uniform.setUniformi("n_lights", num_lights);
+		GL_state.Uniform.setUniformf("light_factor", material_info->get_light_factor());
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_DIFFUSE_MAP ) {
-		GL_state.Uniform.setUniform("sBasemap", render_pass);
+		GL_state.Uniform.setUniformi("sBasemap", render_pass);
 
 		if ( material_info->is_desaturated() ) {
 			color &clr = material_info->get_color();
-			GL_state.Uniform.setUniform("desaturate_clr", clr.red / 255.0f, clr.green / 255.0f, clr.blue / 255.0f);
+			GL_state.Uniform.setUniform3f("desaturate_clr", clr.red / 255.0f, clr.green / 255.0f, clr.blue / 255.0f);
 
-			GL_state.Uniform.setUniform("desaturate", 1);
+			GL_state.Uniform.setUniformi("desaturate", 1);
 		} else {
-			GL_state.Uniform.setUniform("desaturate", 0);
+			GL_state.Uniform.setUniformi("desaturate", 0);
 		}
 
 		switch ( material_info->get_blend_mode() ) {
 		case ALPHA_BLEND_PREMULTIPLIED:
-			GL_state.Uniform.setUniform("blend_alpha", 1);
+			GL_state.Uniform.setUniformi("blend_alpha", 1);
 			break;
 		case ALPHA_BLEND_ALPHA_ADDITIVE:
-			GL_state.Uniform.setUniform("blend_alpha", 2);
+			GL_state.Uniform.setUniformi("blend_alpha", 2);
 			break;
 		default:
-			GL_state.Uniform.setUniform("blend_alpha", 0);
+			GL_state.Uniform.setUniformi("blend_alpha", 0);
 			break;
 		}
 
@@ -2763,7 +2763,7 @@ void opengl_tnl_set_model_material_fixed(model_material *material_info)
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_GLOW_MAP ) {
-		GL_state.Uniform.setUniform("sGlowmap", render_pass);
+		GL_state.Uniform.setUniformi("sGlowmap", render_pass);
 
 		gr_opengl_tcache_set(material_info->get_texture_map(TM_GLOW_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
 
@@ -2771,7 +2771,7 @@ void opengl_tnl_set_model_material_fixed(model_material *material_info)
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_SPEC_MAP ) {
-		GL_state.Uniform.setUniform("sSpecmap", render_pass);
+		GL_state.Uniform.setUniformi("sSpecmap", render_pass);
 
 		gr_opengl_tcache_set(material_info->get_texture_map(TM_SPECULAR_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
 
@@ -2787,9 +2787,9 @@ void opengl_tnl_set_model_material_fixed(model_material *material_info)
 				texture_mat.a1d[i] = GL_env_texture_matrix[i];
 			}
 
-			GL_state.Uniform.setUniform("alpha_spec", alpha_spec);
-			GL_state.Uniform.setUniform("envMatrix", texture_mat);
-			GL_state.Uniform.setUniform("sEnvmap", render_pass);
+			GL_state.Uniform.setUniformi("alpha_spec", alpha_spec);
+			GL_state.Uniform.setUniformMatrix4f("envMatrix", texture_mat);
+			GL_state.Uniform.setUniformi("sEnvmap", render_pass);
 
 			gr_opengl_tcache_set(ENVMAP, TCACHE_TYPE_CUBEMAP, &u_scale, &v_scale, render_pass);
 
@@ -2798,7 +2798,7 @@ void opengl_tnl_set_model_material_fixed(model_material *material_info)
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_NORMAL_MAP ) {
-		GL_state.Uniform.setUniform("sNormalmap", render_pass);
+		GL_state.Uniform.setUniformi("sNormalmap", render_pass);
 
 		gr_opengl_tcache_set(material_info->get_texture_map(TM_NORMAL_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
 
@@ -2806,7 +2806,7 @@ void opengl_tnl_set_model_material_fixed(model_material *material_info)
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_HEIGHT_MAP ) {
-		GL_state.Uniform.setUniform("sHeightmap", render_pass);
+		GL_state.Uniform.setUniformi("sHeightmap", render_pass);
 
 		gr_opengl_tcache_set(material_info->get_texture_map(TM_HEIGHT_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
 
@@ -2814,7 +2814,7 @@ void opengl_tnl_set_model_material_fixed(model_material *material_info)
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_MISC_MAP ) {
-		GL_state.Uniform.setUniform("sMiscmap", render_pass);
+		GL_state.Uniform.setUniformi("sMiscmap", render_pass);
 
 		gr_opengl_tcache_set(material_info->get_texture_map(TM_MISC_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
 
@@ -2833,14 +2833,14 @@ void opengl_tnl_set_model_material_fixed(model_material *material_info)
 		model_matrix.a1d[14] = Object_position.xyz.z;
 		model_matrix.a1d[15] = 1.0f;
 
-		GL_state.Uniform.setUniform("shadow_mv_matrix", Shadow_view_matrix);
-		GL_state.Uniform.setUniform("shadow_proj_matrix", Shadow_proj_matrix, MAX_SHADOW_CASCADES);
-		GL_state.Uniform.setUniform("model_matrix", model_matrix);
-		GL_state.Uniform.setUniform("veryneardist", Shadow_cascade_distances[0]);
-		GL_state.Uniform.setUniform("neardist", Shadow_cascade_distances[1]);
-		GL_state.Uniform.setUniform("middist", Shadow_cascade_distances[2]);
-		GL_state.Uniform.setUniform("fardist", Shadow_cascade_distances[3]);
-		GL_state.Uniform.setUniform("shadow_map", render_pass);
+		GL_state.Uniform.setUniformMatrix4f("shadow_mv_matrix", Shadow_view_matrix);
+		GL_state.Uniform.setUniformMatrix4fv("shadow_proj_matrix", MAX_SHADOW_CASCADES, Shadow_proj_matrix);
+		GL_state.Uniform.setUniformMatrix4f("model_matrix", model_matrix);
+		GL_state.Uniform.setUniformf("veryneardist", Shadow_cascade_distances[0]);
+		GL_state.Uniform.setUniformf("neardist", Shadow_cascade_distances[1]);
+		GL_state.Uniform.setUniformf("middist", Shadow_cascade_distances[2]);
+		GL_state.Uniform.setUniformf("fardist", Shadow_cascade_distances[3]);
+		GL_state.Uniform.setUniformi("shadow_map", render_pass);
 
 		GL_state.Texture.SetActiveUnit(render_pass);
 		GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY_EXT);
@@ -2850,11 +2850,11 @@ void opengl_tnl_set_model_material_fixed(model_material *material_info)
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_SHADOW_MAP ) {
-		GL_state.Uniform.setUniform("shadow_proj_matrix", Shadow_proj_matrix, MAX_SHADOW_CASCADES);
+		GL_state.Uniform.setUniformMatrix4fv("shadow_proj_matrix", MAX_SHADOW_CASCADES, Shadow_proj_matrix);
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_ANIMATED ) {
-		GL_state.Uniform.setUniform("sFramebuffer", render_pass);
+		GL_state.Uniform.setUniformi("sFramebuffer", render_pass);
 
 		GL_state.Texture.SetActiveUnit(render_pass);
 		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
@@ -2870,8 +2870,8 @@ void opengl_tnl_set_model_material_fixed(model_material *material_info)
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_TRANSFORM ) {
-		GL_state.Uniform.setUniform("transform_tex", render_pass);
-		GL_state.Uniform.setUniform("buffer_matrix_offset", GL_transform_buffer_offset);
+		GL_state.Uniform.setUniformi("transform_tex", render_pass);
+		GL_state.Uniform.setUniformi("buffer_matrix_offset", GL_transform_buffer_offset);
 
 		GL_state.Texture.SetActiveUnit(render_pass);
 		GL_state.Texture.SetTarget(GL_TEXTURE_BUFFER_ARB);
@@ -2896,12 +2896,12 @@ void opengl_tnl_set_model_material_fixed(model_material *material_info)
 		base_color.xyz.y = tm_clr.base.g;
 		base_color.xyz.z = tm_clr.base.b;
 
-		GL_state.Uniform.setUniform("stripe_color", stripe_color);
-		GL_state.Uniform.setUniform("base_color", base_color);
+		GL_state.Uniform.setUniform3f("stripe_color", stripe_color);
+		GL_state.Uniform.setUniform3f("base_color", base_color);
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_THRUSTER ) {
-		GL_state.Uniform.setUniform("thruster_scale", material_info->get_thrust_scale());
+		GL_state.Uniform.setUniformf("thruster_scale", material_info->get_thrust_scale());
 	}
 }
 
@@ -2911,18 +2911,18 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 	int render_pass = 0;
 
 	if ( flags & TMAP_ANIMATED_SHADER ) {
-		GL_state.Uniform.setUniform("anim_timer", opengl_shader_get_animated_timer());
-		GL_state.Uniform.setUniform("effect_num", opengl_shader_get_animated_effect());
-		GL_state.Uniform.setUniform("vpwidth", 1.0f/gr_screen.max_w);
-		GL_state.Uniform.setUniform("vpheight", 1.0f/gr_screen.max_h);
+		GL_state.Uniform.setUniformf("anim_timer", opengl_shader_get_animated_timer());
+		GL_state.Uniform.setUniformi("effect_num", opengl_shader_get_animated_effect());
+		GL_state.Uniform.setUniformf("vpwidth", 1.0f/gr_screen.max_w);
+		GL_state.Uniform.setUniformf("vpheight", 1.0f/gr_screen.max_h);
 	}
 
 	int num_lights = MIN(Num_active_gl_lights, GL_max_lights) - 1;
-	GL_state.Uniform.setUniform("n_lights", num_lights);
-	GL_state.Uniform.setUniform( "light_factor", GL_light_factor );
+	GL_state.Uniform.setUniformi("n_lights", num_lights);
+	GL_state.Uniform.setUniformf( "light_factor", GL_light_factor );
 	
 	if ( shader_flags & SDR_FLAG_MODEL_CLIP ) {
-		GL_state.Uniform.setUniform("use_clip_plane", G3_user_clip);
+		GL_state.Uniform.setUniformi("use_clip_plane", G3_user_clip);
 
 		if ( G3_user_clip ) {
 			vec3d normal, pos;
@@ -2944,31 +2944,31 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 			model_matrix.a1d[14] = Object_position.xyz.z;
 			model_matrix.a1d[15] = 1.0f;
 
-			GL_state.Uniform.setUniform("clip_normal", normal);
-			GL_state.Uniform.setUniform("clip_position", pos);
-			GL_state.Uniform.setUniform("world_matrix", model_matrix);
+			GL_state.Uniform.setUniform3f("clip_normal", normal);
+			GL_state.Uniform.setUniform3f("clip_position", pos);
+			GL_state.Uniform.setUniformMatrix4f("world_matrix", model_matrix);
 		}
 	}
 
 	if ( shader_flags & SDR_FLAG_MODEL_DIFFUSE_MAP ) {
-		GL_state.Uniform.setUniform("sBasemap", render_pass);
+		GL_state.Uniform.setUniformi("sBasemap", render_pass);
 		
 		if ( flags & TMAP_FLAG_DESATURATE ) {
-			GL_state.Uniform.setUniform("desaturate", 1);
-			GL_state.Uniform.setUniform("desaturate_clr", gr_screen.current_color.red/255.0f, gr_screen.current_color.green/255.0f, gr_screen.current_color.blue/255.0f);
+			GL_state.Uniform.setUniformi("desaturate", 1);
+			GL_state.Uniform.setUniform3f("desaturate_clr", gr_screen.current_color.red/255.0f, gr_screen.current_color.green/255.0f, gr_screen.current_color.blue/255.0f);
 		} else {
-			GL_state.Uniform.setUniform("desaturate", 0);
+			GL_state.Uniform.setUniformi("desaturate", 0);
 		}
 
 		if ( flags & TMAP_FLAG_ALPHA ) {
 			if ( bm_has_alpha_channel(gr_screen.current_bitmap) ) {
 				GL_state.SetAlphaBlendMode(ALPHA_BLEND_PREMULTIPLIED);
-				GL_state.Uniform.setUniform("blend_alpha", 1);
+				GL_state.Uniform.setUniformi("blend_alpha", 1);
 			} else {
-				GL_state.Uniform.setUniform("blend_alpha", 2);
+				GL_state.Uniform.setUniformi("blend_alpha", 2);
 			}
 		} else {
-			GL_state.Uniform.setUniform("blend_alpha", 0);
+			GL_state.Uniform.setUniformi("blend_alpha", 0);
 		}
 
 		gr_opengl_tcache_set(gr_screen.current_bitmap, tmap_type, &u_scale, &v_scale, render_pass);
@@ -2977,7 +2977,7 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 	}
 
 	if ( shader_flags & SDR_FLAG_MODEL_GLOW_MAP ) {
-		GL_state.Uniform.setUniform("sGlowmap", render_pass);
+		GL_state.Uniform.setUniformi("sGlowmap", render_pass);
 
 		gr_opengl_tcache_set(GLOWMAP, tmap_type, &u_scale, &v_scale, render_pass);
 
@@ -2985,7 +2985,7 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 	}
 
 	if ( shader_flags & SDR_FLAG_MODEL_SPEC_MAP ) {
-		GL_state.Uniform.setUniform("sSpecmap", render_pass);
+		GL_state.Uniform.setUniformi("sSpecmap", render_pass);
 
 		gr_opengl_tcache_set(SPECMAP, tmap_type, &u_scale, &v_scale, render_pass);
 
@@ -3001,9 +3001,9 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 				texture_mat.a1d[i] = GL_env_texture_matrix[i];
 			}
 
-			GL_state.Uniform.setUniform("alpha_spec", alpha_spec);
-			GL_state.Uniform.setUniform("envMatrix", texture_mat);
-			GL_state.Uniform.setUniform("sEnvmap", render_pass);
+			GL_state.Uniform.setUniformi("alpha_spec", alpha_spec);
+			GL_state.Uniform.setUniformMatrix4f("envMatrix", texture_mat);
+			GL_state.Uniform.setUniformi("sEnvmap", render_pass);
 
 			gr_opengl_tcache_set(ENVMAP, TCACHE_TYPE_CUBEMAP, &u_scale, &v_scale, render_pass);
 
@@ -3012,7 +3012,7 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 	}
 
 	if ( shader_flags & SDR_FLAG_MODEL_NORMAL_MAP ) {
-		GL_state.Uniform.setUniform("sNormalmap", render_pass);
+		GL_state.Uniform.setUniformi("sNormalmap", render_pass);
 
 		gr_opengl_tcache_set(NORMMAP, tmap_type, &u_scale, &v_scale, render_pass);
 
@@ -3020,7 +3020,7 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 	}
 
 	if ( shader_flags & SDR_FLAG_MODEL_HEIGHT_MAP ) {
-		GL_state.Uniform.setUniform("sHeightmap", render_pass);
+		GL_state.Uniform.setUniformi("sHeightmap", render_pass);
 		
 		gr_opengl_tcache_set(HEIGHTMAP, tmap_type, &u_scale, &v_scale, render_pass);
 
@@ -3028,7 +3028,7 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 	}
 
 	if ( shader_flags & SDR_FLAG_MODEL_MISC_MAP ) {
-		GL_state.Uniform.setUniform("sMiscmap", render_pass);
+		GL_state.Uniform.setUniformi("sMiscmap", render_pass);
 
 		gr_opengl_tcache_set(MISCMAP, tmap_type, &u_scale, &v_scale, render_pass);
 
@@ -3047,14 +3047,14 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 		model_matrix.a1d[14] = Object_position.xyz.z;
 		model_matrix.a1d[15] = 1.0f;
 
-		GL_state.Uniform.setUniform("shadow_mv_matrix", Shadow_view_matrix);
-		GL_state.Uniform.setUniform("shadow_proj_matrix", Shadow_proj_matrix, MAX_SHADOW_CASCADES);
-		GL_state.Uniform.setUniform("model_matrix", model_matrix);
-		GL_state.Uniform.setUniform("veryneardist", Shadow_cascade_distances[0]);
-		GL_state.Uniform.setUniform("neardist", Shadow_cascade_distances[1]);
-		GL_state.Uniform.setUniform("middist", Shadow_cascade_distances[2]);
-		GL_state.Uniform.setUniform("fardist", Shadow_cascade_distances[3]);
-		GL_state.Uniform.setUniform("shadow_map", render_pass);
+		GL_state.Uniform.setUniformMatrix4f("shadow_mv_matrix", Shadow_view_matrix);
+		GL_state.Uniform.setUniformMatrix4fv("shadow_proj_matrix", MAX_SHADOW_CASCADES, Shadow_proj_matrix);
+		GL_state.Uniform.setUniformMatrix4f("model_matrix", model_matrix);
+		GL_state.Uniform.setUniformf("veryneardist", Shadow_cascade_distances[0]);
+		GL_state.Uniform.setUniformf("neardist", Shadow_cascade_distances[1]);
+		GL_state.Uniform.setUniformf("middist", Shadow_cascade_distances[2]);
+		GL_state.Uniform.setUniformf("fardist", Shadow_cascade_distances[3]);
+		GL_state.Uniform.setUniformi("shadow_map", render_pass);
 		
 		GL_state.Texture.SetActiveUnit(render_pass);
 		GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY_EXT);
@@ -3064,11 +3064,11 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 	}
 
 	if ( shader_flags & SDR_FLAG_MODEL_SHADOW_MAP ) {
-		GL_state.Uniform.setUniform("shadow_proj_matrix", Shadow_proj_matrix, MAX_SHADOW_CASCADES);
+		GL_state.Uniform.setUniformMatrix4fv("shadow_proj_matrix", MAX_SHADOW_CASCADES, Shadow_proj_matrix);
 	}
 
 	if ( shader_flags & SDR_FLAG_MODEL_ANIMATED ) {
-		GL_state.Uniform.setUniform("sFramebuffer", render_pass);
+		GL_state.Uniform.setUniformi("sFramebuffer", render_pass);
 		
 		GL_state.Texture.SetActiveUnit(render_pass);
 		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
@@ -3084,8 +3084,8 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 	}
 
 	if ( shader_flags & SDR_FLAG_MODEL_TRANSFORM ) {
-		GL_state.Uniform.setUniform("transform_tex", render_pass);
-		GL_state.Uniform.setUniform("buffer_matrix_offset", GL_transform_buffer_offset);
+		GL_state.Uniform.setUniformi("transform_tex", render_pass);
+		GL_state.Uniform.setUniformi("buffer_matrix_offset", GL_transform_buffer_offset);
 		
 		GL_state.Texture.SetActiveUnit(render_pass);
 		GL_state.Texture.SetTarget(GL_TEXTURE_BUFFER_ARB);
@@ -3109,12 +3109,12 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 		base_color.xyz.y = Current_team_color->base.g;
 		base_color.xyz.z = Current_team_color->base.b;
 
-		GL_state.Uniform.setUniform("stripe_color", stripe_color);
-		GL_state.Uniform.setUniform("base_color", base_color);
+		GL_state.Uniform.setUniform3f("stripe_color", stripe_color);
+		GL_state.Uniform.setUniform3f("base_color", base_color);
 	}
 
 	if ( shader_flags & SDR_FLAG_MODEL_THRUSTER ) {
-		GL_state.Uniform.setUniform("thruster_scale", GL_thrust_scale);
+		GL_state.Uniform.setUniformf("thruster_scale", GL_thrust_scale);
 	}
 }
 
@@ -3122,17 +3122,17 @@ void opengl_tnl_set_material_particle(particle_material * material_info)
 {
 	opengl_tnl_set_material(material_info, true);
 
-	GL_state.Uniform.setUniform("baseMap", 0);
-	GL_state.Uniform.setUniform("depthMap", 1);
-	GL_state.Uniform.setUniform("window_width", (float)gr_screen.max_w);
-	GL_state.Uniform.setUniform("window_height", (float)gr_screen.max_h);
-	GL_state.Uniform.setUniform("nearZ", Min_draw_distance);
-	GL_state.Uniform.setUniform("farZ", Max_draw_distance);
+	GL_state.Uniform.setUniformi("baseMap", 0);
+	GL_state.Uniform.setUniformi("depthMap", 1);
+	GL_state.Uniform.setUniformf("window_width", (float)gr_screen.max_w);
+	GL_state.Uniform.setUniformf("window_height", (float)gr_screen.max_h);
+	GL_state.Uniform.setUniformf("nearZ", Min_draw_distance);
+	GL_state.Uniform.setUniformf("farZ", Max_draw_distance);
 
 	if ( Cmdline_no_deferred_lighting ) {
-		GL_state.Uniform.setUniform("linear_depth", 0);
+		GL_state.Uniform.setUniformi("linear_depth", 0);
 	} else {
-		GL_state.Uniform.setUniform("linear_depth", 1);
+		GL_state.Uniform.setUniformi("linear_depth", 1);
 	}
 
 	if ( !Cmdline_no_deferred_lighting ) {
@@ -3163,17 +3163,17 @@ void opengl_tnl_set_material_soft_particle(uint flags)
 
 	opengl_shader_set_current(sdr_index);
 
-	GL_state.Uniform.setUniform("baseMap", 0);
-	GL_state.Uniform.setUniform("depthMap", 1);
-	GL_state.Uniform.setUniform("window_width", (float)gr_screen.max_w);
-	GL_state.Uniform.setUniform("window_height", (float)gr_screen.max_h);
-	GL_state.Uniform.setUniform("nearZ", Min_draw_distance);
-	GL_state.Uniform.setUniform("farZ", Max_draw_distance);
+	GL_state.Uniform.setUniformi("baseMap", 0);
+	GL_state.Uniform.setUniformi("depthMap", 1);
+	GL_state.Uniform.setUniformf("window_width", (float)gr_screen.max_w);
+	GL_state.Uniform.setUniformf("window_height", (float)gr_screen.max_h);
+	GL_state.Uniform.setUniformf("nearZ", Min_draw_distance);
+	GL_state.Uniform.setUniformf("farZ", Max_draw_distance);
 
 	if ( Cmdline_no_deferred_lighting ) {
-		GL_state.Uniform.setUniform("linear_depth", 0);
+		GL_state.Uniform.setUniformi("linear_depth", 0);
 	} else {
-		GL_state.Uniform.setUniform("linear_depth", 1);
+		GL_state.Uniform.setUniformi("linear_depth", 1);
 	}
 
 	if ( !Cmdline_no_deferred_lighting ) {
@@ -3195,28 +3195,28 @@ void opengl_tnl_set_material_distortion(distortion_material* material_info)
 {
 	opengl_tnl_set_material(material_info, true);
 
-	GL_state.Uniform.setUniform("baseMap", 0);
-	GL_state.Uniform.setUniform("depthMap", 1);
-	GL_state.Uniform.setUniform("window_width", (float)gr_screen.max_w);
-	GL_state.Uniform.setUniform("window_height", (float)gr_screen.max_h);
-	GL_state.Uniform.setUniform("nearZ", Min_draw_distance);
-	GL_state.Uniform.setUniform("farZ", Max_draw_distance);
-	GL_state.Uniform.setUniform("frameBuffer", 2);
+	GL_state.Uniform.setUniformi("baseMap", 0);
+	GL_state.Uniform.setUniformi("depthMap", 1);
+	GL_state.Uniform.setUniformf("window_width", (float)gr_screen.max_w);
+	GL_state.Uniform.setUniformf("window_height", (float)gr_screen.max_h);
+	GL_state.Uniform.setUniformf("nearZ", Min_draw_distance);
+	GL_state.Uniform.setUniformf("farZ", Max_draw_distance);
+	GL_state.Uniform.setUniformi("frameBuffer", 2);
 
 	GL_state.Texture.SetActiveUnit(2);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Scene_effect_texture);
 
 	if(material_info->get_thruster_rendering()) {
-		GL_state.Uniform.setUniform("distMap", 3);
+		GL_state.Uniform.setUniformi("distMap", 3);
 
 		GL_state.Texture.SetActiveUnit(3);
 		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 		GL_state.Texture.Enable(Distortion_texture[!Distortion_switch]);
-		GL_state.Uniform.setUniform("use_offset", 1.0f);
+		GL_state.Uniform.setUniformf("use_offset", 1.0f);
 	} else {
-		GL_state.Uniform.setUniform("distMap", 0);
-		GL_state.Uniform.setUniform("use_offset", 0.0f);
+		GL_state.Uniform.setUniformi("distMap", 0);
+		GL_state.Uniform.setUniformf("use_offset", 0.0f);
 	}
 
 	Assert(Scene_depth_texture != 0);
@@ -3230,28 +3230,28 @@ void opengl_tnl_set_material_distortion(uint flags)
 {
 	opengl_shader_set_current( gr_opengl_maybe_create_shader(SDR_TYPE_EFFECT_DISTORTION, 0) );
 
-	GL_state.Uniform.setUniform("baseMap", 0);
-	GL_state.Uniform.setUniform("depthMap", 1);
-	GL_state.Uniform.setUniform("window_width", (float)gr_screen.max_w);
-	GL_state.Uniform.setUniform("window_height", (float)gr_screen.max_h);
-	GL_state.Uniform.setUniform("nearZ", Min_draw_distance);
-	GL_state.Uniform.setUniform("farZ", Max_draw_distance);
-	GL_state.Uniform.setUniform("frameBuffer", 2);
+	GL_state.Uniform.setUniformi("baseMap", 0);
+	GL_state.Uniform.setUniformi("depthMap", 1);
+	GL_state.Uniform.setUniformf("window_width", (float)gr_screen.max_w);
+	GL_state.Uniform.setUniformf("window_height", (float)gr_screen.max_h);
+	GL_state.Uniform.setUniformf("nearZ", Min_draw_distance);
+	GL_state.Uniform.setUniformf("farZ", Max_draw_distance);
+	GL_state.Uniform.setUniformi("frameBuffer", 2);
 
 	GL_state.Texture.SetActiveUnit(2);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Scene_effect_texture);
 
 	if(flags & TMAP_FLAG_DISTORTION_THRUSTER) {
-		GL_state.Uniform.setUniform("distMap", 3);
+		GL_state.Uniform.setUniformi("distMap", 3);
 
 		GL_state.Texture.SetActiveUnit(3);
 		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 		GL_state.Texture.Enable(Distortion_texture[!Distortion_switch]);
-		GL_state.Uniform.setUniform("use_offset", 1.0f);
+		GL_state.Uniform.setUniformf("use_offset", 1.0f);
 	} else {
-		GL_state.Uniform.setUniform("distMap", 0);
-		GL_state.Uniform.setUniform("use_offset", 0.0f);
+		GL_state.Uniform.setUniformi("distMap", 0);
+		GL_state.Uniform.setUniformf("use_offset", 0.0f);
 	}
 
 	Assert(Scene_depth_texture != 0);
