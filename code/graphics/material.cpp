@@ -87,6 +87,8 @@ int material::get_texture_type()
 	default:
 	case TEX_TYPE_NORMAL:
 		return TCACHE_TYPE_NORMAL;
+	case TEX_TYPE_XPARENT:
+		return TCACHE_TYPE_XPARENT;
 	case TEX_TYPE_INTERFACE:
 		return TCACHE_TYPE_INTERFACE;
 	case TEX_TYPE_AABITMAP:

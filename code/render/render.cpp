@@ -70,6 +70,10 @@ void render_set_unlit_material(material* mat_info, int texture, float alpha, boo
 	} else {
 		mat_info->set_color(1.0f, 1.0f, 1.0f, alpha);
 	}
+
+	if ( texture >= 0 && bm_has_alpha_channel(texture) ) {
+		mat_info->set_texture_type(material::TEX_TYPE_XPARENT);
+	}
 }
 
 void render_set_unlit_color_material(material* mat_info, int texture, color *clr, bool blending, bool depth_testing)
@@ -1365,6 +1369,7 @@ void render_line(color *clr, int x1,int y1,int x2,int y2, int resize_mode)
 	mat.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
 	mat.set_depth_mode(ZBUFFER_TYPE_NONE);
 	mat.set_color(*clr);
+	mat.set_cull_mode(false);
 
 	if ( (x1 == x2) && (y1 == y2) ) {
 
@@ -1418,6 +1423,7 @@ void render_line_3d(color *clr, bool depth_testing, vec3d *start, vec3d *end)
 	mat.set_texture_source(TEXTURE_SOURCE_NONE);
 	mat.set_depth_mode((depth_testing) ? ZBUFFER_TYPE_READ : ZBUFFER_TYPE_NONE);
 	mat.set_color(*clr);
+	mat.set_cull_mode(false);
 
     if (clr->is_alphacolor) {
 		mat.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
@@ -2128,22 +2134,38 @@ void render_aaline(color *clr, vertex *v1, vertex *v2)
 //	glHint( GL_LINE_SMOOTH_HINT, GL_FASTEST );
 //	glLineWidth( 1.0 );
 
+	vertex temp1 = *v1;
+	vertex temp2 = *v2;
+	vertex *ptr1 = &temp1;
+	vertex *ptr2 = &temp2;
+
+	clip_line(&ptr1, &ptr2, temp1.codes | temp2.codes, 0);
+
+	vertex p1 = *ptr1;
+	vertex p2 = *ptr2;
+
+	if ( ptr1->flags & PF_TEMP_POINT )
+		free_temp_point(ptr1);
+
+	if ( ptr2->flags & PF_TEMP_POINT )
+		free_temp_point(ptr2);
+
 	if ( !( v1->flags & PF_PROJECTED ) ) {
-		g3_project_vertex(v1);
+		g3_project_vertex(&p1);
 	}
 
 	if ( !( v2->flags & PF_PROJECTED ) ) {
-		g3_project_vertex(v2);
+		g3_project_vertex(&p2);
 	}
 
-	if ( v1->flags & PF_OVERFLOW && v2->flags & PF_OVERFLOW ) {
+	if ( p1.flags & PF_OVERFLOW && p2.flags & PF_OVERFLOW ) {
 		return;
 	}
 
-	float x1 = v1->screen.xyw.x;
-	float y1 = v1->screen.xyw.y;
-	float x2 = v2->screen.xyw.x;
-	float y2 = v2->screen.xyw.y;
+	float x1 = p1.screen.xyw.x;
+	float y1 = p1.screen.xyw.y;
+	float x2 = p2.screen.xyw.x;
+	float y2 = p2.screen.xyw.y;
 	float sx1, sy1;
 	float sx2, sy2;
 
@@ -2160,6 +2182,7 @@ void render_aaline(color *clr, vertex *v1, vertex *v2)
 	mat.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
 	mat.set_depth_mode(ZBUFFER_TYPE_NONE);
 	mat.set_color(*clr);
+	mat.set_cull_mode(false);
 
 	if ( (x1 == x2) && (y1 == y2) ) {
 		float vert[3]= {sx1, sy1, -0.99f};

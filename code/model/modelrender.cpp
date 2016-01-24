@@ -2118,14 +2118,14 @@ void model_queue_render_thrusters(model_render_params *interp, polymodel *pm, in
 			// start primary thruster glows
 			if ( (thruster_info.primary_glow_bitmap >= 0) && (d > 0.0f) ) {
 				p.r = p.g = p.b = p.a = (ubyte)(255.0f * d);
-				batching_add_volume_bitmap(thruster_info.primary_glow_bitmap, &p, 0, (w * 0.5f * thruster_info.glow_rad_factor), 1.0f, w * 0.325f);
+				batching_add_volume_bitmap(thruster_info.primary_glow_bitmap, &p, 0, (w * 0.5f * thruster_info.glow_rad_factor), d, w * 0.325f);
 			}
 
 			// start tertiary thruster glows
 			if (thruster_info.tertiary_glow_bitmap >= 0) {
 				p.screen.xyw.w -= w;
 				p.r = p.g = p.b = p.a = (ubyte)(255.0f * fog_int);
-				batching_add_volume_bitmap_rotated(thruster_info.tertiary_glow_bitmap, &p, magnitude * 4, w * 0.6f * thruster_info.tertiary_glow_rad_factor, 1.0f, -(D > 0) ? D : -D);
+				batching_add_volume_bitmap_rotated(thruster_info.tertiary_glow_bitmap, &p, magnitude * 4, w * 0.6f * thruster_info.tertiary_glow_rad_factor, fog_int, -(D > 0) ? D : -D);
 			}
 
 			// begin secondary glows

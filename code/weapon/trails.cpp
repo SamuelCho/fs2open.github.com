@@ -476,8 +476,8 @@ void trail_render( trail * trailp )
 	//gr_render(nv, Trail_v_list, TMAP_FLAG_TEXTURED | TMAP_FLAG_ALPHA | TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_HTL_3D_UNLIT | TMAP_FLAG_TRISTRIP);
 
 	material material_def;
-	render_set_unlit_material(&material_def, ti->texture.bitmap_id, 1.0f, true, false);
-	render_primitives_textured(&material_def, Trail_v_list, nv, PRIM_TYPE_TRISTRIP, false);
+	render_set_unlit_material(&material_def, ti->texture.bitmap_id, 1.0f, true, true);
+	render_primitives_colored_textured(&material_def, Trail_v_list, nv, PRIM_TYPE_TRISTRIP, false);
 
 	profile_end("Trail Draw");
 }

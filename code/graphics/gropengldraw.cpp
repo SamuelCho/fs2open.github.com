@@ -3442,8 +3442,8 @@ void gr_opengl_render_primitives_2d(material* material_info, primitive_type prim
 {
 	GL_CHECK_FOR_ERRORS("start of gr_opengl_render_primitives_2d()");
 
-	glPushMatrix();
-	glTranslatef((float)gr_screen.offset_x, (float)gr_screen.offset_y, -0.99f);
+	//glPushMatrix();
+	//glTranslatef((float)gr_screen.offset_x, (float)gr_screen.offset_y, -0.99f);
 
 	gr_opengl_set_2d_matrix();
 
@@ -3451,7 +3451,7 @@ void gr_opengl_render_primitives_2d(material* material_info, primitive_type prim
 
 	gr_opengl_end_2d_matrix();
 
-	glPopMatrix();
+	//glPopMatrix();
 
 	GL_CHECK_FOR_ERRORS("end of gr_opengl_render_primitives_2d()");
 }

@@ -409,6 +409,7 @@ public:
 
 	enum texture_type {
 		TEX_TYPE_NORMAL,
+		TEX_TYPE_XPARENT,
 		TEX_TYPE_AABITMAP,
 		TEX_TYPE_INTERFACE
 	};
