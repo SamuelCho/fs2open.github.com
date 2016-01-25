@@ -2959,3 +2959,24 @@ char *Default_deferred_clear_fragment_shader =
 "	gl_FragData[2] = vec4(0.0, 0.0, 0.0, 1.0); // normal\n"
 "	gl_FragData[3] = vec4(0.0, 0.0, 0.0, 1.0); // specular\n"
 "}\n";
+
+char *Default_shield_vertex_shader =
+"uniform mat4 shield_mv_matrix;\n"
+"uniform mat4 shield_proj_matrix;\n"
+"uniform mat4 model_matrix;\n"
+"varying vec4 shield_impact_uv;\n"
+"void main()\n"
+"{\n"
+"	gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * gl_Vertex;\n"
+"	shield_impact_uv = shield_proj_matrix * shield_mv_matrix * model_matrix * gl_Vertex;\n"
+"	shield_impact_uv += 1.0f;\n"
+"	shield_impact_uv *= 0.5f;\n"
+"}\n";
+
+char *Default_shield_fragment_shader =
+"uniform sampler2D shieldMap;\n"
+"varying vec4 shield_impact_uv;\n"
+"void main()\n"
+"{\n"
+"	gl_FragColor = texture2D(shieldMap, shield_impact_uv.xy);\n"
+"}\n"
