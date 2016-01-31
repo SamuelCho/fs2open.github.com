@@ -3298,7 +3298,9 @@ void gr_opengl_render_shield_impact(vec3d *verts, int n_verts, matrix *decal_ori
 	shield_mv_matrix.a1d[0] = decal_orient->vec.rvec.xyz.x;   shield_mv_matrix.a1d[4] = decal_orient->vec.rvec.xyz.y;   shield_mv_matrix.a1d[8] = decal_orient->vec.rvec.xyz.z;
 	shield_mv_matrix.a1d[1] = decal_orient->vec.uvec.xyz.x;   shield_mv_matrix.a1d[5] = decal_orient->vec.uvec.xyz.y;   shield_mv_matrix.a1d[9] = decal_orient->vec.uvec.xyz.z;
 	shield_mv_matrix.a1d[2] = decal_orient->vec.fvec.xyz.x;   shield_mv_matrix.a1d[6] = decal_orient->vec.fvec.xyz.y;   shield_mv_matrix.a1d[10] = decal_orient->vec.fvec.xyz.z;
-	shield_mv_matrix.a1d[3] = -decal_pos->xyz.x;	shield_mv_matrix.a1d[7] = -decal_pos->xyz.y;	shield_mv_matrix.a1d[11] = -decal_pos->xyz.z;
+	shield_mv_matrix.a1d[12] = -vm_vec_dot(&decal_orient->vec.rvec, decal_pos);
+	shield_mv_matrix.a1d[13] = -vm_vec_dot(&decal_orient->vec.uvec, decal_pos);
+	shield_mv_matrix.a1d[14] = -vm_vec_dot(&decal_orient->vec.fvec, decal_pos);
 	shield_mv_matrix.a1d[15] = 1.0f;
 
 	opengl_setup_render_states(r, g, b, alpha, tmap_type, TMAP_FLAG_TEXTURED | TMAP_FLAG_BW_TEXTURE);
