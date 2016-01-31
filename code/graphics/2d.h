@@ -40,6 +40,7 @@ enum shader_type {
 	SDR_TYPE_DEFERRED_LIGHTING,
 	SDR_TYPE_DEFERRED_CLEAR,
 	SDR_TYPE_VIDEO_PROCESS,
+	SDR_TYPE_SHIELD_DECAL,
 
 	NUM_SHADER_TYPES
 };
@@ -660,6 +661,8 @@ typedef struct screen {
 
 	void (*gf_shadow_map_start)(const matrix4 *shadow_view_matrix, const matrix *light_matrix);
 	void (*gf_shadow_map_end)();
+
+	void (*gf_render_shield_impact)(vec3d *verts, int n_verts, matrix *decal_orient, vec3d* decal_pos, float decal_radius);
 } screen;
 
 // handy macro
@@ -998,6 +1001,7 @@ __inline void gr_render_buffer(int start, const vertex_buffer *bufferp, int texi
 
 #define gr_shadow_map_start				GR_CALL(*gr_screen.gf_shadow_map_start)
 #define gr_shadow_map_end				GR_CALL(*gr_screen.gf_shadow_map_end)
+#define gr_render_shield_impact			GR_CALL(*gr_screen.gf_render_shield_impact)
 
 // color functions
 void gr_get_color( int *r, int *g, int  b );

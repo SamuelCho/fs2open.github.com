@@ -706,7 +706,7 @@ public:
 		n_thrusters(0), gun_banks(NULL), missile_banks(NULL), docking_bays(NULL), thrusters(NULL), ship_bay(NULL),
 		shield_collision_tree(NULL), sldc_size(0), n_paths(0), paths(NULL), mass(0), num_xc(0), xc(NULL), num_split_plane(0),
 		num_ins(0), used_this_mission(0), n_glow_point_banks(0), glow_point_banks(NULL), gun_submodel_rotation(0),
-		vertex_buffer_id(-1)
+		vertex_buffer_id(-1), shield_mesh(NULL), shield_mesh_num_verts(0)
 	{
 		filename[0] = 0;
 		mins = maxs = autocenter = center_of_mass = vmd_zero_vector;
@@ -777,6 +777,8 @@ public:
 	ship_bay_t		*ship_bay;							// contains path indexes for ship bay approach/depart paths
 
 	shield_info	shield;								// new shield information
+	vec3d *shield_mesh;
+	int shield_mesh_num_verts;
 	ubyte	*shield_collision_tree;
 	int		sldc_size;
 	SCP_vector<vec3d>		shield_points;
