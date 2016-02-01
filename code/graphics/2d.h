@@ -662,7 +662,7 @@ typedef struct screen {
 	void (*gf_shadow_map_start)(const matrix4 *shadow_view_matrix, const matrix *light_matrix);
 	void (*gf_shadow_map_end)();
 
-	void (*gf_render_shield_impact)(vec3d *verts, int n_verts, matrix *decal_orient, vec3d* decal_pos, float decal_radius);
+	void (*gf_render_shield_impact)(vec3d *verts, vec3d *norms, int n_verts, matrix *decal_orient, vec3d* decal_pos, float decal_radius);
 } screen;
 
 // handy macro

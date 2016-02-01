@@ -267,7 +267,9 @@ void model_unload(int modelnum, int force)
 	if ( pm->shield_mesh != NULL ) {
 		vm_free(pm->shield_mesh);
 		pm->shield_mesh = NULL;
+		pm->shield_norms = NULL;
 		pm->shield_mesh_num_verts = 0;
+		pm->shield_mesh_num_norms = 0;
 	}
 
 	for (i = 0; i < MAX_MODEL_DETAIL_LEVELS; ++i) {

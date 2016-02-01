@@ -377,7 +377,7 @@ void render_shield_triangle(gshield_tri *trip, matrix *orient, vec3d *pos, ubyte
 
 void shield_render_decal(polymodel *pm, matrix *orient, vec3d *pos, matrix* hit_orient, vec3d *hit_pos, ubyte r, ubyte g, ubyte b)
 {
-	if ( pm->shield_mesh == NULL || pm->shield_mesh_num_verts <= 0 ) {
+	if ( pm->shield_mesh == NULL || pm->shield_norms == NULL || pm->shield_mesh_num_verts <= 0 || pm->shield_mesh_num_norms <= 0 ) {
 		return;
 	}
 
@@ -389,7 +389,7 @@ void shield_render_decal(polymodel *pm, matrix *orient, vec3d *pos, matrix* hit_
 
 	gr_zbuffer_set(GR_ZBUFF_READ);
 
-	gr_render_shield_impact(pm->shield_mesh, pm->shield_mesh_num_verts, hit_orient, hit_pos, pm->rad * 0.5f);
+	gr_render_shield_impact(pm->shield_mesh, pm->shield_norms, pm->shield_mesh_num_verts, hit_orient, hit_pos, pm->rad * 0.5f);
 
 	//gr_set_texture_addressing(TMAP_ADDRESS_WRAP);
 

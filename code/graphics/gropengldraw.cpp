@@ -3268,7 +3268,7 @@ void gr_opengl_deferred_lighting_finish()
 	gr_clear_states();
 }
 
-void gr_opengl_render_shield_impact(vec3d *verts, int n_verts, matrix *decal_orient, vec3d* decal_pos, float decal_radius)
+void gr_opengl_render_shield_impact(vec3d *verts, vec3d *norms, int n_verts, matrix *decal_orient, vec3d *decal_pos, float decal_radius)
 {
 	int alpha, tmap_type, r, g, b;
 	float u_scale = 1.0f, v_scale = 1.0f;
@@ -3310,6 +3310,8 @@ void gr_opengl_render_shield_impact(vec3d *verts, int n_verts, matrix *decal_ori
 
 	opengl_shader_set_current(gr_opengl_maybe_create_shader(SDR_TYPE_SHIELD_DECAL, 0));
 
+	
+	GL_state.Uniform.setUniform3f("hitnorm", decal_orient->vec.fvec);
 	GL_state.Uniform.setUniform3f("hitpos", *decal_pos);
 	GL_state.Uniform.setUniformMatrix4f("shield_proj_matrix", ortho_mat);
 	GL_state.Uniform.setUniformMatrix4f("shield_mv_matrix", shield_mv_matrix);
@@ -3317,6 +3319,7 @@ void gr_opengl_render_shield_impact(vec3d *verts, int n_verts, matrix *decal_ori
 
 	vertex_layout vert_def;
 	vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, verts);
+	vert_def.add_vertex_component(vertex_format_data::NORMAL, 0, norms);
 
 	opengl_bind_vertex_layout(vert_def);
 

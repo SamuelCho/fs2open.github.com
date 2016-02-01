@@ -4711,6 +4711,7 @@ void interp_create_transparency_index_buffer(polymodel *pm, int mn)
 void interp_create_shield_mesh(polymodel * pm)
 {
 	SCP_vector<vec3d> buffer;
+	SCP_vector<vec3d> normals;
 
 	if ( pm->shield.nverts <= 0 ) {
 		return;
@@ -4722,16 +4723,26 @@ void interp_create_shield_mesh(polymodel * pm)
 		buffer.push_back(pm->shield.verts[tri->verts[0]].pos);
 		buffer.push_back(pm->shield.verts[tri->verts[1]].pos);
 		buffer.push_back(pm->shield.verts[tri->verts[2]].pos);
+
+		normals.push_back(tri->norm);
+		normals.push_back(tri->norm);
+		normals.push_back(tri->norm);
 	}
 
 	if ( buffer.size() > 0 ) {
 		pm->shield_mesh = (vec3d*)vm_malloc(buffer.size() * sizeof(vec3d));
 		memcpy(pm->shield_mesh, &buffer[0], buffer.size() * sizeof(vec3d));
 
+		pm->shield_norms = (vec3d*)vm_malloc(normals.size() * sizeof(vec3d));
+		memcpy(pm->shield_norms, &normals[0], normals.size() * sizeof(vec3d));
+
 		pm->shield_mesh_num_verts = buffer.size();
+		pm->shield_mesh_num_norms = normals.size();
 	} else {
 		pm->shield_mesh = NULL;
 		pm->shield_mesh_num_verts = 0;
+		pm->shield_norms = NULL;
+		pm->shield_mesh_num_norms = 0;
 	}
 }
 
