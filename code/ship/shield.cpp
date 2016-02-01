@@ -29,7 +29,7 @@ int	Show_shield_mesh = 0;
 //	One unit in 3d means this in the shield hit texture map.
 #define	SHIELD_HIT_SCALE	0.15f			// Note, larger constant means smaller effect
 #define	MAX_TRIS_PER_HIT	40					//	Number of triangles per shield hit, maximum.
-#define	MAX_SHIELD_HITS	20					//	Maximum number of active shield hits.
+#define	MAX_SHIELD_HITS	200					//	Maximum number of active shield hits.
 #define	MAX_SHIELD_TRI_BUFFER	(MAX_SHIELD_HITS*MAX_TRIS_PER_HIT) //(MAX_SHIELD_HITS*20) //	Persistent buffer of triangle comprising all active shield hits.
 #define	SHIELD_HIT_DURATION	(3*F1_0/4)	//	Duration, in milliseconds, of shield hit effect
 
@@ -389,7 +389,7 @@ void shield_render_decal(polymodel *pm, matrix *orient, vec3d *pos, matrix* hit_
 
 	gr_zbuffer_set(GR_ZBUFF_READ);
 
-	gr_render_shield_impact(pm->shield_mesh, pm->shield_norms, pm->shield_mesh_num_verts, hit_orient, hit_pos, pm->rad * 0.5f);
+	gr_render_shield_impact(pm->shield_mesh, pm->shield_norms, pm->shield_mesh_num_verts, hit_orient, hit_pos, pm->core_radius * 0.75f);
 
 	//gr_set_texture_addressing(TMAP_ADDRESS_WRAP);
 

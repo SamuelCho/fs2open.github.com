@@ -2996,6 +2996,6 @@ char *Default_shield_fragment_shader =
 "	float invHitDist = clamp(10.0-hitdist, 0.0, 10.0)*0.1;\n"
 "	vec4 debugColor = vec4(invHitDist, invHitDist, invHitDist, 1.0);\n"
 "	vec2 debugUV = vec2(invHitDist, invHitDist);\n"
-"	if(shield_impact_uv.x < 0.0 || shield_impact_uv.x > 1.0 || shield_impact_uv.y < 0.0 || shield_impact_uv.y > 1.0 || shield_impact_uv.z < -1.0 || shield_impact_uv.z > 1.0) discard;\n"
+"	if(shield_impact_uv.x < 0.0 || shield_impact_uv.x > 1.0 || shield_impact_uv.y < 0.0 || shield_impact_uv.y > 1.0) discard;\n"
 "	gl_FragColor = texture2D(shieldMap, shield_impact_uv.xy) * gl_Color;\n"
 "}\n";
