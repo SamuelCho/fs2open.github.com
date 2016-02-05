@@ -4708,7 +4708,7 @@ void interp_create_transparency_index_buffer(polymodel *pm, int mn)
 	}
 }
 
-void interp_create_shield_mesh(polymodel * pm)
+void interp_process_shield_mesh(polymodel * pm)
 {
 	SCP_vector<vec3d> buffer;
 	SCP_vector<vec3d> normals;
@@ -4717,12 +4717,27 @@ void interp_create_shield_mesh(polymodel * pm)
 		return;
 	}
 
+	float dot = 1.0f;
+
 	for ( int i = 0; i < pm->shield.ntris; i++ ) {
 		shield_tri *tri = &pm->shield.tris[i];
 
-		buffer.push_back(pm->shield.verts[tri->verts[0]].pos);
-		buffer.push_back(pm->shield.verts[tri->verts[1]].pos);
-		buffer.push_back(pm->shield.verts[tri->verts[2]].pos);
+		vec3d a = pm->shield.verts[tri->verts[0]].pos;
+		vec3d b = pm->shield.verts[tri->verts[1]].pos;
+		vec3d c = pm->shield.verts[tri->verts[2]].pos;
+
+		// recalculate triangle normals to solve some issues regarding triangle collision
+		vec3d b_a;
+		vec3d c_a;
+
+		vm_vec_sub(&b_a, &b, &a);
+		vm_vec_sub(&c_a, &c, &a);
+		vm_vec_cross(&tri->norm, &b_a, &c_a);
+		vm_vec_normalize_safe(&tri->norm);
+
+		buffer.push_back(a);
+		buffer.push_back(b);
+		buffer.push_back(c);
 
 		normals.push_back(tri->norm);
 		normals.push_back(tri->norm);

@@ -84,7 +84,7 @@ void interp_configure_vertex_buffers(polymodel*, int);
 void interp_pack_vertex_buffers(polymodel* pm, int mn);
 void interp_create_detail_index_buffer(polymodel *pm, int detail);
 void interp_create_transparency_index_buffer(polymodel *pm, int detail_num);
-void interp_create_shield_mesh(polymodel * pm);
+void interp_process_shield_mesh(polymodel * pm);
 
 void model_set_subsys_path_nums(polymodel *pm, int n_subsystems, model_subsystem *subsystems);
 void model_set_bay_path_nums(polymodel *pm);
@@ -813,7 +813,7 @@ void create_vertex_buffer(polymodel *pm)
 	// ... and then finalize buffer
 	gr_pack_buffer(pm->vertex_buffer_id, NULL);
 
-	interp_create_shield_mesh(pm);
+	interp_process_shield_mesh(pm);
 }
 
 // Goober5000
