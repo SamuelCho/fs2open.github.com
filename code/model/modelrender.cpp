@@ -1334,28 +1334,29 @@ void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_
 					}
 				}
 			}
-			
+
+			if ( replacement_textures != NULL && replacement_textures[rt_begin_index + TM_SPECULAR_TYPE] >= 0 ) {
+				tex_replace[TM_SPECULAR_TYPE] = texture_info(replacement_textures[rt_begin_index + TM_SPECULAR_TYPE]);
+				texture_maps[TM_SPECULAR_TYPE] = model_interp_get_texture(&tex_replace[TM_SPECULAR_TYPE], base_frametime);
+			} else {
+				texture_maps[TM_SPECULAR_TYPE] = model_interp_get_texture(&tmap->textures[TM_SPECULAR_TYPE], base_frametime);
+			}
+
+			if ( replacement_textures != NULL && replacement_textures[rt_begin_index + TM_SPEC_GLOSS_TYPE] >= 0 ) {
+				tex_replace[TM_SPEC_GLOSS_TYPE] = texture_info(replacement_textures[rt_begin_index + TM_SPEC_GLOSS_TYPE]);
+				texture_maps[TM_SPEC_GLOSS_TYPE] = model_interp_get_texture(&tex_replace[TM_SPEC_GLOSS_TYPE], base_frametime);
+			} else {
+				texture_maps[TM_SPEC_GLOSS_TYPE] = model_interp_get_texture(&tmap->textures[TM_SPEC_GLOSS_TYPE], base_frametime);
+			}
+
 			if ( (Detail.lighting > 2)  && (detail_level < 2) ) {
 				// likewise, etc.
-				texture_info *spec_map = &tmap->textures[TM_SPECULAR_TYPE];
-				texture_info *specgloss_map = &tmap->textures[TM_SPEC_GLOSS_TYPE];
 				texture_info *norm_map = &tmap->textures[TM_NORMAL_TYPE];
 				texture_info *height_map = &tmap->textures[TM_HEIGHT_TYPE];
 				texture_info *ambient_map = &tmap->textures[TM_AMBIENT_TYPE];
 				texture_info *misc_map = &tmap->textures[TM_MISC_TYPE];
 
 				if (replacement_textures != NULL) {
-
-					if (replacement_textures[rt_begin_index + TM_SPECULAR_TYPE] >= 0) {
-						tex_replace[TM_SPECULAR_TYPE] = texture_info(replacement_textures[rt_begin_index + TM_SPECULAR_TYPE]);
-						spec_map = &tex_replace[TM_SPECULAR_TYPE];
-					}
-
-					if (replacement_textures[rt_begin_index + TM_SPEC_GLOSS_TYPE] >= 0) {
-						tex_replace[TM_SPEC_GLOSS_TYPE] = texture_info(replacement_textures[rt_begin_index + TM_SPEC_GLOSS_TYPE]);
-						specgloss_map = &tex_replace[TM_SPEC_GLOSS_TYPE];
-					}
-
 					if (replacement_textures[rt_begin_index + TM_NORMAL_TYPE] >= 0) {
 						tex_replace[TM_NORMAL_TYPE] = texture_info(replacement_textures[rt_begin_index + TM_NORMAL_TYPE]);
 						norm_map = &tex_replace[TM_NORMAL_TYPE];
@@ -1377,8 +1378,6 @@ void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_
 					}
 				}
 
-				texture_maps[TM_SPECULAR_TYPE] = model_interp_get_texture(spec_map, base_frametime);
-				texture_maps[TM_SPEC_GLOSS_TYPE] = model_interp_get_texture(specgloss_map, base_frametime);
 				texture_maps[TM_NORMAL_TYPE] = model_interp_get_texture(norm_map, base_frametime);
 				texture_maps[TM_HEIGHT_TYPE] = model_interp_get_texture(height_map, base_frametime);
 				texture_maps[TM_AMBIENT_TYPE] = model_interp_get_texture(ambient_map, base_frametime);
