@@ -387,7 +387,7 @@ uint model_material::get_shader_flags()
 		Shader_flags |= SDR_FLAG_MODEL_ANIMATED;
 	}
 
-	if ( get_texture_map(TM_BASE_TYPE) > 0 ) {
+	if ( get_texture_map(TM_BASE_TYPE) > 0 && !Basemap_override ) {
 		Shader_flags |= SDR_FLAG_MODEL_DIFFUSE_MAP;
 	}
 
