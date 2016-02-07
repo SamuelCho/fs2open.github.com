@@ -33,6 +33,7 @@ struct batch_info {
 	bool thruster;	// only used by distortion
 
 	batch_info(): mat_type(FLAT_EMISSIVE), texture(-1), prim_type(PRIM_TYPE_TRIS), thruster(false) {}
+	batch_info(material_type mat, int tex, primitive_type prim, bool thrust): mat_type(mat), texture(tex), prim_type(prim), thruster(thrust) {}
 
 	bool operator < (const batch_info& batch) const {
 		if ( mat_type != batch.mat_type ) {
@@ -47,7 +48,7 @@ struct batch_info {
 			return prim_type < batch.prim_type;
 		}
 
-		return thruster == batch.thruster;
+		return thruster != batch.thruster;
 	}
 };
 

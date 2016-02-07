@@ -116,12 +116,7 @@ primitive_batch_buffer* batching_find_buffer(uint vertex_mask, primitive_type pr
 
 primitive_batch* batching_find_batch(int texture, batch_info::material_type material_id, primitive_type prim_type, bool thruster)
 {
-	batch_info query;
-
-	query.texture = texture;
-	query.mat_type = material_id;
-	query.prim_type = prim_type;
-	query.thruster = thruster;
+	batch_info query(material_id, texture, prim_type, thruster);
 
 	SCP_map<batch_info, primitive_batch>::iterator iter = Batching_primitives.find(query);
 
