@@ -317,6 +317,7 @@ bool model_render_check_detail_box(vec3d *view_pos, polymodel *pm, int submodel_
 void model_render_arc(vec3d *v1, vec3d *v2, color *primary, color *secondary, float arc_width);
 void model_render_insignias(insignia_draw_data *insignia);
 
-void model_render_determine_color(color *clr, gr_alpha_blend blend_mode, bool texturing);
+void model_render_determine_color(color *clr, float alpha, gr_alpha_blend blend_mode, bool no_texturing, bool desaturate);
+gr_alpha_blend model_render_determine_blend_mode(int base_bitmap, bool blending);
 
 #endif

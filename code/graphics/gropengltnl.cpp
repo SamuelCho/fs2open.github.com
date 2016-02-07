@@ -2545,7 +2545,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		case ALPHA_BLEND_PREMULTIPLIED:
 			GL_state.Uniform.setUniformi("blend_alpha", 1);
 			break;
-		case ALPHA_BLEND_ALPHA_ADDITIVE:
+		case ALPHA_BLEND_ADDITIVE:
 			GL_state.Uniform.setUniformi("blend_alpha", 2);
 			break;
 		default:

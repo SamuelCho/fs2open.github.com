@@ -1114,21 +1114,23 @@ void model_render_buffers(draw_list* scene, model_material *rendering_material, 
 			}
 		}
 
-		gr_alpha_blend blend_mode = render_determine_blend_mode(texture_maps[TM_BASE_TYPE], use_blending);
+		gr_alpha_blend blend_mode = model_render_determine_blend_mode(texture_maps[TM_BASE_TYPE], use_blending);
 		gr_zbuffer_type depth_mode = render_determine_depth_mode(use_depth_test, use_blending);
 
 		rendering_material->set_depth_mode(depth_mode);
 		rendering_material->set_blend_mode(blend_mode);
 		
 		color clr = interp->get_color();
-		clr.alpha = fl2i(alpha * 255.0f);
-
-		model_render_determine_color(&clr, blend_mode, no_texturing ? true : false);
-
+		model_render_determine_color(&clr, alpha, blend_mode, no_texturing ? true : false, rendering_material->is_desaturated());
 		rendering_material->set_color(clr);
 
 		if ( (tmap_flags & TMAP_FLAG_TEXTURED) && (buffer->flags & VB_FLAG_UV1) ) {
 			rendering_material->set_texture_map(TM_BASE_TYPE,	texture_maps[TM_BASE_TYPE]);
+
+			if ( texture_maps[TM_BASE_TYPE] >= 0 && bm_has_alpha_channel(texture_maps[TM_BASE_TYPE]) ) {
+				rendering_material->set_texture_type(material::TEX_TYPE_XPARENT);
+			}
+
 			rendering_material->set_texture_map(TM_GLOW_TYPE,	texture_maps[TM_GLOW_TYPE]);
 			rendering_material->set_texture_map(TM_SPECULAR_TYPE, texture_maps[TM_SPECULAR_TYPE]);
 			rendering_material->set_texture_map(TM_NORMAL_TYPE, texture_maps[TM_NORMAL_TYPE]);
@@ -1319,19 +1321,35 @@ bool model_render_determine_autocenter(vec3d *auto_back, polymodel *pm, int deta
 	return false;
 }
 
-void model_render_determine_color(color *clr, gr_alpha_blend blend_mode, bool texturing)
+void model_render_determine_color(color *clr, float alpha, gr_alpha_blend blend_mode, bool no_texturing, bool desaturate)
 {
-	if ( !texturing ) {
-		// if we're not texturing, don't override the given color
+	clr->alpha = fl2i(alpha * 255.0f);
+
+	if ( no_texturing || desaturate ) {
+		// don't override the given color if we're not texturing or we're desaturating
 		return;
 	}
 
 	if (blend_mode == ALPHA_BLEND_ADDITIVE) {
-		clr->red = clr->green = clr->blue = clr->alpha;
+		clr->red = clr->green = clr->blue = fl2i(alpha * 255.0f);
 		clr->alpha = 255;
 	} else {
 		clr->red = clr->green = clr->blue = 255;
+		clr->alpha = fl2i(alpha * 255.0f);
 	}
+}
+
+gr_alpha_blend model_render_determine_blend_mode(int base_bitmap, bool blending)
+{
+	if ( blending ) {
+		if ( base_bitmap >= 0 && bm_has_alpha_channel(base_bitmap) ) {
+			return ALPHA_BLEND_PREMULTIPLIED;
+		}
+
+		return ALPHA_BLEND_ADDITIVE;
+	}
+
+	return ALPHA_BLEND_ALPHA_BLEND_ALPHA;
 }
 
 bool model_render_check_detail_box(vec3d *view_pos, polymodel *pm, int submodel_num, uint flags)

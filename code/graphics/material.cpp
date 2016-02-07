@@ -448,7 +448,7 @@ int model_material::get_shader_handle()
 
 	set_shader_handle(gr_maybe_create_shader(SDR_TYPE_MODEL, get_shader_flags()));
 
-	return get_shader_handle();
+	return material::get_shader_handle();
 }
 
 particle_material::particle_material(): 
@@ -483,7 +483,7 @@ int particle_material::get_shader_handle()
 
 	set_shader_handle(gr_maybe_create_shader(SDR_TYPE_EFFECT_PARTICLE, flags));
 
-	return flags;
+	return material::get_shader_handle();
 }
 
 distortion_material::distortion_material(): 
@@ -512,5 +512,5 @@ int distortion_material::get_shader_handle()
 
 	set_shader_handle(gr_maybe_create_shader(SDR_TYPE_EFFECT_DISTORTION, 0));
 
-	return handle;
+	return material::get_shader_handle();
 }

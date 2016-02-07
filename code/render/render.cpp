@@ -121,7 +121,7 @@ void render_set_distortion_material(distortion_material *mat_info, int texture, 
 
 	mat_info->set_depth_mode(ZBUFFER_TYPE_READ);
 
-	mat_info->set_blend_mode(render_determine_blend_mode(texture, true));
+	mat_info->set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
 
 	mat_info->set_texture_map(TM_BASE_TYPE, texture);
 	mat_info->set_cull_mode(false);
@@ -1204,6 +1204,7 @@ void render_colored_rect(color *clr, int x, int y, int w, int h, int resize_mode
 	material_params.set_depth_mode(ZBUFFER_TYPE_NONE);
 	material_params.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
 	material_params.set_cull_mode(false);
+	material_params.set_texture_source(TEXTURE_SOURCE_NONE);
 
 	// draw the polys
 	render_primitives_colored(&material_params, v, 4, PRIM_TYPE_TRIFAN, true);
@@ -1440,7 +1441,7 @@ void render_line_3d(color *clr, bool depth_testing, vec3d *start, vec3d *end)
 
 	vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, line);
 
-	gr_render_primitives_2d(&mat, PRIM_TYPE_LINES, &vert_def, 0, 2);
+	gr_render_primitives(&mat, PRIM_TYPE_LINES, &vert_def, 0, 2);
 }
 
 void render_line_3d(bool depth_testing, vec3d *start, vec3d *end)
@@ -2365,6 +2366,7 @@ void render_arc(color *clr, int xc, int yc, float r, float angle_start, float an
 	material_params.set_texture_source(TEXTURE_SOURCE_NONE);
 	material_params.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
 	material_params.set_depth_mode(ZBUFFER_TYPE_NONE);
+	material_params.set_cull_mode(false);
 	material_params.set_color(*clr);
 
 	float *arc;
