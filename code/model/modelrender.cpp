@@ -1330,12 +1330,11 @@ void model_render_determine_color(color *clr, float alpha, gr_alpha_blend blend_
 		return;
 	}
 
-	if (blend_mode == ALPHA_BLEND_ADDITIVE) {
-		clr->red = clr->green = clr->blue = fl2i(alpha * 255.0f);
+	if ( blend_mode == ALPHA_BLEND_ADDITIVE ) {
+		clr->red = clr->green = clr->blue = clr->alpha;
 		clr->alpha = 255;
 	} else {
 		clr->red = clr->green = clr->blue = 255;
-		clr->alpha = fl2i(alpha * 255.0f);
 	}
 }
 

@@ -752,14 +752,14 @@ void subtitle::do_frame(float frametime)
 
 			gr_push_scale_matrix(&scale);
 			//gr_bitmap(fl2i(image_pos.x / scale.xyz.x), fl2i(image_pos.y / scale.xyz.y), GR_RESIZE_NONE);
-			render_bitmap(image_id, text_color.alpha/255.0f, fl2i(image_pos.x / scale.xyz.x), fl2i(image_pos.y / scale.xyz.y), GR_RESIZE_NONE);
+			render_bitmap_blended(image_id, i2fl(text_color.alpha/255.0f), fl2i(image_pos.x / scale.xyz.x), fl2i(image_pos.y / scale.xyz.y), GR_RESIZE_NONE);
 			gr_pop_scale_matrix();
 		}
 		// no scaling
 		else
 		{
 			//gr_bitmap(image_pos.x, image_pos.y, GR_RESIZE_NONE);
-			render_bitmap(image_id, text_color.alpha/255.0f, image_pos.x, image_pos.y, GR_RESIZE_NONE);
+			render_bitmap_blended(image_id, text_color.alpha/255.0f, image_pos.x, image_pos.y, GR_RESIZE_NONE);
 		}
 	}
 

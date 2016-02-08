@@ -48,7 +48,7 @@ void render_string(color *clr, int sx, int sy, const char *s, int resize_mode = 
 void render_string(int sx, int sy, const char *s, int resize_mode = GR_RESIZE_FULL);
 
 void render_bitmap(int texture, int _x, int _y, int resize_mode = GR_RESIZE_FULL);
-void render_bitmap(int texture, float alpha, int _x, int _y, int resize_mode = GR_RESIZE_FULL);
+void render_bitmap_blended(int texture, float alpha, int _x, int _y, int resize_mode = GR_RESIZE_FULL);
 void render_bitmap_ex(int texture, float alpha, int x, int y, int w, int h, int sx, int sy, int resize_mode = GR_RESIZE_FULL);
 void render_aabitmap(int texture, color *clr, int x, int y, int resize_mode = GR_RESIZE_FULL, bool mirror = false);
 void render_aabitmap(int texture, int x, int y, int resize_mode = GR_RESIZE_FULL, bool mirror = false);

@@ -1060,7 +1060,7 @@ void render_bitmap(int texture, int _x, int _y, int resize_mode)
 	render_bitmap_internal(texture, blended, alpha, _x, _y, resize_mode);
 }
 
-void render_bitmap(int texture, float alpha, int _x, int _y, int resize_mode)
+void render_bitmap_blended(int texture, float alpha, int _x, int _y, int resize_mode)
 {
 	bool blended = true;
 
@@ -2875,8 +2875,8 @@ void render_sphere_fast(vec3d *pnt, float rad)
 
 void render_cross_fade(int bmap1, int bmap2, int x1, int y1, int x2, int y2, float pct, int resize_mode)
 {
-	render_bitmap(bmap1, 1.0f - pct, x1, y1, resize_mode);
-	render_bitmap(bmap2, pct, x2, y2, resize_mode);
+	render_bitmap_blended(bmap1, 1.0f - pct, x1, y1, resize_mode);
+	render_bitmap_blended(bmap2, pct, x2, y2, resize_mode);
 }
 
 void render_sphere(color *clr, vec3d* position, float radius)
