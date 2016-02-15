@@ -168,6 +168,23 @@ void opengl_set_light(int light_num, opengl_light *ltp)
 		diffuse[2] *= GL_light_factor;
 	}
 
+	vec3d new_light_pos;
+	vec3d light_pos;
+
+	light_pos.xyz.x = ltp->Position[0];
+	light_pos.xyz.y = ltp->Position[1];
+	light_pos.xyz.z = ltp->Position[2];
+
+	if ( ltp->type == LT_POINT ) {
+		vm_vec_sub2(&light_pos, &Object_position);
+	}
+	
+	vm_vec_rotate(&new_light_pos, &light_pos, &Object_matrix);
+
+	ltp->Position[0] = new_light_pos.xyz.x;
+	ltp->Position[1] = new_light_pos.xyz.y;
+	ltp->Position[2] = new_light_pos.xyz.z;
+
 	glLightfv(GL_LIGHT0+light_num, GL_POSITION, ltp->Position);
 	glLightfv(GL_LIGHT0+light_num, GL_AMBIENT, ltp->Ambient);
 	glLightfv(GL_LIGHT0+light_num, GL_DIFFUSE, diffuse);
@@ -601,11 +618,44 @@ void gr_opengl_set_lighting(bool set, bool state)
 		glLightModelfv( GL_LIGHT_MODEL_AMBIENT, GL_light_ambient );
 	}
 
-	for (int i = 0; i < GL_max_lights; i++) {
-		GL_state.Light(i, GL_FALSE);
+	GL_state.Lighting( (state) ? GL_TRUE : GL_FALSE );
+
+	if ( !state ) {
+		for ( int i = 0; i < GL_max_lights; i++ ) {
+			GL_state.Light(i, GL_FALSE);
+		}
+
+		return;
 	}
 
-	GL_state.Lighting( (state) ? GL_TRUE : GL_FALSE );
+	//Valathil: Sort lights by priority
+	extern bool Deferred_lighting;
+	if ( !Deferred_lighting )
+		opengl_pre_render_init_lights();
+	
+	int i = 0;
+
+	for ( i = 0; i < GL_max_lights; i++ ) {
+		if ( i >= Num_active_gl_lights ) {
+			break;
+		}
+
+		if ( opengl_lights[i].occupied ) {
+			opengl_set_light(i, &opengl_lights[i]);
+
+			GL_state.Light(i, GL_TRUE);
+		}
+	}
+
+	opengl_light zero;
+	memset(&zero, 0, sizeof(opengl_light));
+	zero.Position[0] = 1.0f;
+
+	// make sure that we turn off any lights that we aren't using right now
+	for ( ; i < GL_max_lights; i++ ) {
+		GL_state.Light(i, GL_FALSE);
+		opengl_set_light(i, &zero);
+	}
 }
 
 void gr_opengl_set_ambient_light(int red, int green, int blue)

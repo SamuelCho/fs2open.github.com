@@ -2517,10 +2517,29 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	}
 	
 	if ( Current_shader->flags & SDR_FLAG_MODEL_CLIP ) {
-		material::clip_plane &clip_info = material_info->get_clip_plane();
+		bool clip = material_info->is_clipped();
 
-		GL_state.Uniform.setUniform3f("clip_normal", clip_info.normal);
-		GL_state.Uniform.setUniform3f("clip_position", clip_info.position);
+		if ( clip ) {
+			material::clip_plane &clip_info = material_info->get_clip_plane();
+
+			matrix4 model_matrix;
+			memset(&model_matrix, 0, sizeof(model_matrix));
+
+			model_matrix.a1d[0] = Object_matrix.vec.rvec.xyz.x;   model_matrix.a1d[4] = Object_matrix.vec.uvec.xyz.x;   model_matrix.a1d[8] = Object_matrix.vec.fvec.xyz.x;
+			model_matrix.a1d[1] = Object_matrix.vec.rvec.xyz.y;   model_matrix.a1d[5] = Object_matrix.vec.uvec.xyz.y;   model_matrix.a1d[9] = Object_matrix.vec.fvec.xyz.y;
+			model_matrix.a1d[2] = Object_matrix.vec.rvec.xyz.z;   model_matrix.a1d[6] = Object_matrix.vec.uvec.xyz.z;   model_matrix.a1d[10] = Object_matrix.vec.fvec.xyz.z;
+			model_matrix.a1d[12] = Object_position.xyz.x;
+			model_matrix.a1d[13] = Object_position.xyz.y;
+			model_matrix.a1d[14] = Object_position.xyz.z;
+			model_matrix.a1d[15] = 1.0f;
+
+			GL_state.Uniform.setUniformi("use_clip_plane", 1);
+			GL_state.Uniform.setUniformMatrix4f("world_matrix", model_matrix);
+			GL_state.Uniform.setUniform3f("clip_normal", clip_info.normal);
+			GL_state.Uniform.setUniform3f("clip_position", clip_info.position);
+		} else {
+			GL_state.Uniform.setUniformi("use_clip_plane", 0);
+		}
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_LIGHT ) {

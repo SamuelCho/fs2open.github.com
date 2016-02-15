@@ -1647,6 +1647,183 @@ void opengl_uniform_state::reset()
 	uniform_lookup.clear();
 }
 
+opengl_light_state::opengl_light_state(int light_num): Light_num(light_num)
+{
+
+}
+
+void opengl_light_state::Enable()
+{
+	Assert ( Light_num >= 0 && Light_num < GL_max_lights );
+
+	if ( Enabled ) {
+		return;
+	}
+
+	glEnable(GL_LIGHT0 + Light_num);
+	Enabled = true;
+}
+
+void opengl_light_state::Disable()
+{
+	Assert ( Light_num >= 0 && Light_num < GL_max_lights );
+
+	if ( !Enabled ) {
+		return;
+	}
+
+	glDisable(GL_LIGHT0 + Light_num);
+	Enabled = false;
+}
+
+void opengl_light_state::Invalidate()
+{
+	InvalidPosition = true;
+}
+
+void opengl_light_state::SetPosition(GLfloat *val)
+{
+	Assert(Light_num >= 0 && Light_num < GL_max_lights);
+
+	if ( !InvalidPosition && 
+		fl_equal(Position[0], val[0]) && 
+		fl_equal(Position[1], val[1]) && 
+		fl_equal(Position[2], val[2]) && 
+		fl_equal(Position[3], val[3]) ) {
+		return;
+	}
+
+	Position[0] = val[0];
+	Position[1] = val[1];
+	Position[2] = val[2];
+	Position[3] = val[3];
+
+	glLightfv(GL_LIGHT0 + Light_num, GL_POSITION, val);
+	InvalidPosition = false;
+}
+
+void opengl_light_state::SetAmbient(GLfloat *val)
+{
+	Assert(Light_num >= 0 && Light_num < GL_max_lights);
+
+	if ( fl_equal(Ambient[0], val[0]) &&
+		fl_equal(Ambient[1], val[1]) &&
+		fl_equal(Ambient[2], val[2]) &&
+		fl_equal(Ambient[3], val[3]) ) {
+		return;
+	}
+
+	Ambient[0] = val[0];
+	Ambient[1] = val[1];
+	Ambient[2] = val[2];
+	Ambient[3] = val[3];
+
+	glLightfv(GL_LIGHT0 + Light_num, GL_AMBIENT, val);
+}
+
+void opengl_light_state::SetDiffuse(GLfloat *val)
+{
+	Assert(Light_num >= 0 && Light_num < GL_max_lights);
+
+	if ( fl_equal(Diffuse[0], val[0]) &&
+		fl_equal(Diffuse[1], val[1]) &&
+		fl_equal(Diffuse[2], val[2]) &&
+		fl_equal(Diffuse[3], val[3]) ) {
+		return;
+	}
+
+	Diffuse[0] = val[0];
+	Diffuse[1] = val[1];
+	Diffuse[2] = val[2];
+	Diffuse[3] = val[3];
+
+	glLightfv(GL_LIGHT0 + Light_num, GL_DIFFUSE, val);
+}
+
+void opengl_light_state::SetSpecular(GLfloat *val)
+{
+	Assert(Light_num >= 0 && Light_num < GL_max_lights);
+
+	if ( fl_equal(Specular[0], val[0]) &&
+		fl_equal(Specular[1], val[1]) &&
+		fl_equal(Specular[2], val[2]) &&
+		fl_equal(Specular[3], val[3]) ) {
+		return;
+	}
+
+	Specular[0] = val[0];
+	Specular[1] = val[1];
+	Specular[2] = val[2];
+	Specular[3] = val[3];
+
+	glLightfv(GL_LIGHT0 + Light_num, GL_SPECULAR, val);
+}
+
+void opengl_light_state::SetConstantAttenuation(GLfloat val)
+{
+	Assert(Light_num >= 0 && Light_num < GL_max_lights);
+
+	if ( fl_equal(ConstantAttenuation, val) ) {
+		return;
+	}
+
+	ConstantAttenuation = val;
+
+	glLightf(GL_LIGHT0 + Light_num, GL_CONSTANT_ATTENUATION, val);
+}
+
+void opengl_light_state::SetLinearAttenuation(GLfloat val)
+{
+	Assert(Light_num >= 0 && Light_num < GL_max_lights);
+
+	if ( fl_equal(LinearAttenuation, val) ) {
+		return;
+	}
+
+	LinearAttenuation = val;
+
+	glLightf(GL_LIGHT0 + Light_num, GL_LINEAR_ATTENUATION, val);
+}
+
+void opengl_light_state::SetQuadraticAttenuation(GLfloat val)
+{
+	Assert(Light_num >= 0 && Light_num < GL_max_lights);
+
+	if ( fl_equal(QuadraticAttenuation, val) ) {
+		return;
+	}
+
+	QuadraticAttenuation = val;
+
+	glLightf(GL_LIGHT0 + Light_num, GL_QUADRATIC_ATTENUATION, val);
+}
+
+void opengl_light_state::SetSpotExponent(GLfloat val)
+{
+	Assert(Light_num >= 0 && Light_num < GL_max_lights);
+
+	if ( fl_equal(SpotExponent, val) ) {
+		return;
+	}
+
+	SpotExponent = val;
+
+	glLightf(GL_LIGHT0 + Light_num, GL_SPOT_EXPONENT, val);
+}
+
+void opengl_light_state::SetSpotCutoff(GLfloat val)
+{
+	Assert(Light_num >= 0 && Light_num < GL_max_lights);
+
+	if ( fl_equal(SpotCutoff, val) ) {
+		return;
+	}
+
+	SpotCutoff = val;
+
+	glLightf(GL_LIGHT0 + Light_num, GL_SPOT_CUTOFF, val);
+}
+
 void gr_opengl_clear_states()
 {
 	GL_state.Texture.DisableAll();

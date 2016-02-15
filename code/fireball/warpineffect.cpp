@@ -228,6 +228,12 @@ void warpin_queue_render(draw_list *scene, object *obj, matrix *orient, vec3d *p
 
 	vm_vec_scale_add( &center, pos, &orient->vec.fvec, -(max_radius/2.5f)/3.0f );
 
+	verts[0].r = 255;
+	verts[0].g = 255;
+	verts[0].b = 255;
+	verts[0].a = 255;
+
+	verts[1] = verts[2] = verts[3] = verts[4] = verts[0];
 
 	if (Warp_glow_bitmap >= 0) {
 		float r = radius;
@@ -330,7 +336,7 @@ void warpin_queue_render(draw_list *scene, object *obj, matrix *orient, vec3d *p
 		verts[3].texture_position.v = 0.99f;
 
 		verts[4].texture_position.u = 0.5f;
-		verts[4].texture_position.v = 0.5f; 
+		verts[4].texture_position.v = 0.5f;
 
 		if (Cmdline_nohtl) {
 			g3_rotate_vertex( &verts[0], &vecs[0] );

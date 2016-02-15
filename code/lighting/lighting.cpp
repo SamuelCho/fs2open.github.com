@@ -1240,8 +1240,6 @@ bool scene_lights::setLights(light_indexing_info *info)
 
 	gr_reset_lighting();
 
-	gr_set_lighting(true, true);
-
 	for ( size_t i = 0; i < StaticLightIndices.size(); ++i) {
 		int light_index = StaticLightIndices[i];
 		
@@ -1250,7 +1248,7 @@ bool scene_lights::setLights(light_indexing_info *info)
 
 	extern bool Deferred_lighting;
 	if ( Deferred_lighting ) {
-		opengl_change_active_lights(0);
+		gr_set_lighting(true, true);
 		return false;
 	}
 
@@ -1259,7 +1257,7 @@ bool scene_lights::setLights(light_indexing_info *info)
 
 	// check if there are any lights to actually set
 	if ( num_lights <= 0 || index_start < 0 ) {
-		opengl_change_active_lights(0);
+		gr_set_lighting(true, true);
 		return false;
 	}
 
@@ -1273,7 +1271,7 @@ bool scene_lights::setLights(light_indexing_info *info)
 		gr_set_light(&AllLights[light_index]);
 	}
 
-	opengl_change_active_lights(0);
+	gr_set_lighting(true, true);
 
 	return true;
 }
