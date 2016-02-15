@@ -2998,7 +2998,10 @@ void gr_opengl_scene_texture_begin()
 	}
 
 	Scene_framebuffer_in_frame = true;
-	High_dynamic_range = true;
+
+	if ( Cmdline_postprocess && !PostProcessing_override ) {
+		High_dynamic_range = true;
+	}
 }
 
 float time_buffer = 0.0f;
