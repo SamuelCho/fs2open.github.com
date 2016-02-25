@@ -79,7 +79,7 @@ static opengl_shader_type_t GL_shader_types[] = {
 		3, { "ytex", "utex", "vtex" }, 0, { NULL }, "Video Playback" },
 
 	{ SDR_TYPE_SHIELD_DECAL, "shield-impact-v.sdr",	"shield-impact-f.sdr", 0, {0, 0, 0}, 
-		5, { "shieldMap", "shield_mv_matrix", "shield_proj_matrix", "hitpos", "hitnorm"}, 0, { NULL }, "Shield Decals" }
+		4, { "shieldMap", "shield_mv_matrix", "shield_proj_matrix", "hitnorm"}, 0, { NULL }, "Shield Decals" }
 };
 
 /**, 

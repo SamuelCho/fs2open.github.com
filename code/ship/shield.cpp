@@ -385,13 +385,9 @@ void shield_render_decal(polymodel *pm, matrix *orient, vec3d *pos, matrix* hit_
 
 	gr_set_color(r, g, b);
 
-	//gr_set_texture_addressing(TMAP_ADDRESS_CLAMP);
-
 	gr_zbuffer_set(GR_ZBUFF_READ);
 
 	gr_render_shield_impact(pm->shield_mesh, pm->shield_norms, pm->shield_mesh_num_verts, hit_orient, hit_pos, hit_radius);
-
-	//gr_set_texture_addressing(TMAP_ADDRESS_WRAP);
 
 	g3_done_instance(true);
 }
@@ -498,10 +494,13 @@ void render_shield(int shield_num)
 					hit_radius = pm->core_radius * 0.5f;
 				}
 
-				shield_render_decal(pm, orient, centerp, &Shield_hits[shield_num].hit_orient, &Shield_hits[shield_num].hit_pos, hit_radius, Shield_hits[shield_num].rgb[0], Shield_hits[shield_num].rgb[1], Shield_hits[shield_num].rgb[2]);
-				//for (i=0; i<Shield_hits[shield_num].num_tris; i++) {
-				//	render_shield_triangle(&Global_tris[Shield_hits[shield_num].tri_list[i]], orient, centerp, Shield_hits[shield_num].rgb[0], Shield_hits[shield_num].rgb[1], Shield_hits[shield_num].rgb[2]);
-				//}
+				if ( is_minimum_GLSL_version() ) {
+					shield_render_decal(pm, orient, centerp, &Shield_hits[shield_num].hit_orient, &Shield_hits[shield_num].hit_pos, hit_radius, Shield_hits[shield_num].rgb[0], Shield_hits[shield_num].rgb[1], Shield_hits[shield_num].rgb[2]);
+				} else {
+					for ( i = 0; i < Shield_hits[shield_num].num_tris; i++ ) {
+						render_shield_triangle(&Global_tris[Shield_hits[shield_num].tri_list[i]], orient, centerp, Shield_hits[shield_num].rgb[0], Shield_hits[shield_num].rgb[1], Shield_hits[shield_num].rgb[2]);
+					}
+				}
 			}
 		}
 	}
