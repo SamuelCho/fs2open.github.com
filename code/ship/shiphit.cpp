@@ -10,6 +10,8 @@
 
 
 
+#include <algorithm>
+
 #include "asteroid/asteroid.h"
 #include "debris/debris.h"
 #include "fireball/fireballs.h"
@@ -144,7 +146,7 @@ void do_subobj_destroyed_stuff( ship *ship_p, ship_subsys *subsys, vec3d* hitpos
 				} else {
 					// make other fireballs at random positions, but try to keep on the surface
 					vm_vec_rand_vec_quick(&rand_vec);
-					float dot = vm_vec_dotprod(&center_to_subsys, &rand_vec);
+					float dot = vm_vec_dot(&center_to_subsys, &rand_vec);
 					vm_vec_scale_add2(&rand_vec, &center_to_subsys, -dot/vm_vec_mag_squared(&center_to_subsys));
 					vm_vec_scale_add(&temp_vec, &g_subobj_pos, &rand_vec, 0.5f*psub->radius);
 				}
@@ -156,7 +158,7 @@ void do_subobj_destroyed_stuff( ship *ship_p, ship_subsys *subsys, vec3d* hitpos
 				}
 
 				vec3d fb_vel;
-				vm_vec_crossprod(&fb_vel, &objp->phys_info.rotvel, &center_to_subsys);
+				vm_vec_cross(&fb_vel, &objp->phys_info.rotvel, &center_to_subsys);
 				vm_vec_add2(&fb_vel, &objp->phys_info.vel);
 
 				int fireball_type = fireball_ship_explosion_type(sip);
@@ -548,7 +550,7 @@ float do_subobj_hit_stuff(object *ship_objp, object *other_obj, vec3d *hitpos, i
 				// Special case:
 				// if the subsystem is a turret and the hit submodel is its barrel,
 				// get the distance between the hit and the turret barrel center
-				find_submodel_instance_world_point(&g_subobj_pos, ship_objp, submodel_num);
+				find_submodel_instance_world_point(&g_subobj_pos, ship_p->model_instance_num, submodel_num, &ship_objp->orient, &ship_objp->pos);
 				dist = vm_vec_dist_quick(&hitpos2, &g_subobj_pos);
 
 				// Damage attenuation range of barrel radius * 2 makes full damage
@@ -607,7 +609,7 @@ float do_subobj_hit_stuff(object *ship_objp, object *other_obj, vec3d *hitpos, i
 		} else if(other_obj->type == OBJ_ASTEROID) {
 			dmg_type_idx = Asteroid_info[Asteroids[other_obj->instance].asteroid_type].damage_type_idx;
 		} else if(other_obj->type == OBJ_DEBRIS) {
-			dmg_type_idx = Ships[Objects[Debris[other_obj->instance].source_objnum].instance].debris_damage_type_idx;
+			dmg_type_idx = Debris[other_obj->instance].damage_type_idx;
 		} else if(other_obj->type == OBJ_SHIP) {
 			dmg_type_idx = Ships[other_obj->instance].collision_damage_type_idx;
 		}
@@ -976,6 +978,7 @@ void ship_hit_music(object *ship_objp, object *other_obj)
 	Assert(other_obj);	// Goober5000
 
 	ship* ship_p = &Ships[ship_objp->instance];
+	object *parent;
 
 	// Switch to battle track when a ship is hit by fire 
 	//
@@ -988,6 +991,9 @@ void ship_hit_music(object *ship_objp, object *other_obj)
 	int attackee_team, attacker_team;
 
 	attackee_team = Ships[ship_objp->instance].team;
+
+	// avoid uninitialized value by matching them
+	attacker_team = attackee_team;
 
 	switch ( other_obj->type )
 	{
@@ -1002,7 +1008,9 @@ void ship_hit_music(object *ship_objp, object *other_obj)
 
 		case OBJ_WEAPON:
 			// parent of weapon is object num of ship that fired it
-			attacker_team = Ships[Objects[other_obj->parent].instance].team;	
+			parent = &Objects[other_obj->parent];
+			if (parent->signature == other_obj->parent_sig)
+				attacker_team = Ships[parent->instance].team;
 			break;
 
 		default:
@@ -1079,20 +1087,13 @@ int get_max_sparks(object* ship_objp)
 }
 
 
-// helper function to qsort, sorting spark pairs by distance
-int spark_compare( const void *elem1, const void *elem2 )
+// helper function to std::sort, sorting spark pairs by distance
+int spark_compare(const spark_pair &pair1, const spark_pair &pair2)
 {
-	spark_pair *pair1 = (spark_pair *) elem1;
-	spark_pair *pair2 = (spark_pair *) elem2;
+	Assert(pair1.dist >= 0);
+	Assert(pair2.dist >= 0);
 
-	Assert(pair1->dist >= 0);
-	Assert(pair2->dist >= 0);
-
-	if ( pair1->dist <  pair2->dist ) {
-		return -1;
-	} else {
-		return 1;
-	}
+	return (pair1.dist < pair2.dist);
 }
 
 // for big ships, when all spark slots are filled, make intelligent choice of one to be recycled
@@ -1102,7 +1103,6 @@ int choose_next_spark(object *ship_objp, vec3d *hitpos)
 	vec3d world_hitpos[MAX_SHIP_HITS];
 	spark_pair spark_pairs[MAX_SPARK_PAIRS];
 	ship *shipp = &Ships[ship_objp->instance];
-	ship_info *sip = &Ship_info[shipp->ship_info_index];
 
 	// only choose next spark when all slots are full
 	Assert(get_max_sparks(ship_objp) == Ships[ship_objp->instance].num_hits);
@@ -1115,23 +1115,14 @@ int choose_next_spark(object *ship_objp, vec3d *hitpos)
 	num_spark_pairs = (num_sparks * num_sparks - num_sparks) / 2;
 
 	// get the world hitpos for all sparks
-	bool model_started = false;
 	for (spark_num=0; spark_num<num_sparks; spark_num++) {
 		if (shipp->sparks[spark_num].submodel_num != -1) {
-			if ( !model_started) {
-				model_started = true;
-				ship_model_start(ship_objp);
-			}
-			model_find_world_point(&world_hitpos[spark_num], &shipp->sparks[spark_num].pos, sip->model_num, shipp->sparks[spark_num].submodel_num, &ship_objp->orient, &ship_objp->pos);
+			model_instance_find_world_point(&world_hitpos[spark_num], &shipp->sparks[spark_num].pos, shipp->model_instance_num, shipp->sparks[spark_num].submodel_num, &ship_objp->orient, &ship_objp->pos);
 		} else {
 			// rotate sparks correctly with current ship orient
 			vm_vec_unrotate(&world_hitpos[spark_num], &shipp->sparks[spark_num].pos, &ship_objp->orient);
 			vm_vec_add2(&world_hitpos[spark_num], &ship_objp->pos);
 		}
-	}
-
-	if (model_started) {
-		ship_model_stop(ship_objp);
 	}
 
 	// check we're not making a spark in the same location as a current one
@@ -1166,7 +1157,7 @@ int choose_next_spark(object *ship_objp, vec3d *hitpos)
 	Assert(count == num_spark_pairs);
 
 	// sort pairs
-	qsort(spark_pairs, count, sizeof(spark_pair), spark_compare);
+	std::sort(spark_pairs, spark_pairs + count, spark_compare);
 	//mprintf(("Min spark pair dist %.1f\n", spark_pairs[0].dist));
 
 	// look through the first few sorted pairs, counting number of indices of closest pair
@@ -1236,13 +1227,11 @@ void ship_hit_create_sparks(object *ship_objp, vec3d *hitpos, int submodel_num)
 
 	if (instancing) {
 		// get the hit position in the subobject RF
-		ship_model_start(ship_objp);
 		vec3d temp_zero, temp_x, temp_y, temp_z;
-		model_find_world_point(&temp_zero, &vmd_zero_vector, sip->model_num, submodel_num, &ship_objp->orient, &ship_objp->pos);
-		model_find_world_point(&temp_x, &vmd_x_vector, sip->model_num, submodel_num, &ship_objp->orient, &ship_objp->pos);
-		model_find_world_point(&temp_y, &vmd_y_vector, sip->model_num, submodel_num, &ship_objp->orient, &ship_objp->pos);
-		model_find_world_point(&temp_z, &vmd_z_vector, sip->model_num, submodel_num, &ship_objp->orient, &ship_objp->pos);
-		ship_model_stop(ship_objp);
+		model_instance_find_world_point(&temp_zero, &vmd_zero_vector, shipp->model_instance_num, submodel_num, &ship_objp->orient, &ship_objp->pos);
+		model_instance_find_world_point(&temp_x, &vmd_x_vector, shipp->model_instance_num, submodel_num, &ship_objp->orient, &ship_objp->pos);
+		model_instance_find_world_point(&temp_y, &vmd_y_vector, shipp->model_instance_num, submodel_num, &ship_objp->orient, &ship_objp->pos);
+		model_instance_find_world_point(&temp_z, &vmd_z_vector, shipp->model_instance_num, submodel_num, &ship_objp->orient, &ship_objp->pos);
 
 		// find submodel x,y,z axes
 		vm_vec_sub2(&temp_x, &temp_zero);
@@ -1254,9 +1243,9 @@ void ship_hit_create_sparks(object *ship_objp, vec3d *hitpos, int submodel_num)
 		vm_vec_sub(&diff, hitpos, &temp_zero);
 
 		// find displacement from submodel origin in submodel RF
-		shipp->sparks[n].pos.xyz.x = vm_vec_dotprod(&diff, &temp_x);
-		shipp->sparks[n].pos.xyz.y = vm_vec_dotprod(&diff, &temp_y);
-		shipp->sparks[n].pos.xyz.z = vm_vec_dotprod(&diff, &temp_z);
+		shipp->sparks[n].pos.xyz.x = vm_vec_dot(&diff, &temp_x);
+		shipp->sparks[n].pos.xyz.y = vm_vec_dot(&diff, &temp_y);
+		shipp->sparks[n].pos.xyz.z = vm_vec_dot(&diff, &temp_z);
 		shipp->sparks[n].submodel_num = submodel_num;
 		shipp->sparks[n].end_time = timestamp(-1);
 	} else {
@@ -2074,7 +2063,7 @@ static void ship_do_damage(object *ship_objp, object *other_obj, vec3d *hitpos, 
 			} else if(other_obj_is_asteroid) {
 				dmg_type_idx = Asteroid_info[Asteroids[other_obj->instance].asteroid_type].damage_type_idx;
 			} else if(other_obj_is_debris) {
-				dmg_type_idx = Ships[Objects[Debris[other_obj->instance].source_objnum].instance].debris_damage_type_idx;
+				dmg_type_idx = Debris[other_obj->instance].damage_type_idx;
 			} else if(other_obj_is_ship) {
 				dmg_type_idx = Ships[other_obj->instance].collision_damage_type_idx;
 			}
@@ -2152,7 +2141,7 @@ static void ship_do_damage(object *ship_objp, object *other_obj, vec3d *hitpos, 
 			} else if(other_obj_is_asteroid) {
 				dmg_type_idx = Asteroid_info[Asteroids[other_obj->instance].asteroid_type].damage_type_idx;
 			} else if(other_obj_is_debris) {
-				dmg_type_idx = Ships[Objects[Debris[other_obj->instance].source_objnum].instance].debris_damage_type_idx;
+				dmg_type_idx = Debris[other_obj->instance].damage_type_idx;
 			} else if(other_obj_is_ship) {
 				dmg_type_idx = Ships[other_obj->instance].collision_damage_type_idx;
 			}

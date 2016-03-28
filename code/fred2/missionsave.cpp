@@ -1724,6 +1724,8 @@ int CFred_mission_save::save_objects()
 				fout(" \"scramble-messages\"");
 			if (!(objp->flags & OF_COLLIDES))
 				fout(" \"no-collide\"");
+			if (shipp->flags2 & SF2_NO_DISABLED_SELF_DESTRUCT)
+				fout(" \"no-disabled-self-destruct\"");
 			fout(" )");
 		}
 		// -----------------------------------------------------------
@@ -2975,7 +2977,7 @@ int CFred_mission_save::fout_version(char *format, ...)
 		str_scp.append(fso_ver_comment.back().c_str());
 		str_scp.append(" ");
 
-		cfputs(const_cast<char*>(str_scp.c_str()), fp);
+		cfputs(str_scp.c_str(), fp);
 
 		str_scp = "";
 	}
@@ -3002,7 +3004,7 @@ int CFred_mission_save::fout_version(char *format, ...)
 					if (first_line) {
 						first_line = false;
 					} else {
-						cfputs(const_cast<char*>(fso_ver_comment.back().c_str()), fp);
+						cfputs(fso_ver_comment.back().c_str(), fp);
 						cfputs(" ", fp);
 					}
 
@@ -3014,7 +3016,7 @@ int CFred_mission_save::fout_version(char *format, ...)
 					if (first_line) {
 						first_line = false;
 					} else {
-						cfputs(const_cast<char*>(fso_ver_comment.back().c_str()), fp);
+						cfputs(fso_ver_comment.back().c_str(), fp);
 						cfputs(" ", fp);
 					}
 
@@ -3028,7 +3030,7 @@ int CFred_mission_save::fout_version(char *format, ...)
 
 			// be sure to account for any ending elements too
 			if ( strlen(str_p) ) {
-				cfputs(const_cast<char*>(fso_ver_comment.back().c_str()), fp);
+				cfputs(fso_ver_comment.back().c_str(), fp);
 				cfputs(" ", fp);
 				cfputs(str_p, fp);
 			}
@@ -3057,7 +3059,7 @@ int CFred_mission_save::fout(char *format, ...)
 	vsprintf(str, format, args);
 	va_end(args);
 
-	cfputs(const_cast<char*>(str.c_str()), fp);
+	cfputs(str.c_str(), fp);
 	return 0;
 }
 
@@ -3122,7 +3124,7 @@ int CFred_mission_save::fout_ext(char *pre_str, char *format, ...)
 					if (first_line) {
 						first_line = false;
 					} else {
-						cfputs(const_cast<char*>(fso_ver_comment.back().c_str()), fp);
+						cfputs(fso_ver_comment.back().c_str(), fp);
 						cfputs(" ", fp);
 					}
 
@@ -3134,7 +3136,7 @@ int CFred_mission_save::fout_ext(char *pre_str, char *format, ...)
 					if (first_line) {
 						first_line = false;
 					} else {
-						cfputs(const_cast<char*>(fso_ver_comment.back().c_str()), fp);
+						cfputs(fso_ver_comment.back().c_str(), fp);
 						cfputs(" ", fp);
 					}
 
@@ -3148,7 +3150,7 @@ int CFred_mission_save::fout_ext(char *pre_str, char *format, ...)
 
 			// be sure to account for any ending elements too
 			if ( strlen(str_p) ) {
-				cfputs(const_cast<char*>(fso_ver_comment.back().c_str()), fp);
+				cfputs(fso_ver_comment.back().c_str(), fp);
 				cfputs(" ", fp);
 				cfputs(str_p, fp);
 			}

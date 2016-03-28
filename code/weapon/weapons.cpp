@@ -688,6 +688,14 @@ void parse_wi_flags(weapon_info *weaponp, int wi_flags, int wi_flags2, int wi_fl
 			weaponp->wi_flags3 |= WIF3_APPLY_RECOIL;
 		else if (!stricmp(NOX("don't spawn if shot"), weapon_strings[i]))
 			weaponp->wi_flags3 |= WIF3_DONT_SPAWN_IF_SHOT;
+		else if (!stricmp(NOX("die on lost lock"), weapon_strings[i])) {
+			if (!(weaponp->wi_flags & WIF_LOCKED_HOMING)) {
+				Warning(LOCATION, "\"die on lost lock\" may only be used for Homing Type ASPECT/JAVELIN!");
+			}
+			else {
+				weaponp->wi_flags3 |= WIF3_DIE_ON_LOST_LOCK;
+			}
+		}
 		else
 			Warning(LOCATION, "Bogus string in weapon flags: %s\n", weapon_strings[i]);
 	}
@@ -885,9 +893,8 @@ void init_weapon_entry(int weap_info_index)
 	wip->max_delay = 0.0f;
 	wip->min_delay = 0.0f;
 	wip->damage = 0.0f;
-	wip->damage_time = 0.0f;
-	wip->min_damage = 0.0f;
-	wip->max_damage = 0.0f;
+	wip->damage_time = -1.0f;
+	wip->atten_damage = -1.0f;
 
 	wip->damage_type_idx = -1;
 	wip->damage_type_idx_sav = -1;
@@ -1016,6 +1023,8 @@ void init_weapon_entry(int weap_info_index)
 	wip->cm_aspect_effectiveness = 1.0f;
 	wip->cm_heat_effectiveness = 1.0f;
 	wip->cm_effective_rad = MAX_CMEASURE_TRACK_DIST;
+	wip->cm_detonation_rad = CMEASURE_DETONATE_DISTANCE;
+	wip->cm_kill_single = false;
 
 	wip->b_info.beam_type = -1;
 	wip->b_info.beam_life = -1.0f;
@@ -1029,6 +1038,8 @@ void init_weapon_entry(int weap_info_index)
 	wip->b_info.beam_warmup_sound = -1;
 	wip->b_info.beam_warmdown_sound = -1;
 	wip->b_info.beam_num_sections = 0;
+	wip->b_info.glow_length = 0;
+	wip->b_info.directional_glow = false;
 	wip->b_info.beam_shots = 1;
 	wip->b_info.beam_shrink_factor = 0.0f;
 	wip->b_info.beam_shrink_pct = 0.0f;
@@ -1173,15 +1184,7 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 		}
 
 		if(Num_weapon_types >= MAX_WEAPON_TYPES) {
-			Warning(LOCATION, "Too many weapon classes before '%s'; maximum is %d, so only the first %d will be used", fname, MAX_WEAPON_TYPES, Num_weapon_types);
-			
-			//Skip the rest of the ships in non-modular tables, since we can't add them.
-			if(!replace) {
-				if ( !skip_to_start_of_string_either("$Name:", "#End")) {
-					Int3();
-				}
-			}
-			return -1;
+			Error(LOCATION, "Too many weapon classes before '%s'; maximum is %d.\n", fname, MAX_WEAPON_TYPES);
 		}
 
 		wip = &Weapon_info[Num_weapon_types];
@@ -1424,24 +1427,11 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 	// Attenuation of non-beam primary weapon damage
 	if(optional_string("$Damage Time:")) {
 		stuff_float(&wip->damage_time);
-		if(optional_string("+Min Damage:")){
-			stuff_float(&wip->min_damage);
-			if (wip->min_damage > wip->damage && wip->min_damage != 0.0f) {
-				Warning(LOCATION, "Min Damage is greater than Damage, resetting to zero.");
-				wip->min_damage = 0.0f;
-			}
-		}
-		if(optional_string("+Max Damage:")) {
-			stuff_float(&wip->max_damage);
-			if (wip->max_damage < wip->damage && wip->max_damage != 0.0f) {
-				Warning(LOCATION, "Max Damage is less than Damage, resetting to zero.");
-				wip->max_damage = 0.0f;
-			}
-		}
-		if(wip->min_damage != 0.0f && wip->max_damage != 0.0f) {
-			Warning(LOCATION, "Both Min Damage and Max Damage are set to values greater than zero, resetting both to zero.");
-			wip->min_damage = 0.0f;
-			wip->max_damage = 0.0f;
+		if(optional_string("+Attenuation Damage:")){
+			stuff_float(&wip->atten_damage);
+		} else if (optional_string_either("+Min Damage:", "+Max Damage:")) {
+			Warning(LOCATION, "+Min Damage: and +Max Damage: in %s are deprecated, please change to +Attenuation Damage:.", wip->name);
+			stuff_float(&wip->atten_damage);
 		}
 	}
 	
@@ -2192,6 +2182,12 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 
 		if (optional_string("+Effective Radius:"))
 			stuff_float(&wip->cm_effective_rad);
+
+		if (optional_string("+Missile Detonation Radius:"))
+			stuff_float(&wip->cm_detonation_rad);
+
+		if (optional_string("+Single Missile Kill:"))
+			stuff_boolean(&wip->cm_kill_single);
 	}
 
 	// beam weapon optional stuff
@@ -2282,6 +2278,11 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 		if (optional_string("+Muzzleglow:") ) {
 			stuff_string(fname, F_NAME, NAME_LENGTH);
 			generic_anim_init(&wip->b_info.beam_glow, fname);
+		}
+
+		if (optional_string("+Directional Glow:")) {
+			stuff_float(&wip->b_info.glow_length);
+			wip->b_info.directional_glow = true;
 		}
 
 		// # of shots (only used for type D beams)
@@ -3856,8 +3857,14 @@ void weapon_delete(object *obj)
 	}
 
 	if (wp->hud_in_flight_snd_sig >= 0 && snd_is_playing(wp->hud_in_flight_snd_sig))
-	{
 		snd_stop(wp->hud_in_flight_snd_sig);
+
+	if (wp->model_instance_num >= 0)
+		model_delete_instance(wp->model_instance_num);
+
+	if (wp->cmeasure_ignore_list != nullptr) {
+		delete wp->cmeasure_ignore_list;
+		wp->cmeasure_ignore_list = nullptr;
 	}
 
 	wp->objnum = -1;
@@ -3886,32 +3893,43 @@ void weapon_maybe_play_warning(weapon *wp)
 	}
 }
 
-#define	CMEASURE_DETONATE_DISTANCE		40.0f
 
 /**
  * Detonate all missiles near this countermeasure.
  */
-void detonate_nearby_missiles(object *killer_objp)
+void detonate_nearby_missiles(object* killer_objp, object* missile_objp)
 {
-	if(killer_objp->type != OBJ_WEAPON) {
+	if(killer_objp->type != OBJ_WEAPON || missile_objp->type != OBJ_WEAPON) {
 		Int3();
 		return;
 	}
 
-	missile_obj	*mop;
+	weapon_info* killer_infop = &Weapon_info[Weapons[killer_objp->instance].weapon_info_index];
 
-	mop = GET_FIRST(&Missile_obj_list);
+	if (killer_infop->cm_kill_single) {
+		weapon* wp = &Weapons[missile_objp->instance];
+		if (wp->lifeleft > 0.2f) {
+			nprintf(("Countermeasures", "Countermeasure (%s-%i) detonated missile (%s-%i) Frame: %i\n",
+						killer_infop->name, killer_objp->signature,
+						Weapon_info[Weapons[missile_objp->instance].weapon_info_index].name, missile_objp->signature, Framecount));
+			wp->lifeleft = 0.2f;
+		}
+		return;
+	}
+
+	missile_obj* mop = GET_FIRST(&Missile_obj_list);
+
 	while(mop != END_OF_LIST(&Missile_obj_list)) {
-		object	*objp;
-		weapon	*wp;
-
-		objp = &Objects[mop->objnum];
-		wp = &Weapons[objp->instance];
+		object* objp = &Objects[mop->objnum];
+		weapon* wp = &Weapons[objp->instance];
 
 		if (iff_x_attacks_y(Weapons[killer_objp->instance].team, wp->team)) {
 			if ( Missiontime - wp->creation_time > F1_0/2) {
-				if (vm_vec_dist_quick(&killer_objp->pos, &objp->pos) < CMEASURE_DETONATE_DISTANCE) {
+				if (vm_vec_dist_quick(&killer_objp->pos, &objp->pos) < killer_infop->cm_detonation_rad) {
 					if (wp->lifeleft > 0.2f) { 
+						nprintf(("Countermeasures", "Countermeasure (%s-%i) detonated missile (%s-%i) Frame: %i\n",
+									killer_infop->name, killer_objp->signature,
+									Weapon_info[Weapons[objp->instance].weapon_info_index].name, objp->signature, Framecount));
 						wp->lifeleft = 0.2f;
 					}
 				}
@@ -4090,7 +4108,26 @@ void find_homing_object_cmeasures_1(object *weapon_objp)
 
 				if (dist < cm_wip->cm_effective_rad)
 				{
-					float	chance;
+					float chance;
+
+					if (wp->cmeasure_ignore_list == nullptr) {
+						wp->cmeasure_ignore_list = new SCP_vector<int>;
+					}
+					else {
+						bool found = false;
+						for (auto ii = wp->cmeasure_ignore_list->cbegin(); ii != wp->cmeasure_ignore_list->cend(); ++ii) {
+							if (objp->signature == *ii) {
+								nprintf(("CounterMeasures", "Weapon (%s-%04i) already seen CounterMeasure (%s-%04i) Frame: %i\n",
+											wip->name, weapon_objp->instance, cm_wip->name, objp->signature, Framecount));
+								found = true;
+								break;
+							}
+						}
+						if (found) {
+							continue;
+						}
+					}
+
 					if (wip->wi_flags & WIF_HOMING_ASPECT) {
 						// aspect seeker this likely to chase a countermeasure
 						chance = cm_wip->cm_aspect_effectiveness/wip->seeker_strength;
@@ -4098,17 +4135,17 @@ void find_homing_object_cmeasures_1(object *weapon_objp)
 						// heat seeker and javelin HS this likely to chase a countermeasure
 						chance = cm_wip->cm_heat_effectiveness/wip->seeker_strength;
 					}
-					if ((objp->signature != wp->cmeasure_ignore_objnum) && (objp->signature != wp->cmeasure_chase_objnum))
-					{
-						if (frand() >= chance) {
-							wp->cmeasure_ignore_objnum = objp->signature;	//	Don't process this countermeasure again.
-						} else  {
-							wp->cmeasure_chase_objnum = objp->signature;	//	Don't process this countermeasure again.
-						}
+
+					// remember this cmeasure so it can be ignored in future
+					wp->cmeasure_ignore_list->push_back(objp->signature);
+
+					if (frand() >= chance) {
+						// failed to decoy
+						nprintf(("CounterMeasures", "Weapon (%s-%04i) ignoring CounterMeasure (%s-%04i) Frame: %i\n",
+									wip->name, weapon_objp->instance, cm_wip->name, objp->signature, Framecount));
 					}
-				
-					if (objp->signature != wp->cmeasure_ignore_objnum)
-					{
+					else {
+						// successful decoy, maybe chase the new cm
 						dot = vm_vec_dot(&vec_to_object, &weapon_objp->orient.vec.fvec);
 
 						if (dot > best_dot)
@@ -4116,6 +4153,8 @@ void find_homing_object_cmeasures_1(object *weapon_objp)
 							best_dot = dot;
 							wp->homing_object = objp;
 							cmeasure_maybe_alert_success(objp);
+							nprintf(("CounterMeasures", "Weapon (%s-%04i) chasing CounterMeasure (%s-%04i) Frame: %i\n",
+										wip->name, weapon_objp->instance, cm_wip->name, objp->signature, Framecount));
 						}
 					}
 				}
@@ -4242,13 +4281,20 @@ void weapon_home(object *obj, int num, float frame_time)
 	// Goober5000 - this has been fixed back to more closely follow the original logic.  Remember, the retail code
 	// had 0.5 second of free flight time, the first half of which was spent ramping up to full speed.
 	if ((hobjp == &obj_used_list) || ( f2fl(Missiontime - wp->creation_time) < (wip->free_flight_time / 2) )) {
-		//	If this is a heat seeking homing missile and [free-flight-time] has elapsed since firing
-		//	and we don't have a target (else we wouldn't be inside the IF), find a new target.
-        if ((wip->wi_flags & WIF_HOMING_HEAT) &&
-            (f2fl(Missiontime - wp->creation_time) > wip->free_flight_time))
-        {
-            find_homing_object(obj, num);
-        }
+		if (f2fl(Missiontime - wp->creation_time) > wip->free_flight_time) {
+			// If this is a heat seeking homing missile and [free-flight-time] has elapsed since firing
+			// and we don't have a target (else we wouldn't be inside the IF), find a new target.
+			if (wip->wi_flags & WIF_HOMING_HEAT) {
+				find_homing_object(obj, num);
+			}
+			// modders may want aspect homing missiles to die if they lose their target
+			else if (wip->wi_flags & WIF_LOCKED_HOMING && wip->wi_flags3 & WIF3_DIE_ON_LOST_LOCK) {
+				if (wp->lifeleft > 0.5f) {
+					wp->lifeleft = frand_range(0.1f, 0.5f); // randomise a bit to avoid multiple missiles detonating in one frame
+				}
+				return;
+			}
+		}
 		else if (MULTIPLAYER_MASTER && (wip->wi_flags & WIF_LOCKED_HOMING) && (wp->weapon_flags & WF_HOMING_UPDATE_NEEDED)) {
 			wp->weapon_flags &= ~WF_HOMING_UPDATE_NEEDED; 
 			send_homing_weapon_info(num);
@@ -4280,6 +4326,9 @@ void weapon_home(object *obj, int num, float frame_time)
 
 		return;
 	}
+
+	// if we've got this far, this should be valid
+	weapon_info* hobj_infop = &Weapon_info[Weapons[hobjp->instance].weapon_info_index];
 
 	if (wip->acceleration_time > 0.0f) {
 		if (Missiontime - wp->creation_time < fl2f(wip->acceleration_time)) {
@@ -4346,6 +4395,8 @@ void weapon_home(object *obj, int num, float frame_time)
 			return;
 	}
 
+	// TODO maybe add flag to allow WF_LOCKED_HOMING to lose target when target is dead
+
 	switch (hobjp->type) {
 	case OBJ_NONE:
 		if (wip->wi_flags & WIF_LOCKED_HOMING) {
@@ -4370,14 +4421,14 @@ void weapon_home(object *obj, int num, float frame_time)
 	case OBJ_WEAPON:
 	{
 		bool home_on_cmeasure = The_mission.ai_profile->flags2 & AIPF2_ASPECT_LOCK_COUNTERMEASURE
-			|| Weapon_info[Weapons[hobjp->instance].weapon_info_index].wi_flags3 & WIF3_CMEASURE_ASPECT_HOME_ON;
+			|| hobj_infop->wi_flags3 & WIF3_CMEASURE_ASPECT_HOME_ON;
 
 		// don't home on countermeasures or non-bombs, that's handled elsewhere
-		if (((Weapon_info[Weapons[hobjp->instance].weapon_info_index].wi_flags & WIF_CMEASURE) && !home_on_cmeasure))
+		if (((hobj_infop->wi_flags & WIF_CMEASURE) && !home_on_cmeasure))
 		{
 			break;
 		}
-		else if (!(Weapon_info[Weapons[hobjp->instance].weapon_info_index].wi_flags & WIF_BOMB))
+		else if (!(hobj_infop->wi_flags & WIF_BOMB))
 		{
 			break;
 		}
@@ -4434,13 +4485,13 @@ void weapon_home(object *obj, int num, float frame_time)
 			float	dist;
 
 			dist = vm_vec_dist_quick(&obj->pos, &hobjp->pos);
-			if (hobjp->type == OBJ_WEAPON && (Weapon_info[Weapons[hobjp->instance].weapon_info_index].wi_flags & WIF_CMEASURE))
+			if (hobjp->type == OBJ_WEAPON && (hobj_infop->wi_flags & WIF_CMEASURE))
 			{
-				if (dist < CMEASURE_DETONATE_DISTANCE)
+				if (dist < hobj_infop->cm_detonation_rad)
 				{
 					//	Make this missile detonate soon.  Not right away, not sure why.  Seems better.
 					if (iff_x_attacks_y(Weapons[hobjp->instance].team, wp->team)) {
-						detonate_nearby_missiles(hobjp);
+						detonate_nearby_missiles(hobjp, obj);
 						return;
 					}
 				}
@@ -4535,7 +4586,7 @@ void weapon_home(object *obj, int num, float frame_time)
 		if ((dist_to_target < flFrametime * obj->phys_info.speed * 4.0f + 10.0f) &&
             (old_dot < wip->fov) &&
             (wp->lifeleft > 0.01f) &&
-            (wp->homing_object) &&
+            (wp->homing_object != &obj_used_list) &&
             (wp->homing_object->type == OBJ_SHIP))
         {
             wp->lifeleft = 0.01f;
@@ -4640,9 +4691,9 @@ void weapon_process_pre( object *obj, float frame_time)
 	//WMC - Maybe detonate weapon anyway!
 	if(wip->det_radius > 0.0f)
 	{
-		if((wp->homing_object != NULL) && (wp->homing_object->type != 0))
+		if((wp->homing_object != &obj_used_list) && (wp->homing_object->type != 0))
 		{
-			if(vm_vec_dist(&wp->homing_pos, &obj->pos) <= wip->det_radius)
+			if(!IS_VEC_NULL(&wp->homing_pos) && vm_vec_dist(&wp->homing_pos, &obj->pos) <= wip->det_radius)
 			{
 				weapon_detonate(obj);
 			}
@@ -4891,7 +4942,8 @@ void weapon_process_post(object * obj, float frame_time)
 			t = f2fl(Missiontime - wp->creation_time) / wip->acceleration_time;
 			obj->phys_info.speed = wp->launch_speed + MAX(0.0f, wp->weapon_max_vel - wp->launch_speed) * t;
 		} else {
-			obj->phys_info.speed = wip->max_speed;;
+			obj->phys_info.speed = wip->max_speed;
+			obj->phys_info.flags |= PF_CONST_VEL; // Max speed reached, can use simpler physics calculations now
 		}
 
 		vm_vec_copy_scale( &obj->phys_info.desired_vel, &obj->orient.vec.fvec, obj->phys_info.speed);
@@ -4977,20 +5029,23 @@ void weapon_process_post(object * obj, float frame_time)
 
 			//create a warpin effect
 			wp->lssm_warp_idx=fireball_create(&warpin, FIREBALL_WARP, FIREBALL_WARP_EFFECT, -1,obj->radius*1.5f,0,&vmd_zero_vector,wp->lssm_warp_time,0,&orient);
+			
+			if (wp->lssm_warp_idx < 0) {
+				mprintf(("LSSM: Failed to create warp effect! Please report if this happens frequently.\n"));
+			}
 
 			obj->orient=orient;
 			obj->pos=warpin;
 			obj->phys_info.speed=0;
 			obj->phys_info.desired_vel = vmd_zero_vector;
 			obj->phys_info.vel = obj->phys_info.desired_vel;
-		
-			wp->lssm_stage=4;
 
+			wp->lssm_stage = 4;
 		}
-	
 
 		//done warping in.  render and collide it. let the fun begin
-		if ((wp->lssm_stage==4) && (fireball_lifeleft_percent(&Objects[wp->lssm_warp_idx]) <=0.5f))
+		// If the previous fireball creation failed just put it into normal space now
+		if ((wp->lssm_stage==4) && (wp->lssm_warp_idx < 0 || fireball_lifeleft_percent(&Objects[wp->lssm_warp_idx]) <=0.5f))
 		{
 			vm_vec_copy_scale(&obj->phys_info.desired_vel, &obj->orient.vec.fvec, wip->lssm_stage5_vel );
 			obj->phys_info.vel = obj->phys_info.desired_vel;
@@ -5065,7 +5120,7 @@ void weapon_set_tracking_info(int weapon_objnum, int parent_objnum, int target_o
 
 	if (parent_objp != NULL && (Ships[parent_objp->instance].flags2 & SF2_NO_SECONDARY_LOCKON)) {
 		wp->weapon_flags |= WF_NO_HOMING;
-		wp->homing_object = NULL;
+		wp->homing_object = &obj_used_list;
 		wp->homing_subsys = NULL;
 		wp->target_num = -1;
 		wp->target_sig = -1;
@@ -5318,13 +5373,14 @@ int weapon_create( vec3d * pos, matrix * porient, int weapon_type, int parent_ob
 
 	// check if laser or dumbfire missile
 	// set physics flag to allow optimization
-	if ((wip->subtype == WP_LASER) || ((wip->subtype == WP_MISSILE) && !(wip->wi_flags & WIF_HOMING))) {
+	if ((wip->subtype == WP_LASER) || ((wip->subtype == WP_MISSILE) && !(wip->wi_flags & WIF_HOMING) && wip->acceleration_time == 0.0f)) {
 		// set physics flag
 		objp->phys_info.flags |= PF_CONST_VEL;
 	}
 
 	wp->start_pos = *pos;
 	wp->objnum = objnum;
+	wp->model_instance_num = -1;
 	wp->homing_object = &obj_used_list;		//	Assume not homing on anything.
 	wp->homing_subsys = NULL;
 	wp->creation_time = Missiontime;
@@ -5345,8 +5401,7 @@ int weapon_create( vec3d * pos, matrix * porient, int weapon_type, int parent_ob
 	vm_vec_zero(&wp->homing_pos);
 	wp->weapon_flags = 0;
 	wp->target_sig = -1;
-	wp->cmeasure_ignore_objnum = -1;
-	wp->cmeasure_chase_objnum = -1;
+	wp->cmeasure_ignore_list = nullptr;
 	wp->det_range = wip->det_range;
 
 	// Init the thruster info
@@ -5439,7 +5494,15 @@ int weapon_create( vec3d * pos, matrix * porient, int weapon_type, int parent_ob
 	}
 
 	if ( wip->render_type == WRT_POF ) {
+		// this should have been checked above, but let's be extra sure
+		Assert(wip->model_num >= 0);
+
 		objp->radius = model_get_radius(wip->model_num);
+
+		// if we intrinsic-rotate, make sure we have a model instance
+		if (model_get(wip->model_num)->flags & PM_FLAG_HAS_INTRINSIC_ROTATE) {
+			wp->model_instance_num = model_create_instance(false, wip->model_num);
+		}
 	} else if ( wip->render_type == WRT_LASER ) {
 		objp->radius = wip->laser_head_radius;
 	}
@@ -6173,9 +6236,9 @@ bool weapon_armed(weapon *wp, bool hit_target)
 			return false;
 		}
 		if(wip->arm_radius && (!hit_target)) {
-			if(wp->homing_object == NULL)
+			if(wp->homing_object == &obj_used_list)
 				return false;
-			if(vm_vec_dist(&wobj->pos, &wp->homing_pos) > wip->arm_radius)
+			if(IS_VEC_NULL(&wp->homing_pos) || vm_vec_dist(&wobj->pos, &wp->homing_pos) > wip->arm_radius)
 				return false;
 		}
 	}
@@ -6220,7 +6283,7 @@ void weapon_hit( object * weapon_obj, object * other_obj, vec3d * hitpos, int qu
 	objnum = wp->objnum;
 
 	// check if the weapon actually hit the intended target
-	if (wp->homing_object != NULL)
+	if (wp->homing_object != &obj_used_list)
 		if (wp->homing_object == other_obj)
 			hit_target = true;
 

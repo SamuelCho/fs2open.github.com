@@ -277,7 +277,7 @@ static void mc_check_sphereline_face( int nv, vec3d ** verts, vec3d * plane_pnt,
 				//mprintf(("Estimated radius error: Estimate %f, actual %f Mc->radius\n", temp_dist, Mc->radius));
 			}
 			vm_vec_sub( &temp_dir, &hit_point, &temp_sphere );
-			// Assert( vm_vec_dotprod( &temp_dir, &Mc_direction ) > 0 );
+			// Assert( vm_vec_dot( &temp_dir, &Mc_direction ) > 0 );
 			*/
 		}
 	}
@@ -305,7 +305,7 @@ static void mc_check_sphereline_face( int nv, vec3d ** verts, vec3d * plane_pnt,
 				//mprintf(("Estimated radius error: Estimate %f, actual %f Mc->radius\n", temp_dist, Mc->radius));
 			}
 			vm_vec_sub( &temp_dir, &hit_point, &temp_sphere );
-//			Assert( vm_vec_dotprod( &temp_dir, &Mc_direction ) > 0 );
+//			Assert( vm_vec_dot( &temp_dir, &Mc_direction ) > 0 );
 			*/
 
 			if ( (Mc->num_hits==0) || (sphere_time < Mc->hit_dist) ) {
@@ -1206,7 +1206,7 @@ NoHit:
 					vm_rotate_matrix_by_angles(&rotation_matrix, &angs);
 
 					matrix inv_orientation;
-					vm_copy_transpose_matrix(&inv_orientation, &csm->orientation);
+					vm_copy_transpose(&inv_orientation, &csm->orientation);
 
 					vm_matrix_x_matrix(&tm, &rotation_matrix, &inv_orientation);
 				}
@@ -1338,7 +1338,7 @@ int model_collide(mc_info *mc_info_obj)
 			vm_vec_add2(&Mc->hit_point_world, Mc->pos);
 		} else {
 			if ( Mc_pmi ) {
-				model_instance_find_world_point(&Mc->hit_point_world, &Mc->hit_point, Mc->model_num, Mc->model_instance_num, Mc->hit_submodel, Mc->orient, Mc->pos);
+				model_instance_find_world_point(&Mc->hit_point_world, &Mc->hit_point, Mc->model_instance_num, Mc->hit_submodel, Mc->orient, Mc->pos);
 			} else {
 				model_find_world_point(&Mc->hit_point_world, &Mc->hit_point, Mc->model_num, Mc->hit_submodel, Mc->orient, Mc->pos);
 			}
@@ -1376,7 +1376,7 @@ void model_collide_preprocess_subobj(vec3d *pos, matrix *orient, polymodel *pm, 
 			vm_rotate_matrix_by_angles(&rotation_matrix, &angs);
 
 			matrix inv_orientation;
-			vm_copy_transpose_matrix(&inv_orientation, &csm->orientation);
+			vm_copy_transpose(&inv_orientation, &csm->orientation);
 
 			vm_matrix_x_matrix(&tm, &rotation_matrix, &inv_orientation);
 		}

@@ -171,11 +171,11 @@ void batching_add_bitmap_internal(primitive_batch *batch, vertex *pnt, int orien
 	uvec = View_matrix.vec.uvec;
 
 	// make a right vector from the f and up vector, this r vec is exactly what we want, so...
-	vm_vec_crossprod(&rvec, &View_matrix.vec.fvec, &uvec);
+	vm_vec_cross(&rvec, &View_matrix.vec.fvec, &uvec);
 	vm_vec_normalize_safe(&rvec);
 
 	// fix the u vec with it
-	vm_vec_crossprod(&uvec, &View_matrix.vec.fvec, &rvec);
+	vm_vec_cross(&uvec, &View_matrix.vec.fvec, &rvec);
 
 	// move the center of the sprite based on the depth parameter
 	if ( depth != 0.0f )
@@ -341,9 +341,9 @@ void batching_add_bitmap_rotated_internal(primitive_batch *batch, vertex *pnt, f
 
 	vm_rot_point_around_line(&uvec, &View_matrix.vec.uvec, angle, &vmd_zero_vector, &View_matrix.vec.fvec);
 
-	vm_vec_crossprod(&rvec, &View_matrix.vec.fvec, &uvec);
+	vm_vec_cross(&rvec, &View_matrix.vec.fvec, &uvec);
 	vm_vec_normalize_safe(&rvec);
-	vm_vec_crossprod(&uvec, &View_matrix.vec.fvec, &rvec);
+	vm_vec_cross(&uvec, &View_matrix.vec.fvec, &rvec);
 
 	vm_vec_scale_add(&PNT, &PNT, &fvec, depth);
 	vm_vec_scale_add(&p[0], &PNT, &rvec, rad);
@@ -543,13 +543,13 @@ void batching_add_beam_internal(primitive_batch *batch, vec3d *start, vec3d *end
 	vm_vec_sub(&evec, &View_position, start);
 	vm_vec_normalize_safe(&evec);
 
-	vm_vec_crossprod(&uvecs, &fvec, &evec);
+	vm_vec_cross(&uvecs, &fvec, &evec);
 	vm_vec_normalize_safe(&uvecs);
 
 	vm_vec_sub(&evec, &View_position, end);
 	vm_vec_normalize_safe(&evec);
 
-	vm_vec_crossprod(&uvece, &fvec, &evec);
+	vm_vec_cross(&uvece, &fvec, &evec);
 	vm_vec_normalize_safe(&uvece);
 
 	vm_vec_scale_add(&p[0], start, &uvecs, width);
@@ -613,13 +613,13 @@ void batching_add_laser_internal(primitive_batch *batch, vec3d *p0, float width1
 	vm_vec_normalize(&reye);
 
 	// compute the up vector
-	vm_vec_crossprod(&uvec, &fvec, &reye);
+	vm_vec_cross(&uvec, &fvec, &reye);
 	vm_vec_normalize_safe(&uvec);
 	// ... the forward vector
-	vm_vec_crossprod(&fvec, &uvec, &reye);
+	vm_vec_cross(&fvec, &uvec, &reye);
 	vm_vec_normalize_safe(&fvec);
 	// now recompute right vector, in case it wasn't entirely perpendiclar
-	vm_vec_crossprod(&rvec, &uvec, &fvec);
+	vm_vec_cross(&rvec, &uvec, &fvec);
 
 	// Now have uvec, which is up vector and rvec which is the normal
 	// of the face.

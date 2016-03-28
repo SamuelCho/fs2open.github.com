@@ -1530,7 +1530,7 @@ int restore_wss_data(ubyte *block)
 	return offset;
 }
 
-void draw_model_icon(int model_id, int flags, float closeup_zoom, int x, int y, int w, int h, ship_info *sip, int resize_mode)
+void draw_model_icon(int model_id, int flags, float closeup_zoom, int x, int y, int w, int h, const ship_info *sip, int resize_mode, const vec3d *closeup_pos)
 {
 	matrix	object_orient	= IDENTITY_MATRIX;
 	angles rot_angles = {0.0f,0.0f,0.0f};
@@ -1590,9 +1590,9 @@ void draw_model_icon(int model_id, int flags, float closeup_zoom, int x, int y, 
 			bs = &pm->submodel[0];
 		}
 
-		vec3d weap_closeup = Weapon_info->closeup_pos;
+		vec3d weap_closeup = *closeup_pos;
 		float y_closeup;
-		float tm_zoom = Weapon_info->closeup_zoom;
+		float tm_zoom = closeup_zoom;
 
 		//Find the center of teh submodel
 		weap_closeup.xyz.x = -(bs->min.xyz.z + (bs->max.xyz.z - bs->min.xyz.z)/2.0f);
@@ -1729,8 +1729,6 @@ void draw_model_rotating(model_render_params *render_info, int model_id, int x1,
 		float size = pm->rad*0.7f;
 		float start_scale = MIN(time,0.5f)*2.5f;
 		float offset = size*0.5f*MIN(MAX(time-3.0f,0.0f),0.6f)*1.66667f;
-		if ( (time < 1.5f) && (time >= 0.5f) )  // Clip the grid if were in phase 1
-			render_info->set_clip_plane(plane_point,wire_normal);
 
 		g3_start_instance_angles(&vmd_zero_vector,&view_angles);
 
@@ -1758,6 +1756,10 @@ void draw_model_rotating(model_render_params *render_info, int model_id, int x1,
 			gr_set_color(0,200,0);
 			g3_start_instance_angles(&vmd_zero_vector,&view_angles);
 
+			if (time < 1.5f) {
+				stop.xyz.z = -clip;
+			}
+
 			for (i = -3; i < 4; i++) {
 				start.xyz.x = stop.xyz.x = size*0.333f*i;
 				//g3_draw_htl_line(&start,&stop);
@@ -1767,8 +1769,10 @@ void draw_model_rotating(model_render_params *render_info, int model_id, int x1,
 			start.xyz.x = size;
 			stop.xyz.x = -size;
 
-			for (i = -3; i < 4; i++) {
+			for (i = 3; i > -4; i--) {
 				start.xyz.z = stop.xyz.z = size*0.333f*i+offset*0.5f;
+				if ((time < 1.5f) && (start.xyz.z <= -clip))
+					break;
 				//g3_draw_htl_line(&start,&stop);
 				render_line_3d(false, &start, &stop);
 			}

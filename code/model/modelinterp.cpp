@@ -1514,7 +1514,7 @@ static const int MAX_ARC_SEGMENT_POINTS = 50;
 int Num_arc_segment_points = 0;
 vec3d Arc_segment_points[MAX_ARC_SEGMENT_POINTS];
 
-extern int g3_draw_rod(int num_points, vec3d *vecs, float width, uint tmap_flags);
+extern int g3_draw_rod(int num_points, const vec3d *vecs, float width, uint tmap_flags);
 
 void interp_render_arc_segment( vec3d *v1, vec3d *v2, int depth )
 {
@@ -1670,7 +1670,7 @@ void model_interp_subcall(polymodel * pm, int mn, int detail_level)
 	vm_rotate_matrix_by_angles(&rotation_matrix, &pm->submodel[mn].angs);
 
 	matrix inv_orientation;
-	vm_copy_transpose_matrix(&inv_orientation, &pm->submodel[mn].orientation);
+	vm_copy_transpose(&inv_orientation, &pm->submodel[mn].orientation);
 
 	matrix submodel_matrix;
 	vm_matrix_x_matrix(&submodel_matrix, &rotation_matrix, &inv_orientation);
@@ -2057,8 +2057,6 @@ void model_render_DEPRECATED(int model_num, matrix *orient, vec3d * pos, uint fl
 
 	polymodel *pm = model_get(model_num);
 
-	model_do_dumb_rotation(model_num);
-
 	if (flags & MR_FORCE_CLAMP)
 		gr_set_texture_addressing(TMAP_ADDRESS_CLAMP);
 
@@ -2285,7 +2283,7 @@ void moldel_calc_facing_pts( vec3d *top, vec3d *bot, vec3d *fvec, vec3d *pos, fl
 	vm_vec_sub( &rvec, Eyeposition, &temp );
 	vm_vec_normalize( &rvec );	
 
-	vm_vec_crossprod(&uvec,fvec,&rvec);
+	vm_vec_cross(&uvec,fvec,&rvec);
 	vm_vec_normalize(&uvec);
 
 	vm_vec_scale_add( top, &temp, &uvec, w/2.0f );
@@ -2395,7 +2393,7 @@ void model_render_thrusters(polymodel *pm, int objnum, ship *shipp, matrix *orie
 				vm_vec_sub(&loc_offset, &gpt->pnt, &submodel_static_offset);
 
 				tempv = loc_offset;
-				find_submodel_instance_point_normal(&loc_offset, &loc_norm, &Objects[objnum], bank->submodel_num, &tempv, &loc_norm);
+				find_submodel_instance_point_normal(&loc_offset, &loc_norm, shipp->model_instance_num, bank->submodel_num, &tempv, &loc_norm);
 			}
 
 			vm_vec_unrotate(&world_pnt, &loc_offset, orient);
@@ -2705,7 +2703,7 @@ void model_render_glow_points_DEPRECATED(polymodel *pm, ship *shipp, matrix *ori
 						vm_vec_sub(&loc_offset, &gpt->pnt, &submodel_static_offset);
 
 						tempv = loc_offset;
-						find_submodel_instance_point_normal(&loc_offset, &loc_norm, &Objects[shipp->objnum], bank->submodel_parent, &tempv, &loc_norm);
+						find_submodel_instance_point_normal(&loc_offset, &loc_norm, shipp->model_instance_num, bank->submodel_parent, &tempv, &loc_norm);
 					}
 
 					vm_vec_unrotate(&world_pnt, &loc_offset, orient);
@@ -2863,7 +2861,7 @@ void model_render_glow_points_DEPRECATED(polymodel *pm, ship *shipp, matrix *ori
 									} else {
 										cone_dir_rot = gpo->cone_direction; 
 									}
-									find_submodel_instance_point_normal(&unused, &cone_dir_model, &Objects[shipp->objnum], bank->submodel_parent, &unused, &cone_dir_rot);
+									find_submodel_instance_point_normal(&unused, &cone_dir_model, shipp->model_instance_num, bank->submodel_parent, &unused, &cone_dir_rot);
 									vm_vec_unrotate(&cone_dir_world, &cone_dir_model, orient);
 									vm_vec_rotate(&cone_dir_screen, &cone_dir_world, &Eye_matrix);
 									cone_dir_screen.xyz.z = -cone_dir_screen.xyz.z;
@@ -3652,8 +3650,21 @@ void submodel_get_two_random_points(int model_num, int submodel_num, vec3d *v1, 
 		return;
 	}
 
-	int vn1 = (myrand()>>5) % nv;
-	int vn2 = (myrand()>>5) % nv;
+#ifndef NDEBUG
+	if (RAND_MAX < nv)
+	{
+		static int submodel_get_two_random_points_warned = false;
+		if (!submodel_get_two_random_points_warned)
+		{
+			polymodel *pm = model_get(model_num);
+			Warning(LOCATION, "RAND_MAX is only %d, but submodel %d for model %s has %d vertices!  Explosions will not propagate through the entire model!\n", RAND_MAX, submodel_num, pm->filename, nv);
+			submodel_get_two_random_points_warned = true;
+		}
+	}
+#endif
+
+	int vn1 = myrand() % nv;
+	int vn2 = myrand() % nv;
 
 	*v1 = *Interp_verts[vn1];
 	*v2 = *Interp_verts[vn2];
@@ -3690,9 +3701,20 @@ void submodel_get_two_random_points_better(int model_num, int submodel_num, vec3
 			return;
 		}
 
-		Assert(nv > 0);	// Goober5000 - to avoid div-0 error
-		int vn1 = (myrand()>>5) % nv;
-		int vn2 = (myrand()>>5) % nv;
+#ifndef NDEBUG
+		if (RAND_MAX < nv)
+		{
+			static int submodel_get_two_random_points_warned = false;
+			if (!submodel_get_two_random_points_warned)
+			{
+				Warning(LOCATION, "RAND_MAX is only %d, but submodel %d for model %s has %d vertices!  Explosions will not propagate through the entire model!\n", RAND_MAX, submodel_num, pm->filename, nv);
+				submodel_get_two_random_points_warned = true;
+			}
+		}
+#endif
+
+		int vn1 = myrand() % nv;
+		int vn2 = myrand() % nv;
 
 		*v1 = tree->point_list[vn1];
 		*v2 = tree->point_list[vn2];
@@ -4387,7 +4409,7 @@ void interp_configure_vertex_buffers(polymodel *pm, int mn)
 		polygon_list[i].n_verts = vert_count;
 
 		// set submodel ID
-		if ( Use_GLSL >= 3 ) {
+		if ( GLSL_version >= 130 ) {
 			for ( j = 0; j < polygon_list[i].n_verts; ++j ) {
 				polygon_list[i].submodels[j] = mn;
 			}
@@ -4447,7 +4469,7 @@ void interp_configure_vertex_buffers(polymodel *pm, int mn)
 			memcpy( (model_list->tsb) + model_list->n_verts, polygon_list[i].tsb, sizeof(tsb_t) * polygon_list[i].n_verts );
 		}
 
-		if ( Use_GLSL >= 3 ) {
+		if ( GLSL_version >= 130 ) {
 			memcpy( (model_list->submodels) + model_list->n_verts, polygon_list[i].submodels, sizeof(int) * polygon_list[i].n_verts );
 		}
 
@@ -4467,7 +4489,7 @@ void interp_configure_vertex_buffers(polymodel *pm, int mn)
 	}
 
 	if ( model_list->submodels != NULL ) {
-		Assert( Use_GLSL >= 3 );
+		Assert( GLSL_version >= 130 );
 		vertex_flags |= VB_FLAG_MODEL_ID;
 	}
 
@@ -4826,7 +4848,7 @@ void model_render_children_buffers_DEPRECATED(polymodel *pm, int mn, int detail_
 	vm_rotate_matrix_by_angles(&rotation_matrix, &ang);
 
 	matrix inv_orientation;
-	vm_copy_transpose_matrix(&inv_orientation, &model->orientation);
+	vm_copy_transpose(&inv_orientation, &model->orientation);
 
 	matrix submodel_matrix;
 	vm_matrix_x_matrix(&submodel_matrix, &rotation_matrix, &inv_orientation);

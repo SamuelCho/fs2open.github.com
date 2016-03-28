@@ -770,6 +770,15 @@ void gr_screen_resize(int width, int height)
 	}
 }
 
+int gr_get_resolution_class(int width, int height)
+{
+	if ((width >= GR_1024_THRESHOLD_WIDTH) && (height >= GR_1024_THRESHOLD_HEIGHT)) {
+		return GR_1024;
+	} else {
+		return GR_640;
+	}
+}
+
 static bool gr_init_sub(int mode, int width, int height, int depth, float center_aspect_ratio)
 {
 	int res = GR_1024;
@@ -800,11 +809,7 @@ static bool gr_init_sub(int mode, int width, int height, int depth, float center
 	gr_screen.save_center_offset_x = gr_screen.center_offset_x = (width - gr_screen.center_w) / 2;
 	gr_screen.save_center_offset_y = gr_screen.center_offset_y = (height - gr_screen.center_h) / 2;
 
-	if ( (gr_screen.center_w >= GR_1024_THRESHOLD_WIDTH) && (gr_screen.center_h >= GR_1024_THRESHOLD_HEIGHT) ) {
-		res = GR_1024;
-	} else {
-		res = GR_640;
-	}
+	res = gr_get_resolution_class(gr_screen.center_w, gr_screen.center_h);
 
 	if (Fred_running) {
 		gr_screen.custom_size = false;
@@ -844,7 +849,6 @@ static bool gr_init_sub(int mode, int width, int height, int depth, float center
 	gr_screen.bits_per_pixel = depth;
 	gr_screen.bytes_per_pixel= depth / 8;
 	gr_screen.rendering_to_texture = -1;
-	gr_screen.recording_state_block = false;
 	gr_screen.envmap_render_target = -1;
 	gr_screen.mode = mode;
 	gr_screen.res = res;
@@ -979,19 +983,21 @@ bool gr_init(int d_mode, int d_width, int d_height, int d_depth)
 		depth = d_depth;
 	}
 
-	// check for hi-res interface files so that we can verify our width/height is correct
-	bool has_sparky_hi = (cf_exists_full("2_ChoosePilot-m.pcx", CF_TYPE_ANY) && cf_exists_full("2_TechShipData-m.pcx", CF_TYPE_ANY));
+	if (gr_get_resolution_class(width, height) != GR_640) {
+		// check for hi-res interface files so that we can verify our width/height is correct
+		bool has_sparky_hi = (cf_exists_full("2_ChoosePilot-m.pcx", CF_TYPE_ANY) && cf_exists_full("2_TechShipData-m.pcx", CF_TYPE_ANY));
 
-	// if we don't have it then fall back to 640x480 mode instead
-	if ( !has_sparky_hi ) {
-		if ( (width == 1024) && (height == 768) ) {
-			width = 640;
-			height = 480;
-			center_aspect_ratio = -1.0f;
-		} else {
-			width = 800;
-			height = 600;
-			center_aspect_ratio = -1.0f;
+		// if we don't have it then fall back to 640x480 mode instead
+		if ( !has_sparky_hi ) {
+			if ( (width == 1024) && (height == 768) ) {
+				width = 640;
+				height = 480;
+				center_aspect_ratio = -1.0f;
+			} else {
+				width = 800;
+				height = 600;
+				center_aspect_ratio = -1.0f;
+			}
 		}
 	}
 
@@ -1733,7 +1739,7 @@ void poly_list::allocate(int _verts)
 			tsb = (tsb_t*)vm_malloc(sizeof(tsb_t) * _verts);
 		}
 
-		if ( Use_GLSL >= 3 ) {
+		if ( GLSL_version >= 130 ) {
 			submodels = (int*)vm_malloc(sizeof(int) * _verts);
 		}
 
@@ -1845,15 +1851,15 @@ void poly_list::calculate_tangent()
 		vm_vec_normalize_safe(t2);
 
 		// compute handedness (for all 3 verts)
-		vm_vec_crossprod(&cross, &norm[i], &tangent);
+		vm_vec_cross(&cross, &norm[i], &tangent);
 		scale = vm_vec_dot(&cross, &binormal);
 		tsb[i].scaler = (scale < 0.0f) ? -1.0f : 1.0f;
 
-		vm_vec_crossprod(&cross, &norm[i+1], &tangent);
+		vm_vec_cross(&cross, &norm[i+1], &tangent);
 		scale = vm_vec_dot(&cross, &binormal);
 		tsb[i+1].scaler = (scale < 0.0f) ? -1.0f : 1.0f;
 
-		vm_vec_crossprod(&cross, &norm[i+2], &tangent);
+		vm_vec_cross(&cross, &norm[i+2], &tangent);
 		scale = vm_vec_dot(&cross, &binormal);
 		tsb[i+2].scaler = (scale < 0.0f) ? -1.0f : 1.0f;
 	}
@@ -1915,7 +1921,7 @@ void poly_list::make_index_buffer(SCP_vector<int> &vertex_list)
 			buffer_list_internal.tsb[z] = tsb[j];
 		}
 
-		if ( Use_GLSL >= 3 ) {
+		if ( GLSL_version >= 130 ) {
 			buffer_list_internal.submodels[z] = submodels[j];
 		}
 
@@ -1945,7 +1951,7 @@ poly_list& poly_list::operator = (poly_list &other_list)
 		memcpy(tsb, other_list.tsb, sizeof(tsb_t) * other_list.n_verts);
 	}
 
-	if ( Use_GLSL >= 3 ) {
+	if ( GLSL_version >= 130 ) {
 		memcpy(submodels, other_list.submodels, sizeof(int) * other_list.n_verts);
 	}
 
@@ -2109,12 +2115,14 @@ void gr_flip()
 	// m!m avoid running CHA_ONFRAME when the "Quit mission" popup is shown. See mantis 2446 for reference
 	if (!quit_mission_popup_shown)
 	{
+		profile_begin("LUA On Frame");
 		//WMC - Evaluate global hook if not override.
 		Script_system.RunBytecode(Script_globalhook);
 		//WMC - Do conditional hooks. Yippee!
 		Script_system.RunCondition(CHA_ONFRAME);
 		//WMC - Do scripting reset stuff
 		Script_system.EndFrame();
+		profile_end("LUA On Frame");
 	}
 
 	gr_screen.gf_flip();
@@ -2138,7 +2146,7 @@ uint gr_determine_model_shader_flags(
 ) {
 	uint shader_flags = 0;
 
-	if ( Use_GLSL > 1 ) {
+	if ( GLSL_version >= 120 ) {
 		shader_flags |= SDR_FLAG_MODEL_CLIP;
 	}
 

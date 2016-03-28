@@ -269,11 +269,9 @@ void pilotfile::plr_read_multiplayer()
 	// netgame protocol
 	Multi_options_g.protocol = cfread_int(cfp);
 
-	if (Multi_options_g.protocol == NET_VMT) {
+	if (Multi_options_g.protocol != NET_TCP) {
 		Multi_options_g.protocol = NET_TCP;
 	}
-
-	Assert( (Multi_options_g.protocol == NET_IPX) || (Multi_options_g.protocol == NET_TCP) );
 }
 
 void pilotfile::plr_write_multiplayer()
@@ -600,7 +598,7 @@ void pilotfile::plr_write_stats_multi()
 void pilotfile::plr_read_controls()
 {
 	int idx, list_size, list_axis;
-	short id1, id2, id3 __attribute__((__unused__));
+	short id1, id2, id3 __UNUSED;
 	int axi, inv;
 
 	list_size = (int)cfread_ushort(cfp);

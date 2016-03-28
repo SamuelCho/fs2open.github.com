@@ -188,7 +188,7 @@ void hud_ship_icon_page_in(ship_info *sip)
 	sgp = &Shield_gauges.at(sip->shield_icon_index);
 
 	if ( sgp->first_frame == -1 ) {
-		sgp->first_frame = bm_load_animation(const_cast<char*>(Hud_shield_filenames.at(sip->shield_icon_index).c_str()), &sgp->num_frames);
+		sgp->first_frame = bm_load_animation(Hud_shield_filenames.at(sip->shield_icon_index).c_str(), &sgp->num_frames);
 		if ( sgp->first_frame == -1 ) {
 			Warning(LOCATION, "Could not load in the HUD shield ani: %s\n", Hud_shield_filenames.at(sip->shield_icon_index).c_str());
 			return;
@@ -627,7 +627,7 @@ void HudGaugeShield::showShields(object *objp, int mode)
 		sgp = &Shield_gauges.at(sip->shield_icon_index);
 
 		if ( (sgp->first_frame == -1) && (sip->shield_icon_index < Hud_shield_filenames.size()) ) {
-			sgp->first_frame = bm_load_animation(const_cast<char*>(Hud_shield_filenames.at(sip->shield_icon_index).c_str()), &sgp->num_frames);
+			sgp->first_frame = bm_load_animation(Hud_shield_filenames.at(sip->shield_icon_index).c_str(), &sgp->num_frames);
 			if (sgp->first_frame == -1) {
 				if (!shield_ani_warning_displayed_already) {
 					shield_ani_warning_displayed_already = true;
@@ -682,7 +682,6 @@ void HudGaugeShield::showShields(object *objp, int mode)
 		}
 
 		//We're ready to show stuff
-		ship_model_start(objp);
 		//if(!digitus_improbus)
 		{
 			model_render_params render_info;
@@ -690,6 +689,7 @@ void HudGaugeShield::showShields(object *objp, int mode)
 			render_info.set_flags(MR_NO_LIGHTING | MR_AUTOCENTER | MR_NO_FOGGING);
 			render_info.set_replacement_textures(sp->ship_replacement_textures);
 			render_info.set_detail_level_lock(1);
+			render_info.set_object_number(OBJ_INDEX(objp));
 
 			model_render_immediate( &render_info, sip->model_num, &object_orient, &vmd_zero_vector );
 		}
@@ -706,7 +706,6 @@ void HudGaugeShield::showShields(object *objp, int mode)
 			}
 			model_render(fod_model, &object_orient, &vmd_zero_vector, MR_NO_LIGHTING | MR_LOCK_DETAIL | MR_AUTOCENTER | MR_NO_FOGGING, -1, -1);
 		}*/
-		ship_model_stop( objp );
 
 		//We're done
 		if(!Cmdline_nohtl)
@@ -745,7 +744,7 @@ void HudGaugeShield::showShields(object *objp, int mode)
 				continue;
 		}
 
-		range = MAX(HUD_COLOR_ALPHA_MAX, HUD_color_alpha + 4);
+		range = MAX(HUD_COLOR_ALPHA_MAX, HUD_color_alpha + objp->n_quadrants);
 
 		if ( !(sip->flags2 & SIF2_MODEL_POINT_SHIELDS) )
 			hud_color_index = fl2i( (objp->shield_quadrant[Quadrant_xlate[i]] / max_shield) * range);

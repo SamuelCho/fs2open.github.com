@@ -568,8 +568,8 @@ void HudGaugeTargetBox::renderTargetShip(object *target_objp)
 		// IMPORTANT NOTE! Code handling the case 'missile_view == TRUE' in rendering section of renderTargetWeapon()
 		//                 is largely copied over from renderTargetShip(). To keep the codes similar please update
 		//                 both if and when needed
-		ship_model_start( target_objp );
 		model_render_params render_info;
+		render_info.set_object_number(OBJ_INDEX(target_objp));
 
 		switch (Targetbox_wire) {
 			case 0:
@@ -642,8 +642,6 @@ void HudGaugeTargetBox::renderTargetShip(object *target_objp)
 
 		Interp_desaturate = false;
 		Glowpoint_override = false;
-
-		ship_model_stop( target_objp );
 
 		if ( Monitor_mask >= 0 ) {
 			gr_stencil_set(GR_STENCIL_NONE);
@@ -918,7 +916,7 @@ void HudGaugeTargetBox::renderTargetWeapon(object *target_objp)
 					break;
 			}
 		} else {
-			ship_model_start( viewed_obj );
+			render_info.set_object_number(OBJ_INDEX(viewed_obj));
 
 			switch (Targetbox_wire) {
 				case 0:
@@ -1003,8 +1001,6 @@ void HudGaugeTargetBox::renderTargetWeapon(object *target_objp)
 
 		if (missile_view == TRUE) {
 			Glowpoint_override = false;
-
-			ship_model_stop( viewed_obj );
 		}
 
 		if ( Monitor_mask >= 0 ) {
@@ -1379,6 +1375,11 @@ void HudGaugeExtraTargetData::initDockOffsets(int x, int y)
 	dock_offsets[1] = y;
 }
 
+void HudGaugeExtraTargetData::initDockMaxWidth(int width)
+{
+	dock_max_w = width;
+}
+
 void HudGaugeExtraTargetData::initTimeOffsets(int x, int y)
 {
 	time_offsets[0] = x;
@@ -1389,6 +1390,11 @@ void HudGaugeExtraTargetData::initOrderOffsets(int x, int y)
 {
 	order_offsets[0] = x;
 	order_offsets[1] = y;
+}
+
+void HudGaugeExtraTargetData::initOrderMaxWidth(int width)
+{
+	order_max_w = width;
 }
 
 void HudGaugeExtraTargetData::initBitmaps(char *fname)
@@ -1442,7 +1448,7 @@ void HudGaugeExtraTargetData::render(float frametime)
 		if ( ((Player_ship->team == target_shipp->team) || ((Iff_info[target_shipp->team].flags & IFFF_ORDERS_SHOWN) && !(Iff_info[target_shipp->team].flags & IFFF_ORDERS_HIDDEN)) ) && !(ship_get_SIF(target_shipp) & SIF_NOT_FLYABLE) ) {
 			extra_data_shown=1;
 			if ( ship_return_orders(outstr, target_shipp) ) {
-				gr_force_fit_string(outstr, 255, 162);
+				gr_force_fit_string(outstr, 255, order_max_w);
 				has_orders = 1;
 			} else {
 				strcpy_s(outstr, XSTR( "no orders", 337));
@@ -1484,7 +1490,7 @@ void HudGaugeExtraTargetData::render(float frametime)
 			sprintf(outstr, XSTR("Docked: %d objects", 1623), dock_count);
 		}
 
-		gr_force_fit_string(outstr, 255, 173);
+		gr_force_fit_string(outstr, 255, dock_max_w);
 		maybeFlashDock();
 			
 		renderString(position[0] + dock_offsets[0], position[1] + dock_offsets[1], EG_TBOX_EXTRA3, outstr);			

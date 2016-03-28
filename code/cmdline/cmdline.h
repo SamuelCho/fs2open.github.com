@@ -83,7 +83,6 @@ extern int Cmdline_no_deferred_lighting;
 
 // Game Speed related
 extern int Cmdline_cache_bitmaps;
-extern int Cmdline_img2dds;
 extern int Cmdline_NoFPSCap;
 extern int Cmdline_no_vsync;
 
@@ -130,7 +129,6 @@ extern int Cmdline_noglsl;
 extern int Cmdline_mipmap;
 extern int Cmdline_ati_color_swap;
 extern int Cmdline_no_3d_sound;
-extern int Cmdline_no_glsl_model_rendering;
 extern int Cmdline_no_di_mouse;
 extern int Cmdline_drawelements;
 extern char* Cmdline_keyboard_layout;
@@ -161,5 +159,6 @@ extern int Cmdline_reparse_mainhall;
 extern bool Cmdline_frame_profile;
 extern bool Cmdline_profile_write_file;
 extern bool Cmdline_no_unfocus_pause;
+extern bool Cmdline_benchmark_mode;
 
 #endif

@@ -364,7 +364,7 @@ int gr_opengl_create_stream_buffer_object()
 
 int opengl_create_texture_buffer_object()
 {
-	if ( Use_GLSL < 3 || !Is_Extension_Enabled(OGL_ARB_TEXTURE_BUFFER) || !Is_Extension_Enabled(OGL_ARB_FLOATING_POINT_TEXTURES) ) {
+	if ( GLSL_version < 130 || !Is_Extension_Enabled(OGL_ARB_TEXTURE_BUFFER) || !Is_Extension_Enabled(OGL_ARB_FLOATING_POINT_TEXTURES) ) {
 		return -1;
 	}
 
@@ -544,7 +544,7 @@ bool gr_opengl_config_buffer(const int buffer_id, vertex_buffer *vb, bool update
 	}
 
 	if (vb->flags & VB_FLAG_MODEL_ID) {
-		Assert( Use_GLSL >= 3 );
+		Assert( GLSL_version >= 130 );
 
 		Verify( update_ibuffer_only || vb->model_list->submodels != NULL );
 		vb->stride += (1 * sizeof(GLfloat));
@@ -701,7 +701,7 @@ void gr_opengl_set_buffer(int idx)
 			GL_state.Array.BindElementBuffer(0);
 		}
 
-		if ( (Use_GLSL > 1) && !GLSL_override ) {
+		if ( is_minimum_GLSL_version() && !GLSL_override ) {
 			opengl_shader_set_current();
 		}
 
@@ -854,7 +854,7 @@ void mix_two_team_colors(team_color* dest, team_color* a, team_color* b, float m
 	dest->stripe.b = a->stripe.b * (1.0f - mix_factor) + b->stripe.b * mix_factor;
 }
 
-void gr_opengl_set_team_color(team_color *colors)
+void gr_opengl_set_team_color(const team_color *colors)
 {
 	if ( colors == NULL ) {
 		Using_Team_Color = false;
@@ -1480,7 +1480,7 @@ void gr_opengl_render_buffer(int start, const vertex_buffer *bufferp, int texi, 
 
 	const buffer_data *datap = &bufferp->tex_buf[texi];
 
-	if ( (Use_GLSL > 1) && !GLSL_override ) {
+	if ( is_minimum_GLSL_version() && !GLSL_override ) {
 		opengl_render_pipeline_program(start, bufferp, datap, flags);
 	} else {
 		opengl_render_pipeline_fixed(start, bufferp, datap, flags);
@@ -1502,7 +1502,7 @@ void gr_opengl_render_model(model_material* material_info, vertex_buffer* buffer
 
 	buffer_data *datap = &bufferp->tex_buf[texi];
 
-	if ( (Use_GLSL > 1) && !GLSL_override ) {
+	if ( is_minimum_GLSL_version() && !GLSL_override ) {
 		opengl_render_model_program(material_info, bufferp, datap);
 	} else {
 		opengl_render_model_fixed(material_info, bufferp, datap);
@@ -1887,7 +1887,7 @@ void gr_opengl_render_stream_buffer(int buffer_handle, int offset, int n_verts, 
 	GL_CHECK_FOR_ERRORS("end of render3d()");
 }
 
-void gr_opengl_start_instance_matrix(vec3d *offset, matrix *rotation)
+void gr_opengl_start_instance_matrix(const vec3d *offset, const matrix *rotation)
 {
 	if (Cmdline_nohtl) {
 		return;
@@ -1924,7 +1924,7 @@ void gr_opengl_start_instance_matrix(vec3d *offset, matrix *rotation)
 	GL_modelview_matrix_depth++;
 }
 
-void gr_opengl_start_instance_angles(vec3d *pos, angles *rotation)
+void gr_opengl_start_instance_angles(const vec3d *pos, const angles *rotation)
 {
 	if (Cmdline_nohtl)
 		return;
@@ -2016,7 +2016,7 @@ void gr_opengl_end_projection_matrix()
 	GL_htl_projection_matrix_set = 0;
 }
 
-void gr_opengl_set_view_matrix(vec3d *pos, matrix *orient)
+void gr_opengl_set_view_matrix(const vec3d *pos, const matrix *orient)
 {
 	if (Cmdline_nohtl)
 		return;
@@ -2108,17 +2108,17 @@ void gr_opengl_set_view_matrix(vec3d *pos, matrix *orient)
 			glGetFloatv(GL_MODELVIEW_MATRIX, mview);
 
 			// r.xyz  <--  r.x, u.x, f.x
-			GL_env_texture_matrix[0]  =  mview[0];
-			GL_env_texture_matrix[1]  = -mview[4];
-			GL_env_texture_matrix[2]  =  mview[8];
+			GL_env_texture_matrix[0] = mview[0];
+			GL_env_texture_matrix[1] = mview[4];
+			GL_env_texture_matrix[2] = mview[8];
 			// u.xyz  <--  r.y, u.y, f.y
-			GL_env_texture_matrix[4]  =  mview[1];
-			GL_env_texture_matrix[5]  = -mview[5];
-			GL_env_texture_matrix[6]  =  mview[9];
+			GL_env_texture_matrix[4] = mview[1];
+			GL_env_texture_matrix[5] = mview[5];
+			GL_env_texture_matrix[6] = mview[9];
 			// f.xyz  <--  r.z, u.z, f.z
-			GL_env_texture_matrix[8]  =  mview[2];
-			GL_env_texture_matrix[9]  = -mview[6];
-			GL_env_texture_matrix[10] =  mview[10];
+			GL_env_texture_matrix[8] = mview[2];
+			GL_env_texture_matrix[9] = mview[6];
+			GL_env_texture_matrix[10] = mview[10];
 
 			GL_env_texture_matrix[15] = 1.0f;
 		}
@@ -2221,7 +2221,7 @@ void gr_opengl_end_2d_matrix()
 
 static bool GL_scale_matrix_set = false;
 
-void gr_opengl_push_scale_matrix(vec3d *scale_factor)
+void gr_opengl_push_scale_matrix(const vec3d *scale_factor)
 {
 	if ( (scale_factor->xyz.x == 1) && (scale_factor->xyz.y == 1) && (scale_factor->xyz.z == 1) )
 		return;
@@ -2255,7 +2255,7 @@ void gr_opengl_end_clip_plane()
 		return;
 	}
 
-	if ( Use_GLSL > 1 ) {
+	if ( is_minimum_GLSL_version() ) {
 		return;
 	}
 
@@ -2268,7 +2268,7 @@ void gr_opengl_start_clip_plane()
 		return;
 	}
 
-	if ( Use_GLSL > 1 ) {
+	if ( is_minimum_GLSL_version() ) {
 		// bail since we're gonna clip in the shader
 		return;
 	}
@@ -2295,7 +2295,7 @@ void gr_opengl_set_clip_plane(vec3d *clip_normal, vec3d *clip_point)
 		return;
 	}
 
-	if (Use_GLSL > 1 && Current_shader != NULL && Current_shader->shader == SDR_TYPE_MODEL) {
+	if ( is_minimum_GLSL_version() && Current_shader != NULL && Current_shader->shader == SDR_TYPE_MODEL) {
 		return;
 	}
 
@@ -2386,9 +2386,9 @@ void gr_opengl_set_state_block(int handle)
 extern bool Glowpoint_override;
 bool Glowpoint_override_save;
 
-void gr_opengl_shadow_map_start(matrix4 *shadow_view_matrix, matrix *light_orient)
+void gr_opengl_shadow_map_start(const matrix4 *shadow_view_matrix, const matrix *light_orient)
 {
-	if(!Cmdline_shadow_quality)
+	if ( !Cmdline_shadow_quality )
 		return;
 
 	glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &saved_fb);
@@ -3116,7 +3116,7 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 	// Team colors are passed to the shader here, but the shader needs to handle their application.
 	// By default, this is handled through the r and g channels of the misc map, but this can be changed
 	// in the shader; test versions of this used the normal map r and b channels
-	if ( shader_flags & SDR_FLAG_MODEL_TEAMCOLOR ) {
+	if ( (shader_flags & SDR_FLAG_MODEL_TEAMCOLOR) && (shader_flags & SDR_FLAG_MODEL_MISC_MAP) ) {
 		vec3d stripe_color;
 		vec3d base_color;
 
@@ -3130,6 +3130,12 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 
 		GL_state.Uniform.setUniform3f("stripe_color", stripe_color);
 		GL_state.Uniform.setUniform3f("base_color", base_color);
+
+		if ( bm_has_alpha_channel(MISCMAP) ) {
+			GL_state.Uniform.setUniformi("team_glow_enabled", 1);
+		} else {
+			GL_state.Uniform.setUniformi("team_glow_enabled", 0);
+		}
 	}
 
 	if ( shader_flags & SDR_FLAG_MODEL_THRUSTER ) {

@@ -73,6 +73,8 @@ void shipfx_remove_submodel_ship_sparks(ship *shipp, int submodel_num)
 	}
 }
 
+void model_get_rotating_submodel_axis(vec3d *model_axis, vec3d *world_axis, int model_instance_num, int submodel_num, matrix *objorient);
+
 /**
  * Check if subsystem has live debris and create
  *
@@ -81,7 +83,9 @@ void shipfx_remove_submodel_ship_sparks(ship *shipp, int submodel_num)
 void shipfx_subsystem_maybe_create_live_debris(object *ship_objp, ship *ship_p, ship_subsys *subsys, vec3d *exp_center, float exp_mag)
 {
 	// initializations
+	ship *shipp = &Ships[ship_objp->instance];
 	polymodel *pm = model_get(Ship_info[ship_p->ship_info_index].model_num);
+	polymodel_instance *pmi = model_get_instance(shipp->model_instance_num);
 	int submodel_num = subsys->system_info->subobj_num;
 	submodel_instance_info *sii = &subsys->submodel_info_1;
 
@@ -94,8 +98,6 @@ void shipfx_subsystem_maybe_create_live_debris(object *ship_objp, ship *ship_p, 
 		return;
 	}
 
-	ship_model_start(ship_objp);
-
 	// copy angles
 	angles copy_angs = pm->submodel[submodel_num].angs;
 	angles zero_angs = {0.0f, 0.0f, 0.0f};
@@ -104,17 +106,16 @@ void shipfx_subsystem_maybe_create_live_debris(object *ship_objp, ship *ship_p, 
 	vec3d model_axis, world_axis, rotvel, world_axis_pt;
 	matrix m_rot;	// rotation for debris orient about axis
 
-	if(pm->submodel[submodel_num].movement_type == MOVEMENT_TYPE_ROT) {
+	if (pm->submodel[submodel_num].movement_type == MOVEMENT_TYPE_ROT || pm->submodel[submodel_num].movement_type == MOVEMENT_TYPE_INTRINSIC_ROTATE) {
 		if ( !sii->axis_set ) {
 			model_init_submodel_axis_pt(sii, pm->id, submodel_num);
 		}
 
 		// get the rotvel
-		void model_get_rotating_submodel_axis(vec3d *model_axis, vec3d *world_axis, int modelnum, int submodel_num, object *obj);
-		model_get_rotating_submodel_axis(&model_axis, &world_axis, pm->id, submodel_num, ship_objp);
+		model_get_rotating_submodel_axis(&model_axis, &world_axis, shipp->model_instance_num, submodel_num, &ship_objp->orient);
 		vm_vec_copy_scale(&rotvel, &world_axis, sii->cur_turn_rate);
 
-		model_find_world_point(&world_axis_pt, &sii->pt_on_axis, pm->id, submodel_num, &ship_objp->orient, &ship_objp->pos);
+		model_instance_find_world_point(&world_axis_pt, &sii->pt_on_axis, shipp->model_instance_num, submodel_num, &ship_objp->orient, &ship_objp->pos);
 
 		vm_quaternion_rotate(&m_rot, vm_vec_mag((vec3d*)&sii->angs), &model_axis);
 	} else {
@@ -131,17 +132,17 @@ void shipfx_subsystem_maybe_create_live_debris(object *ship_objp, ship *ship_p, 
 
 		// get start world pos
 		vm_vec_zero(&start_world_pos);
-		model_find_world_point(&start_world_pos, &pm->submodel[live_debris_submodel].offset, pm->id, live_debris_submodel, &ship_objp->orient, &ship_objp->pos );
+		model_instance_find_world_point(&start_world_pos, &pm->submodel[live_debris_submodel].offset, shipp->model_instance_num, live_debris_submodel, &ship_objp->orient, &ship_objp->pos );
 
 		// convert to model coord of underlying submodel
 		// set angle to zero
 		pm->submodel[submodel_num].angs = zero_angs;
-		world_find_model_point(&start_model_pos, &start_world_pos, pm, submodel_num, &ship_objp->orient, &ship_objp->pos);
+		world_find_model_instance_point(&start_model_pos, &start_world_pos, pmi, submodel_num, &ship_objp->orient, &ship_objp->pos);
 
 		// rotate from submodel coord to world coords
 		// reset angle to current angle
 		pm->submodel[submodel_num].angs = copy_angs;
-		model_find_world_point(&end_world_pos, &start_model_pos, pm->id, submodel_num, &ship_objp->orient, &ship_objp->pos);
+		model_instance_find_world_point(&end_world_pos, &start_model_pos, shipp->model_instance_num, submodel_num, &ship_objp->orient, &ship_objp->pos);
 
 		int fireball_type = fireball_ship_explosion_type(&Ship_info[ship_p->ship_info_index]);
 		if(fireball_type < 0) {
@@ -158,7 +159,7 @@ void shipfx_subsystem_maybe_create_live_debris(object *ship_objp, ship *ship_p, 
 			// get radial velocity of debris
 			vec3d delta_x, radial_vel;
 			vm_vec_sub(&delta_x, &end_world_pos, &world_axis_pt);
-			vm_vec_crossprod(&radial_vel, &rotvel, &delta_x);
+			vm_vec_cross(&radial_vel, &rotvel, &delta_x);
 
 			if (Ship_info[ship_p->ship_info_index].flags & SIF_KNOSSOS_DEVICE) {
 				// set velocity to cross center of knossos device
@@ -210,8 +211,6 @@ void shipfx_subsystem_maybe_create_live_debris(object *ship_objp, ship *ship_p, 
 			shipfx_debris_limit_speed(&Debris[live_debris_obj->instance], ship_p);
 		}
 	}
-
-	ship_model_stop(ship_objp);
 }
 
 void set_ship_submodel_as_blown_off(ship *shipp, char *name)
@@ -246,6 +245,7 @@ void shipfx_maybe_create_live_debris_at_ship_death( object *ship_objp )
 
 	ship *shipp = &Ships[ship_objp->instance];
 	polymodel *pm = model_get(Ship_info[shipp->ship_info_index].model_num);
+	polymodel_instance *pmi = model_get_instance(shipp->model_instance_num);
 
 	// no subsystems -> no live debris.
 	if (Ship_info[shipp->ship_info_index].n_subsystems == 0) {
@@ -262,11 +262,8 @@ void shipfx_maybe_create_live_debris_at_ship_death( object *ship_objp )
 			int parent = model_get_parent_submodel_for_live_debris(pm->id, live_debris_submodel);
 			Assert(parent != -1);
 
-			// set model values only once (esp blown off)
-			ship_model_start(ship_objp);
-
 			// check if already blown off  (ship model set)
-			if ( !pm->submodel[parent].blown_off ) {
+			if ( !pmi->submodel[parent].blown_off ) {
 		
 				// get ship_subsys for live_debris
 				// Go through all subsystems and look for submodel the subsystems with "parent" submodel.
@@ -281,7 +278,7 @@ void shipfx_maybe_create_live_debris_at_ship_death( object *ship_objp )
 				if (pss != NULL) {
 					if (pss->system_info != NULL) {
 						vec3d exp_center, tmp = ZERO_VECTOR;
-						model_find_world_point(&exp_center, &tmp, pm->id, parent, &ship_objp->orient, &ship_objp->pos );
+						model_instance_find_world_point(&exp_center, &tmp, shipp->model_instance_num, parent, &ship_objp->orient, &ship_objp->pos );
 
 						// if not blown off, blow it off
 						shipfx_subsystem_maybe_create_live_debris(ship_objp, shipp, pss, &exp_center, 3.0f);
@@ -294,10 +291,6 @@ void shipfx_maybe_create_live_debris_at_ship_death( object *ship_objp )
 			}
 		}
 	}
-
-	// clean up
-	ship_model_stop(ship_objp);
-
 }
 
 void shipfx_blow_off_subsystem(object *ship_objp, ship *ship_p,ship_subsys *subsys, vec3d *exp_center, bool no_explosion)
@@ -673,7 +666,7 @@ int compute_special_warpout_stuff(object *objp, float *speed, float *warp_time, 
 	// get facing normal from knossos
 	vm_vec_sub(&vec_to_knossos, &sp_objp->pos, &center_pos);
 	facing_normal = sp_objp->orient.vec.fvec;
-	if (vm_vec_dotprod(&vec_to_knossos, &sp_objp->orient.vec.fvec) > 0) {
+	if (vm_vec_dot(&vec_to_knossos, &sp_objp->orient.vec.fvec) > 0) {
 		vm_vec_negate(&facing_normal);
 	}
 
@@ -695,7 +688,7 @@ int compute_special_warpout_stuff(object *objp, float *speed, float *warp_time, 
 		max_warpout_angle = 0.866f;	// 30 degree half-angle cone for BIG or HUGE
 	}
 
-	if (-vm_vec_dotprod(&objp->orient.vec.fvec, &facing_normal) < max_warpout_angle) {	// within allowed angle
+	if (-vm_vec_dot(&objp->orient.vec.fvec, &facing_normal) < max_warpout_angle) {	// within allowed angle
 		Int3();
 		mprintf(("special warpout angle exceeded\n"));
 		return -1;
@@ -879,7 +872,7 @@ void shipfx_warpout_frame( object *objp, float frametime )
 /**
  * Given point p0, in object's frame of reference, find if it can see the sun.
  */
-int shipfx_point_in_shadow( vec3d *p0, matrix *src_orient, vec3d *src_pos, float radius )
+bool shipfx_point_in_shadow( vec3d *p0, matrix *src_orient, vec3d *src_pos, float radius )
 {
 	mc_info mc;
 	object *objp;
@@ -918,20 +911,20 @@ int shipfx_point_in_shadow( vec3d *p0, matrix *src_orient, vec3d *src_pos, float
 			mc.flags = MC_CHECK_MODEL;	
 
 			if ( model_collide(&mc) ){
-				return 1;
+				return true;
 			}
 		}
 	}
 
 	// not in shadow
-	return 0;
+	return false;
 }
 
 
 /**
  * Given an ship see if it is in a shadow.
  */
-int shipfx_in_shadow( object * src_obj )
+bool shipfx_in_shadow( object * src_obj )
 {
 	mc_info mc;
 	object *objp;
@@ -968,21 +961,21 @@ int shipfx_in_shadow( object * src_obj )
 				mc.flags = MC_CHECK_MODEL;	
 
 				if ( model_collide(&mc) )	{
-					return 1;
+					return true;
 				}
 			}
 		}
 	}
 
 	// not in shadow
-	return 0;
+	return false;
 }
 
 #define w(p)	(*((int *) (p)))
 /**
  * Given world point see if it is in a shadow.
  */
-int shipfx_eye_in_shadow( vec3d *eye_pos, object * src_obj, int sun_n )
+bool shipfx_eye_in_shadow( vec3d *eye_pos, object * src_obj, int sun_n )
 {
 	mc_info mc;
 	object *objp;
@@ -991,11 +984,17 @@ int shipfx_eye_in_shadow( vec3d *eye_pos, object * src_obj, int sun_n )
 	vec3d rp0, rp1;
 	vec3d light_dir;
 
+	// The mc_info struct only needs to be initialized once for this entire function.  This is because
+	// every time the mc variable is reused, every parameter that model_collide reads from is reassigned.
+	// Therefore the stale fields in the rest of the struct do not matter because either a) they are never
+	// read from, or b) they are overwritten by the new collision calculation.
+	mc_info_init(&mc);
+
 	rp0 = *eye_pos;	
 	
 	// get the light dir
 	if(!light_get_global_dir(&light_dir, sun_n)){
-		return 0;
+		return false;
 	}
 
 	// Find rp1
@@ -1005,7 +1004,6 @@ int shipfx_eye_in_shadow( vec3d *eye_pos, object * src_obj, int sun_n )
 		if ( src_obj != objp )	{
 			vm_vec_scale_add( &rp1, &rp0, &light_dir, objp->radius*10.0f );
 
-			mc_info_init(&mc);
 			mc.model_instance_num = Ships[objp->instance].model_instance_num;
 			mc.model_num = Ship_info[Ships[objp->instance].ship_info_index].model_num;
 			mc.orient = &objp->orient;
@@ -1014,10 +1012,8 @@ int shipfx_eye_in_shadow( vec3d *eye_pos, object * src_obj, int sun_n )
 			mc.p1 = &rp1;
 			mc.flags = MC_CHECK_MODEL;	
 
-			int hit = model_collide(&mc);
-
-			if (hit) {
-				return 1;
+			if (model_collide(&mc)) {
+				return true;
 			}
 		}
 	}
@@ -1046,7 +1042,7 @@ int shipfx_eye_in_shadow( vec3d *eye_pos, object * src_obj, int sun_n )
 		mc.flags = (MC_CHECK_MODEL | MC_SUBMODEL);
 
 		if (model_collide(&mc))	{
-			return 1;
+			return true;
 		}
 	}
 
@@ -1064,7 +1060,9 @@ int shipfx_eye_in_shadow( vec3d *eye_pos, object * src_obj, int sun_n )
 				vm_vec_unrotate(&pos, &sip->cockpit_offset, &eye_ori);
 				vm_vec_add2(&pos, &eye_posi);
 
+				mc.model_instance_num = -1;
 				mc.model_num = sip->cockpit_model_num;
+				mc.submodel_num = -1;
 				mc.orient = &Eye_matrix;
 				mc.pos = &pos;
 				mc.p0 = &rp0;
@@ -1082,12 +1080,12 @@ int shipfx_eye_in_shadow( vec3d *eye_pos, object * src_obj, int sun_n )
 						Assertion (tmap_num < MAX_MODEL_TEXTURES, "Texture map index (%i) exceeded max", tmap_num);
 						if (tmap_num >= MAX_MODEL_TEXTURES) { return 0; }
 						if( !(pm->maps[tmap_num].is_transparent) && strcmp(bm_get_filename(mc.hit_bitmap), "glass.dds") ) {
-							return 1;
+							return true;
 						}
 					}
 
 					if ( mc.f_poly ) {
-						 return 1;
+						 return true;
 					}
 
 					if ( mc.bsp_leaf ) {
@@ -1098,10 +1096,10 @@ int shipfx_eye_in_shadow( vec3d *eye_pos, object * src_obj, int sun_n )
 							Assertion (tmap_num < MAX_MODEL_TEXTURES, "Texture map index (%i) exceeded max", tmap_num);
 							if (tmap_num >= MAX_MODEL_TEXTURES) { return 0; }
 							if ( !(pm->maps[tmap_num].is_transparent) && strcmp(bm_get_filename(mc.hit_bitmap), "glass.dds") ) {
-								return 1;
+								return true;
 							}
 						} else {
-							return 1;
+							return true;
 						}
 					}
 				}
@@ -1109,7 +1107,10 @@ int shipfx_eye_in_shadow( vec3d *eye_pos, object * src_obj, int sun_n )
 
 			if ( sip->flags2 & SIF2_SHOW_SHIP_MODEL ) {
 				vm_vec_scale_add( &rp1, &rp0, &light_dir, Viewer_obj->radius*10.0f );
+
+				mc.model_instance_num = -1;
 				mc.model_num = sip->model_num;
+				mc.submodel_num = -1;
 				mc.orient = &Viewer_obj->orient;
 				mc.pos = &Viewer_obj->pos;
 				mc.p0 = &rp0;
@@ -1124,12 +1125,12 @@ int shipfx_eye_in_shadow( vec3d *eye_pos, object * src_obj, int sun_n )
 						Assertion (tmap_num < MAX_MODEL_TEXTURES, "Texture map index (%i) exceeded max", tmap_num);
 						if (tmap_num >= MAX_MODEL_TEXTURES) { return 0; }
 						if ( !(pm->maps[tmap_num].is_transparent) && strcmp(bm_get_filename(mc.hit_bitmap),"glass.dds") ) {
-							return 1;
+							return true;
 						}
 					}
 
 					if ( mc.f_poly ) {
-						 return 1;
+						 return true;
 					}
 
 					if ( mc.bsp_leaf ) {
@@ -1140,10 +1141,10 @@ int shipfx_eye_in_shadow( vec3d *eye_pos, object * src_obj, int sun_n )
 							Assertion (tmap_num < MAX_MODEL_TEXTURES, "Texture map index (%i) exceeded max", tmap_num);
 							if (tmap_num >= MAX_MODEL_TEXTURES) { return 0; }
 							if ( !(pm->maps[tmap_num].is_transparent) && strcmp(bm_get_filename(mc.hit_bitmap), "glass.dds") ) {
-								return 1;
+								return true;
 							}
 						} else {
-							return 1;
+							return true;
 						}
 					}
 				}
@@ -1156,7 +1157,7 @@ int shipfx_eye_in_shadow( vec3d *eye_pos, object * src_obj, int sun_n )
 
     if (Asteroid_field.num_initial_asteroids <= 0 )
     {
-        return 0;
+        return false;
     }
 
     for (i = 0 ; i < MAX_ASTEROIDS; i++, ast++)
@@ -1181,12 +1182,12 @@ int shipfx_eye_in_shadow( vec3d *eye_pos, object * src_obj, int sun_n )
 		mc.flags = MC_CHECK_MODEL;
 
 		if (model_collide(&mc))	{
-			return 1;
+			return true;
 		}
     }
 
 	// not in shadow
-	return 0;
+	return false;
 }
 
 //=====================================================================================
@@ -1449,7 +1450,6 @@ void shipfx_emit_spark( int n, int sn )
 	float spark_num_scale   = 1.0f + spark_scale_factor * (Particle_number - 1.0f);
 
 	obj = &Objects[shipp->objnum];
-	ship_info* si = &Ship_info[shipp->ship_info_index];
 
 	float hull_percent = get_hull_pct(obj);
 	if (hull_percent < 0.001) {
@@ -1474,9 +1474,7 @@ void shipfx_emit_spark( int n, int sn )
 
 	// get spark position
 	if (shipp->sparks[spark_num].submodel_num != -1) {
-		ship_model_start(obj);
-		model_find_world_point(&outpnt, &shipp->sparks[spark_num].pos, sip->model_num, shipp->sparks[spark_num].submodel_num, &obj->orient, &obj->pos);
-		ship_model_stop(obj);
+		model_instance_find_world_point(&outpnt, &shipp->sparks[spark_num].pos, shipp->model_instance_num, shipp->sparks[spark_num].submodel_num, &obj->orient, &obj->pos);
 	} else {
 		// rotate sparks correctly with current ship orient
 		vm_vec_unrotate(&outpnt, &shipp->sparks[spark_num].pos, &obj->orient);
@@ -1561,7 +1559,7 @@ void shipfx_emit_spark( int n, int sn )
 		// first time through - set up end time and make heavier initially
 		if ( sn > -1 )	{
 			// Sparks for first time at this spot
-			if (si->flags & SIF_FIGHTER) {
+			if (sip->flags & SIF_FIGHTER) {
 				if (hull_percent > 0.6f) {
 					// sparks only once when hull > 60%
 					float spark_duration = (float)pow(2.0f, -5.0f*(hull_percent-1.3f)) * (1.0f + 0.6f*(frand()-0.5f));	// +- 30%
@@ -1796,8 +1794,8 @@ static void split_ship_init( ship* shipp, split_ship* split_shipp )
 	vec3d temp_rotvel = parent_ship_obj->phys_info.rotvel;
 	temp_rotvel.xyz.z = 0.0f;
 	vec3d vel_from_rotvel;
-	vm_vec_crossprod(&vel_from_rotvel, &temp_rotvel, &split_shipp->front_ship.local_pivot);
-	vm_vec_crossprod(&vel_from_rotvel, &temp_rotvel, &split_shipp->back_ship.local_pivot);
+	vm_vec_cross(&vel_from_rotvel, &temp_rotvel, &split_shipp->front_ship.local_pivot);
+	vm_vec_cross(&vel_from_rotvel, &temp_rotvel, &split_shipp->back_ship.local_pivot);
 
 	// set up velocity and make initial fireballs and particles
 	split_shipp->front_ship.phys_info.vel = parent_ship_obj->phys_info.vel;
@@ -1881,7 +1879,7 @@ static void half_ship_render_ship_and_debris(clip_ship* half_ship,ship *shipp)
 						debris_obj->orient = half_ship->orient;
 						
 						vm_vec_sub(&center_to_debris, &tmp, &half_ship->local_pivot);
-						vm_vec_crossprod(&debris_vel, &center_to_debris, &half_ship->phys_info.rotvel);
+						vm_vec_cross(&debris_vel, &center_to_debris, &half_ship->phys_info.rotvel);
 						vm_vec_add2(&debris_vel, &half_ship->phys_info.vel);
 						vm_vec_copy_normalize(&radial_vel, &center_to_debris);
 						float radial_mag = 10.0f + 30.0f*frand();
@@ -1981,7 +1979,7 @@ void shipfx_queue_render_ship_halves_and_debris(draw_list *scene, clip_ship* hal
 						debris_obj->orient = half_ship->orient;
 
 						vm_vec_sub(&center_to_debris, &tmp, &half_ship->local_pivot);
-						vm_vec_crossprod(&debris_vel, &center_to_debris, &half_ship->phys_info.rotvel);
+						vm_vec_cross(&debris_vel, &center_to_debris, &half_ship->phys_info.rotvel);
 						vm_vec_add2(&debris_vel, &half_ship->phys_info.vel);
 						vm_vec_copy_normalize(&radial_vel, &center_to_debris);
 						float radial_mag = 10.0f + 30.0f*frand();
@@ -3002,7 +3000,7 @@ void engine_wash_ship_process(ship *shipp)
 
 					// Gets the final offset and normal in the ship's frame of reference
 					temp = loc_pos;
-					find_submodel_instance_point_normal(&loc_pos, &loc_norm, wash_objp, bank->submodel_num, &temp, &loc_norm);
+					find_submodel_instance_point_normal(&loc_pos, &loc_norm, wash_shipp->model_instance_num, bank->submodel_num, &temp, &loc_norm);
 				}
 
 				// get world pos of thruster
@@ -3016,7 +3014,7 @@ void engine_wash_ship_process(ship *shipp)
 				vm_vec_sub(&thruster_to_ship, &objp->pos, &world_thruster_pos);
 
 				// check if on back side of thruster
-				dot_to_ship = vm_vec_dotprod(&thruster_to_ship, &world_thruster_norm);
+				dot_to_ship = vm_vec_dot(&thruster_to_ship, &world_thruster_norm);
 				if (dot_to_ship > 0) {
 
 					// get max wash distance
@@ -3028,7 +3026,7 @@ void engine_wash_ship_process(ship *shipp)
 
 						// check if inside the sphere
 						if ( dist_sqr < ((radius_mult * radius_mult) * (bank->points[j].radius * bank->points[j].radius)) ) {
-							vm_vec_crossprod(&temp, &world_thruster_norm, &thruster_to_ship);
+							vm_vec_cross(&temp, &world_thruster_norm, &thruster_to_ship);
 							vm_vec_scale_add2(&shipp->wash_rot_axis, &temp, dot_to_ship / dist_sqr);
 							ship_intensity += (1.0f - dist_sqr / (max_wash_dist*max_wash_dist));
 							if (!do_damage) {
@@ -3044,8 +3042,8 @@ void engine_wash_ship_process(ship *shipp)
 							vm_vec_normalize(&apex_to_ship);
 
 							// check if inside cone angle
-							if (vm_vec_dotprod(&apex_to_ship, &world_thruster_norm) > cos(half_angle)) {
-								vm_vec_crossprod(&temp, &world_thruster_norm, &thruster_to_ship);
+							if (vm_vec_dot(&apex_to_ship, &world_thruster_norm) > cos(half_angle)) {
+								vm_vec_cross(&temp, &world_thruster_norm, &thruster_to_ship);
 								vm_vec_scale_add2(&shipp->wash_rot_axis, &temp, dot_to_ship / dist_sqr);
 								ship_intensity += (1.0f - dist_sqr / (max_wash_dist*max_wash_dist));
 								if (!do_damage) {

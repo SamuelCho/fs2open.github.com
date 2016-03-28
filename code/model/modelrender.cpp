@@ -9,6 +9,7 @@
 
 #include <algorithm>
 
+#include "asteroid/asteroid.h"
 #include "cmdline/cmdline.h"
 #include "gamesequence/gamesequence.h"
 #include "graphics/gropengldraw.h"
@@ -26,6 +27,7 @@
 #include "math/staticrand.h"
 #include "ship/ship.h"
 #include "ship/shipfx.h"
+#include "weapon/weapon.h"
 
 extern int Model_texturing;
 extern int Model_polys;
@@ -926,7 +928,7 @@ void model_render_buffers(draw_list* scene, model_material *rendering_material, 
 		scale.xyz.x = 1.0f;
 		scale.xyz.y = 1.0f;
 
-		if ( Use_GLSL > 1 ) {
+		if ( is_minimum_GLSL_version() ) {
 			scale.xyz.z = 1.0f;
 			rendering_material->set_thrust_scale(interp->get_thruster_info().length.xyz.z);
 		} else {
@@ -1142,7 +1144,7 @@ void model_render_buffers(draw_list* scene, model_material *rendering_material, 
 	}
 }
 
-void model_render_children_buffers(draw_list* scene, model_material *rendering_material, model_render_params* interp, polymodel* pm, int mn, int detail_level, uint tmap_flags, bool trans_buffer)
+void model_render_children_buffers(draw_list* scene, model_material *rendering_material, model_render_params* interp, polymodel* pm, polymodel_instance *pmi, int mn, int detail_level, uint tmap_flags, bool trans_buffer)
 {
 	int i;
 
@@ -1152,9 +1154,19 @@ void model_render_children_buffers(draw_list* scene, model_material *rendering_m
 	}
 
 	bsp_info *model = &pm->submodel[mn];
+	submodel_instance *smi = NULL;
 
-	if (model->blown_off)
+	if ( pmi != NULL ) {
+		smi = &pmi->submodel[mn];
+	}
+
+	if ( smi != NULL ) {
+		if ( smi->blown_off ) {
+			return;
+		}
+	} else if ( model->blown_off ) {
 		return;
+	}
 
 	const uint model_flags = interp->get_model_flags();
 
@@ -1177,6 +1189,10 @@ void model_render_children_buffers(draw_list* scene, model_material *rendering_m
 	// the submodel relative to its parent
 	angles ang = model->angs;
 
+	if ( smi != NULL ) {
+		ang = smi->angs;
+	}
+
 	// Add barrel rotation if needed
 	if ( model->gun_rotation ) {
 		if ( pm->gun_submodel_rotation > PI2 ) {
@@ -1197,7 +1213,7 @@ void model_render_children_buffers(draw_list* scene, model_material *rendering_m
 	vm_rotate_matrix_by_angles(&rotation_matrix, &ang);
 
 	matrix inv_orientation;
-	vm_copy_transpose_matrix(&inv_orientation, &model->orientation);
+	vm_copy_transpose(&inv_orientation, &model->orientation);
 
 	matrix submodel_matrix;
 	vm_matrix_x_matrix(&submodel_matrix, &rotation_matrix, &inv_orientation);
@@ -1224,7 +1240,7 @@ void model_render_children_buffers(draw_list* scene, model_material *rendering_m
 
 	while ( i >= 0 ) {
 		if ( !pm->submodel[i].is_thruster ) {
-			model_render_children_buffers( scene, rendering_material, interp, pm, i, detail_level, tmap_flags, trans_buffer );
+			model_render_children_buffers( scene, rendering_material, interp, pm, pmi, i, detail_level, tmap_flags, trans_buffer );
 		}
 
 		i = pm->submodel[i].next_sibling;
@@ -1567,7 +1583,7 @@ void model_render_glowpoint(int point_num, vec3d *pos, matrix *orient, glow_poin
 		vm_vec_sub(&loc_offset, &gpt->pnt, &submodel_static_offset);
 
 		tempv = loc_offset;
-		find_submodel_instance_point_normal(&loc_offset, &loc_norm, &Objects[shipp->objnum], bank->submodel_parent, &tempv, &loc_norm);
+		find_submodel_instance_point_normal(&loc_offset, &loc_norm, shipp->model_instance_num, bank->submodel_parent, &tempv, &loc_norm);
 	}
 
 	vm_vec_unrotate(&world_pnt, &loc_offset, orient);
@@ -1730,7 +1746,7 @@ void model_render_glowpoint(int point_num, vec3d *pos, matrix *orient, glow_poin
 						cone_dir_rot = gpo->cone_direction; 
 					}
 
-					find_submodel_instance_point_normal(&unused, &cone_dir_model, &Objects[shipp->objnum], bank->submodel_parent, &unused, &cone_dir_rot);
+					find_submodel_instance_point_normal(&unused, &cone_dir_model, shipp->model_instance_num, bank->submodel_parent, &unused, &cone_dir_rot);
 					vm_vec_unrotate(&cone_dir_world, &cone_dir_model, orient);
 					vm_vec_rotate(&cone_dir_screen, &cone_dir_world, &Eye_matrix);
 					cone_dir_screen.xyz.z = -cone_dir_screen.xyz.z;
@@ -2031,7 +2047,7 @@ void model_queue_render_thrusters(model_render_params *interp, polymodel *pm, in
 				vm_vec_sub(&loc_offset, &gpt->pnt, &submodel_static_offset);
 
 				tempv = loc_offset;
-				find_submodel_instance_point_normal(&loc_offset, &loc_norm, &Objects[objnum], bank->submodel_num, &tempv, &loc_norm);
+				find_submodel_instance_point_normal(&loc_offset, &loc_norm, shipp->model_instance_num, bank->submodel_num, &tempv, &loc_norm);
 			}
 
 			vm_vec_unrotate(&world_pnt, &loc_offset, orient);
@@ -2385,7 +2401,7 @@ void model_render_debug_children(polymodel *pm, int mn, int detail_level, uint d
 	vm_rotate_matrix_by_angles(&rotation_matrix, &ang);
 
 	matrix inv_orientation;
-	vm_copy_transpose_matrix(&inv_orientation, &model->orientation);
+	vm_copy_transpose(&inv_orientation, &model->orientation);
 
 	matrix submodel_matrix;
 	vm_matrix_x_matrix(&submodel_matrix, &rotation_matrix, &inv_orientation);
@@ -2528,9 +2544,8 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 
 	model_material rendering_material;
 	polymodel *pm = model_get(model_num);
+	polymodel_instance *pmi = NULL;
 		
-	model_do_dumb_rotation(model_num);
-
 	float light_factor = model_render_determine_light_factor(interp, pos, model_flags);
 
 	if ( light_factor < (1.0f/32.0f) ) {
@@ -2568,8 +2583,22 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 
 		if (objp->type == OBJ_SHIP) {
 			shipp = &Ships[objp->instance];
+			pmi = model_get_instance(shipp->model_instance_num);
+		}
+		else if (pm->flags & PM_FLAG_HAS_INTRINSIC_ROTATE) {
+			if (objp->type == OBJ_ASTEROID)
+				pmi = model_get_instance(Asteroids[objp->instance].model_instance_num);
+			else if (objp->type == OBJ_WEAPON)
+				pmi = model_get_instance(Weapons[objp->instance].model_instance_num);
+			else
+				Warning(LOCATION, "Unsupported object type %d for rendering intrinsic-rotate submodels!", objp->type);
 		}
 	}
+
+	// is this a skybox with a rotating submodel?
+	extern int Nmodel_num, Nmodel_instance_num;
+	if (model_num == Nmodel_num && Nmodel_instance_num >= 0)
+		pmi = model_get_instance(Nmodel_instance_num);
 	
 	// Set the flags we will pass to the tmapper
 	uint tmap_flags = TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB;
@@ -2698,7 +2727,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 
 	while( i >= 0 )	{
 		if ( !pm->submodel[i].is_thruster ) {
-			model_render_children_buffers( scene, &rendering_material, interp, pm, i, detail_level, tmap_flags, trans_buffer );
+			model_render_children_buffers( scene, &rendering_material, interp, pm, pmi, i, detail_level, tmap_flags, trans_buffer );
 		} else {
 			draw_thrusters = true;
 		}
@@ -2735,7 +2764,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 
 		while( i >= 0 )	{
 			if ( !pm->submodel[i].is_thruster ) {
-				model_render_children_buffers( scene, &rendering_material, interp, pm, i, detail_level, tmap_flags, trans_buffer );
+				model_render_children_buffers( scene, &rendering_material, interp, pm, pmi, i, detail_level, tmap_flags, trans_buffer );
 			}
 
 			i = pm->submodel[i].next_sibling;
@@ -2756,7 +2785,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 
 		while( i >= 0 ) {
 			if (pm->submodel[i].is_thruster) {
-				model_render_children_buffers( scene, &rendering_material, interp, pm, i, detail_level, tmap_flags, trans_buffer );
+				model_render_children_buffers( scene, &rendering_material, interp, pm, pmi, i, detail_level, tmap_flags, trans_buffer );
 			}
 			i = pm->submodel[i].next_sibling;
 		}

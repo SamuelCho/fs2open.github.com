@@ -31,8 +31,6 @@ void gr_opengl_cross_fade(int bmap1, int bmap2, int x1, int y1, int x2, int y2, 
 void gr_opengl_shade(int x, int y, int w, int h, int resize_mode);
 void gr_opengl_flash(int r, int g, int b);
 void gr_opengl_flash_alpha(int r, int g, int b, int a);
-void gr_opengl_fade_in(int instantaneous);
-void gr_opengl_fade_out(int instantaneous);
 void gr_opengl_tmapper(int nverts, vertex **verts, uint flags);
 void gr_opengl_render(int nverts, vertex *verts, uint flags);
 void gr_opengl_render_effect(int nverts, vertex *verts, float *radius_list, uint flags);
@@ -42,17 +40,17 @@ void gr_opengl_update_distortion();
 void opengl_set_spec_mapping(int tmap_type, float *u_scale, float *v_scale, int stage = 0);
 void opengl_reset_spec_mapping();
 
-void gr_opengl_line_htl(vec3d *start, vec3d *end);
+void gr_opengl_line_htl(const vec3d *start, const vec3d *end);
 void gr_opengl_sphere_htl(float rad);
 void gr_opengl_sphere(material *material_def, float rad);
 void gr_opengl_deferred_light_sphere_init(int rings, int segments);
-void gr_opengl_draw_deferred_light_sphere(vec3d *position, float rad, bool clearStencil);
+void gr_opengl_draw_deferred_light_sphere(const vec3d *position, float rad, bool clearStencil);
 void gr_opengl_deferred_light_cylinder_init(int segments);
-void gr_opengl_draw_deferred_light_cylinder(vec3d *position,matrix *orient, float rad, float length, bool clearStencil);
+void gr_opengl_draw_deferred_light_cylinder(const vec3d *position, const matrix *orient, float rad, float length, bool clearStencil);
 
-void gr_opengl_draw_line_list(colored_vector *lines, int num);
+void gr_opengl_draw_line_list(const colored_vector *lines, int num);
 
-void gr_opengl_shadow_map_start(matrix4 *shadow_view_matrix, matrix *light_orient);
+void gr_opengl_shadow_map_start(const matrix4 *shadow_view_matrix, const matrix *light_orient);
 void gr_opengl_shadow_map_end();
 
 void opengl_setup_scene_textures();

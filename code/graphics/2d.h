@@ -87,7 +87,7 @@ public:
 		Stack.push_back(Current_transform);
 	}
 
-	void push(vec3d *pos, matrix *orient, vec3d *scale = NULL)
+	void push(const vec3d *pos, const matrix *orient, const vec3d *scale = NULL)
 	{
 		matrix basis;
 		vec3d origin;
@@ -635,23 +635,12 @@ typedef struct screen {
 
 	int envmap_render_target;
 
-	bool recording_state_block;
-	int current_state_block;
-
-	void (*gf_start_state_block)();
-	int (*gf_end_state_block)();
-	void (*gf_set_state_block)(int);
-
 	//switch onscreen, offscreen
 	void (*gf_flip)();
 
 	// Sets the current palette
-	void (*gf_set_palette)(ubyte * new_pal, int restrict_alphacolor);
-
-	// Fade the screen in/out
-	void (*gf_fade_in)(int instantaneous);
-	void (*gf_fade_out)(int instantaneous);
-
+	void (*gf_set_palette)(const ubyte *new_pal, int restrict_alphacolor);
+	
 	// Flash the screen
 	void (*gf_flash)( int r, int g, int b );
 	void (*gf_flash_alpha)(int r, int g, int b, int a);
@@ -741,17 +730,7 @@ typedef struct screen {
 
 	// Frees up a saved screen.
 	void (*gf_free_screen)(int id);
-
-	// CODE FOR DUMPING FRAMES TO A FILE
-	// Begin frame dumping
-	void (*gf_dump_frame_start)( int first_frame_number, int nframes_between_dumps );
-
-	// Dump the current frame to file
-	void (*gf_dump_frame)();
-
-	// Dump the current frame to file
-	void (*gf_dump_frame_stop)();
-
+	
 	// Sets the gamma
 	void (*gf_set_gamma)(float gamma);
 
@@ -787,15 +766,14 @@ typedef struct screen {
 	// Here be the bitmap functions
 	void (*gf_bm_free_data)(int n, bool release);
 	void (*gf_bm_create)(int n);
-	int(*gf_bm_load)(BM_TYPE type, int n, const char *filename, CFILE *img_cfp, int *w, int *h, int *bpp, BM_TYPE *c_type, int *mm_lvl, int *size);
 	void (*gf_bm_init)(int n);
 	void (*gf_bm_page_in_start)();
-	int (*gf_bm_lock)(const char *filename, int handle, int bitmapnum, ubyte bpp, ubyte flags, bool nodebug);
+	bool (*gf_bm_data)(int n, bitmap* bm);
 
 	int (*gf_bm_make_render_target)(int n, int *width, int *height, ubyte *bpp, int *mm_lvl, int flags );
 	int (*gf_bm_set_render_target)(int n, int face);
 
-	void (*gf_translate_texture_matrix)(int unit, vec3d *shift);
+	void (*gf_translate_texture_matrix)(int unit, const vec3d *shift);
 	void (*gf_push_texture_matrix)(int unit);
 	void (*gf_pop_texture_matrix)(int unit);
 
@@ -814,23 +792,19 @@ typedef struct screen {
 
 	int (*gf_create_stream_buffer)();
 	void (*gf_render_stream_buffer)(int buffer_handle, int offset, int n_verts, int flags);
-
-	int	 (*gf_make_flat_buffer)(poly_list*);
-	int	 (*gf_make_line_buffer)(line_list*);
 	
-
 	//the projection matrix; fov, aspect ratio, near, far
  	void (*gf_set_proj_matrix)(float, float, float, float);
   	void (*gf_end_proj_matrix)();
 	//the view matrix
- 	void (*gf_set_view_matrix)(vec3d *, matrix*);
+ 	void (*gf_set_view_matrix)(const vec3d*, const matrix*);
   	void (*gf_end_view_matrix)();
 	//object scaleing
-	void (*gf_push_scale_matrix)(vec3d *);
+	void (*gf_push_scale_matrix)(const vec3d*);
  	void (*gf_pop_scale_matrix)();
 	//object position and orientation
-	void (*gf_start_instance_matrix)(vec3d *, matrix*);
-	void (*gf_start_angles_instance_matrix)(vec3d *, angles*);
+	void (*gf_start_instance_matrix)(const vec3d*, const matrix*);
+	void (*gf_start_angles_instance_matrix)(const vec3d*, const angles*);
 	void (*gf_end_instance_matrix)();
 
 	int	 (*gf_make_light)(light*, int, int );
@@ -865,16 +839,15 @@ typedef struct screen {
 	void (*gf_end_clip_plane)();
 
 	void (*gf_zbias)(int zbias);
-	void (*gf_setup_background_fog)(bool);
 
 	void (*gf_set_fill_mode)(int);
 	void (*gf_set_texture_panning)(float u, float v, bool enable);
 
-	void (*gf_draw_line_list)(colored_vector*lines, int num);
+	void (*gf_draw_line_list)(const colored_vector *lines, int num);
 
 	void (*gf_set_line_width)(float width);
 
-	void (*gf_line_htl)(vec3d *start, vec3d* end);
+	void (*gf_line_htl)(const vec3d *start, const vec3d *end);
 	void (*gf_sphere_htl)(float rad);
 	void (*gf_sphere)(material *material_def, float rad);
 
@@ -884,12 +857,12 @@ typedef struct screen {
 
 	void (*gf_clear_states)();
 
-	void (*gf_set_team_color)(team_color *colors);
+	void (*gf_set_team_color)(const team_color *colors);
 
-	void (*gf_update_texture)(int bitmap_handle, int bpp, ubyte* data, int width, int height);
+	void (*gf_update_texture)(int bitmap_handle, int bpp, const ubyte* data, int width, int height);
 	void (*gf_get_bitmap_from_texture)(void* data_out, int bitmap_num);
 
-	void (*gf_shadow_map_start)(matrix4 *shadow_view_matrix, matrix *light_matrix);
+	void (*gf_shadow_map_start)(const matrix4 *shadow_view_matrix, const matrix *light_matrix);
 	void (*gf_shadow_map_end)();
 
 	// new drawing functions
@@ -926,6 +899,7 @@ extern const char *Resolution_prefixes[GR_NUM_RESOLUTIONS];
 
 extern bool gr_init(int d_mode = GR_DEFAULT, int d_width = GR_DEFAULT, int d_height = GR_DEFAULT, int d_depth = GR_DEFAULT);
 extern void gr_screen_resize(int width, int height);
+extern int gr_get_resolution_class(int width, int height);
 
 // Call this when your app ends.
 extern void gr_close();
@@ -1076,8 +1050,6 @@ __inline void gr_gradient(int x1, int y1, int x2, int y2, int resize_mode = GR_R
 	(*gr_screen.gf_gradient)(x1, y1, x2, y2, resize_mode);
 }
 
-#define gr_fade_in			GR_CALL(gr_screen.gf_fade_in)
-#define gr_fade_out			GR_CALL(gr_screen.gf_fade_out)
 #define gr_flash			GR_CALL(gr_screen.gf_flash)
 #define gr_flash_alpha		GR_CALL(gr_screen.gf_flash_alpha)
 
@@ -1093,10 +1065,6 @@ __inline void gr_gradient(int x1, int y1, int x2, int y2, int resize_mode = GR_R
 #define gr_save_screen		GR_CALL(gr_screen.gf_save_screen)
 #define gr_restore_screen	GR_CALL(gr_screen.gf_restore_screen)
 #define gr_free_screen		GR_CALL(gr_screen.gf_free_screen)
-
-#define gr_dump_frame_start	GR_CALL(gr_screen.gf_dump_frame_start)
-#define gr_dump_frame_stop		GR_CALL(gr_screen.gf_dump_frame_stop)
-#define gr_dump_frame			GR_CALL(gr_screen.gf_dump_frame)
 
 #define gr_set_gamma			GR_CALL(gr_screen.gf_set_gamma)
 
@@ -1130,12 +1098,8 @@ __inline int gr_tcache_set(int bitmap_id, int bitmap_type, float *u_scale, float
 #define gr_bm_free_data				GR_CALL(*gr_screen.gf_bm_free_data)
 #define gr_bm_create				GR_CALL(*gr_screen.gf_bm_create)
 #define gr_bm_init					GR_CALL(*gr_screen.gf_bm_init)
-__inline int gr_bm_load(BM_TYPE type, int n, const char *filename, CFILE *img_cfp = NULL, int *w = 0, int *h = 0, int *bpp = 0, BM_TYPE *c_type = 0, int *mm_lvl = 0, int *size = 0)
-{
-	return (*gr_screen.gf_bm_load)(type, n, filename, img_cfp, w, h, bpp, c_type, mm_lvl, size);
-}
 #define gr_bm_page_in_start			GR_CALL(*gr_screen.gf_bm_page_in_start)
-#define gr_bm_lock					GR_CALL(*gr_screen.gf_bm_lock)          
+#define gr_bm_data					GR_CALL(*gr_screen.gf_bm_data)
 
 #define gr_bm_make_render_target					GR_CALL(*gr_screen.gf_bm_make_render_target)          
         
@@ -1165,9 +1129,6 @@ __inline void gr_render_buffer(int start, const vertex_buffer *bufferp, int texi
 #define gr_render_stream_buffer_end		GR_CALL(*gr_screen.gf_render_stream_buffer_end)
 
 #define gr_set_buffer					GR_CALL(*gr_screen.gf_set_buffer)      
-      
-#define gr_make_flat_buffer				GR_CALL(*gr_screen.gf_make_flat_buffer)            
-#define gr_make_line_buffer				GR_CALL(*gr_screen.gf_make_line_buffer)            
 
 #define gr_set_proj_matrix					GR_CALL(*gr_screen.gf_set_proj_matrix)            
 #define gr_end_proj_matrix					GR_CALL(*gr_screen.gf_end_proj_matrix)            
@@ -1211,12 +1172,6 @@ __inline void gr_render_buffer(int start, const vertex_buffer *bufferp, int texi
 #define	gr_zbias						GR_CALL(*gr_screen.gf_zbias)
 #define	gr_set_fill_mode				GR_CALL(*gr_screen.gf_set_fill_mode)
 #define	gr_set_texture_panning			GR_CALL(*gr_screen.gf_set_texture_panning)
-
-#define	gr_start_state_block			GR_CAL(*gr_screen.gf_start_state_block)
-#define	gr_end_state_block				GR_CALL(*gr_screen.gf_end_state_block)
-#define	gr_set_state_block				GR_CALL(*gr_screen.gf_set_state_block)
-
-#define gr_setup_background_fog			GR_CALL(*gr_screen.gf_setup_background_fog)
 
 #define gr_draw_line_list				GR_CALL(*gr_screen.gf_draw_line_list)
 
@@ -1304,7 +1259,7 @@ void gr_bitmap_list(bitmap_rect_list* list, int n_bm, int resize_mode);
 
 // texture update functions
 ubyte* gr_opengl_get_texture_update_pointer(int bitmap_handle);
-void gr_opengl_update_texture(int bitmap_handle, int bpp, ubyte* data, int width, int height);
+void gr_opengl_update_texture(int bitmap_handle, int bpp, const ubyte* data, int width, int height);
 
 // special function for drawing polylines. this function is specifically intended for
 // polylines where each section is no more than 90 degrees away from a previous section.

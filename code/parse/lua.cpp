@@ -462,7 +462,7 @@ ADE_FUNC(getTranspose, l_Matrix, NULL, "Returns a transpose version of the speci
 		return ade_set_error(L, "o", l_Matrix.Set(matrix_h()));
 
 	matrix final = *mh->GetMatrix();
-	vm_transpose_matrix(&final);
+	vm_transpose(&final);
 
 	return ade_set_args(L, "o", l_Matrix.Set(matrix_h(&final)));
 }
@@ -3233,7 +3233,7 @@ ADE_VIRTVAR(Name, l_Shiptype, "string", "Ship type name", "string", "Ship type n
 	if(!ade_get_args(L, "o|s", l_Shiptype.Get(&idx), &s))
 		return ade_set_error(L, "s", "");
 
-	if(idx < 0 || idx > (int)Ship_types.size())
+	if(idx < 0 || idx >= (int)Ship_types.size())
 		return ade_set_error(L, "s", "");
 
 	if(ADE_SETTING_VAR && s != NULL) {
@@ -3722,7 +3722,7 @@ ADE_FUNC(getDotProduct, l_Vector, "vector OtherVector", "Returns dot product of 
 	if(!ade_get_args(L, "oo", l_Vector.GetPtr(&v3a), l_Vector.GetPtr(&v3b)))
 		return ade_set_error(L, "f", 0.0f);
 
-	return ade_set_args(L, "f", vm_vec_dotprod(v3a, v3b));
+	return ade_set_args(L, "f", vm_vec_dot(v3a, v3b));
 }
 
 ADE_FUNC(getCrossProduct, l_Vector, "vector OtherVector", "Returns cross product of vector object with vector argument", "vector", "Cross product, or null vector if a handle is invalid")
@@ -3732,7 +3732,7 @@ ADE_FUNC(getCrossProduct, l_Vector, "vector OtherVector", "Returns cross product
 		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
 
 	vec3d v3r;
-	vm_vec_crossprod(&v3r, v3a, v3b);
+	vm_vec_cross(&v3r, v3a, v3b);
 
 	return ade_set_args(L, "o",l_Vector.Set(v3r));
 }
@@ -3916,7 +3916,7 @@ ADE_FUNC(__tostring, l_Weaponclass, NULL, "Weapon class name", "string", "Weapon
 	if(!ade_get_args(L, "o|s", l_Weaponclass.Get(&idx), &s))
 		return ade_set_error(L, "s", "");
 
-	if(idx < 0 || idx > Num_weapon_types)
+	if(idx < 0 || idx >= Num_weapon_types)
 		return ade_set_error(L, "s", "");
 
 	return ade_set_args(L, "s", Weapon_info[idx].name);
@@ -3928,10 +3928,10 @@ ADE_FUNC(__eq, l_Weaponclass, "weaponclass, weaponclass", "Checks if the two cla
 	if(!ade_get_args(L, "oo", l_Weaponclass.Get(&idx1), l_Weaponclass.Get(&idx2)))
 		return ade_set_error(L, "b", false);
 
-	if(idx1 < 0 || idx1 > Num_weapon_types)
+	if(idx1 < 0 || idx1 >= Num_weapon_types)
 		return ade_set_error(L, "b", false);
 
-	if(idx2 < 0 || idx2 > Num_weapon_types)
+	if(idx2 < 0 || idx2 >= Num_weapon_types)
 		return ade_set_error(L, "b", false);
 
 	return ade_set_args(L, "b", idx1 == idx2);
@@ -3945,7 +3945,7 @@ ADE_VIRTVAR(Name, l_Weaponclass, "string", "Weapon class name", "string", "Weapo
 	if(!ade_get_args(L, "o|s", l_Weaponclass.Get(&idx), &s))
 		return ade_set_error(L, "s", "");
 
-	if(idx < 0 || idx > Num_weapon_types)
+	if(idx < 0 || idx >= Num_weapon_types)
 		return ade_set_error(L, "s", "");
 
 	if(ADE_SETTING_VAR && s != NULL) {
@@ -3962,7 +3962,7 @@ ADE_VIRTVAR(Title, l_Weaponclass, "string", "Weapon class title", "string", "Wea
 	if(!ade_get_args(L, "o|s", l_Weaponclass.Get(&idx), &s))
 		return ade_set_error(L, "s", "");
 
-	if(idx < 0 || idx > Num_weapon_types)
+	if(idx < 0 || idx >= Num_weapon_types)
 		return ade_set_error(L, "s", "");
 
 	if(ADE_SETTING_VAR && s != NULL) {
@@ -4007,7 +4007,7 @@ ADE_VIRTVAR(TechTitle, l_Weaponclass, "string", "Weapon class tech title", "stri
 	if(!ade_get_args(L, "o|s", l_Weaponclass.Get(&idx), &s))
 		return ade_set_error(L, "s", "");
 
-	if(idx < 0 || idx > Num_weapon_types)
+	if(idx < 0 || idx >= Num_weapon_types)
 		return ade_set_error(L, "s", "");
 
 	if(ADE_SETTING_VAR && s != NULL) {
@@ -4024,7 +4024,7 @@ ADE_VIRTVAR(TechAnimationFilename, l_Weaponclass, "string", "Weapon class animat
 	if(!ade_get_args(L, "o|s", l_Weaponclass.Get(&idx), &s))
 		return ade_set_error(L, "s", "");
 
-	if(idx < 0 || idx > Num_weapon_types)
+	if(idx < 0 || idx >= Num_weapon_types)
 		return ade_set_error(L, "s", "");
 
 	if(ADE_SETTING_VAR && s != NULL) {
@@ -4069,7 +4069,7 @@ ADE_VIRTVAR(Model, l_Weaponclass, "model", "Model", "model", "Weapon class model
 	if(!ade_get_args(L, "o|o", l_Weaponclass.Get(&weapon_info_idx), l_Model.GetPtr(&mdl)))
 		return ade_set_error(L, "o", l_Model.Set(-1));
 
-	if(weapon_info_idx < 0 || weapon_info_idx > Num_weapon_types)
+	if(weapon_info_idx < 0 || weapon_info_idx >= Num_weapon_types)
 		return ade_set_error(L, "o", l_Model.Set(-1));
 
 	weapon_info *wip = &Weapon_info[weapon_info_idx];
@@ -4090,7 +4090,7 @@ ADE_VIRTVAR(ArmorFactor, l_Weaponclass, "number", "Amount of weapon damage appli
 	if(!ade_get_args(L, "o|f", l_Weaponclass.Get(&idx), &f))
 		return ade_set_error(L, "f", 0.0f);
 
-	if(idx < 0 || idx > Num_weapon_types)
+	if(idx < 0 || idx >= Num_weapon_types)
 		return ade_set_error(L, "f", 0.0f);
 
 	if(ADE_SETTING_VAR) {
@@ -4107,7 +4107,7 @@ ADE_VIRTVAR(Damage, l_Weaponclass, "number", "Amount of damage that weapon deals
 	if(!ade_get_args(L, "o|f", l_Weaponclass.Get(&idx), &f))
 		return ade_set_error(L, "f", 0.0f);
 
-	if(idx < 0 || idx > Num_weapon_types)
+	if(idx < 0 || idx >= Num_weapon_types)
 		return ade_set_error(L, "f", 0.0f);
 
 	if(ADE_SETTING_VAR) {
@@ -4124,7 +4124,7 @@ ADE_VIRTVAR(FireWait, l_Weaponclass, "number", "Weapon fire wait (cooldown time)
 	if(!ade_get_args(L, "o|f", l_Weaponclass.Get(&idx), &f))
 		return ade_set_error(L, "f", 0.0f);
 
-	if(idx < 0 || idx > Num_weapon_types)
+	if(idx < 0 || idx >= Num_weapon_types)
 		return ade_set_error(L, "f", 0.0f);
 
 	if(ADE_SETTING_VAR) {
@@ -4141,7 +4141,7 @@ ADE_VIRTVAR(FreeFlightTime, l_Weaponclass, "number", "The time the weapon will f
 	if(!ade_get_args(L, "o|f", l_Weaponclass.Get(&idx), &f))
 		return ade_set_error(L, "f", 0.0f);
 
-	if(idx < 0 || idx > Num_weapon_types)
+	if(idx < 0 || idx >= Num_weapon_types)
 		return ade_set_error(L, "f", 0.0f);
 
 	if(ADE_SETTING_VAR) {
@@ -4158,7 +4158,7 @@ ADE_VIRTVAR(LifeMax, l_Weaponclass, "number", "Life of weapon in seconds", "numb
 	if(!ade_get_args(L, "o|f", l_Weaponclass.Get(&idx), &f))
 		return ade_set_error(L, "f", 0.0f);
 
-	if(idx < 0 || idx > Num_weapon_types)
+	if(idx < 0 || idx >= Num_weapon_types)
 		return ade_set_error(L, "f", 0.0f);
 
 	if(ADE_SETTING_VAR) {
@@ -4175,7 +4175,7 @@ ADE_VIRTVAR(Range, l_Weaponclass, "number", "Range of weapon in meters", "number
 	if(!ade_get_args(L, "o|f", l_Weaponclass.Get(&idx), &f))
 		return ade_set_error(L, "f", 0.0f);
 
-	if(idx < 0 || idx > Num_weapon_types)
+	if(idx < 0 || idx >= Num_weapon_types)
 		return ade_set_error(L, "f", 0.0f);
 
 	if(ADE_SETTING_VAR) {
@@ -4192,7 +4192,7 @@ ADE_VIRTVAR(Mass, l_Weaponclass, "number", "Weapon mass", "number", "Weapon mass
 	if(!ade_get_args(L, "o|f", l_Weaponclass.Get(&idx), &f))
 		return ade_set_error(L, "f", 0.0f);
 
-	if(idx < 0 || idx > Num_weapon_types)
+	if(idx < 0 || idx >= Num_weapon_types)
 		return ade_set_error(L, "f", 0.0f);
 
 	if(ADE_SETTING_VAR) {
@@ -4209,7 +4209,7 @@ ADE_VIRTVAR(ShieldFactor, l_Weaponclass, "number", "Amount of weapon damage appl
 	if(!ade_get_args(L, "o|f", l_Weaponclass.Get(&idx), &f))
 		return ade_set_error(L, "f", 0.0f);
 
-	if(idx < 0 || idx > Num_weapon_types)
+	if(idx < 0 || idx >= Num_weapon_types)
 		return ade_set_error(L, "f", 0.0f);
 
 	if(ADE_SETTING_VAR) {
@@ -4226,7 +4226,7 @@ ADE_VIRTVAR(SubsystemFactor, l_Weaponclass, "number", "Amount of weapon damage a
 	if(!ade_get_args(L, "o|f", l_Weaponclass.Get(&idx), &f))
 		return ade_set_error(L, "f", 0.0f);
 
-	if(idx < 0 || idx > Num_weapon_types)
+	if(idx < 0 || idx >= Num_weapon_types)
 		return ade_set_error(L, "f", 0.0f);
 
 	if(ADE_SETTING_VAR) {
@@ -4243,7 +4243,7 @@ ADE_VIRTVAR(TargetLOD, l_Weaponclass, "number", "LOD used for weapon model in th
 	if(!ade_get_args(L, "o|i", l_Weaponclass.Get(&idx), &lod))
 		return ade_set_error(L, "i", 0);
 
-	if(idx < 0 || idx > Num_weapon_types)
+	if(idx < 0 || idx >= Num_weapon_types)
 		return ade_set_error(L, "i", 0);
 
 	if(ADE_SETTING_VAR) {
@@ -4260,7 +4260,7 @@ ADE_VIRTVAR(Speed, l_Weaponclass, "number", "Weapon max speed, aka $Velocity in 
 	if(!ade_get_args(L, "o|f", l_Weaponclass.Get(&idx), &spd))
 		return ade_set_error(L, "f", 0.0f);
 
-	if(idx < 0 || idx > Num_weapon_types)
+	if(idx < 0 || idx >= Num_weapon_types)
 		return ade_set_error(L, "f", 0.0f);
 
 	if(ADE_SETTING_VAR) {
@@ -4277,7 +4277,7 @@ ADE_VIRTVAR(Bomb, l_Weaponclass, "boolean", "Is weapon class flagged as bomb", "
 	if(!ade_get_args(L, "o|b", l_Weaponclass.Get(&idx), &newVal))
 		return ADE_RETURN_FALSE;
 
-	if(idx < 0 || idx > Num_weapon_types)
+	if(idx < 0 || idx >= Num_weapon_types)
 		return ADE_RETURN_FALSE;
 	
 	weapon_info *info = &Weapon_info[idx];
@@ -4308,7 +4308,7 @@ ADE_VIRTVAR(CargoSize, l_Weaponclass, "number", "The cargo size of this weapon c
 	if(!ade_get_args(L, "o|f", l_Weaponclass.Get(&idx), &newVal))
 		return ade_set_args(L, "f", -1.0f);
 
-	if(idx < 0 || idx > Num_weapon_types)
+	if(idx < 0 || idx >= Num_weapon_types)
 		return ade_set_args(L, "f", -1.0f);
 	
 	weapon_info *info = &Weapon_info[idx];
@@ -5037,6 +5037,10 @@ ADE_FUNC(checkRayCollision, l_Object, "vector Start Point, vector End Point, [bo
 
 	if (obj->type == OBJ_SHIP) {
 		model_instance_num = Ships[obj->instance].model_instance_num;
+	} else if (obj->type == OBJ_WEAPON) {
+		model_instance_num = Weapons[obj->instance].model_instance_num;
+	} else if (obj->type == OBJ_ASTEROID) {
+		model_instance_num = Asteroids[obj->instance].model_instance_num;
 	}
 
 	mc_info hull_check;
@@ -7460,7 +7464,7 @@ ADE_FUNC(rotateTurret, l_Subsystem, "vector Pos[, boolean reset=false", "Rotates
 	vm_vec_add2(&gpos, &sso->objp->pos);
 
 	// Find direction of turret
-	model_instance_find_world_dir(&gvec, &tp->turret_norm, tp->model_num, Ships[objp->instance].model_instance_num, tp->turret_gun_sobj, &objp->orient, &objp->pos );
+	model_instance_find_world_dir(&gvec, &tp->turret_norm, Ships[objp->instance].model_instance_num, tp->turret_gun_sobj, &objp->orient);
 		
 	int ret_val = model_rotate_gun(Ship_info[(&Ships[sso->objp->instance])->ship_info_index].model_num, tp, &Objects[sso->objp->instance].orient, &sso->ss->submodel_info_1.angs, &sso->ss->submodel_info_2.angs, &Objects[sso->objp->instance].pos, &pos, (&Ships[sso->objp->instance])->objnum, reset);
 
@@ -7482,7 +7486,7 @@ ADE_FUNC(getTurretHeading, l_Subsystem, NULL, "Returns the turrets forward vecto
 	vec3d gvec;
 	object *objp = sso->objp;
 
-	model_instance_find_world_dir(&gvec, &sso->ss->system_info->turret_norm, sso->ss->system_info->model_num, Ships[objp->instance].model_instance_num, sso->ss->system_info->turret_gun_sobj, &objp->orient, &objp->pos );
+	model_instance_find_world_dir(&gvec, &sso->ss->system_info->turret_norm, Ships[objp->instance].model_instance_num, sso->ss->system_info->turret_gun_sobj, &objp->orient);
 
 	vec3d out;
 	vm_vec_rotate(&out, &gvec, &sso->objp->orient);
@@ -8217,7 +8221,7 @@ struct sound_entry_h
 
 	bool IsValid()
 	{
-		if (idx < 0 || idx > (int) Snds.size())
+		if (idx < 0 || idx >= (int) Snds.size())
 			return false;
 
 		return true;
@@ -8800,7 +8804,7 @@ ADE_FUNC(isValid, l_Message, NULL, "Checks if the message handle is valid", "boo
 //**********HANDLE: Wing
 ade_obj<int> l_Wing("wing", "Wing handle");
 
-ADE_INDEXER(l_Wing, "number Index", "Array of ships in the wing", "ship", "Ship handle, or invalid ship handle if index is invawing handle is invalid")
+ADE_INDEXER(l_Wing, "number Index", "Array of ships in the wing", "ship", "Ship handle, or invalid ship handle if index is invalid or wing handle is invalid")
 {
 	int wdx;
 	int sdx;
@@ -8808,7 +8812,7 @@ ADE_INDEXER(l_Wing, "number Index", "Array of ships in the wing", "ship", "Ship 
 	if(!ade_get_args(L, "oi|o", l_Wing.Get(&wdx), &sdx, l_Ship.GetPtr(&ndx)))
 		return ade_set_error(L, "o", l_Ship.Set(object_h()));
 
-	if(sdx < 1 || sdx > Wings[wdx].current_count) {
+	if(wdx < 0 || wdx >= Num_wings || sdx < 1 || sdx > Wings[wdx].current_count) {
 		return ade_set_error(L, "o", l_Ship.Set(object_h()));
 	}
 
@@ -8822,11 +8826,11 @@ ADE_INDEXER(l_Wing, "number Index", "Array of ships in the wing", "ship", "Ship 
 	return ade_set_args(L, "o", l_Ship.Set(object_h(&Objects[Ships[Wings[wdx].ship_index[sdx]].objnum])));
 }
 
-ADE_FUNC(__len, l_Wing, NULL, "Number of wings in mission", "number", "Number of wings in mission")
+ADE_FUNC(__len, l_Wing, NULL, "Gets the number of ships in the wing", "number", "Number of ships in wing, or 0 if invalid handle")
 {
 	int wdx;
-	if(!ade_get_args(L, "o", l_Wing.Get(&wdx)))
-		return ade_set_error(L, "i", NULL);
+	if(!ade_get_args(L, "o", l_Wing.Get(&wdx)) || wdx < 0 || wdx >= Num_wings)
+		return ade_set_error(L, "i", 0);
 
 	return ade_set_args(L, "i", Wings[wdx].current_count);
 }
@@ -8835,7 +8839,7 @@ ADE_VIRTVAR(Name, l_Wing, "string", "Name of Wing", "string", "Wing name, or emp
 {
 	int wdx;
 	char *s = NULL;
-	if ( !ade_get_args(L, "o|s", l_Wing.Get(&wdx), &s) )
+	if ( !ade_get_args(L, "o|s", l_Wing.Get(&wdx), &s) || wdx < 0 || wdx >= Num_wings )
 		return ade_set_error(L, "s", "");
 
 	if(ADE_SETTING_VAR && s != NULL) {
@@ -8843,6 +8847,18 @@ ADE_VIRTVAR(Name, l_Wing, "string", "Name of Wing", "string", "Wing name, or emp
 	}
 
 	return ade_set_args(L, "s", Wings[wdx].name);
+}
+
+ADE_FUNC(isValid, l_Wing, NULL, "Detects whether handle is valid", "boolean", "true if valid, false if handle is invalid, nil if a syntax/type error occurs")
+{
+	int idx;
+	if(!ade_get_args(L, "o", l_Wing.Get(&idx)))
+		return ADE_RETURN_NIL;
+
+	if (idx < 0 || idx >= Num_wings)
+		return ADE_RETURN_FALSE;
+
+	return ADE_RETURN_TRUE;
 }
 
 //**********HANDLE: Ship
@@ -10539,7 +10555,7 @@ ADE_VIRTVAR(HomingObject, l_Weapon, "object", "Object that weapon will home in o
 		}
 	}
 
-	if(wp->homing_object == NULL)
+	if(wp->homing_object == &obj_used_list)
 		return ade_set_args(L, "o", l_Object.Set(object_h()));
 	else
 		return ade_set_object_with_breed(L, OBJ_INDEX(wp->homing_object));
@@ -10606,7 +10622,7 @@ ADE_VIRTVAR(HomingSubsystem, l_Weapon, "subsystem", "Subsystem that weapon will 
 		}
 		else
 		{
-			wp->homing_object = NULL;
+			wp->homing_object = &obj_used_list;
 			wp->homing_pos = vmd_zero_vector;
 			wp->homing_subsys = NULL;
 		}
@@ -14900,6 +14916,19 @@ ADE_FUNC(getPrevMissionFilename, l_Campaign, NULL, "Gets previous mission filena
 	return ade_set_args(L, "s", Campaign.missions[Campaign.prev_mission].name);
 }
 
+// DahBlount - This jumps to a mission, the reason it accepts a boolean value is so that players can return to campaign maps
+ADE_FUNC(jumpToMission, l_Campaign, "string filename, [boolean hub]", "Jumps to a mission based on the filename. Optionally, the player can be sent to a hub mission without setting missions to skipped.", "boolean", "Jumps to a mission, or returns nil.")
+{
+	char *filename = NULL;;
+	bool hub = false;
+	if (!ade_get_args(L, "s|b", &filename, &hub))
+		return ADE_RETURN_NIL;
+
+	mission_campaign_jump_to_mission(filename, hub);
+
+	return ADE_RETURN_TRUE;
+}
+
 // TODO: add a proper indexer type that returns a handle
 // something like ca.Mission[filename/index]
 
@@ -14912,7 +14941,8 @@ ADE_INDEXER(l_Mission_Wings, "number Index/string WingName", "Wings in the missi
 	if(!ade_get_args(L, "*s", &name))
 		return ade_set_error(L, "o", l_Wing.Set(-1));
 
-	int idx = wing_name_lookup(name);
+	//MageKing17 - Make the count-ignoring version of the lookup and leave checking if the wing has any ships to the scripter
+	int idx = wing_lookup(name);
 	
 	if(idx < 0)
 	{

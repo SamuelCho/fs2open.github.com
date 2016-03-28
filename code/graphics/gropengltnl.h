@@ -31,16 +31,16 @@ extern float shadow_middist;
 extern float shadow_fardist;
 extern bool Rendering_to_shadow_map;
 
-void gr_opengl_start_instance_matrix(vec3d *offset, matrix *rotation);
-void gr_opengl_start_instance_angles(vec3d *pos, angles *rotation);
+void gr_opengl_start_instance_matrix(const vec3d *offset, const matrix *rotation);
+void gr_opengl_start_instance_angles(const vec3d *pos, const angles *rotation);
 void gr_opengl_end_instance_matrix();
 void gr_opengl_set_projection_matrix(float fov, float aspect, float z_near, float z_far);
 void gr_opengl_end_projection_matrix();
-void gr_opengl_set_view_matrix(vec3d *pos, matrix *orient);
+void gr_opengl_set_view_matrix(const vec3d *pos, const matrix *orient);
 void gr_opengl_end_view_matrix();
 void gr_opengl_set_2d_matrix(/*int x, int y, int w, int h*/);
 void gr_opengl_end_2d_matrix();
-void gr_opengl_push_scale_matrix(vec3d *scale_factor);
+void gr_opengl_push_scale_matrix(const vec3d *scale_factor);
 void gr_opengl_pop_scale_matrix();
 
 void gr_opengl_start_clip_plane();
@@ -64,13 +64,10 @@ void gr_opengl_set_transform_buffer_offset(int offset);
 int gr_opengl_create_stream_buffer_object();
 void gr_opengl_render_stream_buffer(int buffer_handle, int offset, int n_verts, int flags);
 
-void gr_opengl_start_state_block();
-int gr_opengl_end_state_block();
-void gr_opengl_set_state_block(int);
-
 void gr_opengl_set_thrust_scale(float scale = -1.0f);
-void gr_opengl_set_team_color(team_color *colors);
+void gr_opengl_set_team_color(const team_color *colors);
 
+void opengl_tnl_init();
 void opengl_tnl_shutdown();
 
 void gr_opengl_render_model(model_material* material_info, vertex_buffer* bufferp, int texi);

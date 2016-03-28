@@ -1391,7 +1391,7 @@ static object* select_next_target_by_distance( const bool targeting_from_closest
 			if ( diff > 0.0f ) {
 				if ( diff < ( current_distance - nearest_distance ) ) {
 					nearest_distance = new_distance;
-					nearest_object_ptr = const_cast<object *>(prospective_victim_ptr);
+					nearest_object_ptr = prospective_victim_ptr;
 				}
 			}
 		}
@@ -1793,7 +1793,7 @@ void hud_target_live_turret(int next_flag, int auto_advance, int only_player_tar
 					
 					if (!auto_advance && get_closest_turret && !only_player_target) {
 						// if within 3 degrees and not previous subsys, use subsys in front
-						dot = vm_vec_dotprod(&vec_to_subsys, &Player_obj->orient.vec.fvec);
+						dot = vm_vec_dot(&vec_to_subsys, &Player_obj->orient.vec.fvec);
 						if ((dot > 0.9986) && facing) {
 							use_straight_ahead_turret = TRUE;
 							break;
@@ -2761,9 +2761,9 @@ void HudGaugeOrientationTee::renderOrientation(object *from_objp, object *to_obj
 	// 0 - vectors are perpendicular
 	// 1 - vectors are collinear and in the same direction (target is facing player)
 	// -1 - vectors are collinear and in the opposite direction (target is facing away from player)
-	dot_product = vm_vec_dotprod(&from_orientp->vec.fvec, &target_to_obj);
+	dot_product = vm_vec_dot(&from_orientp->vec.fvec, &target_to_obj);
 
-	if (vm_vec_dotprod(&from_orientp->vec.rvec, &target_to_obj) >= 0) {
+	if (vm_vec_dot(&from_orientp->vec.rvec, &target_to_obj) >= 0) {
 		if (dot_product >= 0){
 			dot_product = -PI_2*dot_product + PI;
 		} else {
@@ -7166,8 +7166,8 @@ void HudGaugeHardpoints::render(float frametime)
 	render_info.set_color(gauge_color);
 	render_info.set_detail_level_lock(detail_level_lock);
 	render_info.set_flags(MR_NO_LIGHTING | MR_AUTOCENTER | MR_NO_FOGGING | MR_NO_TEXTURING | MR_NO_CULL);
+	render_info.set_object_number(OBJ_INDEX(objp));
 
-	ship_model_start(objp);
 	model_render_immediate( &render_info, sip->model_num, &object_orient, &vmd_zero_vector);
 
 	gr_set_color_buffer(1);
@@ -7185,7 +7185,6 @@ void HudGaugeHardpoints::render(float frametime)
 		&object_orient, 
 		&vmd_zero_vector
 	);
-	ship_model_stop( objp );
 
 	gr_stencil_set(GR_STENCIL_NONE);
 	gr_zbuffer_set(zbuffer);

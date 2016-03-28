@@ -166,6 +166,7 @@ int stars_debris_loaded = 0;	// 0 = not loaded, 1 = normal vclips, 2 = nebula vc
 // background data
 int Stars_background_inited = 0;			// if we're inited
 int Nmodel_num = -1;							// model num
+int Nmodel_instance_num = -1;					// model instance num
 matrix Nmodel_orient = IDENTITY_MATRIX;			// model orientation
 int Nmodel_flags = DEFAULT_NMODEL_FLAGS;		// model flags
 int Nmodel_bitmap = -1;						// model texture
@@ -298,10 +299,9 @@ static void starfield_create_bitmap_buffer(const int si_idx)
 	vm_angles_2_matrix(&m_bank, &bank_first);
 
 	// convert angles to matrix
-	float b_save = a->b;
-	a->b = 0.0f;
-	vm_angles_2_matrix(&m, a);
-	a->b = b_save;
+	angles a_temp = *a;
+	a_temp.b = 0.0f;
+	vm_angles_2_matrix(&m, &a_temp);
 
 	// generate the bitmap points
 	for(idx=0; idx<=div_x; idx++) {
@@ -2283,6 +2283,11 @@ void stars_set_background_model(char *model_name, char *texture_name, int flags)
 		Nmodel_num = -1;
 	}
 
+	if (Nmodel_instance_num >= 0) {
+		model_delete_instance(Nmodel_instance_num);
+		Nmodel_instance_num = -1;
+	}
+
 	Nmodel_flags = flags;
 
 	if ( (model_name == NULL) || (*model_name == '\0') )
@@ -2291,8 +2296,13 @@ void stars_set_background_model(char *model_name, char *texture_name, int flags)
 	Nmodel_num = model_load(model_name, 0, NULL, -1);
 	Nmodel_bitmap = bm_load(texture_name);
 
-	if (Nmodel_num >= 0)
+	if (Nmodel_num >= 0) {
 		model_page_in_textures(Nmodel_num);
+
+		if (model_get(Nmodel_num)->flags & PM_FLAG_HAS_INTRINSIC_ROTATE) {
+			Nmodel_instance_num = model_create_instance(false, Nmodel_num);
+		}
+	}
 }
 
 // call this to set a specific orientation for the background
@@ -2728,28 +2738,6 @@ void stars_delete_entry_FRED(int index, bool is_a_sun)
 void stars_load_first_valid_background()
 {
 	int background_idx = stars_get_first_valid_background();
-
-#ifndef NDEBUG
-	if (background_idx < 0 && !Fred_running)
-	{
-		int i;
-		bool at_least_one_bitmap = false;
-		for (i = 0; i < Num_backgrounds; i++)
-		{
-			if (Backgrounds[i].bitmaps.size() > 0)
-				at_least_one_bitmap = true;
-		}
-
-		if (at_least_one_bitmap)
-		{
-			if (Num_backgrounds == 1)
-				Warning(LOCATION, "Unable to find a sufficient number of bitmaps for this mission's background.  The background will not be displayed.");	
-			else if (Num_backgrounds > 1)
-				Warning(LOCATION, "Unable to find a sufficient number of bitmaps for any background listed in this mission.  No background will be displayed.");
-		}
-	}
-#endif
-
 	stars_load_background(background_idx);
 }
 
@@ -2761,32 +2749,43 @@ int stars_get_first_valid_background()
 	if (Num_backgrounds == 0)
 		return -1;
 
-	// get the first background with > 50% of its suns and > 50% of its bitmaps present
-	for (i = 0; i < (uint)Num_backgrounds; i++)
+	// scan every background except the last and return the first one that has all its suns and bitmaps present
+	for (i = 0; i < (uint)Num_backgrounds - 1; i++)
 	{
-		uint total_suns = 0;
-		uint total_bitmaps = 0;
+		bool valid = true;
 		background_t *background = &Backgrounds[i];
 
 		for (j = 0; j < background->suns.size(); j++)
 		{
-			if (stars_find_sun(background->suns[j].filename) >= 0)
-				total_suns++;
+			if (stars_find_sun(background->suns[j].filename) < 0)
+			{
+				mprintf(("Failed to load sun %s for background %d, falling back to background %d\n",
+					background->suns[j].filename, i + 1, i + 2));
+				valid = false;
+				break;
+			}
 		}
 
-		for (j = 0; j < background->bitmaps.size(); j++)
+		if (valid)
 		{
-			if (stars_find_bitmap(background->bitmaps[j].filename) >= 0)
-				total_bitmaps++;
+			for (j = 0; j < background->bitmaps.size(); j++)
+			{
+				if (stars_find_bitmap(background->bitmaps[j].filename) < 0)
+				{
+					mprintf(("Failed to load bitmap %s for background %d, falling back to background %d\n",
+						background->suns[j].filename, i + 1, i + 2));
+					valid = false;
+					break;
+				}
+			}
 		}
 
-		// add 1 so rounding will work properly
-		if ((total_suns >= (background->suns.size() + 1) / 2) && (total_bitmaps >= (background->bitmaps.size() + 1) / 2))
+		if (valid)
 			return i;
 	}
 
-	// didn't find a valid entry
-	return -1;
+	// didn't find a valid background yet, so return the last one
+	return Num_backgrounds - 1;
 }
 
 // Goober5000

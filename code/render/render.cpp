@@ -454,7 +454,7 @@ void render_rotated_bitmap(int texture, float alpha, vertex *pnt, float angle, f
 	vm_rot_point_around_line(&uvec, &View_matrix.vec.uvec, angle, &vmd_zero_vector, &View_matrix.vec.fvec);
 	vm_vec_normalize(&uvec);
 
-	vm_vec_crossprod(&rvec, &View_matrix.vec.fvec, &uvec);
+	vm_vec_cross(&rvec, &View_matrix.vec.fvec, &uvec);
 	vm_vec_normalize(&rvec);
 
 	vm_vec_scale_add(&p[0], &PNT, &rvec, rad);
@@ -789,13 +789,13 @@ void render_laser(int texture, color *clr, float alpha, vec3d *headp, float head
 	}
 	// code intended to prevent possible null vector normalize issue - end
 
-	vm_vec_crossprod(&uvec, &fvec, &reye);
+	vm_vec_cross(&uvec, &fvec, &reye);
 	vm_vec_normalize(&uvec);
-	vm_vec_crossprod(&fvec, &uvec, &reye);
+	vm_vec_cross(&fvec, &uvec, &reye);
 	vm_vec_normalize(&fvec);
 	 
 	//now recompute right vector, in case it wasn't entirely perpendiclar
-	vm_vec_crossprod(&rvec, &uvec, &fvec);
+	vm_vec_cross(&rvec, &uvec, &fvec);
 
 	// Now have uvec, which is up vector and rvec which is the normal
 	// of the face.
@@ -1096,7 +1096,7 @@ void render_rod(color *clr, int num_points, vec3d *pvecs, float width)
 		vm_vec_sub(&rvec, &pvecs[first], &pvecs[second]);
 		vm_vec_normalize_safe(&rvec);
 
-		vm_vec_crossprod(&uvec, &rvec, &fvec);
+		vm_vec_cross(&uvec, &rvec, &fvec);
 
 		vm_vec_scale_add(&vecs[0], &pvecs[i], &uvec, width * 0.5f);
 		vm_vec_scale_add(&vecs[1], &pvecs[i], &uvec, -width * 0.5f);
