@@ -142,6 +142,19 @@ void opengl_bind_vertex_component(vertex_format_data &vert_component, void* base
 		data_src = vert_component.data_src;
 	}
 
+	/*
+	if ( is_minimum_GLSL_version() && Current_shader != NULL ) {
+		// grabbing a vertex attribute is dependent on what current shader has been set. i hope no one calls opengl_bind_vertex_layout before opengl_set_current_shader
+		GLint index = opengl_shader_get_attribute(bind_info.attrib_name.c_str());
+
+		if ( index >= 0 ) {
+			GL_state.Array.EnableVertexAttrib(index);
+			GL_state.Array.VertexAttribPointer(index, bind_info.size, bind_info.data_type, bind_info.normalized, vert_component.stride, data_src);
+		}
+
+		return;
+	}
+	*/
 	switch ( bind_info.binding_type ) {
 		case opengl_vertex_bind::POSITION:
 		{

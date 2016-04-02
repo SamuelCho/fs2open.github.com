@@ -16,10 +16,6 @@
 #include "graphics/gropengl.h"
 #include "lighting/lighting.h"
 
-struct ogl_light_color {
-	float r,g,b,a;
-};
-
 // Structures
 struct opengl_light
 {
@@ -38,7 +34,15 @@ struct opengl_light
 	int type;
 };
 
-struct light_data;
+struct opengl_light_uniform_data {
+	vec4 *Position;
+	vec3d *Color;
+	vec3d *Direction;
+	int *Light_type;
+	float *Attenuation;
+};
+
+extern opengl_light_uniform_data opengl_light_uniforms;
 
 //Variables
 extern bool lighting_is_enabled;

@@ -23,6 +23,7 @@
 #include "graphics/gropenglextension.h"
 #include "graphics/gropengllight.h"
 #include "graphics/gropenglstate.h"
+#include "graphics/gropengltnl.h"
 #include "lighting/lighting.h"
 #include "render/3d.h"
 
@@ -30,6 +31,8 @@
 
 // Variables
 opengl_light *opengl_lights = NULL;
+opengl_light_uniform_data opengl_light_uniforms;
+
 bool lighting_is_enabled = true;
 int Num_active_gl_lights = 0;
 int GL_center_alpha = 0;
@@ -178,26 +181,52 @@ void opengl_set_light(int light_num, opengl_light *ltp)
 	light_pos.xyz.y = ltp->Position[1];
 	light_pos.xyz.z = ltp->Position[2];
 
+	vec3d new_light_dir;
+	vec3d light_dir;
+
+	light_dir.xyz.x = ltp->SpotDir[0];
+	light_dir.xyz.y = ltp->SpotDir[1];
+	light_dir.xyz.z = ltp->SpotDir[2];
+
 	if ( ltp->type == LT_POINT ) {
 		vm_vec_sub2(&light_pos, &Object_position);
 	}
 	
 	vm_vec_rotate(&new_light_pos, &light_pos, &Object_matrix);
-
-	ltp->Position[0] = new_light_pos.xyz.x;
-	ltp->Position[1] = new_light_pos.xyz.y;
-	ltp->Position[2] = new_light_pos.xyz.z;
+	vm_vec_rotate(&new_light_dir, &light_dir, &Object_matrix);
 
 	glLightfv(GL_LIGHT0+light_num, GL_POSITION, ltp->Position);
 	glLightfv(GL_LIGHT0+light_num, GL_AMBIENT, ltp->Ambient);
 	glLightfv(GL_LIGHT0+light_num, GL_DIFFUSE, diffuse);
 	glLightfv(GL_LIGHT0+light_num, GL_SPECULAR, ltp->Specular);
-	glLightfv(GL_LIGHT0+light_num, GL_SPOT_DIRECTION, ltp->SpotDir);
+	glLightfv(GL_LIGHT0+light_num, GL_SPOT_DIRECTION, &new_light_dir.a1d[0]);
 	//glLightf(GL_LIGHT0+light_num, GL_CONSTANT_ATTENUATION, ltp->ConstantAtten); Default is 1.0 and we only use 1.0 - Valathil
 	glLightf(GL_LIGHT0+light_num, GL_LINEAR_ATTENUATION, ltp->LinearAtten);
 	//glLightf(GL_LIGHT0+light_num, GL_QUADRATIC_ATTENUATION, ltp->QuadraticAtten); Default is 0.0 and we only use 0.0 - Valathil
 	glLightf(GL_LIGHT0+light_num, GL_SPOT_EXPONENT, ltp->SpotExp);
 	glLightf(GL_LIGHT0+light_num, GL_SPOT_CUTOFF, ltp->SpotCutOff);
+
+	vec4 light_pos_world;
+	light_pos_world.xyzw.x = ltp->Position[0];
+	light_pos_world.xyzw.y = ltp->Position[1];
+	light_pos_world.xyzw.z = ltp->Position[2];
+	light_pos_world.xyzw.w = ltp->Position[3];
+
+	vec3d light_dir_world;
+	light_dir_world.xyz.x = ltp->SpotDir[0];
+	light_dir_world.xyz.y = ltp->SpotDir[1];
+	light_dir_world.xyz.z = ltp->SpotDir[2];
+
+	vm_vec_transform(&opengl_light_uniforms.Position[light_num], &light_pos_world, &GL_view_matrix);
+	vm_vec_transform(&opengl_light_uniforms.Direction[light_num], &light_dir_world, &GL_view_matrix, false);
+
+	opengl_light_uniforms.Color[light_num].xyz.x = diffuse[0];
+	opengl_light_uniforms.Color[light_num].xyz.y = diffuse[1];
+	opengl_light_uniforms.Color[light_num].xyz.z = diffuse[2];
+
+	opengl_light_uniforms.Light_type[light_num] = ltp->type;
+
+	opengl_light_uniforms.Attenuation[light_num] = ltp->LinearAtten;
 }
 
 bool opengl_sort_active_lights(const opengl_light &la, const opengl_light &lb)
@@ -519,6 +548,31 @@ void opengl_light_shutdown()
 		vm_free(opengl_lights);
 		opengl_lights = NULL;
 	}
+
+	if ( opengl_light_uniforms.Position != NULL ) {
+		vm_free(opengl_light_uniforms.Position);
+		opengl_light_uniforms.Position = NULL;
+	}
+
+	if ( opengl_light_uniforms.Color != NULL ) {
+		vm_free(opengl_light_uniforms.Color);
+		opengl_light_uniforms.Color = NULL;
+	}
+
+	if ( opengl_light_uniforms.Direction != NULL ) {
+		vm_free(opengl_light_uniforms.Direction);
+		opengl_light_uniforms.Direction = NULL;
+	}
+
+	if ( opengl_light_uniforms.Light_type != NULL ) {
+		vm_free(opengl_light_uniforms.Light_type);
+		opengl_light_uniforms.Light_type = NULL;
+	}
+
+	if ( opengl_light_uniforms.Attenuation != NULL ) {
+		vm_free(opengl_light_uniforms.Attenuation);
+		opengl_light_uniforms.Attenuation = NULL;
+	}
 }
 
 void opengl_light_init()
@@ -544,6 +598,12 @@ void opengl_light_init()
 		Error( LOCATION, "Unable to allocate memory for lights!\n");
 
 	memset( opengl_lights, 0, MAX_LIGHTS * sizeof(opengl_light) );
+
+	opengl_light_uniforms.Position = (vec4 *)vm_malloc_q(GL_max_lights * sizeof(vec4));
+	opengl_light_uniforms.Color = (vec3d *)vm_malloc_q(GL_max_lights * sizeof(vec3d));
+	opengl_light_uniforms.Direction = (vec3d *)vm_malloc_q(GL_max_lights * sizeof(vec3d));
+	opengl_light_uniforms.Light_type = (int *)vm_malloc_q(GL_max_lights * sizeof(int));
+	opengl_light_uniforms.Attenuation = (float *)vm_malloc_q(GL_max_lights * sizeof(float));
 }
 
 extern int Cmdline_no_emissive;

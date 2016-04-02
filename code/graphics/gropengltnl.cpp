@@ -93,6 +93,8 @@ bool Rendering_to_shadow_map = false;
 int Transform_buffer_handle = -1;
 
 transform_stack GL_model_matrix_stack;
+matrix4 GL_view_matrix;
+matrix4 GL_projection_matrix;
 
 struct opengl_buffer_object {
 	GLuint buffer_id;
@@ -1887,6 +1889,48 @@ void gr_opengl_render_stream_buffer(int buffer_handle, int offset, int n_verts, 
 	GL_CHECK_FOR_ERRORS("end of render3d()");
 }
 
+void opengl_create_perspective_projection_matrix(matrix4 *out, float left, float right, float bottom, float top, float near_dist, float far_dist)
+{
+	memset(out, 0, sizeof(matrix4));
+
+	out->a1d[0] = 2.0 * near_dist / (right - left);
+	out->a1d[5] = 2.0 * near_dist / (top - bottom);
+	out->a1d[8] = (right + left) / (right - left);
+	out->a1d[9] = (top + bottom) / (top - bottom);
+	out->a1d[10] = -(far_dist + near_dist) / (far_dist - near_dist);
+	out->a1d[11] = -1.0f;
+	out->a1d[14] = -2.0f * far_dist * near_dist / (far_dist - near_dist);
+}
+
+void opengl_create_orthographic_projection_matrix(matrix4* out, float left, float right, float bottom, float top, float near_dist, float far_dist)
+{
+	memset(out, 0, sizeof(matrix4));
+
+	out->a1d[0] = 2.0f / (right - left);
+	out->a1d[5] = 2.0f / (top - bottom);
+	out->a1d[10] = -2.0f / (far_dist - near_dist);
+	out->a1d[12] = -(right + left) / (right - left);
+	out->a1d[13] = -(top + bottom) / (top - bottom);
+	out->a1d[14] = -(far_dist + near_dist) / (far_dist - near_dist);
+	out->a1d[15] = 1.0f;
+}
+
+void opengl_create_view_matrix(matrix4 *out, const vec3d *pos, const matrix *orient)
+{
+	vec3d scaled_pos;
+	vec3d inv_pos;
+	matrix scaled_orient = *orient;
+	matrix inv_orient;
+
+	vm_vec_copy_scale(&scaled_pos, pos, -1.0f);
+	vm_vec_scale(&scaled_orient.vec.fvec, -1.0f);
+
+	vm_copy_transpose(&inv_orient, &scaled_orient);
+	vm_vec_rotate(&inv_pos, &scaled_pos, &scaled_orient);
+
+	vm_matrix4_set_transform(out, &inv_orient, &inv_pos);
+}
+
 void gr_opengl_start_instance_matrix(const vec3d *offset, const matrix *rotation)
 {
 	if (Cmdline_nohtl) {
@@ -1978,8 +2022,10 @@ void gr_opengl_set_projection_matrix(float fov, float aspect, float z_near, floa
 
 	if (GL_rendering_to_texture) {
 		glFrustum( -clip_width, clip_width, clip_height, -clip_height, z_near, z_far );
+		opengl_create_perspective_projection_matrix(&GL_projection_matrix, -clip_width, clip_width, clip_height, -clip_height, z_near, z_far);
 	} else {
 		glFrustum( -clip_width, clip_width, -clip_height, clip_height, z_near, z_far );
+		opengl_create_perspective_projection_matrix(&GL_projection_matrix, -clip_width, clip_width, -clip_height, clip_height, z_near, z_far);
 	}
 
 	glMatrixMode(GL_MODELVIEW);
@@ -2005,8 +2051,10 @@ void gr_opengl_end_projection_matrix()
 	// the top and bottom positions are reversed on purpose, but RTT needs them the other way
 	if (GL_rendering_to_texture) {
 		glOrtho(0, gr_screen.max_w, 0, gr_screen.max_h, -1.0, 1.0);
+		opengl_create_orthographic_projection_matrix(&GL_projection_matrix, 0, gr_screen.max_w, 0, gr_screen.max_h, -1.0, 1.0);
 	} else {
 		glOrtho(0, gr_screen.max_w, gr_screen.max_h, 0, -1.0, 1.0);
+		opengl_create_orthographic_projection_matrix(&GL_projection_matrix, 0, gr_screen.max_w, gr_screen.max_h, 0, -1.0, 1.0);
 	}
 
 	glMatrixMode(GL_MODELVIEW);
@@ -2025,6 +2073,8 @@ void gr_opengl_set_view_matrix(const vec3d *pos, const matrix *orient)
 	Assert(GL_modelview_matrix_depth == 1);
 
 	GL_CHECK_FOR_ERRORS("start of set_view_matrix()");
+
+	opengl_create_view_matrix(&GL_view_matrix, pos, orient);
 
 	glPushMatrix();
 
@@ -2175,8 +2225,10 @@ void gr_opengl_set_2d_matrix(/*int x, int y, int w, int h*/)
 	// the top and bottom positions are reversed on purpose, but RTT needs them the other way
 	if (GL_rendering_to_texture) {
 		glOrtho( 0, gr_screen.max_w, 0, gr_screen.max_h, -1, 1 );
+		opengl_create_orthographic_projection_matrix(&GL_projection_matrix, 0, gr_screen.max_w, 0, gr_screen.max_h, -1, 1);
 	} else {
 		glOrtho( 0, gr_screen.max_w, gr_screen.max_h, 0, -1, 1 );
+		opengl_create_orthographic_projection_matrix(&GL_projection_matrix, 0, gr_screen.max_w, gr_screen.max_h, 0, -1, 1);
 	}
 
 	glMatrixMode( GL_MODELVIEW );
@@ -2508,6 +2560,13 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	Assert( Current_shader->shader == SDR_TYPE_MODEL );
 
 	GL_state.Texture.SetShaderMode(GL_TRUE);
+	
+	GL_state.Uniform.setUniformMatrix4f("modelMatrix", GL_model_matrix_stack.get_transform().get_matrix4());
+	GL_state.Uniform.setUniformMatrix4f("viewMatrix", GL_view_matrix);
+	GL_state.Uniform.setUniformMatrix4f("projMatrix", GL_projection_matrix);
+
+	color &clr = material_info->get_color();
+	GL_state.Uniform.setUniform4f("color", clr.red, clr.green, clr.blue, clr.alpha);
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_ANIMATED ) {
 		GL_state.Uniform.setUniformf("anim_timer", material_info->get_animated_effect_time());
@@ -2546,6 +2605,12 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		int num_lights = MIN(Num_active_gl_lights, GL_max_lights) - 1;
 		GL_state.Uniform.setUniformi("n_lights", num_lights);
 		GL_state.Uniform.setUniformf("light_factor", material_info->get_light_factor());
+
+		GL_state.Uniform.setUniform4fv("lightPosition", GL_max_lights, opengl_light_uniforms.Position);
+		GL_state.Uniform.setUniform3fv("lightDirection", GL_max_lights, opengl_light_uniforms.Direction);
+		GL_state.Uniform.setUniform3fv("lightColor", GL_max_lights, opengl_light_uniforms.Color);
+		GL_state.Uniform.setUniform1iv("lightType", GL_max_lights, opengl_light_uniforms.Light_type);
+		GL_state.Uniform.setUniform1fv("lightAttenuation", GL_max_lights, opengl_light_uniforms.Attenuation);
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_DIFFUSE_MAP ) {

@@ -128,10 +128,11 @@ ogl_extension GL_Extensions[NUM_OGL_EXTENSIONS] =
 	{ false, false, 1, { "GL_ARB_shading_language_100" }, 0, { NULL } },
 
 	// shader objects and program object management
-	{ false, false, 1, { "GL_ARB_shader_objects" }, 19, { "glDeleteObjectARB", "glCreateShaderObjectARB", "glShaderSourceARB",
+	{ false, false, 1, { "GL_ARB_shader_objects" }, 23, { "glDeleteObjectARB", "glCreateShaderObjectARB", "glShaderSourceARB",
 		"glCompileShaderARB", "glGetObjectParameterivARB", "glGetInfoLogARB", "glCreateProgramObjectARB",
 		"glAttachObjectARB", "glLinkProgramARB", "glUseProgramObjectARB", "glValidateProgramARB", "glGetUniformLocationARB",
-		"glGetUniformivARB", "glUniform1fARB", "glUniform2fARB", "glUniform3fARB", "glUniform4fARB", "glUniform1iARB", "glUniformMatrix4fvARB" } },
+		"glGetUniformivARB", "glUniform1fARB", "glUniform2fARB", "glUniform3fARB", "glUniform4fARB", "glUniform1fvARB", "glUniform3fvARB", 
+		"glUniform4fvARB", "glUniform1iARB", "glUniform1ivARB", "glUniformMatrix4fvARB" } },
 
 	// programmable vertex level processing
 	// some of functions are provided by GL_ARB_vertex_program
@@ -233,9 +234,11 @@ ogl_function GL_Functions[NUM_OGL_FUNCTIONS] =
 	{ "glUniform2fARB", 0 },
 	{ "glUniform3fARB", 0 },
 	{ "glUniform4fARB", 0 },
+	{ "glUniform1fvARB", 0 },
 	{ "glUniform3fvARB", 0 },
 	{ "glUniform4fvARB", 0 },
 	{ "glUniform1iARB", 0 },
+	{ "glUniform1ivARB", 0 },
 	{ "glUniformMatrix4fvARB", 0 },
 	{ "glDrawBuffers", 0 },
 	{ "glDrawElementsBaseVertex", 0	},
