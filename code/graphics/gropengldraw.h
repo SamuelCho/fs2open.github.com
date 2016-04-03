@@ -50,7 +50,7 @@ void gr_opengl_draw_deferred_light_cylinder(const vec3d *position, const matrix 
 
 void gr_opengl_draw_line_list(const colored_vector *lines, int num);
 
-void gr_opengl_shadow_map_start(const matrix4 *shadow_view_matrix, const matrix *light_orient);
+void gr_opengl_shadow_map_start(matrix4 *shadow_view_matrix, const matrix *light_orient);
 void gr_opengl_shadow_map_end();
 
 void opengl_setup_scene_textures();

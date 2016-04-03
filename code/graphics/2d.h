@@ -862,7 +862,7 @@ typedef struct screen {
 	void (*gf_update_texture)(int bitmap_handle, int bpp, const ubyte* data, int width, int height);
 	void (*gf_get_bitmap_from_texture)(void* data_out, int bitmap_num);
 
-	void (*gf_shadow_map_start)(const matrix4 *shadow_view_matrix, const matrix *light_matrix);
+	void (*gf_shadow_map_start)(matrix4 *shadow_view_matrix, const matrix *light_matrix);
 	void (*gf_shadow_map_end)();
 
 	// new drawing functions

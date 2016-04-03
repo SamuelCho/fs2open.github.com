@@ -531,7 +531,7 @@ void gr_stub_set_animated_effect(int effect, float timer)
 void gr_stub_set_team_color(const team_color *colors) {
 }
 
-void gr_stub_shadow_map_start(const matrix4 *shadow_view_matrix, const matrix* light_matrix)
+void gr_stub_shadow_map_start(matrix4 *shadow_view_matrix, const matrix* light_matrix)
 {
 }
 

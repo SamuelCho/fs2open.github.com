@@ -2191,6 +2191,7 @@ void gr_opengl_end_view_matrix()
 	glLoadIdentity();
 
 	GL_model_matrix_stack.clear();
+	vm_matrix4_set_identity(&GL_view_matrix);
 
 	GL_modelview_matrix_depth = 1;
 	GL_htl_view_matrix_set = 0;
@@ -2438,7 +2439,7 @@ void gr_opengl_set_state_block(int handle)
 extern bool Glowpoint_override;
 bool Glowpoint_override_save;
 
-void gr_opengl_shadow_map_start(const matrix4 *shadow_view_matrix, const matrix *light_orient)
+void gr_opengl_shadow_map_start(matrix4 *shadow_view_matrix, const matrix *light_orient)
 {
 	if ( !Cmdline_shadow_quality )
 		return;
@@ -2462,7 +2463,7 @@ void gr_opengl_shadow_map_start(const matrix4 *shadow_view_matrix, const matrix 
 	GL_htl_projection_matrix_set = 1;
 	gr_set_view_matrix(&Eye_position, light_orient);
 
-	glGetFloatv(GL_MODELVIEW_MATRIX, (GLfloat*)shadow_view_matrix);
+	*shadow_view_matrix = GL_view_matrix;
 
 	int size = (Cmdline_shadow_quality == 2 ? 1024 : 512);
 	glViewport(0, 0, size, size);
@@ -2561,7 +2562,13 @@ void opengl_tnl_set_model_material(model_material *material_info)
 
 	GL_state.Texture.SetShaderMode(GL_TRUE);
 	
-	GL_state.Uniform.setUniformMatrix4f("modelMatrix", GL_model_matrix_stack.get_transform().get_matrix4());
+	matrix4 model_view_matrix;
+	matrix4 model_matrix = GL_model_matrix_stack.get_transform().get_matrix4();
+	
+	vm_matrix4_x_matrix4(&model_view_matrix, &GL_view_matrix, &model_matrix);
+
+	GL_state.Uniform.setUniformMatrix4f("modelViewMatrix", model_view_matrix);
+	GL_state.Uniform.setUniformMatrix4f("modelMatrix", model_matrix);
 	GL_state.Uniform.setUniformMatrix4f("viewMatrix", GL_view_matrix);
 	GL_state.Uniform.setUniformMatrix4f("projMatrix", GL_projection_matrix);
 
@@ -2580,18 +2587,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 
 		if ( clip ) {
 			material::clip_plane &clip_info = material_info->get_clip_plane();
-
-			matrix4 model_matrix;
-			memset(&model_matrix, 0, sizeof(model_matrix));
-
-			model_matrix.a1d[0] = Object_matrix.vec.rvec.xyz.x;   model_matrix.a1d[4] = Object_matrix.vec.uvec.xyz.x;   model_matrix.a1d[8] = Object_matrix.vec.fvec.xyz.x;
-			model_matrix.a1d[1] = Object_matrix.vec.rvec.xyz.y;   model_matrix.a1d[5] = Object_matrix.vec.uvec.xyz.y;   model_matrix.a1d[9] = Object_matrix.vec.fvec.xyz.y;
-			model_matrix.a1d[2] = Object_matrix.vec.rvec.xyz.z;   model_matrix.a1d[6] = Object_matrix.vec.uvec.xyz.z;   model_matrix.a1d[10] = Object_matrix.vec.fvec.xyz.z;
-			model_matrix.a1d[12] = Object_position.xyz.x;
-			model_matrix.a1d[13] = Object_position.xyz.y;
-			model_matrix.a1d[14] = Object_position.xyz.z;
-			model_matrix.a1d[15] = 1.0f;
-
+			
 			GL_state.Uniform.setUniformi("use_clip_plane", 1);
 			GL_state.Uniform.setUniformMatrix4f("world_matrix", model_matrix);
 			GL_state.Uniform.setUniform3f("clip_normal", clip_info.normal);
@@ -2702,17 +2698,6 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_SHADOWS ) {
-		matrix4 model_matrix;
-		memset(&model_matrix, 0, sizeof(model_matrix));
-
-		model_matrix.a1d[0] = Object_matrix.vec.rvec.xyz.x;   model_matrix.a1d[4] = Object_matrix.vec.uvec.xyz.x;   model_matrix.a1d[8] = Object_matrix.vec.fvec.xyz.x;
-		model_matrix.a1d[1] = Object_matrix.vec.rvec.xyz.y;   model_matrix.a1d[5] = Object_matrix.vec.uvec.xyz.y;   model_matrix.a1d[9] = Object_matrix.vec.fvec.xyz.y;
-		model_matrix.a1d[2] = Object_matrix.vec.rvec.xyz.z;   model_matrix.a1d[6] = Object_matrix.vec.uvec.xyz.z;   model_matrix.a1d[10] = Object_matrix.vec.fvec.xyz.z;
-		model_matrix.a1d[12] = Object_position.xyz.x;
-		model_matrix.a1d[13] = Object_position.xyz.y;
-		model_matrix.a1d[14] = Object_position.xyz.z;
-		model_matrix.a1d[15] = 1.0f;
-
 		GL_state.Uniform.setUniformMatrix4f("shadow_mv_matrix", Shadow_view_matrix);
 		GL_state.Uniform.setUniformMatrix4fv("shadow_proj_matrix", MAX_SHADOW_CASCADES, Shadow_proj_matrix);
 		GL_state.Uniform.setUniformMatrix4f("model_matrix", model_matrix);
