@@ -48,6 +48,7 @@ struct transform
 	matrix4 get_matrix4()
 	{
 		matrix4 new_mat;
+		vm_matrix4_set_identity(&new_mat);
 
 		new_mat.a1d[0] = basis.vec.rvec.xyz.x;   new_mat.a1d[4] = basis.vec.uvec.xyz.x;   new_mat.a1d[8] = basis.vec.fvec.xyz.x;
 		new_mat.a1d[1] = basis.vec.rvec.xyz.y;   new_mat.a1d[5] = basis.vec.uvec.xyz.y;   new_mat.a1d[9] = basis.vec.fvec.xyz.y;
@@ -55,7 +56,6 @@ struct transform
 		new_mat.a1d[12] = origin.xyz.x;
 		new_mat.a1d[13] = origin.xyz.y;
 		new_mat.a1d[14] = origin.xyz.z;
-		new_mat.a1d[15] = 1.0f;
 
 		return new_mat;
 	}
