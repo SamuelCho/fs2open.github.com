@@ -91,15 +91,15 @@ struct opengl_vertex_bind {
 
 static opengl_vertex_bind GL_array_binding_data[] =
 {
-	{ vertex_format_data::POSITION4,	opengl_vertex_bind::POSITION,	4, GL_FLOAT,			"",					GL_FALSE },
-	{ vertex_format_data::POSITION3,	opengl_vertex_bind::POSITION,	3, GL_FLOAT,			"",					GL_FALSE },
-	{ vertex_format_data::POSITION2,	opengl_vertex_bind::POSITION,	2, GL_FLOAT,			"",					GL_FALSE },
-	{ vertex_format_data::SCREEN_POS,	opengl_vertex_bind::POSITION,	2, GL_INT,				"",					GL_FALSE },
-	{ vertex_format_data::COLOR3,		opengl_vertex_bind::COLOR,		3, GL_UNSIGNED_BYTE,	"",					GL_FALSE },
-	{ vertex_format_data::COLOR4,		opengl_vertex_bind::COLOR,		4, GL_UNSIGNED_BYTE,	"",					GL_FALSE },
-	{ vertex_format_data::TEX_COORD,	opengl_vertex_bind::TEXCOORD0,	2, GL_FLOAT,			"",					GL_FALSE },
-	{ vertex_format_data::NORMAL,		opengl_vertex_bind::NORMAL,		3, GL_FLOAT,			"",					GL_FALSE },
-	{ vertex_format_data::TANGENT,		opengl_vertex_bind::TEXCOORD1,	4, GL_FLOAT,			"",					GL_FALSE },
+	{ vertex_format_data::POSITION4,	opengl_vertex_bind::POSITION,	4, GL_FLOAT,			"vertPosition",		GL_FALSE },
+	{ vertex_format_data::POSITION3,	opengl_vertex_bind::POSITION,	3, GL_FLOAT,			"vertPosition",		GL_FALSE },
+	{ vertex_format_data::POSITION2,	opengl_vertex_bind::POSITION,	2, GL_FLOAT,			"vertPosition",		GL_FALSE },
+	{ vertex_format_data::SCREEN_POS,	opengl_vertex_bind::POSITION,	2, GL_INT,				"vertPosition",		GL_FALSE },
+	{ vertex_format_data::COLOR3,		opengl_vertex_bind::COLOR,		3, GL_UNSIGNED_BYTE,	"vertColor",		GL_FALSE },
+	{ vertex_format_data::COLOR4,		opengl_vertex_bind::COLOR,		4, GL_UNSIGNED_BYTE,	"vertColor",		GL_FALSE },
+	{ vertex_format_data::TEX_COORD,	opengl_vertex_bind::TEXCOORD0,	2, GL_FLOAT,			"vertTexCoord",		GL_FALSE },
+	{ vertex_format_data::NORMAL,		opengl_vertex_bind::NORMAL,		3, GL_FLOAT,			"vertNormal",		GL_FALSE },
+	{ vertex_format_data::TANGENT,		opengl_vertex_bind::TEXCOORD1,	4, GL_FLOAT,			"vertTangent",		GL_FALSE },
 	{ vertex_format_data::MODEL_ID,		opengl_vertex_bind::ATTRIB,		1, GL_FLOAT,			"model_id",			GL_FALSE },
 	{ vertex_format_data::RADIUS,		opengl_vertex_bind::ATTRIB,		1, GL_FLOAT,			"radius",			GL_FALSE },
 	{ vertex_format_data::FVEC,			opengl_vertex_bind::ATTRIB,		3, GL_FLOAT,			"fvec",				GL_FALSE },
@@ -142,7 +142,6 @@ void opengl_bind_vertex_component(vertex_format_data &vert_component, void* base
 		data_src = vert_component.data_src;
 	}
 
-	/*
 	if ( is_minimum_GLSL_version() && Current_shader != NULL ) {
 		// grabbing a vertex attribute is dependent on what current shader has been set. i hope no one calls opengl_bind_vertex_layout before opengl_set_current_shader
 		GLint index = opengl_shader_get_attribute(bind_info.attrib_name.c_str());
@@ -154,7 +153,7 @@ void opengl_bind_vertex_component(vertex_format_data &vert_component, void* base
 
 		return;
 	}
-	*/
+
 	switch ( bind_info.binding_type ) {
 		case opengl_vertex_bind::POSITION:
 		{
