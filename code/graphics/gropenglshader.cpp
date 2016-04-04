@@ -137,7 +137,7 @@ static opengl_shader_variant_t GL_shader_variants[] = {
 		"Shadow Mapping" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_SHADOWS, "FLAG_SHADOWS", 
-		8, { "shadow_map", "shadow_mv_matrix", "shadow_proj_matrix", "model_matrix", "veryneardist", "neardist", "middist", "fardist" }, 0, { NULL }, 
+		7, { "shadow_map", "shadow_mv_matrix", "shadow_proj_matrix", "veryneardist", "neardist", "middist", "fardist" }, 0, { NULL }, 
 		"Shadows" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_THRUSTER, "FLAG_THRUSTER", 
@@ -149,7 +149,7 @@ static opengl_shader_variant_t GL_shader_variants[] = {
 		"Submodel Transforms" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_CLIP, "FLAG_CLIP", 
-		4, { "use_clip_plane", "world_matrix", "clip_normal", "clip_position" }, 0, { NULL }, 
+		3, { "use_clip_plane", "clip_normal", "clip_position" }, 0, { NULL }, 
 		"Clip Plane" },
 	
 	{ SDR_TYPE_EFFECT_PARTICLE, true, SDR_FLAG_PARTICLE_POINT_GEN, "FLAG_EFFECT_GEOMETRY", 

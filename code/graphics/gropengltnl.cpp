@@ -2589,7 +2589,6 @@ void opengl_tnl_set_model_material(model_material *material_info)
 			material::clip_plane &clip_info = material_info->get_clip_plane();
 			
 			GL_state.Uniform.setUniformi("use_clip_plane", 1);
-			GL_state.Uniform.setUniformMatrix4f("world_matrix", model_matrix);
 			GL_state.Uniform.setUniform3f("clip_normal", clip_info.normal);
 			GL_state.Uniform.setUniform3f("clip_position", clip_info.position);
 		} else {
@@ -2700,7 +2699,6 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	if ( Current_shader->flags & SDR_FLAG_MODEL_SHADOWS ) {
 		GL_state.Uniform.setUniformMatrix4f("shadow_mv_matrix", Shadow_view_matrix);
 		GL_state.Uniform.setUniformMatrix4fv("shadow_proj_matrix", MAX_SHADOW_CASCADES, Shadow_proj_matrix);
-		GL_state.Uniform.setUniformMatrix4f("model_matrix", model_matrix);
 		GL_state.Uniform.setUniformf("veryneardist", Shadow_cascade_distances[0]);
 		GL_state.Uniform.setUniformf("neardist", Shadow_cascade_distances[1]);
 		GL_state.Uniform.setUniformf("middist", Shadow_cascade_distances[2]);
