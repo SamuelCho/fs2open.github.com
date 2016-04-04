@@ -42,7 +42,7 @@ geometry_sdr_params *Current_geo_sdr_params = NULL;
  */
 static opengl_shader_type_t GL_shader_types[] = {
 	{ SDR_TYPE_MODEL, "main-v.sdr", "main-f.sdr", "main-g.sdr", {GL_TRIANGLES, GL_TRIANGLE_STRIP, 3}, 
-		5, { "modelViewMatrix", "modelMatrix", "viewMatrix", "projMatrix", "color" }, 4, { "vertPosition", "vertTexCoord", "vertNormal", "vertTangent" }, "Model Rendering" },
+		5, { "modelViewMatrix", "modelMatrix", "viewMatrix", "projMatrix", "color" }, 5, { "vertPosition", "vertTexCoord", "vertNormal", "vertTangent", "vertModelID" }, "Model Rendering" },
 
 	{ SDR_TYPE_EFFECT_PARTICLE, "effect-v.sdr", "effect-particle-f.sdr", "effect-screen-g.sdr", {GL_POINTS, GL_TRIANGLE_STRIP, 4}, 
 		7, { "baseMap", "depthMap", "window_width", "window_height", "nearZ", "farZ", "linear_depth" }, 1, {"radius"}, "Particle Effects" },
@@ -145,7 +145,7 @@ static opengl_shader_variant_t GL_shader_variants[] = {
 		"Thruster scaling" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_TRANSFORM, "FLAG_TRANSFORM", 
-		2, { "transform_tex", "buffer_matrix_offset" }, 1, { "model_id" }, 
+		2, { "transform_tex", "buffer_matrix_offset" }, 0, { NULL }, 
 		"Submodel Transforms" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_CLIP, "FLAG_CLIP", 
