@@ -277,6 +277,7 @@ class opengl_array_state
 		void EnableVertexAttrib(GLuint index);
 		void DisableVertexAttrib(GLuint index);
 		void VertexAttribPointer(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, GLvoid *pointer);
+		void ResetVertexAttribs();
 
 		void BindPointersBegin();
 		void BindPointersEnd();

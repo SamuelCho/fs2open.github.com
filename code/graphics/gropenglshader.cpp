@@ -42,7 +42,7 @@ geometry_sdr_params *Current_geo_sdr_params = NULL;
  */
 static opengl_shader_type_t GL_shader_types[] = {
 	{ SDR_TYPE_MODEL, "main-v.sdr", "main-f.sdr", "main-g.sdr", {GL_TRIANGLES, GL_TRIANGLE_STRIP, 3}, 
-		5, { "modelViewMatrix", "modelMatrix", "viewMatrix", "projMatrix", "color" }, 5, { "vertPosition", "vertTexCoord", "vertNormal", "vertTangent", "vertModelID" }, "Model Rendering" },
+		5, { "modelViewMatrix", "modelMatrix", "viewMatrix", "projMatrix", "color" }, 6, { "vertPosition", "vertTexCoord", "vertNormal", "vertTangent", "vertModelID", "vertColor" }, "Model Rendering" },
 
 	{ SDR_TYPE_EFFECT_PARTICLE, "effect-v.sdr", "effect-particle-f.sdr", "effect-screen-g.sdr", {GL_POINTS, GL_TRIANGLE_STRIP, 4}, 
 		7, { "baseMap", "depthMap", "window_width", "window_height", "nearZ", "farZ", "linear_depth" }, 1, {"radius"}, "Particle Effects" },
@@ -181,9 +181,10 @@ void opengl_shader_set_current(opengl_shader_t *shader_obj)
 {
 	if (shader_obj != NULL) {
 		if(!Current_shader || (Current_shader->program_id != shader_obj->program_id)) {
+			GL_state.Array.ResetVertexAttribs();
+			GL_state.Uniform.reset();
 			Current_shader = shader_obj;
 			vglUseProgramObjectARB(Current_shader->program_id);
-			GL_state.Uniform.reset();
 #ifndef NDEBUG
 			if ( opengl_check_for_errors("shader_set_current()") ) {
 				vglValidateProgramARB(Current_shader->program_id);
@@ -206,6 +207,8 @@ void opengl_shader_set_current(opengl_shader_t *shader_obj)
 #endif
 		}
 	} else {
+		GL_state.Array.ResetVertexAttribs();
+		GL_state.Uniform.reset();
 		Current_shader = NULL;
 		vglUseProgramObjectARB(0);
 	}

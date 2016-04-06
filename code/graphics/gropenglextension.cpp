@@ -136,8 +136,8 @@ ogl_extension GL_Extensions[NUM_OGL_EXTENSIONS] =
 
 	// programmable vertex level processing
 	// some of functions are provided by GL_ARB_vertex_program
-	{ false, false, 1, { "GL_ARB_vertex_shader" }, 4, { "glEnableVertexAttribArrayARB", "glDisableVertexAttribArrayARB",
-		"glGetAttribLocationARB", "glVertexAttribPointerARB" } },
+	{ false, false, 1, { "GL_ARB_vertex_shader" }, 5, { "glEnableVertexAttribArrayARB", "glDisableVertexAttribArrayARB",
+		"glGetAttribLocationARB", "glVertexAttribPointerARB", "glBindAttribLocationARB" } },
 
 	// programmable fragment level processing
 	{ false, false, 1, { "GL_ARB_fragment_shader" }, 0, { NULL } },
@@ -227,6 +227,7 @@ ogl_function GL_Functions[NUM_OGL_FUNCTIONS] =
 	{ "glEnableVertexAttribArrayARB", 0 },
 	{ "glDisableVertexAttribArrayARB", 0 },
 	{ "glGetAttribLocationARB", 0 },
+	{ "glBindAttribLocationARB", 0 },
 	{ "glVertexAttribPointerARB", 0 },
 	{ "glGetUniformLocationARB", 0 },
 	{ "glGetUniformivARB", 0 },

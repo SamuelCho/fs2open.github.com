@@ -1329,6 +1329,7 @@ char* Default_main_vertex_shader =
 "attribute vec3 vertNormal;\n"
 "attribute vec4 vertTangent;\n"
 "attribute float vertModelID;\n"
+"attribute vec4 vertColor;\n"
 "uniform mat4 modelViewMatrix;\n"
 "uniform mat4 modelMatrix;\n"
 "uniform mat4 viewMatrix;\n"

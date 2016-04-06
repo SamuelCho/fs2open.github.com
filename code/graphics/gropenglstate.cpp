@@ -1184,6 +1184,17 @@ void opengl_array_state::VertexAttribPointer(GLuint index, GLint size, GLenum ty
 	va_unit->ptr_init = true;
 }
 
+void opengl_array_state::ResetVertexAttribs()
+{
+	SCP_map<GLuint, opengl_vertex_attrib_unit>::iterator it;
+
+	for ( it = vertex_attrib_units.begin(); it != vertex_attrib_units.end(); ++it ) {
+		DisableVertexAttrib(it->first);
+	}
+
+	vertex_attrib_units.clear();
+}
+
 void opengl_array_state::BindPointersBegin()
 {
 	// set all available client states to not used
