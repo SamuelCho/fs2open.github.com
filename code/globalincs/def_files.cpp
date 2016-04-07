@@ -1329,7 +1329,6 @@ char* Default_main_vertex_shader =
 "attribute vec3 vertNormal;\n"
 "attribute vec4 vertTangent;\n"
 "attribute float vertModelID;\n"
-"attribute vec4 vertColor;\n"
 "uniform mat4 modelViewMatrix;\n"
 "uniform mat4 modelMatrix;\n"
 "uniform mat4 viewMatrix;\n"
@@ -1902,16 +1901,17 @@ char* Default_main_geometry_shader =
 "	EndPrimitive();\n"
 "}";
 
-char* Default_fxaa_vertex_shader = 
+char* Default_fxaa_vertex_shader =
 "#extension GL_EXT_gpu_shader4 : enable\n"
+"attribute vec4 vertPosition;\n"
 "uniform float rt_w;\n"
 "uniform float rt_h;\n"
 "varying vec2 v_rcpFrame;\n"
 "noperspective varying vec2 v_pos;\n"
 "void main() {\n"
-"	gl_Position = gl_Vertex;\n"
+"	gl_Position = vertPosition;\n"
 "	v_rcpFrame = vec2(1.0/rt_w, 1.0/rt_h);\n"
-"	v_pos = gl_Vertex.xy*0.5 + 0.5;\n"
+"	v_pos = vertPosition.xy*0.5 + 0.5;\n"
 "}";
 
 char* Default_fxaa_fragment_shader = 
@@ -2589,20 +2589,19 @@ char *Default_post_fragment_shader =
 "	gl_FragColor = color_out;\n"
 "}";
 
-char *Default_post_vertex_shader = 
+char *Default_post_vertex_shader =
+"attribute vec4 vertPosition;\n"
+"attribute vec4 vertTexCoord;\n"
+"attribute vec4 vertColor;\n"
 "varying float blurSize;\n"
 "uniform float bsize;\n"
 "void main()\n"
 "{\n"
-"	gl_TexCoord[0] = gl_MultiTexCoord0;\n"
-"	gl_Position = gl_Vertex;\n"
-"	gl_FrontColor = gl_Color;\n"
+"	gl_TexCoord[0] = vertTexCoord;\n"
+"	gl_Position = vertPosition;\n"
+"	gl_FrontColor = vertColor;\n"
 "	gl_FrontSecondaryColor = vec4(0.0, 0.0, 0.0, 1.0);\n"
 "	blurSize = 1.0 / bsize;\n"
-"// Check necessary for ATI specific behavior\n"
-" #ifdef __GLSL_CG_DATA_TYPES\n"
-"	gl_ClipVertex = (gl_ModelViewMatrix * gl_Vertex);\n"
-" #endif\n"
 "}";
 
 char* Default_fxaa_prepass_shader = 
@@ -2612,10 +2611,13 @@ char* Default_fxaa_prepass_shader =
 "	gl_FragColor = vec4(color.rgb, dot(color.rgb, vec3(0.299, 0.587, 0.114)) );\n"
 "}";
 
-char* Default_effect_vertex_shader = 
-"attribute float radius;\n"
+char* Default_effect_vertex_shader =
+"attribute vec4 vertPosition;\n"
+"attribute vec4 vertTexCoord;\n"
+"attribute vec4 vertColor;\n"
+"attribute float vertRadius;\n"
 "#ifdef FLAG_EFFECT_GEOMETRY\n"
-" attribute vec3 uvec;\n"
+" attribute vec3 vertUvec;\n"
 " varying vec3 up_g;\n"
 " varying float radius_g;\n"
 "#else\n"
@@ -2629,24 +2631,20 @@ char* Default_effect_vertex_shader =
 "void main()\n"
 "{\n"
 "	#ifdef FLAG_EFFECT_GEOMETRY\n"
-"	 radius_g = radius;\n"
-"	 up_g = uvec;\n"
-"	 gl_Position = gl_ModelViewMatrix * gl_Vertex;\n"
+"	 radius_g = vertRadius;\n"
+"	 up_g = vertUvec;\n"
+"	 gl_Position = gl_ModelViewMatrix * vertPosition;\n"
 "	#else\n"
-"	 radius_p = radius;\n"
-"	 gl_Position = ftransform();\n"
-"	 position_p = gl_ModelViewMatrix * gl_Vertex;\n"
+"	 radius_p = vertRadius;\n"
+"	 gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * vertPosition;\n"
+"	 position_p = gl_ModelViewMatrix * vertPosition;\n"
 "	#endif\n"
 "	#ifdef FLAG_EFFECT_DISTORTION\n"
-"	offset_out = radius * use_offset;\n"
+"	offset_out = vertRadius * use_offset;\n"
 "	#endif\n"
-"	gl_TexCoord[0] = gl_MultiTexCoord0;\n"
-"	gl_FrontColor = gl_Color;\n"
+"	gl_TexCoord[0] = vertTexCoord;\n"
+"	gl_FrontColor = vertColor;\n"
 "	gl_FrontSecondaryColor = vec4(0.0, 0.0, 0.0, 1.0);\n"
-" #ifdef  __GLSL_CG_DATA_TYPES\n"
-"	// Check necessary for ATI specific behavior\n"
-"	gl_ClipVertex = (gl_ModelViewMatrix * gl_Vertex);\n"
-" #endif\n"
 "}";
 
 char* Default_effect_particle_fragment_shader =
@@ -2689,20 +2687,19 @@ char* Default_effect_particle_fragment_shader =
 "}";
 
 char* Default_effect_distortion_vertex_shader =
-"attribute float radius;\n"
+"attribute vec4 vertPosition;\n"
+"attribute vec4 vertTexCoord;\n"
+"attribute vec4 vertColor;\n"
+"attribute float vertRadius;\n"
 "varying float offset_out;\n"
 "uniform float use_offset;\n"
 "void main()\n"
 "{\n"
-"   gl_Position = ftransform();\n"
-"	offset_out = radius * use_offset;\n"
-"	gl_TexCoord[0] = gl_MultiTexCoord0;\n"
-"	gl_FrontColor = gl_Color;\n"
+"   gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * vertPosition;\n"
+"	offset_out = vertRadius * use_offset;\n"
+"	gl_TexCoord[0] = vertTexCoord;\n"
+"	gl_FrontColor = vertColor;\n"
 "	gl_FrontSecondaryColor = vec4(0.0, 0.0, 0.0, 1.0);\n"
-" #ifdef  __GLSL_CG_DATA_TYPES\n"
-"	// Check necessary for ATI specific behavior\n"
-"	gl_ClipVertex = (gl_ModelViewMatrix * gl_Vertex);\n"
-" #endif\n"
 "}";
 
 char* Default_effect_distortion_fragment_shader =
@@ -2783,16 +2780,13 @@ char* Default_effect_screen_geometry_shader =
 "	EndPrimitive();\n"
 "}";
 
-char* Default_shadowdebug_vertex_shader = 
+char* Default_shadowdebug_vertex_shader =
+"attribute vec4 vertPosition;\n"
+"attribute vec4 vertTexCoord;\n"
 "void main()\n"
 "{\n"
-"	gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;\n"
-"	gl_FrontColor = vec4(1.0);\n"
-"	gl_Position = gl_Vertex;\n"
-" #ifdef  __GLSL_CG_DATA_TYPES\n"
-"	// Check necessary for ATI specific behavior\n"
-"	gl_ClipVertex = (gl_ModelViewMatrix * gl_Vertex);\n"
-" #endif\n"
+"	gl_TexCoord[0] = gl_TextureMatrix[0] * vertTexCoord;\n"
+"	gl_Position = vertPosition;\n"
 "}\n";
 
 char* Default_shadowdebug_fragment_shader =
@@ -2839,13 +2833,13 @@ char* Default_lightshaft_fragment_shader =
 "	gl_FragColor.a = 1.0;\n"
 "}";
 
-char *Default_video_vertex_shader = 
+char *Default_video_vertex_shader =
+"attribute vec4 vertPosition;\n"
+"attribute vec4 vertTexCoord;\n"
 "void main()\n"
 "{\n"
-"	gl_TexCoord[0] = gl_MultiTexCoord0;\n"
-"	gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * gl_Vertex;\n"
-"	gl_FrontColor = vec4(1.0);\n"
-"	gl_FrontSecondaryColor = vec4(0.0, 0.0, 0.0, 1.0);\n"
+"	gl_TexCoord[0] = vertTexCoord;\n"
+"	gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * vertPosition;\n"
 "}";
 
 char * Default_video_fragment_shader = 
@@ -2862,15 +2856,14 @@ char * Default_video_fragment_shader =
 "}";
 
 char *Default_deferred_vertex_shader =
+"attribute vec4 vertPosition;\n"
 "uniform vec3 scale;\n"
 "uniform int lightType;\n"
-"\n"
 "varying vec3 lightPosition;\n"
 "varying vec3 beamVec;\n"
-"\n"
 "void main()\n"
 "{\n"
-"	gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * vec4(gl_Vertex.xyz * scale,1.0);\n"
+"	gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * vec4(vertPosition.xyz * scale, 1.0);\n"
 "	lightPosition = gl_ModelViewMatrix[3].xyz;\n"
 "	if(lightType == 1)\n"
 "		beamVec = vec3(gl_ModelViewMatrix * vec4(0.0, 0.0, -scale.z, 0.0));\n"
@@ -2957,12 +2950,10 @@ char *Default_deferred_fragment_shader =
 "}";
 
 char *Default_deferred_clear_vertex_shader =
+"attribute vec4 vertPosition;\n"
 "void main()\n"
 "{\n"
-"	gl_TexCoord[0] = gl_MultiTexCoord0;\n"
-"	gl_Position = gl_Vertex;\n"
-"	gl_FrontColor = vec4(1.0);\n"
-"	gl_FrontSecondaryColor = vec4(0.0, 0.0, 0.0, 1.0);\n"
+"	gl_Position = vertPosition;\n"
 "}";
 
 char *Default_deferred_clear_fragment_shader =

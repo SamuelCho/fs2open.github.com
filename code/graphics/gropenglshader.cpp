@@ -36,47 +36,71 @@ static float GL_anim_timer = 0.0f;
 
 geometry_sdr_params *Current_geo_sdr_params = NULL;
 
+opengl_vert_attrib GL_vertex_attrib_info[] =
+{
+	{ opengl_vert_attrib::POSITION,		"vertPosition",		{ 0.0f, 0.0f, 0.0f, 1.0f } },
+	{ opengl_vert_attrib::COLOR,		"vertColor",		{ 0.0f, 0.0f, 0.0f, 1.0f } },
+	{ opengl_vert_attrib::TEXCOORD,		"vertTexCoord",		{ 1.0f, 1.0f, 1.0f, 1.0f } },
+	{ opengl_vert_attrib::NORMAL,		"vertNormal",		{ 0.0f, 0.0f, 1.0f, 0.0f } },
+	{ opengl_vert_attrib::TANGENT,		"vertTangent",		{ 1.0f, 0.0f, 0.0f, 0.0f } },
+	{ opengl_vert_attrib::MODEL_ID,		"vertModelID",		{ 0.0f, 0.0f, 0.0f, 0.0f } },
+	{ opengl_vert_attrib::RADIUS,		"vertRadius",		{ 1.0f, 0.0f, 0.0f, 0.0f } },
+	{ opengl_vert_attrib::UVEC,			"vertUvec",			{ 0.0f, 1.0f, 0.0f, 0.0f } }
+};
+
 /**
  * Static lookup reference for shader uniforms
  * When adding a new shader, list all associated uniforms and attributes here
  */
 static opengl_shader_type_t GL_shader_types[] = {
 	{ SDR_TYPE_MODEL, "main-v.sdr", "main-f.sdr", "main-g.sdr", {GL_TRIANGLES, GL_TRIANGLE_STRIP, 3}, 
-		5, { "modelViewMatrix", "modelMatrix", "viewMatrix", "projMatrix", "color" }, 6, { "vertPosition", "vertTexCoord", "vertNormal", "vertTangent", "vertModelID", "vertColor" }, "Model Rendering" },
+		5, { "modelViewMatrix", "modelMatrix", "viewMatrix", "projMatrix", "color" }, 
+		5, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD, opengl_vert_attrib::NORMAL, opengl_vert_attrib::TANGENT, opengl_vert_attrib::MODEL_ID }, "Model Rendering" },
 
 	{ SDR_TYPE_EFFECT_PARTICLE, "effect-v.sdr", "effect-particle-f.sdr", "effect-screen-g.sdr", {GL_POINTS, GL_TRIANGLE_STRIP, 4}, 
-		7, { "baseMap", "depthMap", "window_width", "window_height", "nearZ", "farZ", "linear_depth" }, 1, {"radius"}, "Particle Effects" },
+		7, { "baseMap", "depthMap", "window_width", "window_height", "nearZ", "farZ", "linear_depth" }, 
+		4, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD, opengl_vert_attrib::RADIUS, opengl_vert_attrib::COLOR }, "Particle Effects" },
 
 	{ SDR_TYPE_EFFECT_DISTORTION, "effect-distort-v.sdr", "effect-distort-f.sdr", 0, { 0, 0, 0 }, 
-		6, { "baseMap", "window_width", "window_height", "distMap", "frameBuffer", "use_offset" }, 1, { "radius" }, "Distortion Effects" },
+		6, { "baseMap", "window_width", "window_height", "distMap", "frameBuffer", "use_offset" }, 
+		3, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD, opengl_vert_attrib::RADIUS, opengl_vert_attrib::COLOR }, "Distortion Effects" },
 
 	{ SDR_TYPE_POST_PROCESS_MAIN, "post-v.sdr", "post-f.sdr", 0, {0, 0, 0}, 
-		5, { "tex", "depth_tex", "timer", "bloomed", "bloom_intensity" }, 0, { NULL }, "Post Processing" },
+		5, { "tex", "depth_tex", "timer", "bloomed", "bloom_intensity" }, 
+		2, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD }, "Post Processing" },
 
 	{ SDR_TYPE_POST_PROCESS_BLUR, "post-v.sdr", "blur-f.sdr", 0, {0, 0, 0}, 
-		2, { "tex", "bsize", "debug" }, 0, { NULL }, "Gaussian Blur" },
+		2, { "tex", "bsize", "debug" }, 
+		2, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD }, "Gaussian Blur" },
 
 	{ SDR_TYPE_POST_PROCESS_BRIGHTPASS, "post-v.sdr", "brightpass-f.sdr", 0, { 0, 0, 0 },
-		1, { "tex" }, 0, { NULL }, "Bloom Brightpass" },
+		1, { "tex" }, 
+		2, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD }, "Bloom Brightpass" },
 
 	{ SDR_TYPE_POST_PROCESS_FXAA, "fxaa-v.sdr", "fxaa-f.sdr", 0, {0, 0, 0}, 
-		3, { "tex0", "rt_w", "rt_h" }, 0, { NULL }, "FXAA" },
+		3, { "tex0", "rt_w", "rt_h" }, 
+		1, { opengl_vert_attrib::POSITION }, "FXAA" },
 
 	{ SDR_TYPE_POST_PROCESS_FXAA_PREPASS, "post-v.sdr", "fxaapre-f.sdr", 0, {0, 0, 0}, 
-		1, { "tex" }, 0, { NULL }, "FXAA Prepass" },
+		1, { "tex" }, 
+		2, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD }, "FXAA Prepass" },
 
 	{ SDR_TYPE_POST_PROCESS_LIGHTSHAFTS, "post-v.sdr", "ls-f.sdr", 0, {0, 0, 0}, 
-		8, { "scene", "cockpit", "sun_pos", "weight", "intensity", "falloff", "density", "cp_intensity" }, 0, { NULL }, "Lightshafts" },
+		8, { "scene", "cockpit", "sun_pos", "weight", "intensity", "falloff", "density", "cp_intensity" }, 
+		2, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD }, "Lightshafts" },
 
 	{ SDR_TYPE_DEFERRED_LIGHTING, "deferred-v.sdr", "deferred-f.sdr", 0, { 0, 0, 0 }, 
 		16, { "scale", "ColorBuffer", "NormalBuffer", "PositionBuffer", "SpecBuffer", "invScreenWidth", "invScreenHeight", "lightType", "lightRadius", "diffuseLightColor", 
-		"specLightColor", "dualCone", "coneDir", "coneAngle", "coneInnerAngle", "specFactor" }, 0, { NULL }, "Deferred Lighting" },
+		"specLightColor", "dualCone", "coneDir", "coneAngle", "coneInnerAngle", "specFactor" }, 
+		1, { opengl_vert_attrib::POSITION }, "Deferred Lighting" },
 	
 	{ SDR_TYPE_DEFERRED_CLEAR, "deferred-clear-v.sdr", "deferred-clear-f.sdr", 0, {0, 0, 0}, 
-		0, { NULL }, 0, { NULL }, "Clear Deferred Lighting Buffer" },
+		0, { NULL }, 
+		1, { opengl_vert_attrib::POSITION }, "Clear Deferred Lighting Buffer" },
 
 	{ SDR_TYPE_VIDEO_PROCESS, "video-v.sdr", "video-f.sdr", 0, {0, 0, 0}, 
-	3, { "ytex", "utex", "vtex" }, 0, { NULL }, "Video Playback" }
+		3, { "ytex", "utex", "vtex" }, 
+		2, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD }, "Video Playback" }
 };
 
 /**
@@ -85,83 +109,83 @@ static opengl_shader_type_t GL_shader_types[] = {
  */
 static opengl_shader_variant_t GL_shader_variants[] = {
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_LIGHT, "FLAG_LIGHT", 
-		7, { "n_lights", "light_factor", "lightPosition", "lightDirection", "lightColor", "lightType", "lightAttenuation" }, 0, { NULL },
+		7, { "n_lights", "light_factor", "lightPosition", "lightDirection", "lightColor", "lightType", "lightAttenuation" }, 0, {  },
 		"Lighting" },
 
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_FOG, "FLAG_FOG", 
-		0, { NULL }, 0, { NULL }, 
+		0, { NULL }, 0, {  }, 
 		"Fog Effect" },
 
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_DIFFUSE_MAP, "FLAG_DIFFUSE_MAP", 
-		4, { "sBasemap", "desaturate", "desaturate_clr", "blend_alpha" }, 0, { NULL }, 
+		4, { "sBasemap", "desaturate", "desaturate_clr", "blend_alpha" }, 0, {  }, 
 		"Diffuse Mapping" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_GLOW_MAP, "FLAG_GLOW_MAP", 
-		1, { "sGlowmap" }, 0, { NULL }, 
+		1, { "sGlowmap" }, 0, {  }, 
 		"Glow Mapping" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_SPEC_MAP, "FLAG_SPEC_MAP", 
-		1, { "sSpecmap" }, 0, { NULL }, 
+		1, { "sSpecmap" }, 0, {  }, 
 		"Specular Mapping" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_NORMAL_MAP, "FLAG_NORMAL_MAP", 
-		1, { "sNormalmap" }, 0, { NULL }, 
+		1, { "sNormalmap" }, 0, {  }, 
 		"Normal Mapping" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_HEIGHT_MAP, "FLAG_HEIGHT_MAP", 
-		1, { "sHeightmap" }, 0, { NULL }, 
+		1, { "sHeightmap" }, 0, {  }, 
 		"Parallax Mapping" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_ENV_MAP, "FLAG_ENV_MAP", 
-		3, { "sEnvmap", "alpha_spec", "envMatrix" }, 0, { NULL }, 
+		3, { "sEnvmap", "alpha_spec", "envMatrix" }, 0, {  }, 
 		"Environment Mapping" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_ANIMATED, "FLAG_ANIMATED", 
-		5, { "sFramebuffer", "effect_num", "anim_timer", "vpwidth", "vpheight" }, 0, { NULL }, 
+		5, { "sFramebuffer", "effect_num", "anim_timer", "vpwidth", "vpheight" }, 0, {  }, 
 		"Animated Effects" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_MISC_MAP, "FLAG_MISC_MAP", 
-		1, { "sMiscmap" }, 0, { NULL }, 
+		1, { "sMiscmap" }, 0, {  }, 
 		"Utility mapping" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_TEAMCOLOR, "FLAG_TEAMCOLOR", 
-		3, { "stripe_color", "base_color", "team_glow_enabled" }, 0, { NULL }, 
+		3, { "stripe_color", "base_color", "team_glow_enabled" }, 0, {  }, 
 		"Team Colors" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_DEFERRED, "FLAG_DEFERRED", 
-		0, { NULL }, 0, { NULL }, 
+		0, { NULL }, 0, {  }, 
 		"Deferred lighting" },
 	
 	{ SDR_TYPE_MODEL, true, SDR_FLAG_MODEL_SHADOW_MAP, "FLAG_SHADOW_MAP", 
-		1, { "shadow_proj_matrix" }, 0, { NULL }, 
+		1, { "shadow_proj_matrix" }, 0, {  }, 
 		"Shadow Mapping" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_SHADOWS, "FLAG_SHADOWS", 
-		7, { "shadow_map", "shadow_mv_matrix", "shadow_proj_matrix", "veryneardist", "neardist", "middist", "fardist" }, 0, { NULL }, 
+		7, { "shadow_map", "shadow_mv_matrix", "shadow_proj_matrix", "veryneardist", "neardist", "middist", "fardist" }, 0, { }, 
 		"Shadows" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_THRUSTER, "FLAG_THRUSTER", 
-		1, { "thruster_scale" }, 0, { NULL }, 
+		1, { "thruster_scale" }, 0, {  }, 
 		"Thruster scaling" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_TRANSFORM, "FLAG_TRANSFORM", 
-		2, { "transform_tex", "buffer_matrix_offset" }, 0, { NULL }, 
+		2, { "transform_tex", "buffer_matrix_offset" }, 0, {  }, 
 		"Submodel Transforms" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_CLIP, "FLAG_CLIP", 
-		3, { "use_clip_plane", "clip_normal", "clip_position" }, 0, { NULL }, 
+		3, { "use_clip_plane", "clip_normal", "clip_position" }, 0, {  }, 
 		"Clip Plane" },
 	
 	{ SDR_TYPE_EFFECT_PARTICLE, true, SDR_FLAG_PARTICLE_POINT_GEN, "FLAG_EFFECT_GEOMETRY", 
-		0, { NULL }, 1, { "uvec" },
+		0, { NULL }, 1, { opengl_vert_attrib::UVEC },
 		"Geometry shader point-based particles" },
 	
 	{ SDR_TYPE_POST_PROCESS_BLUR, false, SDR_FLAG_BLUR_HORIZONTAL, "PASS_0", 
-		0, { NULL }, 0, { NULL },
+		0, { NULL }, 0, {  },
 		"Horizontal blur pass" },
 	
 	{ SDR_TYPE_POST_PROCESS_BLUR, false, SDR_FLAG_BLUR_VERTICAL, "PASS_1", 
-		0, { NULL }, 0, { NULL },
+		0, { NULL }, 0, {  },
 		"Vertical blur pass" }
 };
 
@@ -432,7 +456,7 @@ int opengl_compile_shader(shader_type sdr, uint flags)
 	}
 
 	for (int i = 0; i < sdr_info->num_attributes; ++i) {
-		opengl_shader_init_attribute(sdr_info->attributes[i]);
+		opengl_shader_init_attribute(&GL_vertex_attrib_info[sdr_info->attributes[i]]);
 	}
 
 	// if this shader is POST_PROCESS_MAIN, hack in the user-defined flags
@@ -452,7 +476,7 @@ int opengl_compile_shader(shader_type sdr, uint flags)
 			}
 
 			for (int j = 0; j < variant.num_attributes; ++j) {
-				opengl_shader_init_attribute(variant.attributes[j]);
+				opengl_shader_init_attribute(&GL_vertex_attrib_info[variant.attributes[j]]);
 			}
 
 			mprintf(("	%s\n", variant.description));
@@ -629,6 +653,12 @@ GLhandleARB opengl_shader_link_object(GLhandleARB vertex_object, GLhandleARB fra
 #endif
 		}
 	}
+
+	for ( int i = 0; i < opengl_vert_attrib::NUM_ATTRIBS; ++i ) {
+		// assign vert attribute binding locations before we link the shader
+		vglBindAttribLocationARB(shader_object, i, GL_vertex_attrib_info[i].name.c_str());
+	}
+
 	vglLinkProgramARB(shader_object);
 
 	// check if the link was successful
@@ -724,24 +754,33 @@ Done:
  *
  * @param attribute_text	Name of the attribute to be initialized
  */
-void opengl_shader_init_attribute(const char *attribute_text)
+void opengl_shader_init_attribute(const opengl_vert_attrib *attrib_info)
 {
 	opengl_shader_uniform_t new_attribute;
 
-	if ( ( Current_shader == NULL ) || ( attribute_text == NULL ) ) {
+	if ( (Current_shader == NULL) || attrib_info->name.empty() ) {
 		Int3();
 		return;
 	}
 
-	new_attribute.text_id = attribute_text;
-	new_attribute.location = vglGetAttribLocationARB(Current_shader->program_id, attribute_text);
+	new_attribute.text_id = attrib_info->name;
+	new_attribute.location = vglGetAttribLocationARB(Current_shader->program_id, attrib_info->name.c_str());
 
 	if ( new_attribute.location < 0 ) {
-		nprintf(("SHADER-DEBUG", "WARNING: Unable to get shader attribute location for \"%s\"!\n", attribute_text));
+		nprintf(("SHADER-DEBUG", "WARNING: Unable to get shader attribute location for \"%s\"!\n", attrib_info->name.c_str()));
 		return;
 	}
 
-	Current_shader->attributes.push_back( new_attribute );
+	// assign default value to vertex attribute
+	vglVertexAttrib4fARB(
+		new_attribute.location,
+		attrib_info->default_value.xyzw.x,
+		attrib_info->default_value.xyzw.y,
+		attrib_info->default_value.xyzw.z,
+		attrib_info->default_value.xyzw.w
+	);
+
+	Current_shader->attributes.push_back(new_attribute);
 }
 
 /**

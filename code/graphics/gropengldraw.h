@@ -13,7 +13,16 @@
 
 #include "graphics/2d.h"
 #include "graphics/gropenglstate.h"
+#include "graphics/gropenglshader.h"
 #include "graphics/shadows.h"
+
+struct opengl_vertex_bind {
+	vertex_format_data::vertex_format format;
+	GLint size;
+	GLenum data_type;
+	GLboolean normalized;
+	opengl_vert_attrib::attrib_id attribute_id;
+};
 
 void gr_opengl_aabitmap_ex(int x, int y, int w, int h, int sx, int sy, int resize_mode, bool mirror);
 void gr_opengl_aabitmap(int x, int y, int resize_mode, bool mirror);

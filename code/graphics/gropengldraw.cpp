@@ -67,44 +67,20 @@ GLuint deferred_light_cylinder_ibo = 0;
 GLushort deferred_light_cylinder_vcount = 0;
 GLuint deferred_light_cylinder_icount = 0;
 
-struct opengl_vertex_bind {
-	vertex_format_data::vertex_format format;
-
-	enum type {
-		POSITION,
-		COLOR,
-		TEXCOORD0,
-		TEXCOORD1,
-		NORMAL,
-		ATTRIB
-	};
-
-	opengl_vertex_bind::type binding_type;
-
-	GLint size;
-	GLenum data_type;
-
-	// used only by vertex attributes
-	SCP_string attrib_name;
-	GLboolean normalized;
-};
-
 static opengl_vertex_bind GL_array_binding_data[] =
 {
-	{ vertex_format_data::POSITION4,	opengl_vertex_bind::POSITION,	4, GL_FLOAT,			"vertPosition",		GL_FALSE },
-	{ vertex_format_data::POSITION3,	opengl_vertex_bind::POSITION,	3, GL_FLOAT,			"vertPosition",		GL_FALSE },
-	{ vertex_format_data::POSITION2,	opengl_vertex_bind::POSITION,	2, GL_FLOAT,			"vertPosition",		GL_FALSE },
-	{ vertex_format_data::SCREEN_POS,	opengl_vertex_bind::POSITION,	2, GL_INT,				"vertPosition",		GL_FALSE },
-	{ vertex_format_data::COLOR3,		opengl_vertex_bind::COLOR,		3, GL_UNSIGNED_BYTE,	"vertColor",		GL_FALSE },
-	{ vertex_format_data::COLOR4,		opengl_vertex_bind::COLOR,		4, GL_UNSIGNED_BYTE,	"vertColor",		GL_FALSE },
-	{ vertex_format_data::TEX_COORD,	opengl_vertex_bind::TEXCOORD0,	2, GL_FLOAT,			"vertTexCoord",		GL_FALSE },
-	{ vertex_format_data::NORMAL,		opengl_vertex_bind::NORMAL,		3, GL_FLOAT,			"vertNormal",		GL_FALSE },
-	{ vertex_format_data::TANGENT,		opengl_vertex_bind::TEXCOORD1,	4, GL_FLOAT,			"vertTangent",		GL_FALSE },
-	{ vertex_format_data::MODEL_ID,		opengl_vertex_bind::ATTRIB,		1, GL_FLOAT,			"vertModelID",		GL_FALSE },
-	{ vertex_format_data::RADIUS,		opengl_vertex_bind::ATTRIB,		1, GL_FLOAT,			"radius",			GL_FALSE },
-	{ vertex_format_data::FVEC,			opengl_vertex_bind::ATTRIB,		3, GL_FLOAT,			"fvec",				GL_FALSE },
-	{ vertex_format_data::UVEC,			opengl_vertex_bind::ATTRIB,		3, GL_FLOAT,			"uvec",				GL_FALSE },
-	{ vertex_format_data::INTENSITY,	opengl_vertex_bind::ATTRIB,		1, GL_FLOAT,			"intensity",		GL_FALSE }
+	{ vertex_format_data::POSITION4,	4, GL_FLOAT,			GL_FALSE, opengl_vert_attrib::POSITION	},
+	{ vertex_format_data::POSITION3,	3, GL_FLOAT,			GL_FALSE, opengl_vert_attrib::POSITION	},
+	{ vertex_format_data::POSITION2,	2, GL_FLOAT,			GL_FALSE, opengl_vert_attrib::POSITION	},
+	{ vertex_format_data::SCREEN_POS,	2, GL_INT,				GL_FALSE, opengl_vert_attrib::POSITION	},
+	{ vertex_format_data::COLOR3,		3, GL_UNSIGNED_BYTE,	GL_TRUE,opengl_vert_attrib::COLOR		},
+	{ vertex_format_data::COLOR4,		4, GL_UNSIGNED_BYTE,	GL_TRUE, opengl_vert_attrib::COLOR		},
+	{ vertex_format_data::TEX_COORD,	2, GL_FLOAT,			GL_FALSE, opengl_vert_attrib::TEXCOORD	},
+	{ vertex_format_data::NORMAL,		3, GL_FLOAT,			GL_FALSE, opengl_vert_attrib::NORMAL	},
+	{ vertex_format_data::TANGENT,		4, GL_FLOAT,			GL_FALSE, opengl_vert_attrib::TANGENT	},
+	{ vertex_format_data::MODEL_ID,		1, GL_FLOAT,			GL_FALSE, opengl_vert_attrib::MODEL_ID	},
+	{ vertex_format_data::RADIUS,		1, GL_FLOAT,			GL_FALSE, opengl_vert_attrib::RADIUS	},
+	{ vertex_format_data::UVEC,			3, GL_FLOAT,			GL_FALSE, opengl_vert_attrib::UVEC		}
 };
 
 inline GLenum opengl_primitive_type(primitive_type prim_type)
@@ -134,6 +110,10 @@ inline GLenum opengl_primitive_type(primitive_type prim_type)
 void opengl_bind_vertex_component(vertex_format_data &vert_component, void* base_ptr)
 {
 	opengl_vertex_bind &bind_info = GL_array_binding_data[vert_component.format_type];
+	opengl_vert_attrib &attrib_info = GL_vertex_attrib_info[bind_info.attribute_id];
+
+	Assert(bind_info.attribute_id == attrib_info.attribute_id);
+
 	void* data_src;
 
 	if ( vert_component.offset >= 0 ) {
@@ -144,7 +124,7 @@ void opengl_bind_vertex_component(vertex_format_data &vert_component, void* base
 
 	if ( is_minimum_GLSL_version() && Current_shader != NULL ) {
 		// grabbing a vertex attribute is dependent on what current shader has been set. i hope no one calls opengl_bind_vertex_layout before opengl_set_current_shader
-		GLint index = opengl_shader_get_attribute(bind_info.attrib_name.c_str());
+		GLint index = opengl_shader_get_attribute(attrib_info.name.c_str());
 
 		if ( index >= 0 ) {
 			GL_state.Array.EnableVertexAttrib(index);
@@ -154,50 +134,38 @@ void opengl_bind_vertex_component(vertex_format_data &vert_component, void* base
 		return;
 	}
 
-	switch ( bind_info.binding_type ) {
-		case opengl_vertex_bind::POSITION:
+	switch ( attrib_info.attribute_id ) {
+		case opengl_vert_attrib::POSITION:
 		{
 			GL_state.Array.EnableClientVertex();
 			GL_state.Array.VertexPointer(bind_info.size, bind_info.data_type, vert_component.stride, data_src);
 			break;
 		}
-		case opengl_vertex_bind::TEXCOORD0:
+		case opengl_vert_attrib::TEXCOORD:
 		{
 			GL_state.Array.SetActiveClientUnit(0);
 			GL_state.Array.EnableClientTexture();
 			GL_state.Array.TexPointer(bind_info.size, bind_info.data_type, vert_component.stride, data_src);
 			break;
 		}
-		case opengl_vertex_bind::TEXCOORD1:
+		case opengl_vert_attrib::TANGENT:
 		{
 			GL_state.Array.SetActiveClientUnit(1);
 			GL_state.Array.EnableClientTexture();
 			GL_state.Array.TexPointer(bind_info.size, bind_info.data_type, vert_component.stride, data_src);
 			break;
 		}
-		case opengl_vertex_bind::COLOR:
+		case opengl_vert_attrib::COLOR:
 		{
 			GL_state.Array.EnableClientColor();
 			GL_state.Array.ColorPointer(bind_info.size, bind_info.data_type, vert_component.stride, data_src);
 			GL_state.InvalidateColor();
 			break;
 		}
-		case opengl_vertex_bind::NORMAL:
+		case opengl_vert_attrib::NORMAL:
 		{
 			GL_state.Array.EnableClientNormal();
 			GL_state.Array.NormalPointer(bind_info.data_type, vert_component.stride, data_src);
-			break;
-		}
-		case opengl_vertex_bind::ATTRIB:
-		{
-			// grabbing a vertex attribute is dependent on what current shader has been set. i hope no one calls opengl_bind_vertex_layout before opengl_set_current_shader
-			GLint index = opengl_shader_get_attribute(bind_info.attrib_name.c_str());
-
-			if ( index >= 0 ) {
-				GL_state.Array.EnableVertexAttrib(index);
-				GL_state.Array.VertexAttribPointer(index, bind_info.size, bind_info.data_type, bind_info.normalized, vert_component.stride, data_src);
-			}
-
 			break;
 		}
 	}

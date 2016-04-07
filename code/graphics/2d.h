@@ -209,9 +209,7 @@ struct vertex_format_data
 		TANGENT,
 		MODEL_ID,
 		RADIUS,
-		FVEC,
-		UVEC,
-		INTENSITY
+		UVEC
 	};
 
 	vertex_format format_type;

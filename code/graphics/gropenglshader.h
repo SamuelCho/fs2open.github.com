@@ -26,6 +26,26 @@
 
 #define MAX_SDR_UNIFORM_BLOCKS	5
 
+struct opengl_vert_attrib {
+	enum attrib_id {
+		POSITION,
+		COLOR,
+		TEXCOORD,
+		NORMAL,
+		TANGENT,
+		MODEL_ID,
+		RADIUS,
+		UVEC,
+		NUM_ATTRIBS
+	};
+
+	attrib_id attribute_id;
+	SCP_string name;
+	vec4 default_value;
+};
+
+extern opengl_vert_attrib GL_vertex_attrib_info[];
+
 struct geometry_sdr_params
 {
 	int input_type;
@@ -46,7 +66,8 @@ struct opengl_shader_type_t {
 	char* uniforms[MAX_SHADER_UNIFORMS];
 
 	int num_attributes;
-	char* attributes[MAX_SDR_ATTRIBUTES];
+	//char* attributes[MAX_SDR_ATTRIBUTES];
+	opengl_vert_attrib::attrib_id attributes[MAX_SDR_ATTRIBUTES];
 
 	const char* description;
 };
@@ -63,7 +84,8 @@ struct opengl_shader_variant_t {
 	char* uniforms[MAX_SHADER_UNIFORMS];
 
 	int num_attributes;
-	char* attributes[MAX_SDR_ATTRIBUTES];
+	//char* attributes[MAX_SDR_ATTRIBUTES];
+	opengl_vert_attrib::attrib_id attributes[MAX_SDR_ATTRIBUTES];
 
 	const char* description;
 };
@@ -140,6 +162,7 @@ void opengl_shader_shutdown();
 int opengl_compile_shader(shader_type sdr, uint flags);
 
 void opengl_shader_init_attribute(const char *attribute_text);
+void opengl_shader_init_attribute(const opengl_vert_attrib *attrib_info);
 GLint opengl_shader_get_attribute(const char *attribute_text);
 
 void opengl_shader_init_uniform(const char *uniform_text);
