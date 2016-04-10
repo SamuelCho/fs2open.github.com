@@ -2766,6 +2766,17 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	if ( Current_shader->flags & SDR_FLAG_MODEL_THRUSTER ) {
 		GL_state.Uniform.setUniformf("thruster_scale", material_info->get_thrust_scale());
 	}
+
+	
+	if ( Current_shader->flags & SDR_FLAG_MODEL_FOG ) {
+		material::fog fog_params = material_info->get_fog();
+
+		if ( fog_params.enabled ) {
+			GL_state.Uniform.setUniformf("fogStart", fog_params.dist_near);
+			GL_state.Uniform.setUniformf("fogScale", 1.0f / fog_params.dist_far);
+			GL_state.Uniform.setUniform4f("fogColor", fog_params.r, fog_params.g, fog_params.b, 1.0f);
+		}
+	}
 }
 
 void opengl_tnl_set_model_material_fixed(model_material *material_info)

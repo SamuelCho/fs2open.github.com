@@ -113,7 +113,7 @@ static opengl_shader_variant_t GL_shader_variants[] = {
 		"Lighting" },
 
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_FOG, "FLAG_FOG", 
-		0, { NULL }, 0, {  }, 
+		3, { "fogStart", "fogScale", "fogColor" }, 0, {  }, 
 		"Fog Effect" },
 
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_DIFFUSE_MAP, "FLAG_DIFFUSE_MAP", 

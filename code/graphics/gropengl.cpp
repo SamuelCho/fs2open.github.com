@@ -650,6 +650,10 @@ void gr_opengl_fog_set(int fog_mode, int r, int g, int b, float fog_near, float 
 		return;
 	}
 
+	if ( is_minimum_GLSL_version() && Current_shader != NULL && Current_shader->shader == SDR_TYPE_MODEL ) {
+		return;
+	}
+
   	if (OGL_fogmode == 3) {
 		glFogf(GL_FOG_DISTANCE_MODE_NV, GL_EYE_RADIAL_NV);
 		glFogf(GL_FOG_COORDINATE_SOURCE, GL_FRAGMENT_DEPTH);
