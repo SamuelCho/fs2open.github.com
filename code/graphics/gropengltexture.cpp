@@ -25,6 +25,8 @@
 static tcache_slot_opengl *Textures = NULL;
 static int *Tex_used_this_frame = NULL;
 
+matrix4 GL_texture_matrix;
+
 int GL_texture_ram = 0;
 int GL_min_texture_width = 0;
 GLint GL_max_texture_width = 0;
@@ -202,6 +204,8 @@ void opengl_tcache_init()
 
 	GL_textures_in = 0;
 	GL_textures_in_frame = 0;
+
+	vm_matrix4_set_identity(&GL_texture_matrix);
 }
 
 void opengl_free_texture_with_handle(int handle)
@@ -1150,6 +1154,10 @@ void gr_opengl_set_texture_panning(float u, float v, bool enable)
 	GLint current_matrix;
 
 	if (enable) {
+		vm_matrix4_set_identity(&GL_texture_matrix);
+		GL_texture_matrix.vec.pos.xyzw.x = u;
+		GL_texture_matrix.vec.pos.xyzw.y = v;
+
 		glGetIntegerv(GL_MATRIX_MODE, &current_matrix);
 		glMatrixMode( GL_TEXTURE );
 		glPushMatrix();
@@ -1158,6 +1166,8 @@ void gr_opengl_set_texture_panning(float u, float v, bool enable)
 
 		GL_texture_panning_enabled = 1;
 	} else if (GL_texture_panning_enabled) {
+		vm_matrix4_set_identity(&GL_texture_matrix);
+
 		glGetIntegerv(GL_MATRIX_MODE, &current_matrix);
 		glMatrixMode( GL_TEXTURE );
 		glPopMatrix();

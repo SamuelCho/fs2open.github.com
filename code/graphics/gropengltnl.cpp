@@ -2563,7 +2563,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	GL_state.Texture.SetShaderMode(GL_TRUE);
 	
 	matrix4 model_view_matrix;
-	matrix4 model_matrix = GL_model_matrix_stack.get_transform().get_matrix4();
+	matrix4 model_matrix = GL_model_matrix_stack.get_transform();
 	
 	vm_matrix4_x_matrix4(&model_view_matrix, &GL_view_matrix, &model_matrix);
 
@@ -2571,6 +2571,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	GL_state.Uniform.setUniformMatrix4f("modelMatrix", model_matrix);
 	GL_state.Uniform.setUniformMatrix4f("viewMatrix", GL_view_matrix);
 	GL_state.Uniform.setUniformMatrix4f("projMatrix", GL_projection_matrix);
+	GL_state.Uniform.setUniformMatrix4f("textureMatrix", GL_texture_matrix);
 
 	color &clr = material_info->get_color();
 	GL_state.Uniform.setUniform4f("color", clr.red, clr.green, clr.blue, clr.alpha);

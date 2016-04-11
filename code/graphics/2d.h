@@ -64,73 +64,61 @@ struct transform
 
 class transform_stack {
 	
-	transform Current_transform;
-	SCP_vector<transform> Stack;
+	matrix4 Current_transform;
+	SCP_vector<matrix4> Stack;
 public:
-	transform_stack():
-		Current_transform()
+	transform_stack()
 	{
+		vm_matrix4_set_identity(&Current_transform);
+
 		Stack.clear();
 		Stack.push_back(Current_transform);
 	}
 
-	transform &get_transform()
+	matrix4 &get_transform()
 	{
 		return Current_transform;
 	}
 
 	void clear()
 	{
-		Current_transform = transform();
-		
+		vm_matrix4_set_identity(&Current_transform);
+
 		Stack.clear();
 		Stack.push_back(Current_transform);
 	}
 
 	void push(const vec3d *pos, const matrix *orient, const vec3d *scale = NULL)
 	{
-		matrix basis;
-		vec3d origin;
-		vec3d factor;
+		vec3d new_scale = SCALE_IDENTITY_VECTOR;
+		matrix new_orient = IDENTITY_MATRIX;
+		vec3d new_pos = ZERO_VECTOR;
 
-		if (orient == NULL) {
-			basis = vmd_identity_matrix;
-		} else {
-			basis = *orient;
+		matrix4 current_transform_copy = Current_transform;
+		matrix4 new_transform;
+
+		if ( pos != NULL ) {
+			new_pos = *pos;
 		}
 
-		if (pos == NULL) {
-			origin = vmd_zero_vector;
-		} else {
-			origin = *pos;
+		if ( orient != NULL ) {
+			new_orient = *orient;
 		}
 
-		if ( scale == NULL ) {
-			factor = vmd_scale_identity_vector;
-		} else {
-			factor = *scale;
+		if ( scale != NULL ) {
+			new_scale = *scale;
 		}
 
-		if (Stack.size() == 0) {
-			Stack.push_back(transform());
-		}
+		vm_vec_scale(&new_orient.vec.rvec, new_scale.xyz.x);
+		vm_vec_scale(&new_orient.vec.uvec, new_scale.xyz.y);
+		vm_vec_scale(&new_orient.vec.fvec, new_scale.xyz.z);
 
-		vec3d tempv;
-		transform newTransform = Current_transform;
+		vm_matrix4_set_transform(&new_transform, &new_orient, &new_pos);
 
-		vm_vec_unrotate(&tempv, &origin, &Current_transform.basis);
-		vm_vec_add2(&newTransform.origin, &tempv);
-
-		vm_vec_scale(&basis.vec.rvec, factor.xyz.x);
-		vm_vec_scale(&basis.vec.uvec, factor.xyz.y);
-		vm_vec_scale(&basis.vec.fvec, factor.xyz.z);
-
-		vm_matrix_x_matrix(&newTransform.basis, &Current_transform.basis, &basis);
-		
-		Current_transform = newTransform;
+		vm_matrix4_x_matrix4(&Current_transform, &current_transform_copy, &new_transform);
 		Stack.push_back(Current_transform);
 	}
-
+	
 	void pop()
 	{
 		if ( Stack.size() > 1 ) {

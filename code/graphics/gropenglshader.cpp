@@ -54,7 +54,7 @@ opengl_vert_attrib GL_vertex_attrib_info[] =
  */
 static opengl_shader_type_t GL_shader_types[] = {
 	{ SDR_TYPE_MODEL, "main-v.sdr", "main-f.sdr", "main-g.sdr", {GL_TRIANGLES, GL_TRIANGLE_STRIP, 3}, 
-		5, { "modelViewMatrix", "modelMatrix", "viewMatrix", "projMatrix", "color" }, 
+		6, { "modelViewMatrix", "modelMatrix", "viewMatrix", "projMatrix", "textureMatrix", "color" }, 
 		5, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD, opengl_vert_attrib::NORMAL, opengl_vert_attrib::TANGENT, opengl_vert_attrib::MODEL_ID }, "Model Rendering" },
 
 	{ SDR_TYPE_EFFECT_PARTICLE, "effect-v.sdr", "effect-particle-f.sdr", "effect-screen-g.sdr", {GL_POINTS, GL_TRIANGLE_STRIP, 4}, 
