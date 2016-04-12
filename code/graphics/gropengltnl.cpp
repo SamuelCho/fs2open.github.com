@@ -2574,7 +2574,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	GL_state.Uniform.setUniformMatrix4f("textureMatrix", GL_texture_matrix);
 
 	color &clr = material_info->get_color();
-	GL_state.Uniform.setUniform4f("color", clr.red, clr.green, clr.blue, clr.alpha);
+	GL_state.Uniform.setUniform4f("color", clr.red / 255.0f, clr.green / 255.0f, clr.blue / 255.0f, clr.alpha / 255.0f);
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_ANIMATED ) {
 		GL_state.Uniform.setUniformf("anim_timer", material_info->get_animated_effect_time());
