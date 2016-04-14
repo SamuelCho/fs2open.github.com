@@ -1307,6 +1307,8 @@ void opengl_setup_viewport()
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
+	GL_last_projection_matrix = GL_projection_matrix;
+
 	// the top and bottom positions are reversed on purpose, but RTT needs them the other way
 	if (GL_rendering_to_texture) {
 		glOrtho(0, gr_screen.max_w, 0, gr_screen.max_h, -1.0, 1.0);

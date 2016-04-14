@@ -33,6 +33,7 @@ extern bool Rendering_to_shadow_map;
 
 extern matrix4 GL_view_matrix;
 extern matrix4 GL_projection_matrix;
+extern matrix4 GL_last_projection_matrix;
 
 void gr_opengl_start_instance_matrix(const vec3d *offset, const matrix *rotation);
 void gr_opengl_start_instance_angles(const vec3d *pos, const angles *rotation);

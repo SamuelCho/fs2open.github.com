@@ -95,6 +95,7 @@ int Transform_buffer_handle = -1;
 transform_stack GL_model_matrix_stack;
 matrix4 GL_view_matrix;
 matrix4 GL_projection_matrix;
+matrix4 GL_last_projection_matrix;
 
 struct opengl_buffer_object {
 	GLuint buffer_id;
@@ -2015,10 +2016,12 @@ void gr_opengl_set_projection_matrix(float fov, float aspect, float z_near, floa
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-	GLdouble clip_width, clip_height;
+	float clip_width, clip_height;
 
-	clip_height = tan( (double)fov * 0.5 ) * z_near;
-	clip_width = clip_height * (GLdouble)aspect;
+	clip_height = tan( fov * 0.5 ) * z_near;
+	clip_width = clip_height * aspect;
+
+	GL_last_projection_matrix = GL_projection_matrix;
 
 	if (GL_rendering_to_texture) {
 		glFrustum( -clip_width, clip_width, clip_height, -clip_height, z_near, z_far );
@@ -2047,6 +2050,8 @@ void gr_opengl_end_projection_matrix()
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
+
+	GL_last_projection_matrix = GL_projection_matrix;
 
 	// the top and bottom positions are reversed on purpose, but RTT needs them the other way
 	if (GL_rendering_to_texture) {
@@ -2223,6 +2228,8 @@ void gr_opengl_set_2d_matrix(/*int x, int y, int w, int h*/)
 	glPushMatrix();
 	glLoadIdentity();
 
+	GL_last_projection_matrix = GL_projection_matrix;
+
 	// the top and bottom positions are reversed on purpose, but RTT needs them the other way
 	if (GL_rendering_to_texture) {
 		glOrtho( 0, gr_screen.max_w, 0, gr_screen.max_h, -1, 1 );
@@ -2235,6 +2242,11 @@ void gr_opengl_set_2d_matrix(/*int x, int y, int w, int h*/)
 	glMatrixMode( GL_MODELVIEW );
 	glPushMatrix();
 	glLoadIdentity();
+
+	matrix4 identity_mat;
+	vm_matrix4_set_identity(&identity_mat);
+
+	GL_model_matrix_stack.push_and_replace(identity_mat);
 
 #ifndef NDEBUG
 	// safety check to make sure we don't use more than 2 projection matrices
@@ -2261,8 +2273,13 @@ void gr_opengl_end_2d_matrix()
 	// reset viewport to what it was originally set to by the proj matrix
 	glViewport(gr_screen.offset_x, (gr_screen.max_h - gr_screen.offset_y - gr_screen.clip_height), gr_screen.clip_width, gr_screen.clip_height);
 
+	GL_projection_matrix = GL_last_projection_matrix;
+
 	glMatrixMode( GL_PROJECTION );
 	glPopMatrix();
+
+	GL_model_matrix_stack.pop();
+
 	glMatrixMode( GL_MODELVIEW );
 	glPopMatrix();
 

@@ -88,6 +88,12 @@ public:
 		Stack.push_back(Current_transform);
 	}
 
+	void push_and_replace(matrix4 new_transform)
+	{
+		Current_transform = new_transform;
+		Stack.push_back(Current_transform);
+	}
+
 	void push(const vec3d *pos, const matrix *orient, const vec3d *scale = NULL)
 	{
 		vec3d new_scale = SCALE_IDENTITY_VECTOR;
