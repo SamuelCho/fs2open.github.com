@@ -82,8 +82,9 @@ extern ogl_function GL_EXT_Special[];
 #define OGL_EXT_TRANSFORM_FEEDBACK			31
 #define OGL_ARB_DRAW_INSTANCED				32
 #define OGL_ARB_TEXTURE_BUFFER				33
+#define OGL_EXT_GPU_SHADER4					34
 
-#define NUM_OGL_EXTENSIONS					34
+#define NUM_OGL_EXTENSIONS					35
 
 
 // Functions
@@ -182,8 +183,10 @@ extern ogl_function GL_EXT_Special[];
 #define OGL_ARB_DRAW_ARRAYS_INSTANCED		88
 #define OGL_ARB_DRAW_ELEMENTS_INSTANCED		89
 #define OGL_ARB_TEX_BUFFER					90
+#define OGL_BIND_FRAG_DATA_LOCATION			91
+#define OGL_GET_FRAG_DATA_LOCATION			92
 
-#define NUM_OGL_FUNCTIONS					91
+#define NUM_OGL_FUNCTIONS					93
 
 // special extensions/functions (OS specific, non-GL stuff)
 #define OGL_SPC_WGL_SWAP_INTERVAL		0
@@ -313,6 +316,8 @@ typedef GLuint (* glGetUniformBlockIndexARBProcPtr) (GLuint program, const GLcha
 #define PFNGLDRAWARRAYSINSTANCEDARBPROC			glDrawArraysInstancedARBProcPtr
 #define PFNGLDRAWELEMENTSINSTANCEDARBPROC		glDrawElementsInstancedARBProcPtr
 #define PFNGLTEXBUFFERARBPROC					glTexBufferARBProcPtr
+#define PFNGLBINDFRAGDATALOCATIONEXTPROC		glBindFragDataLocationEXTProcPtr
+#define PFNGLGETFRAGDATALOCATIONEXTPROC			glGetFragDataLocationEXTProcPtr
 #endif	// __APPLE__
 
 #define vglFogCoordfEXT					GLEXT_CALL( OGL_FOG_COORDF, PFNGLFOGCOORDFEXTPROC )
@@ -408,6 +413,8 @@ typedef GLuint (* glGetUniformBlockIndexARBProcPtr) (GLuint program, const GLcha
 #define vglDrawArraysInstancedARB		GLEXT_CALL( OGL_ARB_DRAW_ARRAYS_INSTANCED, PFNGLDRAWARRAYSINSTANCEDARBPROC )
 #define vglDrawElementsInstancedARB		GLEXT_CALL( OGL_ARB_DRAW_ELEMENTS_INSTANCED, PFNGLDRAWELEMENTSINSTANCEDARBPROC )
 #define vglTexBufferARB					GLEXT_CALL( OGL_ARB_TEX_BUFFER, PFNGLTEXBUFFERARBPROC )
+#define vglBindFragDataLocationEXT		GLEXT_CALL( OGL_BIND_FRAG_DATA_LOCATION, PFNGLBINDFRAGDATALOCATIONEXTPROC )
+#define vglGetFragDataLocationEXT		GLEXT_CALL( OGL_GET_FRAG_DATA_LOCATION, PFNGLGETFRAGDATALOCATIONEXTPROC )
 #ifndef __APPLE__
 #define vglTexImage3D					GLEXT_CALL( OGL_TEXIMAGE3D, PFNGLTEXIMAGE3DPROC )
 #else

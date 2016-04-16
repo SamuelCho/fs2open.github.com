@@ -320,13 +320,58 @@ void opengl_shader_shutdown()
 	}
 }
 
-static SCP_string get_shader_header(shader_type type_id, int flags) {
+static SCP_string get_shader_header(shader_type type_id, int flags, shader_stage stage) {
 	SCP_stringstream sflags;
 
 #ifdef __APPLE__
 	sflags << "#version 120\n";
 	sflags << "#define APPLE\n";
 #endif
+
+	// apply different macros for differing GLSL versions
+	if ( GL_version >= 30 && GLSL_version >= 130 ) {
+		if ( stage == SDR_STAGE_VERTEX ) {
+			sflags << "#version 130\n";
+			sflags << "#define vertIn in\n";
+			sflags << "#define vertOut out\n";
+			sflags << "#define tex2D texture\n";
+			sflags << "#define tex2DLod textureLod\n";
+			sflags << "#define texCube texture\n";
+			sflags << "#define tex2DArray texture\n";
+		} else if ( stage == SDR_STAGE_FRAGMENT ) {
+			sflags << "#version 130\n";
+			sflags << "#define fragIn in\n";
+			sflags << "#define tex2D texture\n";
+			sflags << "#define tex2DLod textureLod\n";
+			sflags << "#define texCube texture\n";
+			sflags << "#define tex2DArray texture\n";
+			sflags << "out vec4 fragOut0;\n";
+			sflags << "out vec4 fragOut1;\n";
+			sflags << "out vec4 fragOut2;\n";
+			sflags << "out vec4 fragOut3;\n";
+			sflags << "out vec4 fragOut4;\n";
+		}
+	} else {
+		if ( stage == SDR_STAGE_VERTEX ) {
+			sflags << "#define vertIn attribute\n";
+			sflags << "#define vertOut varying\n";
+			sflags << "#define tex2D texture2D\n";
+			sflags << "#define tex2DLod texture2DLod\n";
+			sflags << "#define texCube textureCube\n";
+			sflags << "#define tex2DArray texture2DArray\n";
+		} else {
+			sflags << "#define fragIn varying\n";
+			sflags << "#define tex2D texture2D\n";
+			sflags << "#define tex2DLod texture2DLod\n";
+			sflags << "#define texCube textureCube\n";
+			sflags << "#define tex2DArray texture2DArray\n";
+			sflags << "#define fragOut0 gl_FragData[0]\n";
+			sflags << "#define fragOut1 gl_FragData[1]\n";
+			sflags << "#define fragOut2 gl_FragData[2]\n";
+			sflags << "#define fragOut3 gl_FragData[3]\n";
+			sflags << "#define fragOut4 gl_FragData[4]\n";
+		}
+	}
 
 	if (type_id == SDR_TYPE_POST_PROCESS_MAIN || type_id == SDR_TYPE_POST_PROCESS_LIGHTSHAFTS || type_id == SDR_TYPE_POST_PROCESS_FXAA) {
 		// ignore looking for variants. main post process, lightshafts, and FXAA shaders need special headers to be hacked in
@@ -380,9 +425,9 @@ static SCP_string opengl_load_shader(const char *filename)
 	return content;
 }
 
-static SCP_vector<SCP_string> opengl_get_shader_content(shader_type type_id, const char* filename, int flags) {
+static SCP_vector<SCP_string> opengl_get_shader_content(shader_type type_id, const char* filename, int flags, shader_stage stage) {
 	SCP_vector<SCP_string> parts;
-	parts.push_back(get_shader_header(type_id, flags));
+	parts.push_back(get_shader_header(type_id, flags, stage));
 
 	parts.push_back(opengl_load_shader(filename));
 
@@ -424,8 +469,8 @@ int opengl_compile_shader(shader_type sdr, uint flags)
 		}
 	}
 
-	auto vertex_content = opengl_get_shader_content(sdr_info->type_id, sdr_info->vert, flags);
-	auto fragment_content = opengl_get_shader_content(sdr_info->type_id, sdr_info->frag, flags);
+	auto vertex_content = opengl_get_shader_content(sdr_info->type_id, sdr_info->vert, flags, SDR_STAGE_VERTEX);
+	auto fragment_content = opengl_get_shader_content(sdr_info->type_id, sdr_info->frag, flags, SDR_STAGE_FRAGMENT);
 	SCP_vector<SCP_string> geom_content;
 
 	if ( use_geo_sdr ) {
@@ -434,7 +479,7 @@ int opengl_compile_shader(shader_type sdr, uint flags)
 		}
 
 		// read geometry shader
-		geom_content = opengl_get_shader_content(sdr_info->type_id, sdr_info->geo, flags);
+		geom_content = opengl_get_shader_content(sdr_info->type_id, sdr_info->geo, flags, SDR_STAGE_GEOMETRY);
 
 		Current_geo_sdr_params = &sdr_info->geo_sdr_info;
 	}
@@ -449,6 +494,15 @@ int opengl_compile_shader(shader_type sdr, uint flags)
 	new_shader.flags = flags;
 
 	opengl_shader_set_current(&new_shader);
+
+	// bind fragment data locations
+	if ( GL_version >= 30 && GLSL_version >= 130 ) {
+		vglBindFragDataLocationEXT(new_shader.program_id, 0, "fragOut0");
+		vglBindFragDataLocationEXT(new_shader.program_id, 1, "fragOut1");
+		vglBindFragDataLocationEXT(new_shader.program_id, 2, "fragOut2");
+		vglBindFragDataLocationEXT(new_shader.program_id, 3, "fragOut3");
+		vglBindFragDataLocationEXT(new_shader.program_id, 4, "fragOut4");
+	}
 
 	// initialize uniforms and attributes
 	for ( int i = 0; i < sdr_info->num_uniforms; ++i ) {

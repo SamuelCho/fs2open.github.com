@@ -26,6 +26,12 @@
 
 #define MAX_SDR_UNIFORM_BLOCKS	5
 
+enum shader_stage {
+	SDR_STAGE_VERTEX,
+	SDR_STAGE_FRAGMENT,
+	SDR_STAGE_GEOMETRY
+};
+
 struct opengl_vert_attrib {
 	enum attrib_id {
 		POSITION,

@@ -167,7 +167,9 @@ ogl_extension GL_Extensions[NUM_OGL_EXTENSIONS] =
 
 	{ false, false, 1, { "GL_ARB_draw_instanced" }, 2, { "glDrawArraysInstancedARB", "glDrawElementsInstancedARB" } },
 
-	{ false, false, 1, { "GL_ARB_texture_buffer_object" }, 1, { "glTexBufferARB" } }
+	{ false, false, 1, { "GL_ARB_texture_buffer_object" }, 1, { "glTexBufferARB" } },
+
+	{ false, false, 1, { "GL_EXT_gpu_shader4" }, 2, { "glBindFragDataLocation", "glGetFragDataLocation" } }
 };
 
 // ogl_funcion is:
@@ -271,7 +273,9 @@ ogl_function GL_Functions[NUM_OGL_FUNCTIONS] =
 	{ "glGetTransformFeedbackVaryingEXT", 0 },
 	{ "glDrawArraysInstancedARB", 0	},
 	{ "glDrawElementsInstancedARB", 0 },
-	{ "glTexBufferARB", 0 }
+	{ "glTexBufferARB", 0 },
+	{ "glBindFragDataLocation", 0 },
+	{ "glGetFragDataLocation", 0 }
 };
 
 // special extensions (only special functions are supported at the moment)
