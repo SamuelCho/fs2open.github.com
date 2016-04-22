@@ -48,12 +48,12 @@ extern float Cmdline_ogl_spec;
 GLint GL_max_lights = 0;
 
 // OGL defaults
-static const float GL_light_color[4] = { 0.8f, 0.8f, 0.8f, 1.0f };
-static const float GL_light_spec[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-static const float GL_light_zero[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-static const float GL_light_emission[4] = { 0.09f, 0.09f, 0.09f, 1.0f };
-static const float GL_light_true_zero[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-static float GL_light_ambient[4] = { 0.47f, 0.47f, 0.47f, 1.0f };
+const float GL_light_color[4] = { 0.8f, 0.8f, 0.8f, 1.0f };
+const float GL_light_spec[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+const float GL_light_zero[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+const float GL_light_emission[4] = { 0.09f, 0.09f, 0.09f, 1.0f };
+const float GL_light_true_zero[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+float GL_light_ambient[4] = { 0.3f, 0.3f, 0.3f, 1.0f };
 
 void FSLight2GLLight(light *FSLight, opengl_light *GLLight)
 {
@@ -220,9 +220,13 @@ void opengl_set_light(int light_num, opengl_light *ltp)
 	vm_vec_transform(&opengl_light_uniforms.Position[light_num], &light_pos_world, &GL_view_matrix);
 	vm_vec_transform(&opengl_light_uniforms.Direction[light_num], &light_dir_world, &GL_view_matrix, false);
 
-	opengl_light_uniforms.Color[light_num].xyz.x = diffuse[0];
-	opengl_light_uniforms.Color[light_num].xyz.y = diffuse[1];
-	opengl_light_uniforms.Color[light_num].xyz.z = diffuse[2];
+	opengl_light_uniforms.Diffuse_color[light_num].xyz.x = diffuse[0];
+	opengl_light_uniforms.Diffuse_color[light_num].xyz.y = diffuse[1];
+	opengl_light_uniforms.Diffuse_color[light_num].xyz.z = diffuse[2];
+
+	opengl_light_uniforms.Spec_color[light_num].xyz.x = ltp->Specular[0];
+	opengl_light_uniforms.Spec_color[light_num].xyz.y = ltp->Specular[1];
+	opengl_light_uniforms.Spec_color[light_num].xyz.z = ltp->Specular[2];
 
 	opengl_light_uniforms.Light_type[light_num] = ltp->type;
 
@@ -522,18 +526,12 @@ void gr_opengl_reset_lighting()
 
 void opengl_calculate_ambient_factor()
 {
-	float amb_user = 0.0f;
-
-	// assuming that the default is "128", just skip this if not a user setting
-	if (Cmdline_ambient_factor == 128)
-		return;
-
-	amb_user = (float)((Cmdline_ambient_factor * 2) - 255) / 255.0f;
+	float amb_user = i2fl(Cmdline_ambient_factor) / 128.0f;
 
 	// set the ambient light
-	GL_light_ambient[0] += amb_user;
-	GL_light_ambient[1] += amb_user;
-	GL_light_ambient[2] += amb_user;
+	GL_light_ambient[0] *= amb_user;
+	GL_light_ambient[1] *= amb_user;
+	GL_light_ambient[2] *= amb_user;
 
 	CLAMP( GL_light_ambient[0], 0.02f, 1.0f );
 	CLAMP( GL_light_ambient[1], 0.02f, 1.0f );
@@ -554,9 +552,14 @@ void opengl_light_shutdown()
 		opengl_light_uniforms.Position = NULL;
 	}
 
-	if ( opengl_light_uniforms.Color != NULL ) {
-		vm_free(opengl_light_uniforms.Color);
-		opengl_light_uniforms.Color = NULL;
+	if ( opengl_light_uniforms.Diffuse_color != NULL ) {
+		vm_free(opengl_light_uniforms.Diffuse_color);
+		opengl_light_uniforms.Diffuse_color = NULL;
+	}
+
+	if ( opengl_light_uniforms.Spec_color != NULL ) {
+		vm_free(opengl_light_uniforms.Spec_color);
+		opengl_light_uniforms.Spec_color = NULL;
 	}
 
 	if ( opengl_light_uniforms.Direction != NULL ) {
@@ -600,13 +603,13 @@ void opengl_light_init()
 	memset( opengl_lights, 0, MAX_LIGHTS * sizeof(opengl_light) );
 
 	opengl_light_uniforms.Position = (vec4 *)vm_malloc_q(GL_max_lights * sizeof(vec4));
-	opengl_light_uniforms.Color = (vec3d *)vm_malloc_q(GL_max_lights * sizeof(vec3d));
+	opengl_light_uniforms.Diffuse_color = (vec3d *)vm_malloc_q(GL_max_lights * sizeof(vec3d));
+	opengl_light_uniforms.Spec_color = (vec3d *)vm_malloc_q(GL_max_lights * sizeof(vec3d));
 	opengl_light_uniforms.Direction = (vec3d *)vm_malloc_q(GL_max_lights * sizeof(vec3d));
 	opengl_light_uniforms.Light_type = (int *)vm_malloc_q(GL_max_lights * sizeof(int));
 	opengl_light_uniforms.Attenuation = (float *)vm_malloc_q(GL_max_lights * sizeof(float));
 }
 
-extern int Cmdline_no_emissive;
 bool ambient_state = false;
 bool emission_state = false;
 bool specular_state = false;
@@ -617,8 +620,7 @@ void opengl_default_light_settings(int ambient, int emission, int specular)
 
 	if (ambient) {
 		if (!ambient_state) {
-			glMaterialfv( GL_FRONT, GL_DIFFUSE, GL_light_color );
-			glMaterialfv( GL_FRONT, GL_AMBIENT, GL_light_ambient );
+			glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, GL_light_color);
 			ambient_state = true;
 		}
 	} else {

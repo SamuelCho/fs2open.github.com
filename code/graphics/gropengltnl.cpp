@@ -2616,14 +2616,32 @@ void opengl_tnl_set_model_material(model_material *material_info)
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_LIGHT ) {
 		int num_lights = MIN(Num_active_gl_lights, GL_max_lights) - 1;
+		float light_factor = material_info->get_light_factor();
 		GL_state.Uniform.setUniformi("n_lights", num_lights);
-		GL_state.Uniform.setUniformf("light_factor", material_info->get_light_factor());
-
 		GL_state.Uniform.setUniform4fv("lightPosition", GL_max_lights, opengl_light_uniforms.Position);
 		GL_state.Uniform.setUniform3fv("lightDirection", GL_max_lights, opengl_light_uniforms.Direction);
-		GL_state.Uniform.setUniform3fv("lightColor", GL_max_lights, opengl_light_uniforms.Color);
+		GL_state.Uniform.setUniform3fv("lightDiffuseColor", GL_max_lights, opengl_light_uniforms.Diffuse_color);
+		GL_state.Uniform.setUniform3fv("lightSpecColor", GL_max_lights, opengl_light_uniforms.Spec_color);
 		GL_state.Uniform.setUniform1iv("lightType", GL_max_lights, opengl_light_uniforms.Light_type);
 		GL_state.Uniform.setUniform1fv("lightAttenuation", GL_max_lights, opengl_light_uniforms.Attenuation);
+
+		if ( !material_info->get_center_alpha() ) {
+			GL_state.Uniform.setUniform3f("diffuseFactor", GL_light_color[0] * light_factor, GL_light_color[1] * light_factor, GL_light_color[2] * light_factor);
+			GL_state.Uniform.setUniform3f("ambientFactor", GL_light_ambient[0], GL_light_ambient[1], GL_light_ambient[2]);
+		} else {
+			//GL_state.Uniform.setUniform3f("diffuseFactor", GL_light_true_zero[0], GL_light_true_zero[1], GL_light_true_zero[2]);
+			//GL_state.Uniform.setUniform3f("ambientFactor", GL_light_true_zero[0], GL_light_true_zero[1], GL_light_true_zero[2]);
+			GL_state.Uniform.setUniform3f("diffuseFactor", GL_light_color[0] * light_factor, GL_light_color[1] * light_factor, GL_light_color[2] * light_factor);
+			GL_state.Uniform.setUniform3f("ambientFactor", GL_light_ambient[0], GL_light_ambient[1], GL_light_ambient[2]);
+		}
+
+		if ( material_info->get_light_factor() > 0.25f && !Cmdline_no_emissive ) {
+			GL_state.Uniform.setUniform4f("emissionFactor", GL_light_emission[0], GL_light_emission[1], GL_light_emission[2], GL_light_emission[3]);
+		} else {
+			GL_state.Uniform.setUniform4f("emissionFactor", GL_light_zero[0], GL_light_zero[1], GL_light_zero[2], GL_light_zero[3]);
+		}
+
+		GL_state.Uniform.setUniformf("specPower", Cmdline_ogl_spec);
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_DIFFUSE_MAP ) {

@@ -3120,7 +3120,6 @@ void gr_opengl_deferred_lighting_end()
 
 extern light Lights[MAX_LIGHTS];
 extern int Num_lights;
-extern float GL_light_color[];
 extern float static_point_factor;
 extern float static_light_factor;
 extern float static_tube_factor;
