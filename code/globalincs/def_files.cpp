@@ -1907,11 +1907,11 @@ char* Default_main_geometry_shader =
 
 char* Default_fxaa_vertex_shader =
 "#extension GL_EXT_gpu_shader4 : enable\n"
-"attribute vec4 vertPosition;\n"
+"vertIn vec4 vertPosition;\n"
 "uniform float rt_w;\n"
 "uniform float rt_h;\n"
-"varying vec2 v_rcpFrame;\n"
-"noperspective varying vec2 v_pos;\n"
+"vertOut vec2 v_rcpFrame;\n"
+"noperspective vertOut vec2 v_pos;\n"
 "void main() {\n"
 "	gl_Position = vertPosition;\n"
 "	v_rcpFrame = vec2(1.0/rt_w, 1.0/rt_h);\n"
@@ -2424,14 +2424,14 @@ char* Default_fxaa_fragment_shader =
 "	#endif\n"
 "}\n"
 "uniform sampler2D tex0;\n"
-"varying vec2 v_rcpFrame;\n"
-"noperspective varying vec2 v_pos;\n"
+"fragIn vec2 v_rcpFrame;\n"
+"noperspective fragIn vec2 v_pos;\n"
 "void main() {\n"
-"	gl_FragColor = FxaaPixelShader(v_pos, tex0, v_rcpFrame, FXAA_QUALITY_SUBPIX, FXAA_QUALITY_EDGE_THRESHOLD, FXAA_QUALITY_EDGE_THRESHOLD_MIN);\n"
+"	fragOut0 = FxaaPixelShader(v_pos, tex0, v_rcpFrame, FXAA_QUALITY_SUBPIX, FXAA_QUALITY_EDGE_THRESHOLD, FXAA_QUALITY_EDGE_THRESHOLD_MIN);\n"
 "}";
 
 char *Default_blur_fragment_shader = 
-"varying float blurSize;\n"
+"fragIn float blurSize;\n"
 "uniform sampler2D tex;\n"
 "#define BLUR_SIZE_DIV 3.0\n"
 "// Gaussian Blur\n"
@@ -2461,7 +2461,7 @@ char *Default_blur_fragment_shader =
 "		sum += texture2D(tex, vec2(gl_TexCoord[0].x, clamp(gl_TexCoord[0].y + float(i) * (blurSize/BLUR_SIZE_DIV), 0.0, 1.0))) * BlurWeights[i];\n"
 "	}\n"
 "#endif\n"
-"	gl_FragColor = sum;\n"
+"	fragOut0 = sum;\n"
 "}";
 
 char *Default_brightpass_fragment_shader = 
@@ -2476,7 +2476,7 @@ char *Default_brightpass_fragment_shader =
 "	ColorOut *= (1.0 + (ColorOut / (fWhiteCutoff * fWhiteCutoff)));\n"
 "	ColorOut -= 6.0;\n"
 "	ColorOut /= (10.0 + ColorOut);\n"
-"	gl_FragColor = ColorOut;\n"
+"	fragOut0 = ColorOut;\n"
 "}";
 
 char *Default_post_fragment_shader = 
@@ -2590,14 +2590,14 @@ char *Default_post_fragment_shader =
 "	color_out.rgb = floor(color_out.rgb * downsampling_factor + bias) / downsampling_factor;\n"
 " #endif\n"
 "	color_out.a = 1.0;\n"
-"	gl_FragColor = color_out;\n"
+"	fragOut0 = color_out;\n"
 "}";
 
 char *Default_post_vertex_shader =
-"attribute vec4 vertPosition;\n"
-"attribute vec4 vertTexCoord;\n"
-"attribute vec4 vertColor;\n"
-"varying float blurSize;\n"
+"vertIn vec4 vertPosition;\n"
+"vertIn vec4 vertTexCoord;\n"
+"vertIn vec4 vertColor;\n"
+"vertOut float blurSize;\n"
 "uniform float bsize;\n"
 "void main()\n"
 "{\n"
@@ -2612,24 +2612,24 @@ char* Default_fxaa_prepass_shader =
 "uniform sampler2D tex;\n"
 "void main() {\n"
 "	vec4 color = texture2D(tex, gl_TexCoord[0].xy);\n"
-"	gl_FragColor = vec4(color.rgb, dot(color.rgb, vec3(0.299, 0.587, 0.114)) );\n"
+"	fragOut0 = vec4(color.rgb, dot(color.rgb, vec3(0.299, 0.587, 0.114)) );\n"
 "}";
 
 char* Default_effect_vertex_shader =
-"attribute vec4 vertPosition;\n"
-"attribute vec4 vertTexCoord;\n"
-"attribute vec4 vertColor;\n"
-"attribute float vertRadius;\n"
+"vertIn vec4 vertPosition;\n"
+"vertIn vec4 vertTexCoord;\n"
+"vertIn vec4 vertColor;\n"
+"vertIn float vertRadius;\n"
 "#ifdef FLAG_EFFECT_GEOMETRY\n"
-" attribute vec3 vertUvec;\n"
-" varying vec3 up_g;\n"
-" varying float radius_g;\n"
+" vertIn vec3 vertUvec;\n"
+" vertOut vec3 up_g;\n"
+" vertOut float radius_g;\n"
 "#else\n"
-" varying float radius_p;\n"
-" varying vec4 position_p;\n"
+" vertOut float radius_p;\n"
+" vertOut vec4 position_p;\n"
 "#endif\n"
 "#ifdef FLAG_EFFECT_DISTORTION\n"
-"varying float offset_out;\n"
+"vertOut float offset_out;\n"
 "uniform float use_offset;\n"
 "#endif\n"
 "uniform mat4 modelViewMatrix;\n"
@@ -2661,15 +2661,15 @@ char* Default_effect_particle_fragment_shader =
 "uniform float nearZ;\n"
 "uniform float farZ;\n"
 "uniform int linear_depth;\n"
-"varying float radius_p;\n"
-"varying vec4 position_p;\n"
+"fragIn float radius_p;\n"
+"fragIn vec4 position_p;\n"
 "void main()\n"
 "{\n"
 "	vec4 fragmentColor = texture2D(baseMap, gl_TexCoord[0].xy)*gl_Color.a;\n"
 "	vec2 offset = vec2(radius_p * abs(0.5 - gl_TexCoord[0].x) * 2.0, radius_p * abs(0.5 - gl_TexCoord[0].y) * 2.0);\n"
 "	float offset_len = length(offset);\n"
 "	if ( offset_len > radius_p ) {\n"
-"		gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);\n"
+"		fragOut0 = vec4(0.0, 0.0, 0.0, 0.0);\n"
 "		return;\n"
 "	}\n"
 "	vec2 depthCoord = vec2(gl_FragCoord.x / window_width, gl_FragCoord.y / window_height );\n"
@@ -2689,17 +2689,17 @@ char* Default_effect_particle_fragment_shader =
 "	float backDepth = fragDepthLinear + depthOffset;\n"
 "	float ds = min(sceneDepthLinear, backDepth) - max(nearZ, frontDepth);\n"
 "	fragmentColor = fragmentColor * ( ds / (depthOffset*2.0) );\n"
-"	gl_FragColor = fragmentColor;\n"
+"	fragOut0 = fragmentColor;\n"
 "}";
 
 char* Default_effect_distortion_vertex_shader =
-"attribute vec4 vertPosition;\n"
-"attribute vec4 vertTexCoord;\n"
-"attribute vec4 vertColor;\n"
-"attribute float vertRadius;\n"
+"vertIn vec4 vertPosition;\n"
+"vertIn vec4 vertTexCoord;\n"
+"vertIn vec4 vertColor;\n"
+"vertIn float vertRadius;\n"
 "uniform mat4 modelViewMatrix;\n"
 "uniform mat4 projMatrix;\n"
-"varying float offset_out;\n"
+"vertOut float offset_out;\n"
 "uniform float use_offset;\n"
 "void main()\n"
 "{\n"
@@ -2717,7 +2717,7 @@ char* Default_effect_distortion_fragment_shader =
 "uniform float window_height;\n"
 "uniform sampler2D distMap;\n"
 "uniform sampler2D frameBuffer;\n"
-"varying float offset_out;\n"
+"fragIn float offset_out;\n"
 "void main()\n"
 "{\n"
 "	vec2 depthCoord = vec2(gl_FragCoord.x / window_width, gl_FragCoord.y / window_height);\n"
@@ -2725,8 +2725,8 @@ char* Default_effect_distortion_fragment_shader =
 "	vec2 distortion = texture2D(distMap, gl_TexCoord[0].xy+vec2(0.0, offset_out)).rg;\n"
 "	float alpha = clamp(dot(fragmentColor.rgb,vec3(0.3333))*10.0,0.0,1.0);\n"
 "	distortion = ((distortion - 0.5) * 0.01) * alpha;\n"
-"	gl_FragColor = texture2D(frameBuffer,depthCoord+distortion);\n"
-"	gl_FragColor.a = alpha;\n"
+"	fragOut0 = texture2D(frameBuffer,depthCoord+distortion);\n"
+"	fragOut0.a = alpha;\n"
 "}";
 
 char* Default_effect_fragment_shader = 
@@ -2734,7 +2734,7 @@ char* Default_effect_fragment_shader =
 "void main()\n"
 "{\n"
 "	vec4 fragmentColor = texture2D(baseMap, gl_TexCoord[0].xy)*gl_Color.a;\n"
-"	gl_FragColor = fragmentColor;\n"
+"	fragOut0 = fragmentColor;\n"
 "}";
 
 char* Default_effect_screen_geometry_shader =
@@ -2790,8 +2790,8 @@ char* Default_effect_screen_geometry_shader =
 "}";
 
 char* Default_shadowdebug_vertex_shader =
-"attribute vec4 vertPosition;\n"
-"attribute vec4 vertTexCoord;\n"
+"vertIn vec4 vertPosition;\n"
+"vertIn vec4 vertTexCoord;\n"
 "void main()\n"
 "{\n"
 "	gl_TexCoord[0] = vertTexCoord;\n"
@@ -2806,8 +2806,8 @@ char* Default_shadowdebug_fragment_shader =
 "void main()\n"
 "{\n"
 "	vec3 texcoord = vec3(gl_TexCoord[0].xy, float(index));\n"
-"	gl_FragColor = vec4(texture2DArray(shadow_map, texcoord).rgb,1.0);\n"
-"	//gl_FragColor = vec4(texture2D(shadow_map, gl_TexCoord[0].xy).rgb,1.0);\n"
+"	fragOut0 = vec4(texture2DArray(shadow_map, texcoord).rgb,1.0);\n"
+"	//fragOut0 = vec4(texture2D(shadow_map, gl_TexCoord[0].xy).rgb,1.0);\n"
 "}\n"; 
 
 char* Default_lightshaft_fragment_shader =
@@ -2828,7 +2828,7 @@ char* Default_lightshaft_fragment_shader =
 "	vec4 sum = vec4(0.0);\n"
 "	vec4 mask = texture2D(cockpit, gl_TexCoord[0].st);\n"
 "	if (mask.r < 1.0) {\n"
-"		gl_FragColor = vec4(cp_intensity);\n"
+"		fragOut0 = vec4(cp_intensity);\n"
 "		return;\n"
 "	}\n"
 "	for(int i=0; i < SAMPLE_NUM ; i++) {\n"
@@ -2838,13 +2838,13 @@ char* Default_lightshaft_fragment_shader =
 "			sum += decay * weight;\n"
 "		decay *= falloff;\n"
 "	}\n"
-"	gl_FragColor = sum * intensity;\n"
-"	gl_FragColor.a = 1.0;\n"
+"	fragOut0 = sum * intensity;\n"
+"	fragOut0.a = 1.0;\n"
 "}";
 
 char *Default_video_vertex_shader =
-"attribute vec4 vertPosition;\n"
-"attribute vec4 vertTexCoord;\n"
+"vertIn vec4 vertPosition;\n"
+"vertIn vec4 vertTexCoord;\n"
 "uniform mat4 modelViewMatrix;\n"
 "uniform mat4 projMatrix;\n"
 "void main()\n"
@@ -2860,20 +2860,20 @@ char * Default_video_fragment_shader =
 "void main()\n"
 "{\n"
 "	vec3 val = vec3(texture2D(ytex, gl_TexCoord[0].st).r - 0.0625, texture2D(utex, gl_TexCoord[0].st).r - 0.5, texture2D(vtex, gl_TexCoord[0].st).r - 0.5);\n"
-"	gl_FragColor.r = dot(val, vec3(1.1640625, 0.0, 1.59765625));\n"
-"	gl_FragColor.g = dot(val, vec3(1.1640625, -0.390625, -0.8125));\n"
-"	gl_FragColor.b = dot(val, vec3(1.1640625, 2.015625, 0.0));\n"
-"	gl_FragColor.a = 1.0;\n"
+"	fragOut0.r = dot(val, vec3(1.1640625, 0.0, 1.59765625));\n"
+"	fragOut0.g = dot(val, vec3(1.1640625, -0.390625, -0.8125));\n"
+"	fragOut0.b = dot(val, vec3(1.1640625, 2.015625, 0.0));\n"
+"	fragOut0.a = 1.0;\n"
 "}";
 
 char *Default_deferred_vertex_shader =
-"attribute vec4 vertPosition;\n"
+"vertIn vec4 vertPosition;\n"
 "uniform mat4 modelViewMatrix;\n"
 "uniform mat4 projMatrix;\n"
 "uniform vec3 scale;\n"
 "uniform int lightType;\n"
-"varying vec3 lightPosition;\n"
-"varying vec3 beamVec;\n"
+"vertOut vec3 lightPosition;\n"
+"vertOut vec3 beamVec;\n"
 "void main()\n"
 "{\n"
 "	gl_Position = projMatrix * modelViewMatrix * vec4(vertPosition.xyz * scale, 1.0);\n"
@@ -2891,9 +2891,9 @@ char *Default_deferred_fragment_shader =
 "uniform float invScreenWidth;\n"
 "uniform float invScreenHeight;\n"
 "uniform int lightType;\n"
-"varying vec3 lightPosition;\n"
+"fragIn vec3 lightPosition;\n"
 "uniform float lightRadius;\n"
-"varying vec3 beamVec;\n"
+"fragIn vec3 beamVec;\n"
 "uniform vec3 diffuseLightColor;\n"
 "uniform vec3 specLightColor;\n"
 "uniform float coneAngle;\n"
@@ -2957,13 +2957,13 @@ char *Default_deferred_fragment_shader =
 "	lightDir /= dist;\n"
 "	vec3 halfVec = normalize(lightDir + eyeDir);\n"
 "	float NdotHV = clamp(dot(normal.xyz, halfVec), 0.0, 1.0);\n"
-"	gl_FragData[0].rgb = color * (diffuseLightColor * (max(dot(normal.xyz, lightDir), 0.0)) * attenuation);\n"
-"   gl_FragData[0].rgb += pow(NdotHV, specFactor) * SPEC_INTENSITY_POINT * specfactor * specLightColor * attenuation;\n"
-"	gl_FragData[0].a = 1.0;\n"
+"	fragOut0.rgb = color * (diffuseLightColor * (max(dot(normal.xyz, lightDir), 0.0)) * attenuation);\n"
+"   fragOut0.rgb += pow(NdotHV, specFactor) * SPEC_INTENSITY_POINT * specfactor * specLightColor * attenuation;\n"
+"	fragOut0.a = 1.0;\n"
 "}";
 
 char *Default_deferred_clear_vertex_shader =
-"attribute vec4 vertPosition;\n"
+"vertIn vec4 vertPosition;\n"
 "void main()\n"
 "{\n"
 "	gl_Position = vertPosition;\n"
@@ -2972,8 +2972,8 @@ char *Default_deferred_clear_vertex_shader =
 char *Default_deferred_clear_fragment_shader =
 "void main()\n"
 "{\n"
-"   gl_FragData[0] = vec4(0.0, 0.0, 0.0, 1.0); // color\n"
-"	gl_FragData[1] = vec4(0.0, 0.0, -1000000.0, 1.0); // position\n"
-"	gl_FragData[2] = vec4(0.0, 0.0, 0.0, 1.0); // normal\n"
-"	gl_FragData[3] = vec4(0.0, 0.0, 0.0, 1.0); // specular\n"
+"   fragOut0 = vec4(0.0, 0.0, 0.0, 1.0); // color\n"
+"	fragOut1 = vec4(0.0, 0.0, -1000000.0, 1.0); // position\n"
+"	fragOut2 = vec4(0.0, 0.0, 0.0, 1.0); // normal\n"
+"	fragOut3 = vec4(0.0, 0.0, 0.0, 1.0); // specular\n"
 "}\n";
