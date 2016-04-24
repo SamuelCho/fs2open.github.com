@@ -1946,6 +1946,8 @@ bool gr_opengl_init()
 	opengl_set_vsync( !Cmdline_no_vsync );
 
 	opengl_setup_viewport();
+	vm_matrix4_set_identity(&GL_view_matrix);
+	vm_matrix4_set_identity(&GL_model_view_matrix);
 
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glClear(GL_STENCIL_BUFFER_BIT);

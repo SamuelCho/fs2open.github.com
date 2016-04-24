@@ -2422,6 +2422,8 @@ void gr_opengl_draw_deferred_light_sphere(vec3d *position, float rad, bool clear
 	g3_start_instance_matrix(position, &vmd_identity_matrix, true);
 	
 	GL_state.Uniform.setUniform3f("scale", rad, rad, rad);
+	GL_state.Uniform.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
+	GL_state.Uniform.setUniformMatrix4f("projMatrix", GL_projection_matrix);
 
 	GL_state.Array.BindArrayBuffer(deferred_light_sphere_vbo);
 	GL_state.Array.BindElementBuffer(deferred_light_sphere_ibo);
@@ -2554,6 +2556,8 @@ void gr_opengl_draw_deferred_light_cylinder(vec3d *position,matrix *orient, floa
 	g3_start_instance_matrix(position, orient, true);
 
 	GL_state.Uniform.setUniform3f("scale", rad, rad, length);
+	GL_state.Uniform.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
+	GL_state.Uniform.setUniformMatrix4f("projMatrix", GL_projection_matrix);
 
 	GL_state.Array.BindArrayBuffer(deferred_light_cylinder_vbo);
 	GL_state.Array.BindElementBuffer(deferred_light_cylinder_ibo);

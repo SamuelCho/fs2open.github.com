@@ -21,6 +21,7 @@
 #include "graphics/gropenglshader.h"
 #include "graphics/gropenglstate.h"
 #include "graphics/gropengltexture.h"
+#include "graphics/gropengltnl.h"
 #include "io/key.h"
 #include "io/timer.h"
 #include "osapi/osapi.h"
@@ -340,7 +341,6 @@ static void OGG_video_init(theora_info *tinfo)
 	g_screenWidth = tinfo->frame_width;
 	g_screenHeight = tinfo->frame_height;
 
-
 	if (gr_screen.mode == GR_OPENGL) {
 		opengl_set_texture_target(GL_TEXTURE_2D);
 		opengl_tcache_get_adjusted_texture_size(g_screenWidth, g_screenHeight, &wp2, &hp2);
@@ -445,11 +445,13 @@ static void OGG_video_init(theora_info *tinfo)
 
 		// don't bother setting anything if we aren't going to need it
 		if (!Cmdline_noscalevid && (scale_by != 1.0f)) {
-			glMatrixMode(GL_MODELVIEW);
-			glPushMatrix();
-			glLoadIdentity();
+			vec3d scale;
+			
+			scale.xyz.x = scale_by;
+			scale.xyz.y = scale_by;
+			scale.xyz.z = -1.0f;
 
-			glScalef( scale_by, scale_by, -1.0f );
+			gr_push_scale_matrix(&scale);
 			scale_video = 1;
 		}
 
@@ -493,6 +495,9 @@ static void OGG_video_init(theora_info *tinfo)
 			GL_state.Uniform.setUniformi("ytex", 0);
 			GL_state.Uniform.setUniformi("utex", 1);
 			GL_state.Uniform.setUniformi("vtex", 2);
+
+			GL_state.Uniform.setUniformMatrix4f("projMatrix", GL_projection_matrix);
+			GL_state.Uniform.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
 		}
 
 		glVertices[0][0] = (GLfloat)g_screenX;
@@ -538,8 +543,7 @@ static void OGG_video_close()
 
 	if (gr_screen.mode == GR_OPENGL) {
 		if (scale_video) {
-			glMatrixMode(GL_MODELVIEW);
-			glPopMatrix();
+			gr_pop_scale_matrix();
 		}
 
 		GL_state.Texture.Disable();

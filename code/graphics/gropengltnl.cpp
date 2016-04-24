@@ -94,8 +94,10 @@ int Transform_buffer_handle = -1;
 
 transform_stack GL_model_matrix_stack;
 matrix4 GL_view_matrix;
+matrix4 GL_model_view_matrix;
 matrix4 GL_projection_matrix;
 matrix4 GL_last_projection_matrix;
+matrix4 GL_last_view_matrix;
 
 struct opengl_buffer_object {
 	GLuint buffer_id;
@@ -1964,6 +1966,9 @@ void gr_opengl_start_instance_matrix(const vec3d *offset, const matrix *rotation
 
 	GL_model_matrix_stack.push(offset, rotation);
 
+	matrix4 model_matrix = GL_model_matrix_stack.get_transform();
+	vm_matrix4_x_matrix4(&GL_model_view_matrix, &GL_view_matrix, &model_matrix);
+
 	GL_CHECK_FOR_ERRORS("end of start_instance_matrix()");
 
 	GL_modelview_matrix_depth++;
@@ -1993,6 +1998,9 @@ void gr_opengl_end_instance_matrix()
 
 	glPopMatrix();
 	GL_model_matrix_stack.pop();
+
+	matrix4 model_matrix = GL_model_matrix_stack.get_transform();
+	vm_matrix4_x_matrix4(&GL_model_view_matrix, &GL_view_matrix, &model_matrix);
 
 	GL_modelview_matrix_depth--;
 }
@@ -2150,6 +2158,7 @@ void gr_opengl_set_view_matrix(const vec3d *pos, const matrix *orient)
 	glScalef(1.0f, 1.0f, -1.0f);
 
 	GL_model_matrix_stack.clear();
+	vm_matrix4_set_identity(&GL_model_view_matrix);
 
 	if (Cmdline_env) {
 		GL_env_texture_matrix_set = true;
@@ -2197,6 +2206,7 @@ void gr_opengl_end_view_matrix()
 
 	GL_model_matrix_stack.clear();
 	vm_matrix4_set_identity(&GL_view_matrix);
+	vm_matrix4_set_identity(&GL_model_view_matrix);
 
 	GL_modelview_matrix_depth = 1;
 	GL_htl_view_matrix_set = 0;
@@ -2248,6 +2258,11 @@ void gr_opengl_set_2d_matrix(/*int x, int y, int w, int h*/)
 
 	GL_model_matrix_stack.push_and_replace(identity_mat);
 
+	GL_last_view_matrix = GL_view_matrix;
+	GL_view_matrix = identity_mat;
+
+	vm_matrix4_x_matrix4(&GL_model_view_matrix, &GL_view_matrix, &identity_mat);
+
 #ifndef NDEBUG
 	// safety check to make sure we don't use more than 2 projection matrices
 	GLint num_proj_stacks = 0;
@@ -2280,6 +2295,11 @@ void gr_opengl_end_2d_matrix()
 
 	GL_model_matrix_stack.pop();
 
+	GL_view_matrix = GL_last_view_matrix;
+
+	matrix4 model_matrix = GL_model_matrix_stack.get_transform();
+	vm_matrix4_x_matrix4(&GL_model_view_matrix, &GL_view_matrix, &model_matrix);
+
 	glMatrixMode( GL_MODELVIEW );
 	glPopMatrix();
 
@@ -2303,6 +2323,9 @@ void gr_opengl_push_scale_matrix(const vec3d *scale_factor)
 
 	GL_model_matrix_stack.push(NULL, NULL, scale_factor);
 
+	matrix4 model_matrix = GL_model_matrix_stack.get_transform();
+	vm_matrix4_x_matrix4(&GL_model_view_matrix, &GL_view_matrix, &model_matrix);
+
 	glScalef(scale_factor->xyz.x, scale_factor->xyz.y, scale_factor->xyz.z);
 }
 
@@ -2314,6 +2337,9 @@ void gr_opengl_pop_scale_matrix()
 	glPopMatrix();
 
 	GL_model_matrix_stack.pop();
+
+	matrix4 model_matrix = GL_model_matrix_stack.get_transform();
+	vm_matrix4_x_matrix4(&GL_model_view_matrix, &GL_view_matrix, &model_matrix);
 
 	GL_modelview_matrix_depth--;
 	GL_scale_matrix_set = false;
@@ -2579,13 +2605,8 @@ void opengl_tnl_set_model_material(model_material *material_info)
 
 	GL_state.Texture.SetShaderMode(GL_TRUE);
 	
-	matrix4 model_view_matrix;
-	matrix4 model_matrix = GL_model_matrix_stack.get_transform();
-	
-	vm_matrix4_x_matrix4(&model_view_matrix, &GL_view_matrix, &model_matrix);
-
-	GL_state.Uniform.setUniformMatrix4f("modelViewMatrix", model_view_matrix);
-	GL_state.Uniform.setUniformMatrix4f("modelMatrix", model_matrix);
+	GL_state.Uniform.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
+	GL_state.Uniform.setUniformMatrix4f("modelMatrix", GL_model_matrix_stack.get_transform());
 	GL_state.Uniform.setUniformMatrix4f("viewMatrix", GL_view_matrix);
 	GL_state.Uniform.setUniformMatrix4f("projMatrix", GL_projection_matrix);
 	GL_state.Uniform.setUniformMatrix4f("textureMatrix", GL_texture_matrix);
@@ -3242,6 +3263,9 @@ void opengl_tnl_set_material_particle(particle_material * material_info)
 {
 	opengl_tnl_set_material(material_info, true);
 
+	GL_state.Uniform.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
+	GL_state.Uniform.setUniformMatrix4f("projMatrix", GL_projection_matrix);
+
 	GL_state.Uniform.setUniformi("baseMap", 0);
 	GL_state.Uniform.setUniformi("depthMap", 1);
 	GL_state.Uniform.setUniformf("window_width", (float)gr_screen.max_w);
@@ -3314,6 +3338,9 @@ void opengl_tnl_set_material_soft_particle(uint flags)
 void opengl_tnl_set_material_distortion(distortion_material* material_info)
 {
 	opengl_tnl_set_material(material_info, true);
+
+	GL_state.Uniform.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
+	GL_state.Uniform.setUniformMatrix4f("projMatrix", GL_projection_matrix);
 
 	GL_state.Uniform.setUniformi("baseMap", 0);
 	GL_state.Uniform.setUniformi("depthMap", 1);

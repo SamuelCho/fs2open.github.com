@@ -32,6 +32,7 @@ extern float shadow_fardist;
 extern bool Rendering_to_shadow_map;
 
 extern matrix4 GL_view_matrix;
+extern matrix4 GL_model_view_matrix;
 extern matrix4 GL_projection_matrix;
 extern matrix4 GL_last_projection_matrix;
 
