@@ -188,7 +188,6 @@ void opengl_vertex_buffer::clear()
 
 static SCP_vector<opengl_buffer_object> GL_buffer_objects;
 static SCP_vector<opengl_vertex_buffer> GL_vertex_buffers;
-static SCP_vector<opengl_render_buffer> GL_render_buffers;
 static opengl_vertex_buffer *g_vbp = NULL;
 static int GL_vertex_buffers_in_use = 0;
 static int GL_render_buffers_in_use = 0;
@@ -265,97 +264,6 @@ void opengl_delete_buffer_object(int handle)
 	GL_vertex_data_in -= buffer_obj.size;
 
 	vglDeleteBuffersARB(1, &buffer_obj.buffer_id);
-}
-
-int gr_opengl_create_render_buffer(bool indexed, bool dynamic)
-{
-	if ( Cmdline_nohtl || Cmdline_novbo ) {
-		return -1;
-	}
-
-	opengl_render_buffer rbuffer;
-
-	GLenum usage = GL_STATIC_DRAW_ARB;
-
-	if ( dynamic ) {
-		usage = GL_DYNAMIC_DRAW_ARB;
-	}
-
-	rbuffer.vb_handle = opengl_create_buffer_object(GL_ARRAY_BUFFER_ARB, usage);
-
-	if ( indexed ) {
-		rbuffer.indexed = true;
-		rbuffer.ib_handle = opengl_create_buffer_object(GL_ELEMENT_ARRAY_BUFFER_ARB, usage);
-	}
-
-	GL_render_buffers.push_back(rbuffer);
-	GL_render_buffers_in_use++;
-
-	return (int)(GL_render_buffers.size() - 1);
-}
-
-void gr_opengl_render_buffer_update_vertex_data(int handle, uint size, void* data)
-{
-	Assert(handle >= 0);
-	Assert((size_t)handle < GL_render_buffers.size());
-
-	opengl_render_buffer *rbuffer = &GL_render_buffers[handle];
-
-	// make sure we have one
-	if (rbuffer->vb_handle >= 0) {
-		gr_opengl_update_buffer_object(rbuffer->vb_handle, size, rbuffer->array_list);
-
-		if (!opengl_check_for_errors()) {
-			return;
-		}
-
-		opengl_delete_buffer_object(rbuffer->vb_handle);
-		rbuffer->vb_handle = -1;
-	}
-
-	if (rbuffer->vbo_size < size) {
-		if (rbuffer->array_list != NULL) {
-			vm_free(rbuffer->array_list);
-		}
-
-		rbuffer->array_list = (GLfloat*)vm_malloc(size);
-		rbuffer->vbo_size = size;
-	}
-
-	memcpy(rbuffer->array_list, data, size);
-}
-
-void gr_opengl_render_buffer_update_index_data(int handle, uint size, void* data)
-{
-	Assert(handle >= 0);
-	Assert((size_t)handle < GL_render_buffers.size());
-
-	opengl_render_buffer *rbuffer = &GL_render_buffers[handle];
-
-	Assert(rbuffer->indexed);
-
-	// make sure we have one
-	if (rbuffer->ib_handle >= 0) {
-		gr_opengl_update_buffer_object(rbuffer->ib_handle, size, rbuffer->index_list);
-
-		if (!opengl_check_for_errors()) {
-			return;
-		}
-
-		opengl_delete_buffer_object(rbuffer->ib_handle);
-		rbuffer->ib_handle = -1;
-	}
-
-	if (rbuffer->ibo_size < size) {
-		if (rbuffer->index_list != NULL) {
-			vm_free(rbuffer->index_list);
-		}
-
-		rbuffer->index_list = (GLubyte*)vm_malloc(size);
-		rbuffer->ibo_size = size;
-	}
-
-	memcpy(rbuffer->index_list, data, size);
 }
 
 int gr_opengl_create_stream_buffer_object()
