@@ -78,7 +78,7 @@ void gr_opengl_render_primitives_2d(material* material_info, primitive_type prim
 void gr_opengl_render_primitives_particle(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
 void gr_opengl_render_primitives_distortion(distortion_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
 
-void opengl_bind_vertex_layout(vertex_layout &layout);
+void opengl_bind_vertex_layout(vertex_layout &layout, uint offset = 0);
 
 inline void opengl_draw_textured_quad_instanced(
 	GLfloat x1, GLfloat y1, GLfloat u1, GLfloat v1,

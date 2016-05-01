@@ -171,14 +171,14 @@ void opengl_bind_vertex_component(vertex_format_data &vert_component, void* base
 	}
 }
 
-void opengl_bind_vertex_layout(vertex_layout &layout)
+void opengl_bind_vertex_layout(vertex_layout &layout, uint offset)
 {
 	GL_state.Array.BindPointersBegin();
 
 	uint num_vertex_bindings = layout.get_num_vertex_components();
 
 	for ( uint i = 0; i < num_vertex_bindings; ++i ) {
-		opengl_bind_vertex_component(*layout.get_vertex_component(i), layout.get_base_vertex_ptr());
+		opengl_bind_vertex_component(*layout.get_vertex_component(i), (ubyte*)offset);
 	}
 
 	GL_state.Array.BindPointersEnd();

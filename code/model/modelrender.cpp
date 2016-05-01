@@ -709,11 +709,7 @@ void draw_list::render_outline(outline_draw &outline_info)
 	material_instance.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
 	material_instance.set_color(outline_info.clr);
 
-	vertex_layout layout;
-	layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), &outline_info.vert_array[0].world.xyz.x);
-	layout.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), &outline_info.vert_array[0].r);
-
-	gr_render_primitives(&material_instance, PRIM_TYPE_LINES, &layout, 0, outline_info.n_verts);
+	render_primitives_colored(&material_instance, outline_info.vert_array, outline_info.n_verts, PRIM_TYPE_LINES, false);
 
 	g3_done_instance(true);
 }
@@ -2323,20 +2319,15 @@ void model_render_insignias(insignia_draw_data *insignia)
 			vecs[2].texture_position.u = pm->ins[idx].u[s_idx][2];
 			vecs[2].texture_position.v = pm->ins[idx].v[s_idx][2];
 
-			vertex_layout layout;
-
-			layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), &vecs[0].world);
-			layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &vecs[0].texture_position);
-
 			if ( !Cmdline_nohtl ) {
 				light_apply_rgb( &vecs[0].r, &vecs[0].g, &vecs[0].b, &pm->ins[idx].vecs[i1], &pm->ins[idx].norm[i1], 1.5f );
 				light_apply_rgb( &vecs[1].r, &vecs[1].g, &vecs[1].b, &pm->ins[idx].vecs[i2], &pm->ins[idx].norm[i2], 1.5f );
 				light_apply_rgb( &vecs[2].r, &vecs[2].g, &vecs[2].b, &pm->ins[idx].vecs[i3], &pm->ins[idx].norm[i3], 1.5f );
-				layout.add_vertex_component(vertex_format_data::COLOR3, sizeof(vertex), &vecs[0].r);
+				vecs[0].a = vecs[1].a = vecs[2].a = 255;
 			}
 
 			// draw the polygon
-			gr_render_primitives(&insignia_material, PRIM_TYPE_TRIFAN, &layout, 0, 3);
+			render_primitives_colored_textured(&insignia_material, vecs, 3, PRIM_TYPE_TRIFAN, false);
 		}
 	}
 }

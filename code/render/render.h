@@ -13,6 +13,8 @@
 #include "graphics/grinternal.h"
 #include "graphics/material.h"
 
+void render_init_buffer();
+
 gr_alpha_blend render_determine_blend_mode(int base_bitmap, bool is_transparent);
 gr_zbuffer_type render_determine_depth_mode(bool depth_testing, bool is_transparent);
 

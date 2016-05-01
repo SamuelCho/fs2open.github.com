@@ -34,6 +34,7 @@
 #include "palman/palman.h"
 #include "parse/scripting.h"
 #include "render/3d.h"
+#include "render/render.h"
 
 #if defined(SCP_UNIX) && !defined(__APPLE__)
 #if ( SDL_VERSION_ATLEAST(1, 2, 7) )
@@ -1053,6 +1054,8 @@ bool gr_init(int d_mode, int d_width, int d_height, int d_depth)
 	gr_set_palette_internal(Gr_current_palette_name, NULL, 0);
 
 	bm_init();
+
+	render_init_buffer();
 
 	if (Gr_cursor < 0) {
 		int w, h;

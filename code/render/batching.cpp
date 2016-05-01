@@ -51,28 +51,23 @@ void batching_setup_vertex_layout(vertex_layout *layout, uint vert_mask)
 	int stride = sizeof(batch_vertex);
 
 	if ( vert_mask & vertex_format_data::mask(vertex_format_data::POSITION3) ) {
-		layout->add_vertex_component(vertex_format_data::POSITION3, stride, offset);
-		offset += sizeof(vec3d);
+		layout->add_vertex_component(vertex_format_data::POSITION3, stride, (int)offsetof(batch_vertex, position));
 	}
 
 	if ( vert_mask & vertex_format_data::mask(vertex_format_data::TEX_COORD) ) {
-		layout->add_vertex_component(vertex_format_data::TEX_COORD, stride, offset);
-		offset += sizeof(uv_pair);
+		layout->add_vertex_component(vertex_format_data::TEX_COORD, stride, (int)offsetof(batch_vertex, tex_coord));
 	}
 
 	if ( vert_mask & vertex_format_data::mask(vertex_format_data::COLOR4) ) {
-		layout->add_vertex_component(vertex_format_data::COLOR4, stride, offset);
-		offset += sizeof(ubyte) * 4;
+		layout->add_vertex_component(vertex_format_data::COLOR4, stride, (int)offsetof(batch_vertex, r));
 	}
 
 	if ( vert_mask & vertex_format_data::mask(vertex_format_data::RADIUS) ) {
-		layout->add_vertex_component(vertex_format_data::RADIUS, stride, offset);
-		offset += sizeof(float);
+		layout->add_vertex_component(vertex_format_data::RADIUS, stride, (int)offsetof(batch_vertex, radius));
 	}
 
 	if ( vert_mask & vertex_format_data::mask(vertex_format_data::UVEC) ) {
-		layout->add_vertex_component(vertex_format_data::UVEC, stride, offset);
-		offset += sizeof(vec3d);
+		layout->add_vertex_component(vertex_format_data::UVEC, stride, (int)offsetof(batch_vertex, uvec));
 	}
 }
 
@@ -897,13 +892,7 @@ void batching_allocate_and_load_buffer(primitive_batch_buffer *draw_queue)
 	}
 
 	draw_queue->desired_buffer_size = 0;
-
-	if ( draw_queue->buffer_num >= 0 ) {
-		draw_queue->layout.set_base_vertex_ptr(NULL);
-	} else {
-		draw_queue->layout.set_base_vertex_ptr(draw_queue->buffer_ptr);
-	}
-
+	
 	int offset = 0;
 	size_t num_items = draw_queue->items.size();
 

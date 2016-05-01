@@ -27,6 +27,13 @@
 #include "graphics/material.h"
 #include "render/render.h"
 
+static int Render_buffer_handle = -1;
+
+void render_init_buffer()
+{
+	Render_buffer_handle = gr_create_stream_buffer();
+}
+
 gr_alpha_blend render_determine_blend_mode(int base_bitmap, bool blending)
 {
 	if ( blending ) {
@@ -133,36 +140,43 @@ void render_primitives_textured(material* mat, vertex* verts, int n_verts, primi
 	vertex_layout layout;
 
 	if ( orthographic ) {
-		layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &verts[0].screen.xyw.x);
+		layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), (int)offsetof(vertex, screen));
 	} else {
-		layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), &verts[0].world.xyz.x);
+		layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), (int)offsetof(vertex, world));
 	}
 
-	layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &verts[0].texture_position.u);
-
+	layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), (int)offsetof(vertex, texture_position));
+	
+	int buffer_handle = Render_buffer_handle;
+	gr_update_buffer_object(buffer_handle, n_verts * sizeof(vertex), verts);
+	
 	if ( orthographic ) {
-		gr_render_primitives_2d(mat, prim_type, &layout, 0, n_verts, -1);
+		gr_render_primitives_2d(mat, prim_type, &layout, 0, n_verts, buffer_handle);
 	} else {
-		gr_render_primitives(mat, prim_type, &layout, 0, n_verts, -1);
+		gr_render_primitives(mat, prim_type, &layout, 0, n_verts, buffer_handle);
 	}
 }
 
 void render_primitives_colored(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic)
 {
 	vertex_layout layout;
+	uint mask = 0;
 
 	if ( orthographic ) {
-		layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &verts[0].screen.xyw.x);
+		layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), (int)offsetof(vertex, screen));
 	} else {
-		layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), &verts[0].world.xyz.x);
+		layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), (int)offsetof(vertex, world));
 	}
 
-	layout.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), &verts[0].r);
+	layout.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), (int)offsetof(vertex, r));
+
+	int buffer_handle = Render_buffer_handle;
+	gr_update_buffer_object(buffer_handle, n_verts * sizeof(vertex), verts);
 
 	if ( orthographic ) {
-		gr_render_primitives_2d(mat, prim_type, &layout, 0, n_verts, -1);
+		gr_render_primitives_2d(mat, prim_type, &layout, 0, n_verts, buffer_handle);
 	} else {
-		gr_render_primitives(mat, prim_type, &layout, 0, n_verts, -1);
+		gr_render_primitives(mat, prim_type, &layout, 0, n_verts, buffer_handle);
 	}
 }
 
@@ -171,18 +185,21 @@ void render_primitives_colored_textured(material* mat, vertex* verts, int n_vert
 	vertex_layout layout;
 
 	if ( orthographic ) {
-		layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &verts[0].screen.xyw.x);
+		layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), (int)offsetof(vertex, screen));
 	} else {
-		layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), &verts[0].world.xyz.x);
+		layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), (int)offsetof(vertex, world));
 	}
 
-	layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &verts[0].texture_position.u);
-	layout.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), &verts[0].r);
+	layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), (int)offsetof(vertex, r));
+	layout.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), (int)offsetof(vertex, r));
+
+	int buffer_handle = Render_buffer_handle;
+	gr_update_buffer_object(buffer_handle, n_verts * sizeof(vertex), verts);
 
 	if ( orthographic ) {
-		gr_render_primitives_2d(mat, prim_type, &layout, 0, n_verts, -1);
+		gr_render_primitives_2d(mat, prim_type, &layout, 0, n_verts, buffer_handle);
 	} else {
-		gr_render_primitives(mat, prim_type, &layout, 0, n_verts, -1);
+		gr_render_primitives(mat, prim_type, &layout, 0, n_verts, buffer_handle);
 	}
 }
 
@@ -198,12 +215,37 @@ void render_screen_points_textured(
 		{ x2, y2, u2, v2 }
 	};
 
+	vertex vertices[4];
+
+	vertices[0].screen.xyw.x = x1;
+	vertices[0].screen.xyw.y = y1;
+	vertices[0].texture_position.u = u1;
+	vertices[0].texture_position.v = v1;
+
+	vertices[1].screen.xyw.x = x1;
+	vertices[1].screen.xyw.y = y2;
+	vertices[1].texture_position.u = u1;
+	vertices[1].texture_position.v = v2;
+
+	vertices[2].screen.xyw.x = x2;
+	vertices[2].screen.xyw.y = y1;
+	vertices[2].texture_position.u = u2;
+	vertices[2].texture_position.v = v1;
+
+	vertices[3].screen.xyw.x = x2;
+	vertices[3].screen.xyw.y = y2;
+	vertices[3].texture_position.u = u2;
+	vertices[3].texture_position.v = v2;
+
 	vertex_layout vert_def;
 
-	vert_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(glVertices[0]), glVertices);
-	vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(glVertices[0]), &(glVertices[0][2]));
+	vert_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), (int)offsetof(vertex, screen));
+	vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), (int)offsetof(vertex, texture_position));
 
-	gr_render_primitives_2d(material_info, PRIM_TYPE_TRISTRIP, &vert_def, 0, 4);
+	int buffer_handle = Render_buffer_handle;
+	gr_update_buffer_object(buffer_handle, sizeof(vertex) * 4, vertices);
+
+	gr_render_primitives_2d(material_info, PRIM_TYPE_TRISTRIP, &vert_def, 0, 4, buffer_handle);
 }
 
 void render_screen_points(
@@ -220,9 +262,12 @@ void render_screen_points(
 
 	vertex_layout vert_def;
 
-	vert_def.add_vertex_component(vertex_format_data::SCREEN_POS, 0, glVertices);
+	vert_def.add_vertex_component(vertex_format_data::SCREEN_POS, 0, 0);
 
-	gr_render_primitives_2d(material_info, PRIM_TYPE_TRISTRIP, &vert_def, 0, 4);
+	int buffer_handle = Render_buffer_handle;
+	gr_update_buffer_object(buffer_handle, sizeof(int) * 8, glVertices);
+
+	gr_render_primitives_2d(material_info, PRIM_TYPE_TRISTRIP, &vert_def, 0, 4, buffer_handle);
 }
 
 void render_screen_points(
@@ -239,9 +284,12 @@ void render_screen_points(
 
 	vertex_layout vert_def;
 
-	vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, glVertices);
+	vert_def.add_vertex_component(vertex_format_data::SCREEN_POS, 0, 0);
 
-	gr_render_primitives_2d(material_info, PRIM_TYPE_TRISTRIP, &vert_def, 0, 4);
+	int buffer_handle = Render_buffer_handle;
+	gr_update_buffer_object(buffer_handle, sizeof(int) * 8, glVertices);
+
+	gr_render_primitives_2d(material_info, PRIM_TYPE_TRISTRIP, &vert_def, 0, 4, buffer_handle);
 }
 
 // adapted from g3_draw_polygon()
@@ -1378,9 +1426,13 @@ void render_line(color *clr, int x1,int y1,int x2,int y2, int resize_mode)
 
 		vertex_layout vert_def;
 
-		vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, vert);
+		vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, 0);
 
-		gr_render_primitives_2d(&mat, PRIM_TYPE_POINTS, &vert_def, 0, 1);
+		int buffer_handle = Render_buffer_handle;
+
+		gr_update_buffer_object(buffer_handle, sizeof(float) * 3, vert);
+
+		gr_render_primitives_2d(&mat, PRIM_TYPE_POINTS, &vert_def, 0, 1, buffer_handle);
 
 		return;
 	}
@@ -1406,9 +1458,12 @@ void render_line(color *clr, int x1,int y1,int x2,int y2, int resize_mode)
 
 	vertex_layout vert_def;
 
-	vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, line);
+	vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, 0);
 
-	gr_render_primitives_2d(&mat, PRIM_TYPE_LINES, &vert_def, 0, 2);
+	int buffer_handle = Render_buffer_handle;
+	gr_update_buffer_object(buffer_handle, sizeof(float) * 6, line);
+
+	gr_render_primitives_2d(&mat, PRIM_TYPE_LINES, &vert_def, 0, 2, buffer_handle);
 }
 
 void render_line(int x1, int y1, int x2, int y2, int resize_mode)
@@ -1439,9 +1494,12 @@ void render_line_3d(color *clr, bool depth_testing, vec3d *start, vec3d *end)
 
 	vertex_layout vert_def;
 
-	vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, line);
+	vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, 0);
 
-	gr_render_primitives(&mat, PRIM_TYPE_LINES, &vert_def, 0, 2);
+	int buffer_handle = Render_buffer_handle;
+	gr_update_buffer_object(buffer_handle, sizeof(float) * 6, line);
+
+	gr_render_primitives(&mat, PRIM_TYPE_LINES, &vert_def, 0, 2, buffer_handle);
 }
 
 void render_line_3d(bool depth_testing, vec3d *start, vec3d *end)
@@ -1966,8 +2024,8 @@ void render_string(color *clr, float sx, float sy, const char *s, int resize_mod
 
 	vertex_layout vert_def;
 
-	vert_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(string_vert), &String_render_buff[0].x);
-	vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(string_vert), &String_render_buff[0].u);
+	vert_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(string_vert), (int)offsetof(string_vert, x));
+	vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(string_vert), (int)offsetof(string_vert, u));
 
 	// pick out letter coords, draw it, goto next letter and do the same
 	while (*s)	{
@@ -2065,7 +2123,9 @@ void render_string(color *clr, float sx, float sy, const char *s, int resize_mod
 		v1 = v_scale * (i2fl((v+yd)+hc) / bh);
 
 		if ( buffer_offset == MAX_VERTS_PER_DRAW ) {
-			gr_render_primitives_2d(&mat, PRIM_TYPE_TRIS, &vert_def, 0, buffer_offset);
+			int buffer_handle = Render_buffer_handle;
+			gr_update_buffer_object(buffer_handle, sizeof(string_vert) * buffer_offset, String_render_buff);
+			gr_render_primitives_2d(&mat, PRIM_TYPE_TRIS, &vert_def, 0, buffer_offset, buffer_handle);
 			buffer_offset = 0;
 		}
 
@@ -2107,7 +2167,9 @@ void render_string(color *clr, float sx, float sy, const char *s, int resize_mod
 	}
 
 	if ( buffer_offset ) {
-		gr_render_primitives_2d(&mat, PRIM_TYPE_TRIS, &vert_def, 0, buffer_offset);
+		int buffer_handle = Render_buffer_handle;
+		gr_update_buffer_object(buffer_handle, sizeof(string_vert) * buffer_offset, String_render_buff);
+		gr_render_primitives_2d(&mat, PRIM_TYPE_TRIS, &vert_def, 0, buffer_offset, buffer_handle);
 	}
 }
 
@@ -2190,9 +2252,12 @@ void render_aaline(color *clr, vertex *v1, vertex *v2)
 
 		vertex_layout vert_def;
 
-		vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, vert);
+		vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, 0);
 
-		gr_render_primitives_2d(&mat, PRIM_TYPE_POINTS, &vert_def, 0, 1);
+		int buffer_handle = Render_buffer_handle;
+		gr_update_buffer_object(buffer_handle, sizeof(float) * 3, vert);
+
+		gr_render_primitives_2d(&mat, PRIM_TYPE_POINTS, &vert_def, 0, 1, buffer_handle);
 
 		return;
 	}
@@ -2218,9 +2283,12 @@ void render_aaline(color *clr, vertex *v1, vertex *v2)
 
 	vertex_layout vert_def;
 
-	vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, line);
+	vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, 0);
 
-	gr_render_primitives_2d(&mat, PRIM_TYPE_LINES, &vert_def, 0, 2);
+	int buffer_handle = Render_buffer_handle;
+	gr_update_buffer_object(buffer_handle, sizeof(float) * 6, line);
+
+	gr_render_primitives_2d(&mat, PRIM_TYPE_LINES, &vert_def, 0, 2, buffer_handle);
 
 //	glDisable( GL_LINE_SMOOTH );
 }
@@ -2276,23 +2344,32 @@ void render_gradient(color *clr, int x1, int y1, int x2, int y2, int resize_mode
 			sx1 += 0.5f;
 		}
 	}
+	
+	vertex vertices[2];
 
-	ubyte colour[8] = {
-		clr->red, clr->green, clr->blue, ba,
-		clr->red, clr->green, clr->blue, aa
-	};
+	vertices[0].screen.xyw.x = sx2;
+	vertices[0].screen.xyw.y = sy2;
+	vertices[0].r = clr->red;
+	vertices[0].g = clr->green;
+	vertices[0].b = clr->blue;
+	vertices[0].a = ba;
 
-	float verts[4] = {
-		sx2, sy2,
-		sx1, sy1
-	};
+	vertices[1].screen.xyw.y = sx1;
+	vertices[1].screen.xyw.y = sy1;
+	vertices[1].r = clr->red;
+	vertices[1].g = clr->green;
+	vertices[1].b = clr->blue;
+	vertices[1].a = aa;
 
 	vertex_layout vert_def;
 
-	vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, verts);
-	vert_def.add_vertex_component(vertex_format_data::COLOR4, 0, colour);
+	vert_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), (int)offsetof(vertex, screen));
+	vert_def.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), (int)offsetof(vertex, r));
 
-	gr_render_primitives_2d(&mat, PRIM_TYPE_LINES, &vert_def, 0, 2);
+	int buffer_handle = Render_buffer_handle;
+	gr_update_buffer_object(buffer_handle, sizeof(vertex) * 2, vertices);
+
+	gr_render_primitives_2d(&mat, PRIM_TYPE_LINES, &vert_def, 0, 2, buffer_handle);
 }
 
 void render_gradient(int x1, int y1, int x2, int y2, int resize_mode)
@@ -2390,9 +2467,12 @@ void render_arc(color *clr, int xc, int yc, float r, float angle_start, float an
 		}
 
 		vertex_layout vert_def;
-		vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, arc);
+		vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, 0);
 
-		gr_render_primitives_2d(&material_params, PRIM_TYPE_TRIFAN, &vert_def, 0, segments + 1);
+		int buffer_handle = Render_buffer_handle;
+		gr_update_buffer_object(buffer_handle, sizeof(float) * segments * 2 + 2, arc);
+
+		gr_render_primitives_2d(&material_params, PRIM_TYPE_TRIFAN, &vert_def, 0, segments + 1, buffer_handle);
 	} else {
 		arc = new float[segments * 4];
 
@@ -2412,9 +2492,12 @@ void render_arc(color *clr, int xc, int yc, float r, float angle_start, float an
 		}
 
 		vertex_layout vert_def;
-		vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, arc);
+		vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, 0);
 
-		gr_render_primitives_2d(&material_params, PRIM_TYPE_QUADSTRIP, &vert_def, 0, segments * 2);
+		int buffer_handle = Render_buffer_handle;
+		gr_update_buffer_object(buffer_handle, sizeof(float) * segments * 4, arc);
+
+		gr_render_primitives_2d(&material_params, PRIM_TYPE_QUADSTRIP, &vert_def, 0, segments * 2, buffer_handle);
 	}
 
 	delete [] arc;
@@ -2502,9 +2585,12 @@ void render_unfilled_circle(color *clr, float linewidth, int xc, int yc, int d, 
 	}
 
 	vertex_layout vert_def;
-	vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, circle);
+	vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, 0);
 
-	gr_render_primitives_2d(&material_params, PRIM_TYPE_QUADSTRIP, &vert_def, 0, segments * 2);
+	int buffer_handle = Render_buffer_handle;
+	gr_update_buffer_object(buffer_handle, sizeof(float) * segments * 4, circle);
+
+	gr_render_primitives_2d(&material_params, PRIM_TYPE_QUADSTRIP, &vert_def, 0, segments * 2, buffer_handle);
 
 	delete [] circle;
 }

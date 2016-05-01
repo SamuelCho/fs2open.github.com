@@ -217,7 +217,7 @@ struct vertex_format_data
 	vertex_format_data(vertex_format i_format_type, uint i_stride, int i_offset) : 
 	format_type(i_format_type), stride(i_stride), data_src(NULL), offset(i_offset) {}
 
-	static uint mask(vertex_format v_format) { return 1 << v_format; }
+	static inline uint mask(vertex_format v_format) { return 1 << v_format; }
 };
 
 class vertex_layout
@@ -225,21 +225,15 @@ class vertex_layout
 	SCP_vector<vertex_format_data> Vertex_components;
 
 	uint Vertex_mask;
-
-	void* base_ptr;
 public:
-	vertex_layout(): Vertex_mask(0), base_ptr(NULL) {}
+	vertex_layout(): Vertex_mask(0) {}
 
-	vertex_layout(void* init_ptr): Vertex_mask(0), base_ptr(init_ptr) {}
+	vertex_layout(void* init_ptr): Vertex_mask(0) {}
 
 	uint get_num_vertex_components() { return Vertex_components.size(); }
 
 	vertex_format_data* get_vertex_component(uint index) { return &Vertex_components[index]; }
-
-	void* get_base_vertex_ptr() { return base_ptr; }
-
-	void set_base_vertex_ptr(void* i_base_ptr) { base_ptr = i_base_ptr; }
-
+	
 	bool resident_vertex_format(vertex_format_data::vertex_format format_type)
 	{ 
 		return ( Vertex_mask & vertex_format_data::mask(format_type) ) ? true : false; 
@@ -271,23 +265,31 @@ public:
 		Vertex_mask |= (1 << format_type);
 		Vertex_components.push_back(vertex_format_data(format_type, stride, offset));
 	}
-};
 
-class vertex_source
-{
-	vertex_layout Vert_config;
+	void set_component_offset_for_type_vertex(vertex_format_data::vertex_format format_type)
+	{
+		int offset;
 
-	int offset;
+		switch ( format_type ) {
+		case vertex_format_data::POSITION2:
+			offset = offsetof(vertex, screen);
+			break;
+		case vertex_format_data::POSITION3:
+			offset = offsetof(vertex, world);
+			break;
+		case vertex_format_data::TEX_COORD:
+			offset = offsetof(vertex, texture_position);
+			break;
+		case vertex_format_data::COLOR3:
+		case vertex_format_data::COLOR4:
+			offset = offsetof(vertex, r);
+			break;
+		default:
+			return;
+		}
 
-	int Vertex_buffer_handle;
-
-	int Index_buffer_handle;
-	void* Index_ptr;
-
-	int Num_verts;
-
-public:
-	vertex_source() {}
+		add_vertex_component(format_type, sizeof(vertex), offset);
+	}
 };
 
 // stencil buffering stuff
