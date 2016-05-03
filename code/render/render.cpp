@@ -190,7 +190,7 @@ void render_primitives_colored_textured(material* mat, vertex* verts, int n_vert
 		layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), (int)offsetof(vertex, world));
 	}
 
-	layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), (int)offsetof(vertex, r));
+	layout.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), (int)offsetof(vertex, texture_position));
 	layout.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), (int)offsetof(vertex, r));
 
 	int buffer_handle = Render_buffer_handle;
@@ -284,7 +284,7 @@ void render_screen_points(
 
 	vertex_layout vert_def;
 
-	vert_def.add_vertex_component(vertex_format_data::SCREEN_POS, 0, 0);
+	vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, 0);
 
 	int buffer_handle = Render_buffer_handle;
 	gr_update_buffer_object(buffer_handle, sizeof(int) * 8, glVertices);
