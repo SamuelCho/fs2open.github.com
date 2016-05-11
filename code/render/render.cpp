@@ -287,7 +287,7 @@ void render_screen_points(
 	vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, 0);
 
 	int buffer_handle = Render_buffer_handle;
-	gr_update_buffer_object(buffer_handle, sizeof(int) * 8, glVertices);
+	gr_update_buffer_object(buffer_handle, sizeof(float) * 8, glVertices);
 
 	gr_render_primitives_2d(material_info, PRIM_TYPE_TRISTRIP, &vert_def, 0, 4, buffer_handle);
 }
