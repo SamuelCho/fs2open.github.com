@@ -329,9 +329,9 @@ static SCP_string get_shader_header(shader_type type_id, int flags, shader_stage
 #endif
 
 	// apply different macros for differing GLSL versions
-	if ( GL_version >= 30 && GLSL_version >= 130 ) {
+	if ( GL_version >= 32 && GLSL_version >= 150 ) {
 		if ( stage == SDR_STAGE_VERTEX ) {
-			sflags << "#version 130\n";
+			sflags << "#version 150\n";
 			sflags << "#define vertIn in\n";
 			sflags << "#define vertOut out\n";
 			sflags << "#define tex2D texture\n";
@@ -339,7 +339,7 @@ static SCP_string get_shader_header(shader_type type_id, int flags, shader_stage
 			sflags << "#define texCube texture\n";
 			sflags << "#define tex2DArray texture\n";
 		} else if ( stage == SDR_STAGE_FRAGMENT ) {
-			sflags << "#version 130\n";
+			sflags << "#version 150\n";
 			sflags << "#define fragIn in\n";
 			sflags << "#define tex2D texture\n";
 			sflags << "#define tex2DLod textureLod\n";
@@ -496,7 +496,7 @@ int opengl_compile_shader(shader_type sdr, uint flags)
 	opengl_shader_set_current(&new_shader);
 
 	// bind fragment data locations
-	if ( GL_version >= 30 && GLSL_version >= 130 ) {
+	if ( GL_version >= 32 && GLSL_version >= 150 ) {
 		vglBindFragDataLocationEXT(new_shader.program_id, 0, "fragOut0");
 		vglBindFragDataLocationEXT(new_shader.program_id, 1, "fragOut1");
 		vglBindFragDataLocationEXT(new_shader.program_id, 2, "fragOut2");

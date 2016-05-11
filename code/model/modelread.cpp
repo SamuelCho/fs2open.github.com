@@ -810,7 +810,7 @@ void create_vertex_buffer(polymodel *pm)
 
 	bool use_batched_rendering = true;
 
-	if ( GLSL_version >= 130 && !Cmdline_no_batching ) {
+	if ( GLSL_version >= 150 && !Cmdline_no_batching ) {
 		uint stride = 0;
 
 		// figure out if the vertex stride of this entire model matches. if not, turn off batched rendering for this model
@@ -2468,7 +2468,7 @@ void model_load_texture(polymodel *pm, int i, char *file)
 	gr_maybe_create_shader(SDR_TYPE_MODEL, shader_flags | SDR_FLAG_MODEL_LIGHT);
 	gr_maybe_create_shader(SDR_TYPE_MODEL, shader_flags | SDR_FLAG_MODEL_LIGHT | SDR_FLAG_MODEL_FOG);
 	
-	if( !Cmdline_no_batching && GLSL_version >= 130 ) {
+	if( !Cmdline_no_batching && GLSL_version >= 150 ) {
 		shader_flags &= ~SDR_FLAG_MODEL_DEFERRED;
 		shader_flags |= SDR_FLAG_MODEL_TRANSFORM;
 
