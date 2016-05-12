@@ -1055,8 +1055,6 @@ bool gr_init(int d_mode, int d_width, int d_height, int d_depth)
 
 	bm_init();
 
-	render_init_buffer();
-
 	if (Gr_cursor < 0) {
 		int w, h;
 

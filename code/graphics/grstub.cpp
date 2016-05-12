@@ -549,7 +549,17 @@ void gr_stub_render_primitives(material* material_info, primitive_type prim_type
 
 }
 
+void gr_stub_render_primitives_immediate(material* material_info, primitive_type prim_type, vertex_layout* layout, int n_verts, void* data, int size)
+{
+
+}
+
 void gr_stub_render_primitives_2d(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+{
+
+}
+
+void gr_stub_render_primitives_2d_immediate(material* material_info, primitive_type prim_type, vertex_layout* layout, int n_verts, void* data, int size)
 {
 
 }
@@ -759,7 +769,9 @@ bool gr_stub_init()
 
 	gr_screen.gf_render_model = gr_stub_render_model;
 	gr_screen.gf_render_primitives	= gr_stub_render_primitives;
+	gr_screen.gf_render_primitives_immediate = gr_stub_render_primitives_immediate;
 	gr_screen.gf_render_primitives_2d	= gr_stub_render_primitives_2d;
+	gr_screen.gf_render_primitives_2d_immediate = gr_stub_render_primitives_2d_immediate;
 	gr_screen.gf_render_primitives_particle	= gr_stub_render_primitives_particle;
 	gr_screen.gf_render_primitives_distortion = gr_stub_render_primitives_distortion;
 

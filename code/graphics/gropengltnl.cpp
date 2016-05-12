@@ -192,6 +192,11 @@ static opengl_vertex_buffer *g_vbp = NULL;
 static int GL_vertex_buffers_in_use = 0;
 static int GL_render_buffers_in_use = 0;
 
+int GL_immediate_buffer_handle = -1;
+static uint GL_immediate_buffer_offset = 0;
+static uint GL_immediate_buffer_size = 0;
+static const int IMMEDIATE_BUFFER_RESIZE_BLOCK_SIZE = 2048;
+
 int opengl_create_buffer_object(GLenum type, GLenum usage)
 {
 	opengl_buffer_object buffer_obj;
@@ -250,6 +255,18 @@ void gr_opengl_update_buffer_object(int handle, uint size, void* data)
 	vglBufferDataARB(buffer_obj.type, size, data, buffer_obj.usage);
 }
 
+void opengl_update_buffer_object_offset(int handle, uint offset, uint size, void* data)
+{
+	Assert(handle >= 0);
+	Assert((size_t)handle < GL_buffer_objects.size());
+
+	opengl_buffer_object &buffer_obj = GL_buffer_objects[handle];
+
+	opengl_bind_buffer_object(handle);
+	
+	vglBufferSubDataARB(buffer_obj.type, offset, size, data);
+}
+
 void opengl_delete_buffer_object(int handle)
 {
 	Assert(handle >= 0);
@@ -273,6 +290,46 @@ int gr_opengl_create_stream_buffer_object()
 	}
 
 	return opengl_create_buffer_object(GL_ARRAY_BUFFER_ARB, GL_STREAM_DRAW_ARB);
+}
+
+uint opengl_add_to_immediate_buffer(uint size, void *data)
+{
+	if ( GL_immediate_buffer_handle < 0 ) {
+		GL_immediate_buffer_handle = opengl_create_buffer_object(GL_ARRAY_BUFFER_ARB, GL_STREAM_DRAW_ARB);
+	}
+
+	Assert(size > 0 && data != NULL);
+
+	if ( GL_immediate_buffer_offset + size > GL_immediate_buffer_size ) {
+		// incoming data won't fit the immediate buffer. time to reallocate.
+		GL_immediate_buffer_offset = 0;
+		GL_immediate_buffer_size += MAX(IMMEDIATE_BUFFER_RESIZE_BLOCK_SIZE, size);
+		
+		gr_opengl_update_buffer_object(GL_immediate_buffer_handle, GL_immediate_buffer_size, NULL);
+	}
+
+	// only update a section of the immediate vertex buffer
+	opengl_update_buffer_object_offset(GL_immediate_buffer_handle, GL_immediate_buffer_offset, size, data);
+
+	uint old_offset = GL_immediate_buffer_offset;
+
+	GL_immediate_buffer_offset += size;
+
+	return old_offset;
+}
+
+void opengl_reset_immediate_buffer()
+{
+	if ( GL_immediate_buffer_handle < 0 ) {
+		// we haven't used the immediate buffer yet
+		return;
+	}
+
+	// orphan the immediate buffer so we can start fresh in a new frame
+	gr_opengl_update_buffer_object(GL_immediate_buffer_handle, GL_immediate_buffer_size, NULL);
+
+	// bring our offset to the beginning of the immediate buffer
+	GL_immediate_buffer_offset = 0;
 }
 
 int opengl_create_texture_buffer_object()

@@ -17,6 +17,7 @@
 #include "palman/palman.h"
 #include "graphics/material.h"
 #include "render/3d.h"
+#include "render/render.h"
 #include "starfield/nebula.h"
 
 #define MAX_TRIS 200
@@ -215,12 +216,11 @@ void nebula_render()
 		nebula_get_color_from_palette(&verts[1].r, &verts[1].g, &verts[1].b, verts[1].b);
 		nebula_get_color_from_palette(&verts[2].r, &verts[2].g, &verts[2].b, verts[2].b);
 
-		vertex_layout layout;
+		verts[0].a = 255;
+		verts[1].a = 255;
+		verts[2].a = 255;
 
-		layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), &verts[0].screen);
-		layout.add_vertex_component(vertex_format_data::COLOR3, sizeof(vertex), &verts[0].r);
-
-		gr_render_primitives_2d(&nebula_material, PRIM_TYPE_TRIFAN, &layout, 0, 3);
+		render_primitives_colored(&nebula_material, verts, 3, PRIM_TYPE_TRIFAN, true);
 	}
 
 	g3_done_instance(false);

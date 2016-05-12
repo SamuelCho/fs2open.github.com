@@ -36,6 +36,8 @@ extern matrix4 GL_model_view_matrix;
 extern matrix4 GL_projection_matrix;
 extern matrix4 GL_last_projection_matrix;
 
+extern int GL_immediate_buffer_handle;
+
 void gr_opengl_start_instance_matrix(const vec3d *offset, const matrix *rotation);
 void gr_opengl_start_instance_angles(const vec3d *pos, const angles *rotation);
 void gr_opengl_end_instance_matrix();
@@ -69,6 +71,9 @@ void opengl_delete_buffer_object(int handle);
 
 void gr_opengl_update_transform_buffer(void* data, uint size);
 void gr_opengl_set_transform_buffer_offset(int offset);
+
+uint opengl_add_to_immediate_buffer(uint size, void *data);
+void opengl_reset_immediate_buffer();
 
 int gr_opengl_create_stream_buffer_object();
 void gr_opengl_render_stream_buffer(int buffer_handle, int offset, int n_verts, int flags);

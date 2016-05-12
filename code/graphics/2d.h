@@ -862,9 +862,11 @@ typedef struct screen {
 	// new drawing functions
 	void (*gf_render_model)(model_material* material_info, vertex_buffer* bufferp, int texi);
 	void (*gf_render_primitives)(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
+	void (*gf_render_primitives_immediate)(material* material_info, primitive_type prim_type, vertex_layout* layout, int n_verts, void* data, int size);
 	void (*gf_render_primitives_particle)(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
 	void (*gf_render_primitives_distortion)(distortion_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
 	void (*gf_render_primitives_2d)(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
+	void (*gf_render_primitives_2d_immediate)(material* material_info, primitive_type prim_type, vertex_layout* layout, int n_verts, void* data, int size);
 
 	bool (*gf_is_capable)(gr_capability capability);
 } screen;
@@ -1187,9 +1189,15 @@ __inline void gr_render_buffer(int start, const vertex_buffer *bufferp, int texi
 
 #define gr_shadow_map_start				GR_CALL(*gr_screen.gf_shadow_map_start)
 #define gr_shadow_map_end				GR_CALL(*gr_screen.gf_shadow_map_end)
+
 __inline void gr_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle = -1)
 {
 	(*gr_screen.gf_render_primitives)(material_info, prim_type, layout, offset, n_verts, buffer_handle);
+}
+
+__inline void gr_render_primitives_immediate(material* material_info, primitive_type prim_type, vertex_layout* layout, int n_verts, void* data, int size)
+{
+	(*gr_screen.gf_render_primitives_immediate)(material_info, prim_type, layout, n_verts, data, size);
 }
 
 __inline void gr_render_primitives_particle(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle = -1)
@@ -1205,6 +1213,11 @@ __inline void gr_render_primitives_distortion(distortion_material* material_info
 __inline void gr_render_primitives_2d(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle = -1)
 {
 	(*gr_screen.gf_render_primitives_2d)(material_info, prim_type, layout, offset, n_verts, buffer_handle);
+}
+
+__inline void gr_render_primitives_2d_immediate(material* material_info, primitive_type prim_type, vertex_layout* layout, int n_verts, void* data, int size)
+{
+	(*gr_screen.gf_render_primitives_2d_immediate)(material_info, prim_type, layout, n_verts, data, size);
 }
 
 __inline void gr_render_model(model_material* material_info, vertex_buffer* bufferp, int texi)
