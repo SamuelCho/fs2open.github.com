@@ -107,19 +107,32 @@ inline GLenum opengl_primitive_type(primitive_type prim_type)
 	}
 }
 
-void opengl_bind_vertex_component(vertex_format_data &vert_component, void* base_ptr)
+void opengl_bind_vertex_component(vertex_format_data &vert_component, uint base_vertex, ubyte* base_ptr)
 {
 	opengl_vertex_bind &bind_info = GL_array_binding_data[vert_component.format_type];
 	opengl_vert_attrib &attrib_info = GL_vertex_attrib_info[bind_info.attribute_id];
 
 	Assert(bind_info.attribute_id == attrib_info.attribute_id);
 
-	void* data_src;
+	uint byte_offset = 0;
+
+	// determine if we need to offset into this vertex buffer by # of base_vertex vertices
+	if ( base_vertex > 0 ) {
+		if ( vert_component.stride > 0 ) {
+			// we have a stride so it's just number of bytes per stride times number of verts
+			byte_offset = vert_component.stride * base_vertex;
+		} else {
+			// no stride so that means verts are tightly packed so offset based off of the data type and width.
+			byte_offset = bind_info.size * opengl_data_type_size(bind_info.data_type) * base_vertex;
+		}
+	}
+
+	GLubyte *data_src;
 
 	if ( vert_component.offset >= 0 ) {
-		data_src = (ubyte*)base_ptr + vert_component.offset;
+		data_src = (GLubyte*)base_ptr + vert_component.offset + byte_offset;
 	} else {
-		data_src = vert_component.data_src;
+		data_src = (GLubyte*)vert_component.data_src + byte_offset;
 	}
 
 	if ( is_minimum_GLSL_version() && Current_shader != NULL ) {
@@ -171,14 +184,14 @@ void opengl_bind_vertex_component(vertex_format_data &vert_component, void* base
 	}
 }
 
-void opengl_bind_vertex_layout(vertex_layout &layout, uint offset)
+void opengl_bind_vertex_layout(vertex_layout &layout, uint base_vertex, ubyte* base_ptr)
 {
 	GL_state.Array.BindPointersBegin();
 
 	uint num_vertex_bindings = layout.get_num_vertex_components();
 
 	for ( uint i = 0; i < num_vertex_bindings; ++i ) {
-		opengl_bind_vertex_component(*layout.get_vertex_component(i), (ubyte*)offset);
+		opengl_bind_vertex_component(*layout.get_vertex_component(i), base_vertex, base_ptr);
 	}
 
 	GL_state.Array.BindPointersEnd();
@@ -3418,7 +3431,7 @@ void gr_opengl_render_primitives_immediate(material* material_info, primitive_ty
 
 	opengl_bind_buffer_object(GL_immediate_buffer_handle);
 
-	opengl_bind_vertex_layout(*layout, offset);
+	opengl_bind_vertex_layout(*layout, 0, (ubyte*)offset);
 
 	glDrawArrays(opengl_primitive_type(prim_type), 0, n_verts);
 }

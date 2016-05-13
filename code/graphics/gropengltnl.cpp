@@ -108,46 +108,6 @@ struct opengl_buffer_object {
 	GLuint texture;	// for texture buffer objects
 };
 
-struct opengl_render_buffer {
-	GLfloat *array_list;	// interleaved array
-	GLubyte *index_list;
-
-	int vb_handle;
-	int ib_handle;
-
-	uint vbo_size;
-	uint ibo_size;
-
-	bool indexed;
-
-	opengl_render_buffer() :
-		array_list(NULL), index_list(NULL),
-		vbo_size(0), ibo_size(0), vb_handle(-1), ib_handle(-1), indexed(false)
-	{
-	}
-
-	void clear();
-};
-
-void opengl_render_buffer::clear()
-{
-	if (array_list) {
-		vm_free(array_list);
-	}
-
-	if (index_list) {
-		vm_free(index_list);
-	}
-
-	if (vb_handle >= 0) {
-		opengl_delete_buffer_object(vb_handle);
-	}
-
-	if (ib_handle >= 0) {
-		opengl_delete_buffer_object(ib_handle);
-	}
-}
-
 struct opengl_vertex_buffer {
 	GLfloat *array_list;	// interleaved array
 	GLubyte *index_list;
@@ -178,11 +138,11 @@ void opengl_vertex_buffer::clear()
 	}
 	
 	if ( vb_handle >= 0 ) {
-		opengl_delete_buffer_object(vb_handle);
+		gr_opengl_delete_buffer(vb_handle);
 	}
 
 	if ( ib_handle >= 0 ) {
-		opengl_delete_buffer_object(ib_handle);
+		gr_opengl_delete_buffer(ib_handle);
 	}
 }
 
@@ -190,7 +150,6 @@ static SCP_vector<opengl_buffer_object> GL_buffer_objects;
 static SCP_vector<opengl_vertex_buffer> GL_vertex_buffers;
 static opengl_vertex_buffer *g_vbp = NULL;
 static int GL_vertex_buffers_in_use = 0;
-static int GL_render_buffers_in_use = 0;
 
 int GL_immediate_buffer_handle = -1;
 static uint GL_immediate_buffer_offset = 0;
@@ -239,8 +198,12 @@ void opengl_bind_buffer_object(int handle)
 	}
 }
 
-void gr_opengl_update_buffer_object(int handle, uint size, void* data)
+void gr_opengl_update_buffer_data(int handle, uint size, void* data)
 {
+	if ( !Use_VBOs ) {
+		return;
+	}
+
 	Assert(handle >= 0);
 	Assert((size_t)handle < GL_buffer_objects.size());
 
@@ -255,7 +218,7 @@ void gr_opengl_update_buffer_object(int handle, uint size, void* data)
 	vglBufferDataARB(buffer_obj.type, size, data, buffer_obj.usage);
 }
 
-void opengl_update_buffer_object_offset(int handle, uint offset, uint size, void* data)
+void opengl_update_buffer_data_offset(int handle, uint offset, uint size, void* data)
 {
 	Assert(handle >= 0);
 	Assert((size_t)handle < GL_buffer_objects.size());
@@ -267,7 +230,7 @@ void opengl_update_buffer_object_offset(int handle, uint offset, uint size, void
 	vglBufferSubDataARB(buffer_obj.type, offset, size, data);
 }
 
-void opengl_delete_buffer_object(int handle)
+void gr_opengl_delete_buffer(int handle)
 {
 	Assert(handle >= 0);
 	Assert((size_t)handle < GL_buffer_objects.size());
@@ -281,6 +244,24 @@ void opengl_delete_buffer_object(int handle)
 	GL_vertex_data_in -= buffer_obj.size;
 
 	vglDeleteBuffersARB(1, &buffer_obj.buffer_id);
+}
+
+int gr_opengl_create_vertex_buffer(bool static_buffer)
+{
+	if ( !Use_VBOs ) {
+		return -1;
+	}
+
+	return opengl_create_buffer_object(GL_ARRAY_BUFFER_ARB, static_buffer ? GL_STATIC_DRAW_ARB : GL_STREAM_DRAW_ARB);
+}
+
+int gr_opengl_create_index_buffer(bool static_buffer)
+{
+	if ( !Use_VBOs ) {
+		return -1;
+	}
+
+	return opengl_create_buffer_object(GL_ELEMENT_ARRAY_BUFFER_ARB, static_buffer ? GL_STATIC_DRAW_ARB : GL_STREAM_DRAW_ARB);
 }
 
 int gr_opengl_create_stream_buffer_object()
@@ -305,11 +286,11 @@ uint opengl_add_to_immediate_buffer(uint size, void *data)
 		GL_immediate_buffer_offset = 0;
 		GL_immediate_buffer_size += MAX(IMMEDIATE_BUFFER_RESIZE_BLOCK_SIZE, size);
 		
-		gr_opengl_update_buffer_object(GL_immediate_buffer_handle, GL_immediate_buffer_size, NULL);
+		gr_opengl_update_buffer_data(GL_immediate_buffer_handle, GL_immediate_buffer_size, NULL);
 	}
 
 	// only update a section of the immediate vertex buffer
-	opengl_update_buffer_object_offset(GL_immediate_buffer_handle, GL_immediate_buffer_offset, size, data);
+	opengl_update_buffer_data_offset(GL_immediate_buffer_handle, GL_immediate_buffer_offset, size, data);
 
 	uint old_offset = GL_immediate_buffer_offset;
 
@@ -326,7 +307,7 @@ void opengl_reset_immediate_buffer()
 	}
 
 	// orphan the immediate buffer so we can start fresh in a new frame
-	gr_opengl_update_buffer_object(GL_immediate_buffer_handle, GL_immediate_buffer_size, NULL);
+	gr_opengl_update_buffer_data(GL_immediate_buffer_handle, GL_immediate_buffer_size, NULL);
 
 	// bring our offset to the beginning of the immediate buffer
 	GL_immediate_buffer_offset = 0;
@@ -341,17 +322,13 @@ int opengl_create_texture_buffer_object()
 	// create the buffer
 	int buffer_object_handle = opengl_create_buffer_object(GL_TEXTURE_BUFFER_ARB, GL_DYNAMIC_DRAW_ARB);
 
-	opengl_check_for_errors();
-
 	opengl_buffer_object &buffer_obj = GL_buffer_objects[buffer_object_handle];
 
 	// create the texture
 	glGenTextures(1, &buffer_obj.texture);
 	glBindTexture(GL_TEXTURE_BUFFER_ARB, buffer_obj.texture);
 
-	opengl_check_for_errors();
-
-	gr_opengl_update_buffer_object(buffer_object_handle, 100, NULL);
+	gr_opengl_update_buffer_data(buffer_object_handle, 100, NULL);
 
 	vglTexBufferARB(GL_TEXTURE_BUFFER_ARB, GL_RGBA32F_ARB, buffer_obj.buffer_id);
 
@@ -366,7 +343,7 @@ void gr_opengl_update_transform_buffer(void* data, uint size)
 		return;
 	}
 
-	gr_opengl_update_buffer_object(Transform_buffer_handle, size, data);
+	gr_opengl_update_buffer_data(Transform_buffer_handle, size, data);
 }
 
 GLuint opengl_get_transform_buffer_texture()
@@ -406,11 +383,11 @@ static void opengl_gen_buffer(opengl_vertex_buffer *vbp)
 
 		// make sure we have one
 		if ( vbp->vb_handle >= 0 ) {
-			gr_opengl_update_buffer_object(vbp->vb_handle, vbp->vbo_size, vbp->array_list);
+			gr_opengl_update_buffer_data(vbp->vb_handle, vbp->vbo_size, vbp->array_list);
 
 			// just in case
 			if ( opengl_check_for_errors() ) {
-				opengl_delete_buffer_object(vbp->vb_handle);
+				gr_opengl_delete_buffer(vbp->vb_handle);
 				vbp->vb_handle = -1;
 				return;
 			}
@@ -431,11 +408,11 @@ static void opengl_gen_buffer(opengl_vertex_buffer *vbp)
 
 		// make sure we have one
 		if ( vbp->ib_handle >= 0 ) {
-			gr_opengl_update_buffer_object(vbp->ib_handle, vbp->ibo_size, vbp->index_list);
+			gr_opengl_update_buffer_data(vbp->ib_handle, vbp->ibo_size, vbp->index_list);
 
 			// just in case
 			if ( opengl_check_for_errors() ) {
-				opengl_delete_buffer_object(vbp->ib_handle);
+				gr_opengl_delete_buffer(vbp->ib_handle);
 				vbp->ib_handle = -1;
 				return;
 			}
@@ -717,7 +694,7 @@ void opengl_destroy_all_buffers()
 	}
 
 	for ( uint i = 0; i < GL_buffer_objects.size(); i++ ) {
-		opengl_delete_buffer_object(i);
+		gr_opengl_delete_buffer(i);
 	}
 
 	GL_vertex_buffers.clear();
@@ -840,52 +817,40 @@ void gr_opengl_set_thrust_scale(float scale)
 	GL_thrust_scale = scale;
 }
 
-static void opengl_init_arrays(opengl_vertex_buffer *vbp, const vertex_buffer *bufferp)
+static void opengl_init_arrays(opengl_vertex_buffer *vert_src, vertex_buffer *bufferp)
 {
-	GLint offset = (GLint)bufferp->vertex_offset;
+	GLint vert_offset = (GLint)bufferp->vertex_num_offset;
 	GLubyte *ptr = NULL;
 
-	if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
-		offset = 0;
+	if ( is_minimum_GLSL_version() && !GLSL_override && Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+		vert_offset = 0;
 	}
 
-	// vertex buffer
-
-	if ( vbp->vb_handle >= 0 ) {
-		opengl_bind_buffer_object(vbp->vb_handle);
+	if ( vert_src->vb_handle >= 0 ) {
+		opengl_bind_buffer_object(vert_src->vb_handle);
 	} else {
-		ptr = (GLubyte*)vbp->array_list;
+		ptr = (GLubyte*)vert_src->array_list;
 	}
 
-	vertex_layout vert_def;
+	opengl_bind_vertex_layout(bufferp->layout, vert_offset, ptr);
+}
 
-	if (bufferp->flags & VB_FLAG_UV1) {
-		vert_def.add_vertex_component(vertex_format_data::TEX_COORD, bufferp->stride, ptr + offset);
-		offset += (2 * sizeof(GLfloat));
+static void opengl_init_arrays(indexed_vertex_source *vert_src, vertex_buffer *bufferp)
+{
+	GLint vert_offset = (GLint)bufferp->vertex_num_offset;
+	GLubyte *ptr = NULL;
+
+	if ( is_minimum_GLSL_version() && !GLSL_override && Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+		vert_offset = 0;
 	}
 
-	if (bufferp->flags & VB_FLAG_NORMAL) {
-		vert_def.add_vertex_component(vertex_format_data::NORMAL, bufferp->stride, ptr + offset);
-		offset += (3 * sizeof(GLfloat));
+	if ( vert_src->Vbuffer_handle >= 0 ) {
+		opengl_bind_buffer_object(vert_src->Vbuffer_handle);
+	} else {
+		ptr = (GLubyte*)vert_src->Vertex_list;
 	}
-
-	if (bufferp->flags & VB_FLAG_TANGENT) {
-		// we treat this as texture coords for ease of use
-		// NOTE: this is forced on tex unit 1!!!
-		vert_def.add_vertex_component(vertex_format_data::TANGENT, bufferp->stride, ptr + offset);
-		offset += (4 * sizeof(GLfloat));
-	}
-
-	if (bufferp->flags & VB_FLAG_MODEL_ID) {
-		vert_def.add_vertex_component(vertex_format_data::MODEL_ID, bufferp->stride, ptr + offset);
-		offset += (1 * sizeof(GLfloat));
-	}
-
-	Assert( bufferp->flags & VB_FLAG_POSITION );
-	vert_def.add_vertex_component(vertex_format_data::POSITION3, bufferp->stride, ptr + offset);
-	offset += (3 * sizeof(GLfloat));
-
-	opengl_bind_vertex_layout(vert_def);
+	
+	opengl_bind_vertex_layout(bufferp->layout, vert_offset, ptr);
 }
 
 #define DO_RENDER()	\
@@ -897,7 +862,7 @@ static void opengl_init_arrays(opengl_vertex_buffer *vbp, const vertex_buffer *b
 unsigned int GL_last_shader_flags = 0;
 int GL_last_shader_index = -1;
 
-static void opengl_render_pipeline_fixed(int start, const vertex_buffer *bufferp, const buffer_data *datap, int flags);
+static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buffer_data *datap, int flags);
 
 extern bool Scene_framebuffer_in_frame;
 extern GLuint Framebuffer_fallback_texture_id;
@@ -905,7 +870,7 @@ extern matrix Object_matrix;
 extern vec3d Object_position;
 extern int Interp_thrust_scale_subobj;
 extern float Interp_thrust_scale;
-static void opengl_render_pipeline_program(int start, const vertex_buffer *bufferp, const buffer_data *datap, int flags)
+static void opengl_render_pipeline_program(int start, vertex_buffer *bufferp, buffer_data *datap, int flags)
 {
 	unsigned int shader_flags = 0;
 	int sdr_index = -1;
@@ -979,13 +944,13 @@ static void opengl_render_pipeline_program(int start, const vertex_buffer *buffe
 	opengl_tnl_set_material(flags, shader_flags, tmap_type);
 	
 	if(Rendering_to_shadow_map) {
-		vglDrawElementsInstancedBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), 4, (GLint)bufferp->vertex_offset/bufferp->stride);
+		vglDrawElementsInstancedBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), 4, (GLint)bufferp->vertex_num_offset);
 	} else {
 		if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
 			if (Cmdline_drawelements) {
-				vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
+				vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
 			} else {
-				vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
+				vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
 			}
 		} else {
 			if (Cmdline_drawelements) {
@@ -1062,7 +1027,7 @@ static void opengl_render_pipeline_program(int start, const vertex_buffer *buffe
 	GL_state.Texture.SetShaderMode(GL_FALSE);
 }
 
-static void opengl_render_pipeline_fixed(int start, const vertex_buffer *bufferp, const buffer_data *datap, int flags)
+static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buffer_data *datap, int flags)
 {
 	float u_scale, v_scale;
 	int render_pass = 0;
@@ -1137,11 +1102,9 @@ static void opengl_render_pipeline_fixed(int start, const vertex_buffer *bufferp
 
 		// base texture
 		if ( !Basemap_override ) {
-			if ( !Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
-				GL_state.Array.SetActiveClientUnit(render_pass);
-				GL_state.Array.EnableClientTexture();
-				GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
-			}
+			GL_state.Array.SetActiveClientUnit(render_pass);
+			GL_state.Array.EnableClientTexture();
+			GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
 
 			gr_opengl_tcache_set(gr_screen.current_bitmap, tmap_type, &u_scale, &v_scale, render_pass);
 
@@ -1153,11 +1116,7 @@ static void opengl_render_pipeline_fixed(int start, const vertex_buffer *bufferp
 		if (using_glow) {
 			GL_state.Array.SetActiveClientUnit(render_pass);
 			GL_state.Array.EnableClientTexture();
-			if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
-				GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, 0 );
-			} else {
-				GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
-			}
+			GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
 
 			// set glowmap on relevant ARB
 			gr_opengl_tcache_set(GLOWMAP, tmap_type, &u_scale, &v_scale, render_pass);
@@ -1169,18 +1128,10 @@ static void opengl_render_pipeline_fixed(int start, const vertex_buffer *bufferp
 	}
 
 	// DRAW IT!!
-	if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
-		if (Cmdline_drawelements) {
-			vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
-		} else {
-			vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
-		}
+	if ( Cmdline_drawelements ) {
+		glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start));
 	} else {
-		if (Cmdline_drawelements) {
-			glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
-		} else {
-			vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
-		}
+		vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
 	}
 
 // -------- End 2nd PASS --------------------------------------------------------- //
@@ -1235,11 +1186,9 @@ static void opengl_render_pipeline_fixed(int start, const vertex_buffer *bufferp
 		render_pass = 0;
 
 		// set specmap, for us to modulate against
-		if ( !Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
-			GL_state.Array.SetActiveClientUnit(render_pass);
-			GL_state.Array.EnableClientTexture();
-			GL_state.Array.TexPointer(2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
-		}
+		GL_state.Array.SetActiveClientUnit(render_pass);
+		GL_state.Array.EnableClientTexture();
+		GL_state.Array.TexPointer(2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
 
 		// set specmap on relevant ARB
 		gr_opengl_tcache_set(SPECMAP, tmap_type, &u_scale, &v_scale, render_pass);
@@ -1268,11 +1217,9 @@ static void opengl_render_pipeline_fixed(int start, const vertex_buffer *bufferp
 		render_pass++; // bump!
 
 		// now move the to the envmap
-		if ( !Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
-			GL_state.Array.SetActiveClientUnit(render_pass);
-			GL_state.Array.EnableClientTexture();
-			GL_state.Array.TexPointer(2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
-		}
+		GL_state.Array.SetActiveClientUnit(render_pass);
+		GL_state.Array.EnableClientTexture();
+		GL_state.Array.TexPointer(2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
 
 		gr_opengl_tcache_set(ENVMAP, TCACHE_TYPE_CUBEMAP, &u_scale, &v_scale, render_pass);
 
@@ -1316,18 +1263,10 @@ static void opengl_render_pipeline_fixed(int start, const vertex_buffer *bufferp
 		glMaterialfv( GL_FRONT, GL_AMBIENT, ambient );
 
 		// DRAW IT!!
-		if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
-			if (Cmdline_drawelements) {
-				vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
-			} else {
-				vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
-			}
+		if (Cmdline_drawelements) {
+			glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
 		} else {
-			if (Cmdline_drawelements) {
-				glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
-			} else {
-				vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
-			}
+			vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
 		}
 
 		// disable and reset everything we changed
@@ -1367,11 +1306,9 @@ static void opengl_render_pipeline_fixed(int start, const vertex_buffer *bufferp
 
 		render_pass = 0;
 
-		if ( !Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
-			GL_state.Array.SetActiveClientUnit(0);
-			GL_state.Array.EnableClientTexture();
-			GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
-		}
+		GL_state.Array.SetActiveClientUnit(0);
+		GL_state.Array.EnableClientTexture();
+		GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
 
 		gr_opengl_tcache_set(SPECMAP, tmap_type, &u_scale, &v_scale, render_pass);
 
@@ -1392,18 +1329,10 @@ static void opengl_render_pipeline_fixed(int start, const vertex_buffer *bufferp
 		GL_state.DepthFunc(GL_LEQUAL);
 
 		// DRAW IT!!
-		if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
-			if (Cmdline_drawelements) {
-				vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
-			} else {
-				vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
-			}
+		if (Cmdline_drawelements) {
+			glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
 		} else {
-			if (Cmdline_drawelements) {
-				glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
-			} else {
-				vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
-			}
+			vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
 		}
 
 		opengl_default_light_settings();
@@ -1433,7 +1362,7 @@ static void opengl_render_pipeline_fixed(int start, const vertex_buffer *bufferp
 }
 
 // start is the first part of the buffer to render, n_prim is the number of primitives, index_list is an index buffer, if index_list == NULL render non-indexed
-void gr_opengl_render_buffer(int start, const vertex_buffer *bufferp, int texi, int flags)
+void gr_opengl_render_buffer(int start, vertex_buffer *bufferp, int texi, int flags)
 {
 	Assert( GL_htl_projection_matrix_set );
 	Assert( GL_htl_view_matrix_set );
@@ -1448,7 +1377,7 @@ void gr_opengl_render_buffer(int start, const vertex_buffer *bufferp, int texi, 
 
 	Assert( texi >= 0 );
 
-	const buffer_data *datap = &bufferp->tex_buf[texi];
+	buffer_data *datap = &bufferp->tex_buf[texi];
 
 	if ( is_minimum_GLSL_version() && !GLSL_override ) {
 		opengl_render_pipeline_program(start, bufferp, datap, flags);
@@ -1459,7 +1388,7 @@ void gr_opengl_render_buffer(int start, const vertex_buffer *bufferp, int texi, 
 	GL_CHECK_FOR_ERRORS("end of render_buffer()");
 }
 
-void gr_opengl_render_model(model_material* material_info, vertex_buffer* bufferp, int texi)
+void gr_opengl_render_model(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer* bufferp, int texi)
 {
 	Assert( GL_htl_projection_matrix_set );
 	Assert( GL_htl_view_matrix_set );
@@ -1473,15 +1402,15 @@ void gr_opengl_render_model(model_material* material_info, vertex_buffer* buffer
 	buffer_data *datap = &bufferp->tex_buf[texi];
 
 	if ( is_minimum_GLSL_version() && !GLSL_override ) {
-		opengl_render_model_program(material_info, bufferp, datap);
+		opengl_render_model_program(material_info, vert_source, bufferp, datap);
 	} else {
-		opengl_render_model_fixed(material_info, bufferp, datap);
+		opengl_render_model_fixed(material_info, vert_source, bufferp, datap);
 	}
 
 	GL_CHECK_FOR_ERRORS("end of render_buffer()");
 }
 
-void opengl_render_model_program(model_material* material_info, vertex_buffer* bufferp, buffer_data *datap)
+void opengl_render_model_program(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer* bufferp, buffer_data *datap)
 {
 	GL_state.Texture.SetShaderMode(GL_TRUE);
 
@@ -1495,26 +1424,25 @@ void opengl_render_model_program(model_material* material_info, vertex_buffer* b
 
 	GLenum element_type = (datap->flags & VB_FLAG_LARGE_INDEX) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
 
-	opengl_vertex_buffer *vbp = g_vbp;
-	Assert(vbp);
+	Assert(vert_source);
 
 	// basic setup of all data
-	opengl_init_arrays(vbp, bufferp);
+	opengl_init_arrays(vert_source, bufferp);
 
-	if ( vbp->ib_handle >= 0 ) {
-		opengl_bind_buffer_object(vbp->ib_handle);
+	if ( vert_source->Ibuffer_handle >= 0 ) {
+		opengl_bind_buffer_object(vert_source->Ibuffer_handle);
 	} else {
-		ibuffer = (GLubyte*)vbp->index_list;
+		ibuffer = (GLubyte*)vert_source->Index_list;
 	}
 
 	if ( Rendering_to_shadow_map ) {
-		vglDrawElementsInstancedBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), 4, (GLint)bufferp->vertex_offset / bufferp->stride);
+		vglDrawElementsInstancedBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), 4, (GLint)bufferp->vertex_num_offset);
 	} else {
 		if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
 			if ( Cmdline_drawelements ) {
-				vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset / bufferp->stride);
+				vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
 			} else {
-				vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset / bufferp->stride);
+				vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
 			}
 		} else {
 			if ( Cmdline_drawelements ) {
@@ -1528,11 +1456,10 @@ void opengl_render_model_program(model_material* material_info, vertex_buffer* b
 	GL_state.Texture.SetShaderMode(GL_FALSE);
 }
 
-void opengl_render_model_fixed(model_material* material_info, vertex_buffer *bufferp, buffer_data *datap)
+void opengl_render_model_fixed(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer *bufferp, buffer_data *datap)
 {
 	float u_scale, v_scale;
 	int render_pass = 0;
-	int tmap_type;
 	GLubyte *ibuffer = NULL;
 	GLubyte *vbuffer = NULL;
 
@@ -1540,7 +1467,6 @@ void opengl_render_model_fixed(model_material* material_info, vertex_buffer *buf
 	bool rendered_env = false;
 	bool using_glow = false;
 	bool using_spec = false;
-	bool using_env = false;
 
 	int start = 0;
 	int end = (datap->n_verts - 1);
@@ -1579,16 +1505,16 @@ void opengl_render_model_fixed(model_material* material_info, vertex_buffer *buf
 	gr_opengl_set_center_alpha(material_info->get_center_alpha());
 
 	// basic setup of all data
-	opengl_init_arrays(vbp, bufferp);
+	opengl_init_arrays(vert_source, bufferp);
 
 	if ( vbp->ib_handle >= 0 ) {
-		opengl_bind_buffer_object(vbp->ib_handle);
+		opengl_bind_buffer_object(vert_source->Ibuffer_handle);
 	} else {
-		ibuffer = (GLubyte*)vbp->index_list;
+		ibuffer = (GLubyte*)vert_source->Index_list;
 	}
 
-	if ( vbp->vb_handle < 0 ) {
-		vbuffer = (GLubyte*)vbp->array_list;
+	if ( vert_source->Vbuffer_handle < 0 ) {
+		vbuffer = (GLubyte*)vert_source->Vertex_list;
 	}
 
 	// if we're not doing an alpha pass, turn on the alpha mask
@@ -1605,11 +1531,9 @@ void opengl_render_model_fixed(model_material* material_info, vertex_buffer *buf
 
 		// base texture
 		if ( material_info->get_texture_map(TM_BASE_TYPE) > 0 ) {
-			if ( !Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
-				GL_state.Array.SetActiveClientUnit(render_pass);
-				GL_state.Array.EnableClientTexture();
-				GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
-			}
+			GL_state.Array.SetActiveClientUnit(render_pass);
+			GL_state.Array.EnableClientTexture();
+			GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
 
 			gr_opengl_tcache_set(material_info->get_texture_map(TM_BASE_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
 
@@ -1621,11 +1545,7 @@ void opengl_render_model_fixed(model_material* material_info, vertex_buffer *buf
 		if (using_glow) {
 			GL_state.Array.SetActiveClientUnit(render_pass);
 			GL_state.Array.EnableClientTexture();
-			if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
-				GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, 0 );
-			} else {
-				GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
-			}
+			GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
 
 			// set glowmap on relevant ARB
 			gr_opengl_tcache_set(material_info->get_texture_map(TM_GLOW_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
@@ -1637,18 +1557,10 @@ void opengl_render_model_fixed(model_material* material_info, vertex_buffer *buf
 	}
 
 	// DRAW IT!!
-	if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
-		if (Cmdline_drawelements) {
-			vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
-		} else {
-			vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
-		}
+	if (Cmdline_drawelements) {
+		glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
 	} else {
-		if (Cmdline_drawelements) {
-			glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
-		} else {
-			vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
-		}
+		vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
 	}
 
 // -------- End 2nd PASS --------------------------------------------------------- //
@@ -1664,11 +1576,9 @@ void opengl_render_model_fixed(model_material* material_info, vertex_buffer *buf
 
 		render_pass = 0;
 
-		if ( !Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
-			GL_state.Array.SetActiveClientUnit(0);
-			GL_state.Array.EnableClientTexture();
-			GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
-		}
+		GL_state.Array.SetActiveClientUnit(0);
+		GL_state.Array.EnableClientTexture();
+		GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
 
 		gr_opengl_tcache_set(material_info->get_texture_map(TM_SPECULAR_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
 
@@ -1689,18 +1599,10 @@ void opengl_render_model_fixed(model_material* material_info, vertex_buffer *buf
 		GL_state.DepthFunc(GL_LEQUAL);
 
 		// DRAW IT!!
-		if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
-			if (Cmdline_drawelements) {
-				vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
-			} else {
-				vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
-			}
+		if (Cmdline_drawelements) {
+			glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
 		} else {
-			if (Cmdline_drawelements) {
-				glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
-			} else {
-				vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
-			}
+			vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
 		}
 
 		opengl_default_light_settings();

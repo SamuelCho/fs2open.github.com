@@ -159,7 +159,7 @@ void render_primitives_colored(material* mat, vertex* verts, int n_verts, primit
 	}
 
 	layout.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), (int)offsetof(vertex, r));
-	
+
 	if ( orthographic ) {
 		gr_render_primitives_2d_immediate(mat, prim_type, &layout, n_verts, verts, n_verts * sizeof(vertex));
 	} else {

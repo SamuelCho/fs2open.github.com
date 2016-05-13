@@ -4357,6 +4357,164 @@ void find_sortnorm(int offset, ubyte *bsp_data)
 	if (postlist) find_tri_counts(offset+postlist, bsp_data);
 }
 
+void model_interp_submit_buffers(indexed_vertex_source *vert_src)
+{
+	Assert(vert_src != NULL);
+
+	if ( !(vert_src->Vertex_list_size > 0 && vert_src->Index_list_size > 0 ) ) {
+		return;
+	}
+
+	bool static_buffer = true;
+	vert_src->Vbuffer_handle = gr_create_vertex_buffer(static_buffer);
+
+	if ( vert_src->Vbuffer_handle > -1 && vert_src->Vertex_list != NULL ) {
+		gr_update_buffer_data(vert_src->Vbuffer_handle, vert_src->Vertex_list_size, vert_src->Vertex_list);
+
+		vm_free(vert_src->Vertex_list);
+		vert_src->Vertex_list = NULL;
+	}
+
+	vert_src->Ibuffer_handle = gr_create_index_buffer(static_buffer);
+
+	if ( vert_src->Ibuffer_handle > -1 && vert_src->Index_list != NULL ) {
+		gr_update_buffer_data(vert_src->Ibuffer_handle, vert_src->Index_list_size, vert_src->Index_list);
+
+		vm_free(vert_src->Index_list);
+		vert_src->Index_list = NULL;
+	}
+}
+
+bool model_interp_pack_buffer(indexed_vertex_source *vert_src, vertex_buffer *vb)
+{
+	if ( Cmdline_nohtl ) {
+		return false;
+	}
+
+	if ( vert_src == NULL ) {
+		return false;
+	}
+	
+	// NULL means that we are done with the buffer and can create the IBO/VBO
+	// returns false here only for some minor error prevention
+	if ( vb == NULL ) {
+		model_interp_submit_buffers(vert_src);
+		return false;
+	}
+
+	int i, n_verts = 0;
+	size_t j;
+	uint arsize = 0;
+
+	if ( vert_src->Vertex_list == NULL ) {
+		vert_src->Vertex_list = (float*)vm_malloc_q(vert_src->Vertex_list_size);
+
+		// return invalid if we don't have the memory
+		if ( vert_src->Vertex_list == NULL ) {
+			return false;
+		}
+
+		memset(vert_src->Vertex_list, 0, vert_src->Vertex_list_size);
+	}
+
+	if ( vert_src->Index_list == NULL ) {
+		vert_src->Index_list = (ubyte*)vm_malloc_q(vert_src->Index_list_size);
+
+		// return invalid if we don't have the memory
+		if ( vert_src->Index_list == NULL ) {
+			return false;
+		}
+
+		memset(vert_src->Index_list, 0, vert_src->Index_list_size);
+	}
+
+	// bump to our index in the array
+	float *array = vert_src->Vertex_list + (vb->vertex_offset / sizeof(float));
+
+	// generate the vertex array
+	n_verts = vb->model_list->n_verts;
+	for ( i = 0; i < n_verts; i++ ) {
+		vertex *vl = &vb->model_list->vert[i];
+
+		// don't try to generate more data than what's available
+		Assert(((arsize * sizeof(float)) + vb->stride) <= (vert_src->Vertex_list_size - vb->vertex_offset));
+
+		// NOTE: UV->NORM->TSB->MODEL_ID->VERT, This array order *must* be preserved!!
+
+		// tex coords
+		if ( vb->flags & VB_FLAG_UV1 ) {
+			array[arsize++] = vl->texture_position.u;
+			array[arsize++] = vl->texture_position.v;
+		} else {
+			array[arsize++] = 1.0f;
+			array[arsize++] = 1.0f;
+		}
+
+		// normals
+		if ( vb->flags & VB_FLAG_NORMAL ) {
+			Assert(vb->model_list->norm != NULL);
+			vec3d *nl = &vb->model_list->norm[i];
+			array[arsize++] = nl->xyz.x;
+			array[arsize++] = nl->xyz.y;
+			array[arsize++] = nl->xyz.z;
+		} else {
+			array[arsize++] = 0.0f;
+			array[arsize++] = 0.0f;
+			array[arsize++] = 1.0f;
+		}
+
+		// tangent space data
+		if ( vb->flags & VB_FLAG_TANGENT ) {
+			Assert(vb->model_list->tsb != NULL);
+			tsb_t *tsb = &vb->model_list->tsb[i];
+			array[arsize++] = tsb->tangent.xyz.x;
+			array[arsize++] = tsb->tangent.xyz.y;
+			array[arsize++] = tsb->tangent.xyz.z;
+			array[arsize++] = tsb->scaler;
+		} else {
+			array[arsize++] = 1.0f;
+			array[arsize++] = 0.0f;
+			array[arsize++] = 0.0f;
+			array[arsize++] = 0.0f;
+		}
+
+		if ( vb->flags & VB_FLAG_MODEL_ID ) {
+			Assert(vb->model_list->submodels != NULL);
+			array[arsize++] = (float)vb->model_list->submodels[i];
+		} else {
+			array[arsize++] = 0.0f;
+		}
+
+		// verts
+		array[arsize++] = vl->world.xyz.x;
+		array[arsize++] = vl->world.xyz.y;
+		array[arsize++] = vl->world.xyz.z;
+	}
+
+	// generate the index array
+	for ( j = 0; j < vb->tex_buf.size(); j++ ) {
+		buffer_data* tex_buf = &vb->tex_buf[j];
+		n_verts = tex_buf->n_verts;
+		uint offset = tex_buf->index_offset;
+		const uint *index = tex_buf->get_index();
+
+		// bump to our spot in the buffer
+		ubyte *ibuf = vert_src->Index_list + offset;
+
+		if ( vb->tex_buf[j].flags & VB_FLAG_LARGE_INDEX ) {
+			memcpy(ibuf, index, n_verts * sizeof(uint));
+		} else {
+			ushort *mybuf = (ushort*)ibuf;
+
+			for ( i = 0; i < n_verts; i++ ) {
+				mybuf[i] = (ushort)index[i];
+			}
+		}
+	}
+
+	return true;
+}
+
 void interp_pack_vertex_buffers(polymodel *pm, int mn)
 {
 	Assert( pm->vertex_buffer_id >= 0 );
@@ -4368,15 +4526,110 @@ void interp_pack_vertex_buffers(polymodel *pm, int mn)
 		return;
 	}
 
-	bool rval = gr_pack_buffer(pm->vertex_buffer_id, &model->buffer);
+	bool rval = model_interp_pack_buffer(&pm->vert_source, &model->buffer);
 
 	if ( model->trans_buffer.flags & VB_FLAG_TRANS && model->trans_buffer.tex_buf.size() > 0 ) {
-		gr_pack_buffer(pm->vertex_buffer_id, &model->trans_buffer);
+		model_interp_pack_buffer(&pm->vert_source, &model->trans_buffer);
 	}
 
 	if ( !rval ) {
 		Error( LOCATION, "Unable to pack vertex buffer for '%s'\n", pm->filename );
 	}
+}
+
+void model_interp_set_buffer_layout(vertex_layout *layout, uint stride, int flags)
+{
+	Assert(layout != NULL);
+	
+	uint offset = 0;
+
+	// NOTE: UV->NORM->TSB->MODEL_ID->VERT, This array order *must* be preserved!!
+
+	if ( flags & VB_FLAG_UV1 ) {
+		layout->add_vertex_component(vertex_format_data::TEX_COORD, stride, offset);
+	}
+
+	offset += (2 * sizeof(float));
+
+	if ( flags & VB_FLAG_NORMAL ) {
+		layout->add_vertex_component(vertex_format_data::NORMAL, stride, offset);
+	}
+
+	offset += (3 * sizeof(float));
+
+	if ( flags & VB_FLAG_TANGENT ) {
+		layout->add_vertex_component(vertex_format_data::TANGENT, stride, offset);
+	}
+
+	offset += (4 * sizeof(float));
+
+	if ( flags & VB_FLAG_MODEL_ID ) {
+		layout->add_vertex_component(vertex_format_data::MODEL_ID, stride, offset);
+	}
+
+	offset += (1 * sizeof(float));
+
+	Assert(flags & VB_FLAG_POSITION);
+	layout->add_vertex_component(vertex_format_data::POSITION3, stride, offset);
+
+	offset += (3 * sizeof(float));
+}
+
+bool model_interp_config_buffer(indexed_vertex_source *vert_src, vertex_buffer *vb, bool update_ibuffer_only)
+{
+	if ( Cmdline_nohtl ) {
+		return false;
+	}
+
+	if ( vb == NULL ) {
+		return false;
+	}
+
+	if ( !(vb->flags & VB_FLAG_POSITION) ) {
+		Int3();
+		return false;
+	}
+
+	vb->stride = 0;
+
+	// pad out the vertex buffer even if it doesn't use certain attributes
+	// we require consistent stride across vertex buffers so we can use base vertex offsetting for performance reasons
+
+	// uv coords
+	vb->stride += (2 * sizeof(float));
+
+	// normals
+	vb->stride += (3 * sizeof(float));
+
+	// tangent space data for normal maps (shaders only)
+	vb->stride += (4 * sizeof(float));
+
+	// model ID for batched submodel rendering (shaders only)
+	vb->stride += (1 * sizeof(float));
+
+	// position
+	vb->stride += (3 * sizeof(float));
+
+	model_interp_set_buffer_layout(&vb->layout, vb->stride, vb->flags);
+
+	// offsets for this chunk
+	if ( !update_ibuffer_only ) {
+		vb->vertex_offset = vert_src->Vertex_list_size;
+		vb->vertex_num_offset = vb->vertex_offset / vb->stride;
+		vert_src->Vertex_list_size += vb->stride * vb->model_list->n_verts;
+	}
+
+	for ( size_t idx = 0; idx < vb->tex_buf.size(); idx++ ) {
+		buffer_data *bd = &vb->tex_buf[idx];
+
+		bd->index_offset = vert_src->Index_list_size;
+		vert_src->Index_list_size += bd->n_verts * ((bd->flags & VB_FLAG_LARGE_INDEX) ? sizeof(uint) : sizeof(ushort));
+
+		// even out index buffer so we are always word aligned
+		vert_src->Index_list_size += vert_src->Index_list_size % sizeof(uint);
+	}
+
+	return true;
 }
 
 void interp_configure_vertex_buffers(polymodel *pm, int mn)
@@ -4521,7 +4774,7 @@ void interp_configure_vertex_buffers(polymodel *pm, int mn)
 		model->buffer.tex_buf.push_back( new_buffer );
 	}
 
-	bool rval = gr_config_buffer(pm->vertex_buffer_id, &model->buffer, false);
+	bool rval = model_interp_config_buffer(&pm->vert_source, &model->buffer, false);
 
 	if ( !rval ) {
 		Error( LOCATION, "Unable to configure vertex buffer for '%s'\n", pm->filename );
@@ -4534,7 +4787,7 @@ void interp_copy_index_buffer(vertex_buffer *src, vertex_buffer *dest, int *inde
 	size_t src_buff_size;
 	buffer_data *src_buffer;
 	buffer_data *dest_buffer;
-	uint vert_offset = src->vertex_offset / src->stride; // assuming all submodels crunched into this index buffer have the same stride
+	uint vert_offset = src->vertex_num_offset; // assuming all submodels crunched into this index buffer have the same stride
 	//int vert_offset = 0;
 
 	for ( i = 0; i < dest->tex_buf.size(); ++i ) {
@@ -4569,6 +4822,7 @@ void interp_fill_detail_index_buffer(SCP_vector<int> &submodel_list, polymodel *
 	}
 
 	buffer->vertex_offset = 0;
+	buffer->vertex_num_offset = 0;
 	buffer->model_list = new(std::nothrow) poly_list;
 
 	int num_buffers;
@@ -4642,15 +4896,13 @@ void interp_create_detail_index_buffer(polymodel *pm, int detail_num)
 	}
 
 	interp_fill_detail_index_buffer(submodel_list, pm, &pm->detail_buffers[detail_num]);
-	//interp_fill_detail_index_buffer(submodel_list, pm, &pm->trans_buff[detail_num]);
 	
 	// check if anything was even put into this buffer
 	if ( pm->detail_buffers[detail_num].tex_buf.size() < 1 ) {
 		return;
 	} 
 
-	gr_config_buffer(pm->vertex_buffer_id, &pm->detail_buffers[detail_num], true);
-	//gr_config_buffer(pm->vertex_buffer_id, &pm->trans_buff[detail_num], true);
+	model_interp_config_buffer(&pm->vert_source, &pm->detail_buffers[detail_num], true);
 }
 
 void interp_create_transparency_index_buffer(polymodel *pm, int mn)
@@ -4663,6 +4915,7 @@ void interp_create_transparency_index_buffer(polymodel *pm, int mn)
 
 	trans_buffer->model_list = new(std::nothrow) poly_list;
 	trans_buffer->vertex_offset = pm->submodel[mn].buffer.vertex_offset;
+	trans_buffer->vertex_num_offset = pm->submodel[mn].buffer.vertex_num_offset;
 	trans_buffer->stride = pm->submodel[mn].buffer.stride;
 	trans_buffer->flags = pm->submodel[mn].buffer.flags;
 

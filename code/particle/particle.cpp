@@ -73,11 +73,11 @@ void particle_init()
 
 	// grab a vertex buffer object
 	if ( Particle_buffer_object < 0 ) {
-		Particle_buffer_object = gr_create_stream_buffer();
+		Particle_buffer_object = gr_create_vertex_buffer();
 	}
 
 	if ( Geometry_shader_buffer_object < 0 && !Cmdline_no_geo_sdr_effects && Is_Extension_Enabled(OGL_EXT_GEOMETRY_SHADER4) ) {
-		Geometry_shader_buffer_object = gr_create_stream_buffer();
+		Geometry_shader_buffer_object = gr_create_vertex_buffer();
 	}
 }
 

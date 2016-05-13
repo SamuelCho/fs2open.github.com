@@ -189,8 +189,8 @@ struct queued_buffer_draw
 	transform transformation;
 	vec3d scale;
 
+	indexed_vertex_source *vert_src;
 	vertex_buffer *buffer;
-	int buffer_id;
 	int texi;
 	int flags;
 	int sdr_flags;
@@ -243,8 +243,6 @@ class draw_list
 	scene_lights Scene_light_handler;
 	light_indexing_info Current_lights_set;
 
-	int Current_buffer_id;
-
 	void render_arc(arc_effect &arc);
 	void render_insignia(insignia_draw_data &insignia_info);
 	void render_outline(outline_draw &outline_info);
@@ -264,12 +262,10 @@ public:
 	draw_list();
 	void init();
 
-	void set_buffer(int buffer);
-	
 	void add_submodel_to_batch(int model_num);
 	void start_model_batch(int n_models);
 
-	void add_buffer_draw(model_material *render_material, vertex_buffer *buffer, int texi, uint tmap_flags);
+	void add_buffer_draw(model_material *render_material, indexed_vertex_source *vert_src, vertex_buffer *buffer, int texi, uint tmap_flags);
 	
 	vec3d get_view_position();
 	void clear_transforms();

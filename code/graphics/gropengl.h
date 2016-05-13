@@ -656,6 +656,7 @@ bool gr_opengl_init();
 void gr_opengl_cleanup(int minimize=1);
 int opengl_check_for_errors(char *err_at = NULL);
 bool gr_opengl_is_capable(gr_capability capability);
+uint opengl_data_type_size(GLenum data_type);
 bool is_minimum_GLSL_version();
 
 #ifndef NDEBUG

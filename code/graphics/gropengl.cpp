@@ -1757,13 +1757,16 @@ void opengl_setup_function_pointers()
 	gr_screen.gf_set_fill_mode			= gr_opengl_set_fill_mode;
 	gr_screen.gf_set_texture_panning	= gr_opengl_set_texture_panning;
 
+	gr_screen.gf_create_vertex_buffer	= gr_opengl_create_vertex_buffer;
+	gr_screen.gf_create_index_buffer	= gr_opengl_create_index_buffer;
+	gr_screen.gf_delete_buffer		= gr_opengl_delete_buffer;
 	gr_screen.gf_create_buffer		= gr_opengl_create_buffer;
 	gr_screen.gf_config_buffer		= gr_opengl_config_buffer;
 	gr_screen.gf_pack_buffer		= gr_opengl_pack_buffer;
 	gr_screen.gf_destroy_buffer		= gr_opengl_destroy_buffer;
 	gr_screen.gf_render_buffer		= gr_opengl_render_buffer;
 	gr_screen.gf_set_buffer			= gr_opengl_set_buffer;
-	gr_screen.gf_update_buffer_object		= gr_opengl_update_buffer_object;
+	gr_screen.gf_update_buffer_data		= gr_opengl_update_buffer_data;
 
 	gr_screen.gf_update_transform_buffer	= gr_opengl_update_transform_buffer;
 	gr_screen.gf_set_transform_buffer_offset	= gr_opengl_set_transform_buffer_offset;
@@ -2053,6 +2056,36 @@ bool gr_opengl_is_capable(gr_capability capability)
 	}
 
 	return false;
+}
+
+uint opengl_data_type_size(GLenum data_type)
+{
+	switch ( data_type ) {
+	case GL_BYTE:
+		return sizeof(GLbyte);
+	case GL_UNSIGNED_BYTE:
+		return sizeof(GLubyte);
+	case GL_SHORT:
+		return sizeof(GLshort);
+	case GL_UNSIGNED_SHORT:
+		return sizeof(GLushort);
+	case GL_INT:
+		return sizeof(GLint);
+	case GL_UNSIGNED_INT:
+		return sizeof(GLuint);
+	case GL_FLOAT:
+		return sizeof(GLfloat);
+	case GL_2_BYTES:
+		return sizeof(GLbyte) * 2;
+	case GL_3_BYTES:
+		return sizeof(GLbyte) * 3;
+	case GL_4_BYTES:
+		return sizeof(GLbyte) * 4;
+	case GL_DOUBLE:
+		return sizeof(GLdouble);
+	}
+
+	return 0;
 }
 
 DCF(ogl_minimize, "Minimizes opengl")

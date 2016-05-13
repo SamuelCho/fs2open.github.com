@@ -75,7 +75,7 @@ void batching_init_buffer(primitive_batch_buffer *buffer, primitive_type prim_ty
 {
 	batching_setup_vertex_layout(&buffer->layout, vertex_mask);
 
-	buffer->buffer_num = gr_create_stream_buffer();
+	buffer->buffer_num = gr_create_vertex_buffer();
 	buffer->buffer_ptr = NULL;
 	buffer->buffer_size = 0;
 	buffer->prim_type = prim_type;
@@ -907,7 +907,7 @@ void batching_allocate_and_load_buffer(primitive_batch_buffer *draw_queue)
 	}
 
 	if ( draw_queue->buffer_num >= 0 ) {
-		gr_update_buffer_object(draw_queue->buffer_num, draw_queue->buffer_size, draw_queue->buffer_ptr);
+		gr_update_buffer_data(draw_queue->buffer_num, draw_queue->buffer_size, draw_queue->buffer_ptr);
 	}
 }
 

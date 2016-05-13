@@ -57,17 +57,19 @@ void opengl_create_view_matrix(matrix4 *out, const vec3d *pos, const matrix *ori
 void gr_opengl_start_clip_plane();
 void gr_opengl_end_clip_plane();
 
+int gr_opengl_create_vertex_buffer(bool static_buffer);
+int gr_opengl_create_index_buffer(bool static_buffer);
 int gr_opengl_create_buffer();
 bool gr_opengl_pack_buffer(const int buffer_id, vertex_buffer *vb);
 bool gr_opengl_config_buffer(const int buffer_id, vertex_buffer *vb, bool update_ibuffer_only);
 void gr_opengl_destroy_buffer(int idx);
 void gr_opengl_set_buffer(int idx);
-void gr_opengl_render_buffer(int start, const vertex_buffer *bufferp, int texi, int flags);
+void gr_opengl_render_buffer(int start, vertex_buffer *bufferp, int texi, int flags);
 void gr_opengl_render_to_env(int FACE);
 
-void gr_opengl_update_buffer_object(int handle, uint size, void* data);
 void opengl_bind_buffer_object(int handle);
-void opengl_delete_buffer_object(int handle);
+void gr_opengl_update_buffer_data(int handle, uint size, void* data);
+void gr_opengl_delete_buffer(int handle);
 
 void gr_opengl_update_transform_buffer(void* data, uint size);
 void gr_opengl_set_transform_buffer_offset(int offset);
@@ -84,9 +86,9 @@ void gr_opengl_set_team_color(const team_color *colors);
 void opengl_tnl_init();
 void opengl_tnl_shutdown();
 
-void gr_opengl_render_model(model_material* material_info, vertex_buffer* bufferp, int texi);
-void opengl_render_model_program(model_material* material_info, vertex_buffer* bufferp, buffer_data *datap);
-void opengl_render_model_fixed(model_material* material_info, vertex_buffer *bufferp, buffer_data *datap);
+void gr_opengl_render_model(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer* bufferp, int texi);
+void opengl_render_model_program(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer* bufferp, buffer_data *datap);
+void opengl_render_model_fixed(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer *bufferp, buffer_data *datap);
 
 void opengl_tnl_set_material(material* material_info, bool set_base_map);
 void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type);

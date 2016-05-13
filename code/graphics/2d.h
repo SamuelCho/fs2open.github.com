@@ -531,13 +531,16 @@ public:
 
 	uint stride;
 	size_t vertex_offset;
+	size_t vertex_num_offset;
 
 	poly_list *model_list;
 
 	SCP_vector<buffer_data> tex_buf;
 
+	vertex_layout layout;
+
 	vertex_buffer() :
-		flags(0), stride(0), vertex_offset(0), model_list(NULL)
+		flags(0), stride(0), vertex_offset(0), vertex_num_offset(0), model_list(NULL)
 	{
 	}
 
@@ -562,6 +565,23 @@ public:
 	{
 		release();
 		tex_buf.clear();
+	}
+};
+
+struct indexed_vertex_source {
+	float *Vertex_list;	// interleaved array
+	ubyte *Index_list;
+
+	int Vbuffer_handle;
+	int Ibuffer_handle;
+
+	uint Vertex_list_size;
+	uint Index_list_size;
+
+	indexed_vertex_source() :
+		Vertex_list(NULL), Index_list(NULL),
+		Vbuffer_handle(-1), Ibuffer_handle(-1), Vertex_list_size(0), Index_list_size(0)
+	{
 	}
 };
 
@@ -773,14 +793,17 @@ typedef struct screen {
 
 	void (*gf_set_texture_addressing)(int);
 
+	int (*gf_create_vertex_buffer)(bool static_buffer);
+	int (*gf_create_index_buffer)(bool static_buffer);
+	void (*gf_delete_buffer)(int handle);
 	int (*gf_create_buffer)();
 	bool (*gf_pack_buffer)(const int buffer_id, vertex_buffer *vb);
 	bool (*gf_config_buffer)(const int buffer_id, vertex_buffer *vb, bool update_ibuffer_only);
 	void (*gf_destroy_buffer)(int);
 	void (*gf_set_buffer)(int);
-	void (*gf_render_buffer)(int, const vertex_buffer*, int, int);
+	void (*gf_render_buffer)(int, vertex_buffer*, int, int);
 
-	void (*gf_update_buffer_object)(int handle, uint size, void* data);
+	void (*gf_update_buffer_data)(int handle, uint size, void* data);
 	void (*gf_update_transform_buffer)(void* data, uint size);
 	void (*gf_set_transform_buffer_offset)(int offset);
 
@@ -860,7 +883,7 @@ typedef struct screen {
 	void (*gf_shadow_map_end)();
 
 	// new drawing functions
-	void (*gf_render_model)(model_material* material_info, vertex_buffer* bufferp, int texi);
+	void (*gf_render_model)(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer* bufferp, int texi);
 	void (*gf_render_primitives)(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
 	void (*gf_render_primitives_immediate)(material* material_info, primitive_type prim_type, vertex_layout* layout, int n_verts, void* data, int size);
 	void (*gf_render_primitives_particle)(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
@@ -1106,16 +1129,27 @@ __inline int gr_bm_set_render_target(int n, int face = -1)
 
 #define gr_set_texture_addressing					 GR_CALL(*gr_screen.gf_set_texture_addressing)            
 
+__inline int gr_create_vertex_buffer(bool static_buffer = false)
+{
+	return (*gr_screen.gf_create_vertex_buffer)(static_buffer);
+}
+
+__inline int gr_create_index_buffer(bool static_buffer = false)
+{
+	return (*gr_screen.gf_create_index_buffer)(static_buffer);
+}
+
+#define gr_delete_buffer				GR_CALL(*gr_screen.gf_delete_buffer)
 #define gr_create_buffer				GR_CALL(*gr_screen.gf_create_buffer)
 #define gr_pack_buffer					GR_CALL(*gr_screen.gf_pack_buffer)
 #define gr_config_buffer				GR_CALL(*gr_screen.gf_config_buffer)
 #define gr_destroy_buffer				 GR_CALL(*gr_screen.gf_destroy_buffer)
-__inline void gr_render_buffer(int start, const vertex_buffer *bufferp, int texi, int flags = TMAP_FLAG_TEXTURED)
+__inline void gr_render_buffer(int start, vertex_buffer *bufferp, int texi, int flags = TMAP_FLAG_TEXTURED)
 {
 	(*gr_screen.gf_render_buffer)(start, bufferp, texi, flags);
 }
 
-#define gr_update_buffer_object			GR_CALL(*gr_screen.gf_update_buffer_object)
+#define gr_update_buffer_data			GR_CALL(*gr_screen.gf_update_buffer_data)
 #define gr_update_transform_buffer		GR_CALL(*gr_screen.gf_update_transform_buffer)
 #define gr_set_transform_buffer_offset	GR_CALL(*gr_screen.gf_set_transform_buffer_offset)
 
@@ -1220,9 +1254,9 @@ __inline void gr_render_primitives_2d_immediate(material* material_info, primiti
 	(*gr_screen.gf_render_primitives_2d_immediate)(material_info, prim_type, layout, n_verts, data, size);
 }
 
-__inline void gr_render_model(model_material* material_info, vertex_buffer* bufferp, int texi)
+__inline void gr_render_model(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer* bufferp, int texi)
 {
-	(*gr_screen.gf_render_model)(material_info, bufferp, texi);
+	(*gr_screen.gf_render_model)(material_info, vert_source, bufferp, texi);
 }
 
 __inline bool gr_is_capable(gr_capability capability)

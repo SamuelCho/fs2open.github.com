@@ -23,6 +23,21 @@ uint gr_stub_lock()
 	return 1;
 }
 
+int gr_stub_create_vertex_buffer(bool static_buffer)
+{
+	return -1;
+}
+
+int gr_stub_create_index_buffer(bool static_buffer)
+{
+	return -1;
+}
+
+void gr_stub_delete_buffer(int handle)
+{
+
+}
+
 // NOTE: should return a failure
 int gr_stub_create_buffer()
 {
@@ -223,7 +238,7 @@ void gr_stub_rect(int x, int y, int w, int h, int resize_mode)
 {
 }
 
-void gr_stub_render_buffer(int start, const vertex_buffer *bufferp, int texi, int flags)
+void gr_stub_render_buffer(int start, vertex_buffer *bufferp, int texi, int flags)
 {
 }
 
@@ -255,7 +270,7 @@ void gr_stub_set_buffer(int idx)
 {
 }
 
-void gr_stub_update_buffer_object(int handle, uint size, void* data)
+void gr_stub_update_buffer_data(int handle, uint size, void* data)
 {
 
 }
@@ -539,7 +554,7 @@ void gr_stub_shadow_map_end()
 {
 }
 
-void gr_stub_render_model(model_material* material_info, vertex_buffer* bufferp, int texi)
+void gr_stub_render_model(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer* bufferp, int texi)
 {
 
 }
@@ -688,6 +703,9 @@ bool gr_stub_init()
 	gr_screen.gf_set_fill_mode			= gr_set_fill_mode_stub;
 	gr_screen.gf_set_texture_panning	= gr_stub_set_texture_panning;
 
+	gr_screen.gf_create_vertex_buffer	= gr_stub_create_vertex_buffer;
+	gr_screen.gf_create_index_buffer	= gr_stub_create_index_buffer;
+	gr_screen.gf_delete_buffer		= gr_stub_delete_buffer;
 	gr_screen.gf_create_buffer		= gr_stub_create_buffer;
 	gr_screen.gf_config_buffer		= gr_stub_config_buffer;
 	gr_screen.gf_pack_buffer		= gr_stub_pack_buffer;
@@ -696,7 +714,7 @@ bool gr_stub_init()
 	gr_screen.gf_set_buffer			= gr_stub_set_buffer;
 
 	gr_screen.gf_update_transform_buffer	= gr_stub_update_transform_buffer;
-	gr_screen.gf_update_buffer_object		= gr_stub_update_buffer_object;
+	gr_screen.gf_update_buffer_data		= gr_stub_update_buffer_data;
 	gr_screen.gf_set_transform_buffer_offset	= gr_stub_set_transform_buffer_offset;
 
 	gr_screen.gf_create_stream_buffer		= gr_stub_create_stream_buffer;

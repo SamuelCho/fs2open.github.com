@@ -360,8 +360,6 @@ void draw_list::reset()
 	Current_scale.xyz.x = 1.0f;
 	Current_scale.xyz.y = 1.0f;
 	Current_scale.xyz.z = 1.0f;
-
-	Current_buffer_id = -1;
 }
 
 void draw_list::sort_draws()
@@ -426,7 +424,7 @@ void draw_list::set_light_filter(int objnum, vec3d *pos, float rad)
 	Current_lights_set = Scene_light_handler.bufferLights();
 }
 
-void draw_list::add_buffer_draw(model_material *render_material, vertex_buffer *buffer, int texi, uint tmap_flags)
+void draw_list::add_buffer_draw(model_material *render_material, indexed_vertex_source *vert_src, vertex_buffer *buffer, int texi, uint tmap_flags)
 {
 	queued_buffer_draw draw_data;
 
@@ -452,7 +450,7 @@ void draw_list::add_buffer_draw(model_material *render_material, vertex_buffer *
 
 	draw_data.sdr_flags = render_material->get_shader_flags();
 
-	draw_data.buffer_id = Current_buffer_id;
+	draw_data.vert_src = vert_src;
 	draw_data.buffer = buffer;
 	draw_data.texi = texi;
 	draw_data.flags = tmap_flags;
@@ -475,13 +473,11 @@ void draw_list::render_buffer(queued_buffer_draw &render_elements)
 		Scene_light_handler.resetLightState();
 	}
 
-	gr_set_buffer(render_elements.buffer_id);
-
 	g3_start_instance_matrix(&render_elements.transformation.origin, &render_elements.transformation.basis);
 
 	gr_push_scale_matrix(&render_elements.scale);
 
-	gr_render_model(&render_elements.render_material, render_elements.buffer, render_elements.texi);
+	gr_render_model(&render_elements.render_material, render_elements.vert_src, render_elements.buffer, render_elements.texi);
 
 	gr_pop_scale_matrix();
 
@@ -571,11 +567,6 @@ void draw_list::set_scale(vec3d *scale)
 	}
 
 	Current_scale = *scale;
-}
-
-void draw_list::set_buffer(int buffer)
-{
-	Current_buffer_id = buffer;
 }
 
 void draw_list::init()
@@ -722,9 +713,13 @@ bool draw_list::sort_draw_pair(const int a, const int b)
 	if ( draw_call_a->sdr_flags != draw_call_b->sdr_flags ) {
 		return draw_call_a->sdr_flags < draw_call_b->sdr_flags;
 	}
-	
-	if ( draw_call_a->buffer_id != draw_call_b->buffer_id ) {
-		return draw_call_a->buffer_id < draw_call_b->buffer_id;
+
+	if ( draw_call_a->vert_src->Vbuffer_handle != draw_call_b->vert_src->Vbuffer_handle ) {
+		return draw_call_a->vert_src->Vbuffer_handle < draw_call_b->vert_src->Vbuffer_handle;
+	}
+
+	if ( draw_call_a->vert_src->Ibuffer_handle != draw_call_b->vert_src->Ibuffer_handle ) {
+		return draw_call_a->vert_src->Ibuffer_handle < draw_call_b->vert_src->Ibuffer_handle;
 	}
 
 	if ( draw_call_a->render_material.get_texture_map(TM_BASE_TYPE) != draw_call_b->render_material.get_texture_map(TM_BASE_TYPE) ) {
@@ -1136,7 +1131,7 @@ void model_render_buffers(draw_list* scene, model_material *rendering_material, 
 			rendering_material->set_texture_map(TM_MISC_TYPE,	texture_maps[TM_MISC_TYPE]);
 		}
 
-		scene->add_buffer_draw(rendering_material, buffer, i, tmap_flags);
+		scene->add_buffer_draw(rendering_material, &pm->vert_source, buffer, i, tmap_flags);
 	}
 }
 
@@ -1534,8 +1529,6 @@ void submodel_render_queue(model_render_params *render_info, draw_list *scene, i
 	} else {
 		rendering_material.set_depth_bias(0);
 	}
-
-	scene->set_buffer(pm->vertex_buffer_id);
 
 	vec3d view_pos = scene->get_view_position();
 
@@ -2688,10 +2681,6 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 		rendering_material.set_lighting(true);
 	} else {
 		rendering_material.set_lighting(false);
-	}
-	
-	if (is_outlines_only_htl || (!Cmdline_nohtl && !is_outlines_only)) {
-		scene->set_buffer(pm->vertex_buffer_id);
 	}
 
 	if ( Rendering_to_shadow_map ) {

@@ -22,17 +22,11 @@
 int Num_trails;
 trail Trails;
 
-int Trail_buffer_object = -1;
-
 // Reset everything between levels
 void trail_level_init()
 {
 	Num_trails = 0;
 	Trails.next = &Trails;
-
-	if (Trail_buffer_object < 0) {
-		Trail_buffer_object = gr_create_stream_buffer();
-	}
 }
 
 void trail_level_close()
