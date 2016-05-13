@@ -16,6 +16,7 @@
 #include "graphics/gropenglextension.h"
 #include "graphics/gropenglstate.h"
 #include "graphics/gropengltexture.h"
+#include "graphics/gropengltnl.h"
 #include "io/key.h"
 #include "io/timer.h"
 #include "render/render.h"
@@ -67,6 +68,7 @@ void *g_vBuffers = NULL;
 void *g_vBackBuf1, *g_vBackBuf2;
 ushort *pixelbuf = NULL;
 static GLuint GLtex = 0;
+static int buffer_handle = -1;
 static GLfloat gl_screenYH = 0;
 static GLfloat gl_screenXW = 0;
 static GLfloat gl_screenU = 0;
@@ -462,13 +464,17 @@ int mve_video_createbuf(ubyte minor, ubyte *data)
 			scale_by = (float)gr_screen.center_w / (float)g_width;
 		}
 
+		buffer_handle = gr_create_vertex_buffer(true);
+
 		// don't bother setting anything if we aren't going to need it
 		if (!Cmdline_noscalevid && (scale_by != 1.0f)) {
-			glMatrixMode(GL_MODELVIEW);
-			glPushMatrix();
-			glLoadIdentity();
+			vec3d scale;
 
-			glScalef( scale_by, scale_by, 1.0f );
+			scale.xyz.x = scale_by;
+			scale.xyz.y = scale_by;
+			scale.xyz.z = 1.0f;
+
+			gr_push_scale_matrix(&scale);
 			mve_scale_video = 1;
 		}
 
@@ -514,9 +520,12 @@ int mve_video_createbuf(ubyte minor, ubyte *data)
 
 		vertex_layout vertex_def;
 
-		vertex_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(glVertices[0]), glVertices);
-		vertex_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(glVertices[0]), &(glVertices[0][2]));
+		vertex_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(glVertices[0]), 0);
+		vertex_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(glVertices[0]), sizeof(GLfloat) * 2);
 
+		gr_update_buffer_data(buffer_handle, sizeof(glVertices[0]) * 4, glVertices);
+
+		opengl_bind_buffer_object(buffer_handle);
 		opengl_bind_vertex_layout(vertex_def);
 	}
 
@@ -784,9 +793,11 @@ void mve_shutdown()
 {
 	if (gr_screen.mode == GR_OPENGL) {
 		if (mve_scale_video) {
-			glMatrixMode(GL_MODELVIEW);
-			glPopMatrix();
+			gr_pop_scale_matrix();
 		}
+
+		gr_delete_buffer(buffer_handle);
+		buffer_handle = -1;
 
 		GL_state.Texture.Disable();
 		GL_state.Texture.Delete(GLtex);

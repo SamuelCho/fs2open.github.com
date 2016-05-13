@@ -53,6 +53,7 @@ static GLint gl_screenXW = 0;
 static GLfloat gl_screenU = 0;
 static GLfloat gl_screenV = 0;
 static GLfloat glVertices[4][4] = {{0}};
+static int buffer_handle = -1;
 
 // video externs from API graphics functions
 extern void opengl_tcache_get_adjusted_texture_size(int w_in, int h_in, int *w_out, int *h_out);
@@ -345,6 +346,8 @@ static void OGG_video_init(theora_info *tinfo)
 		opengl_set_texture_target(GL_TEXTURE_2D);
 		opengl_tcache_get_adjusted_texture_size(g_screenWidth, g_screenHeight, &wp2, &hp2);
 
+		buffer_handle = gr_create_vertex_buffer(true);
+
 		if(!is_minimum_GLSL_version())
 			use_shaders = false;
 
@@ -520,13 +523,14 @@ static void OGG_video_init(theora_info *tinfo)
 		glVertices[3][2] = gl_screenU;
 		glVertices[3][3] = gl_screenV;
 
-		GL_state.Array.BindArrayBuffer(0);
-
 		vertex_layout vert_def;
 
-		vert_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(glVertices[0]), glVertices);
-		vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(glVertices[0]), &(glVertices[0][2]));
+		vert_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(glVertices[0]), 0);
+		vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(glVertices[0]), sizeof(GLfloat) * 2);
 
+		gr_update_buffer_data(buffer_handle, sizeof(glVertices[0]) * 4, glVertices);
+
+		opengl_bind_buffer_object(buffer_handle);
 		opengl_bind_vertex_layout(vert_def);
 	}
 	if(!use_shaders && tinfo->frame_height > 450) {
@@ -545,6 +549,9 @@ static void OGG_video_close()
 		if (scale_video) {
 			gr_pop_scale_matrix();
 		}
+
+		gr_delete_buffer(buffer_handle);
+		buffer_handle = -1;
 
 		GL_state.Texture.Disable();
 		if(use_shaders) {
