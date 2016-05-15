@@ -2405,18 +2405,22 @@ void gr_opengl_shadow_map_end()
 void opengl_tnl_set_material(material* material_info, bool set_base_map)
 {
 	int shader_handle = material_info->get_shader_handle();
+	int base_map = material_info->get_texture_map(TM_BASE_TYPE);
+	color &clr = material_info->get_color();
 
 	if ( shader_handle >= 0 ) {
 		opengl_shader_set_current(shader_handle);
 	} else {
-		opengl_shader_set_current();
+		opengl_shader_set_passthrough(base_map >= 0, material_info->get_texture_type() == TCACHE_TYPE_AABITMAP, &clr, 1.0f);
+
+		GL_state.Uniform.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
+		GL_state.Uniform.setUniformMatrix4f("projMatrix", GL_projection_matrix);
 	}
 
 	GL_state.SetTextureSource(material_info->get_texture_source());
 	GL_state.SetAlphaBlendMode(material_info->get_blend_mode());
 	GL_state.SetZbufferType(material_info->get_depth_mode());
 
-	color &clr = material_info->get_color();
 	GL_state.Color(clr.red, clr.green, clr.blue, clr.alpha);
 
 	gr_set_cull(material_info->get_cull_mode());
@@ -2442,8 +2446,6 @@ void opengl_tnl_set_material(material* material_info, bool set_base_map)
 	} else {
 		gr_opengl_set_clip_plane(NULL, NULL);
 	}
-
-	int base_map = material_info->get_texture_map(TM_BASE_TYPE);
 
 	if ( set_base_map && base_map >= 0 ) {
 		float u_scale, v_scale;
@@ -3129,6 +3131,8 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 void opengl_tnl_set_material_particle(particle_material * material_info)
 {
 	opengl_tnl_set_material(material_info, true);
+
+	color &clr = material_info->get_color();
 
 	GL_state.Uniform.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
 	GL_state.Uniform.setUniformMatrix4f("projMatrix", GL_projection_matrix);

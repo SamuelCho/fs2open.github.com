@@ -185,6 +185,9 @@ float opengl_shader_get_animated_timer();
 void opengl_shader_compile_deferred_light_shader();
 void opengl_shader_compile_deferred_light_clear_shader();
 
+void opengl_shader_compile_passthrough_shader();
+void opengl_shader_set_passthrough(bool textured, bool alpha, color* clr = NULL, float color_scale = 1.0f);
+
 #define ANIMATED_SHADER_LOADOUTSELECT_FS1	0
 #define ANIMATED_SHADER_LOADOUTSELECT_FS2	1
 #define ANIMATED_SHADER_CLOAK				2

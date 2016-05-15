@@ -136,7 +136,7 @@ ogl_extension GL_Extensions[NUM_OGL_EXTENSIONS] =
 
 	// programmable vertex level processing
 	// some of functions are provided by GL_ARB_vertex_program
-	{ false, false, 1, { "GL_ARB_vertex_shader" }, 8, { "glEnableVertexAttribArrayARB", "glDisableVertexAttribArrayARB",
+	{ false, false, 1, { "GL_ARB_vertex_shader" }, 9, { "glEnableVertexAttribArrayARB", "glDisableVertexAttribArrayARB",
 		"glGetAttribLocationARB", "glBindAttribLocationARB", "glVertexAttribPointerARB", "glVertexAttrib1fARB", "glVertexAttrib2fARB", 
 		"glVertexAttrib3fARB", "glVertexAttrib4fARB" } },
 

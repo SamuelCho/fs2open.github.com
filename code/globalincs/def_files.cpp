@@ -55,6 +55,8 @@ extern char* Default_deferred_vertex_shader;
 extern char* Default_deferred_fragment_shader;
 extern char* Default_deferred_clear_vertex_shader;
 extern char* Default_deferred_clear_fragment_shader;
+extern char* Default_passthrough_vertex_shader;
+extern char* Default_passthrough_fragment_shader;
 //**********
 
 //:PART 2:
@@ -94,7 +96,9 @@ def_file Default_files[] =
 	{ "deferred-v.sdr",			Default_deferred_vertex_shader},
 	{ "deferred-f.sdr",			Default_deferred_fragment_shader},
 	{ "deferred-clear-v.sdr",	Default_deferred_clear_vertex_shader},
-	{ "deferred-clear-f.sdr",	Default_deferred_clear_fragment_shader}
+	{ "deferred-clear-f.sdr",	Default_deferred_clear_fragment_shader},
+	{ "passthrough-v.sdr",		Default_passthrough_vertex_shader },
+	{ "passthrough-f.sdr",		Default_passthrough_fragment_shader }
 };
 
 static int Num_default_files = sizeof(Default_files) / sizeof(def_file);
@@ -2880,6 +2884,41 @@ char * Default_video_fragment_shader =
 "	fragOut0.g = dot(val, vec3(1.1640625, -0.390625, -0.8125));\n"
 "	fragOut0.b = dot(val, vec3(1.1640625, 2.015625, 0.0));\n"
 "	fragOut0.a = 1.0;\n"
+"}";
+
+char *Default_passthrough_vertex_shader =
+"vertIn vec4 vertPosition;\n"
+"vertIn vec4 vertTexCoord;\n"
+"vertIn vec4 vertColor;\n"
+"vertOut vec4 fragTexCoord;\n"
+"vertOut vec4 fragColor;\n"
+"uniform mat4 modelViewMatrix;\n"
+"uniform mat4 projMatrix;\n"
+"uniform vec4 color;\n"
+"void main()\n"
+"{\n"
+"	fragTexCoord = vertTexCoord;\n"
+"	fragColor = vertColor * color;\n"
+"	//fragColor = vec4(1.0, 1.0, 1.0, 1.0);\n"
+"	//gl_Position = projMatrix * modelViewMatrix * vertPosition;\n"
+"	gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * vertPosition;\n"
+"}";
+
+char* Default_passthrough_fragment_shader =
+"fragIn vec4 fragTexCoord;\n"
+"fragIn vec4 fragColor;\n"
+"uniform sampler2D baseMap;\n"
+"uniform int alphaTexture;\n"
+"uniform int noTexturing;\n"
+"uniform int srgb;\n"
+"uniform float intensity;\n"
+"#define SRGB_GAMMA 2.2\n"
+"void main()\n"
+"{\n"
+"	vec4 baseColor = texture2D(baseMap, fragTexCoord.xy);\n"
+"	baseColor.rgb = (srgb == 1) ? pow(baseColor.rgb, vec3(SRGB_GAMMA)) : baseColor.rgb;\n"
+"	baseColor *= fragColor;\n"
+"	gl_FragColor = mix(mix(baseColor, vec4(fragColor.rgb, baseColor.a), float(alphaTexture)), fragColor, float(noTexturing)) * intensity;\n"
 "}";
 
 char *Default_deferred_vertex_shader =

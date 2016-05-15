@@ -39,7 +39,7 @@ geometry_sdr_params *Current_geo_sdr_params = NULL;
 opengl_vert_attrib GL_vertex_attrib_info[] =
 {
 	{ opengl_vert_attrib::POSITION,		"vertPosition",		{ 0.0f, 0.0f, 0.0f, 1.0f } },
-	{ opengl_vert_attrib::COLOR,		"vertColor",		{ 0.0f, 0.0f, 0.0f, 1.0f } },
+	{ opengl_vert_attrib::COLOR,		"vertColor",		{ 1.0f, 1.0f, 1.0f, 1.0f } },
 	{ opengl_vert_attrib::TEXCOORD,		"vertTexCoord",		{ 1.0f, 1.0f, 1.0f, 1.0f } },
 	{ opengl_vert_attrib::NORMAL,		"vertNormal",		{ 0.0f, 0.0f, 1.0f, 0.0f } },
 	{ opengl_vert_attrib::TANGENT,		"vertTangent",		{ 1.0f, 0.0f, 0.0f, 0.0f } },
@@ -100,7 +100,11 @@ static opengl_shader_type_t GL_shader_types[] = {
 
 	{ SDR_TYPE_VIDEO_PROCESS, "video-v.sdr", "video-f.sdr", 0, {0, 0, 0}, 
 		5, { "modelViewMatrix", "projMatrix", "ytex", "utex", "vtex" },
-		2, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD }, "Video Playback" }
+		2, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD }, "Video Playback" },
+
+	{ SDR_TYPE_PASSTHROUGH_RENDER, "passthrough-v.sdr", "passthrough-f.sdr", 0,{ 0, 0, 0 },
+		8, { "modelViewMatrix", "projMatrix", "baseMap", "noTexturing", "alphaTexture", "srgb", "intensity", "color" },
+		3, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD, opengl_vert_attrib::COLOR }, "Passthrough" }
 };
 
 /**
@@ -597,6 +601,8 @@ void opengl_shader_init()
 	// compile deferred lighting shaders
 	opengl_shader_compile_deferred_light_shader();
 	mprintf(("\n"));
+
+	opengl_shader_compile_passthrough_shader();
 }
 
 /**
@@ -1026,5 +1032,71 @@ void opengl_shader_compile_deferred_light_shader()
 	if ( in_error ) {
 		mprintf(("  Shader in_error! Disabling deferred lighting!\n"));
 		Cmdline_no_deferred_lighting = 1;
+	}
+}
+
+void opengl_shader_compile_passthrough_shader()
+{
+	bool in_error = false;
+
+	mprintf(("Compiling passthrough shader...\n"));
+
+	int sdr_handle = gr_opengl_maybe_create_shader(SDR_TYPE_PASSTHROUGH_RENDER, 0);
+
+	if ( sdr_handle >= 0 ) {
+		opengl_shader_set_current(sdr_handle);
+
+		//Hardcoded Uniforms
+		GL_state.Uniform.setUniformi("baseMap", 0);
+		GL_state.Uniform.setUniformi("noTexturing", 0);
+		GL_state.Uniform.setUniformi("alphaTexture", 0);
+		GL_state.Uniform.setUniformi("srgb", 0);
+	} else {
+		opengl_shader_set_current();
+		mprintf(("Failed to compile passthrough shader!\n"));
+		in_error = true;
+	}
+
+	if ( in_error ) {
+		mprintf(("  Shader in_error! Passthrough shader unavailable!\n"));
+	}
+
+	opengl_shader_set_current();
+}
+
+void opengl_shader_set_passthrough(bool textured, bool alpha, color *clr, float color_scale)
+{
+	if ( !is_minimum_GLSL_version() ) {
+		opengl_shader_set_current();
+		return;
+	}
+
+	opengl_shader_set_current(gr_opengl_maybe_create_shader(SDR_TYPE_PASSTHROUGH_RENDER, 0));
+
+	if ( textured ) {
+		GL_state.Uniform.setUniformi("noTexturing", 0);
+	} else {
+		GL_state.Uniform.setUniformi("noTexturing", 1);
+	}
+
+	if ( alpha ) {
+		GL_state.Uniform.setUniformi("alphaTexture", 1);
+	} else {
+		GL_state.Uniform.setUniformi("alphaTexture", 0);
+	}
+
+// 	if ( High_dynamic_range ) {
+// 		GL_state.Uniform.setUniformi("srgb", 1);
+// 	} else {
+// 		GL_state.Uniform.setUniformi("srgb", 0);
+// 	}
+	GL_state.Uniform.setUniformi("srgb", 0);
+
+	GL_state.Uniform.setUniformf("intensity", color_scale);
+
+	if ( clr != NULL ) {
+		GL_state.Uniform.setUniform4f("color", clr->red / 255.0f, clr->green / 255.0f, clr->blue / 255.0f, clr->alpha / 255.0f);
+	} else {
+		GL_state.Uniform.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
 	}
 }
