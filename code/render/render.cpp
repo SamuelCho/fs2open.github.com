@@ -2421,7 +2421,7 @@ void render_arc(color *clr, int xc, int yc, float r, float angle_start, float an
 		vertex_layout vert_def;
 		vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, 0);
 
-		gr_render_primitives_2d_immediate(&material_params, PRIM_TYPE_TRIFAN, &vert_def, segments + 1, arc, sizeof(float) * segments * 2 + 2);
+		gr_render_primitives_2d_immediate(&material_params, PRIM_TYPE_TRIFAN, &vert_def, segments + 1, arc, sizeof(float) * (segments * 2 + 2));
 	} else {
 		arc = new float[segments * 4];
 
