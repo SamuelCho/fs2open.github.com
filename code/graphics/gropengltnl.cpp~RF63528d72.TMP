@@ -150,11 +150,7 @@ static SCP_vector<opengl_buffer_object> GL_buffer_objects;
 static SCP_vector<opengl_vertex_buffer> GL_vertex_buffers;
 static opengl_vertex_buffer *g_vbp = NULL;
 static int GL_vertex_buffers_in_use = 0;
-
-int GL_immediate_buffer_handle = -1;
-static uint GL_immediate_buffer_offset = 0;
-static uint GL_immediate_buffer_size = 0;
-static const int IMMEDIATE_BUFFER_RESIZE_BLOCK_SIZE = 2048;
+static int GL_render_buffers_in_use = 0;
 
 int opengl_create_buffer_object(GLenum type, GLenum usage)
 {
@@ -218,44 +214,12 @@ void gr_opengl_update_buffer_data(int handle, uint size, void* data)
 	vglBufferDataARB(buffer_obj.type, size, data, buffer_obj.usage);
 }
 
-void opengl_update_buffer_data_offset(int handle, uint offset, uint size, void* data)
-{
-	Assert(handle >= 0);
-	Assert((size_t)handle < GL_buffer_objects.size());
-
-	opengl_buffer_object &buffer_obj = GL_buffer_objects[handle];
-
-	opengl_bind_buffer_object(handle);
-	
-	vglBufferSubDataARB(buffer_obj.type, offset, size, data);
-}
-
 void gr_opengl_delete_buffer(int handle)
 {
 	Assert(handle >= 0);
 	Assert((size_t)handle < GL_buffer_objects.size());
 
 	opengl_buffer_object &buffer_obj = GL_buffer_objects[handle];
-
-	// de-bind the buffer point so we can clear the recorded state.
-	switch ( buffer_obj.type ) {
-	case GL_ARRAY_BUFFER_ARB:
-		GL_state.Array.BindArrayBuffer(0);
-		break;
-	case GL_ELEMENT_ARRAY_BUFFER_ARB:
-		GL_state.Array.BindElementBuffer(0);
-		break;
-	case GL_TEXTURE_BUFFER_ARB:
-		GL_state.Array.BindTextureBuffer(0);
-		break;
-	case GL_UNIFORM_BUFFER:
-		GL_state.Array.BindUniformBuffer(0);
-		break;
-	default:
-		Int3();
-		return;
-		break;
-	}
 
 	if ( buffer_obj.type == GL_TEXTURE_BUFFER_ARB ) {
 		glDeleteTextures(1, &buffer_obj.texture);
@@ -293,49 +257,9 @@ int gr_opengl_create_stream_buffer_object()
 	return opengl_create_buffer_object(GL_ARRAY_BUFFER_ARB, GL_STREAM_DRAW_ARB);
 }
 
-uint opengl_add_to_immediate_buffer(uint size, void *data)
-{
-	if ( GL_immediate_buffer_handle < 0 ) {
-		GL_immediate_buffer_handle = opengl_create_buffer_object(GL_ARRAY_BUFFER_ARB, GL_STREAM_DRAW_ARB);
-	}
-
-	Assert(size > 0 && data != NULL);
-
-	if ( GL_immediate_buffer_offset + size > GL_immediate_buffer_size ) {
-		// incoming data won't fit the immediate buffer. time to reallocate.
-		GL_immediate_buffer_offset = 0;
-		GL_immediate_buffer_size += MAX(IMMEDIATE_BUFFER_RESIZE_BLOCK_SIZE, size);
-		
-		gr_opengl_update_buffer_data(GL_immediate_buffer_handle, GL_immediate_buffer_size, NULL);
-	}
-
-	// only update a section of the immediate vertex buffer
-	opengl_update_buffer_data_offset(GL_immediate_buffer_handle, GL_immediate_buffer_offset, size, data);
-
-	uint old_offset = GL_immediate_buffer_offset;
-
-	GL_immediate_buffer_offset += size;
-
-	return old_offset;
-}
-
-void opengl_reset_immediate_buffer()
-{
-	if ( GL_immediate_buffer_handle < 0 ) {
-		// we haven't used the immediate buffer yet
-		return;
-	}
-
-	// orphan the immediate buffer so we can start fresh in a new frame
-	gr_opengl_update_buffer_data(GL_immediate_buffer_handle, GL_immediate_buffer_size, NULL);
-
-	// bring our offset to the beginning of the immediate buffer
-	GL_immediate_buffer_offset = 0;
-}
-
 int opengl_create_texture_buffer_object()
 {
-	if ( GLSL_version < 150 || !Is_Extension_Enabled(OGL_ARB_TEXTURE_BUFFER) || !Is_Extension_Enabled(OGL_ARB_FLOATING_POINT_TEXTURES) ) {
+	if ( GLSL_version < 130 || !Is_Extension_Enabled(OGL_ARB_TEXTURE_BUFFER) || !Is_Extension_Enabled(OGL_ARB_FLOATING_POINT_TEXTURES) ) {
 		return -1;
 	}
 
@@ -511,7 +435,7 @@ bool gr_opengl_config_buffer(const int buffer_id, vertex_buffer *vb, bool update
 	}
 
 	if (vb->flags & VB_FLAG_MODEL_ID) {
-		Assert( GLSL_version >= 150 );
+		Assert( GLSL_version >= 130 );
 
 		Verify( update_ibuffer_only || vb->model_list->submodels != NULL );
 		vb->stride += (1 * sizeof(GLfloat));
@@ -1458,7 +1382,7 @@ void opengl_render_model_program(model_material* material_info, indexed_vertex_s
 	if ( Rendering_to_shadow_map ) {
 		vglDrawElementsInstancedBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), 4, (GLint)bufferp->vertex_num_offset);
 	} else {
-		if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+		if ( is_minimum_GLSL_version() && !GLSL_override && Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
 			if ( Cmdline_drawelements ) {
 				vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
 			} else {
@@ -2425,22 +2349,18 @@ void gr_opengl_shadow_map_end()
 void opengl_tnl_set_material(material* material_info, bool set_base_map)
 {
 	int shader_handle = material_info->get_shader_handle();
-	int base_map = material_info->get_texture_map(TM_BASE_TYPE);
-	color &clr = material_info->get_color();
 
 	if ( shader_handle >= 0 ) {
 		opengl_shader_set_current(shader_handle);
 	} else {
-		opengl_shader_set_passthrough(base_map >= 0, material_info->get_texture_type() == TCACHE_TYPE_AABITMAP, &clr, 1.0f);
-
-		GL_state.Uniform.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
-		GL_state.Uniform.setUniformMatrix4f("projMatrix", GL_projection_matrix);
+		opengl_shader_set_current();
 	}
 
 	GL_state.SetTextureSource(material_info->get_texture_source());
 	GL_state.SetAlphaBlendMode(material_info->get_blend_mode());
 	GL_state.SetZbufferType(material_info->get_depth_mode());
 
+	color &clr = material_info->get_color();
 	GL_state.Color(clr.red, clr.green, clr.blue, clr.alpha);
 
 	gr_set_cull(material_info->get_cull_mode());
@@ -2466,6 +2386,8 @@ void opengl_tnl_set_material(material* material_info, bool set_base_map)
 	} else {
 		gr_opengl_set_clip_plane(NULL, NULL);
 	}
+
+	int base_map = material_info->get_texture_map(TM_BASE_TYPE);
 
 	if ( set_base_map && base_map >= 0 ) {
 		float u_scale, v_scale;
@@ -3151,8 +3073,6 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 void opengl_tnl_set_material_particle(particle_material * material_info)
 {
 	opengl_tnl_set_material(material_info, true);
-
-	color &clr = material_info->get_color();
 
 	GL_state.Uniform.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
 	GL_state.Uniform.setUniformMatrix4f("projMatrix", GL_projection_matrix);
