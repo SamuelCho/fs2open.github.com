@@ -414,7 +414,7 @@ static void OGG_video_init(theora_info *tinfo)
 			glTexParameteri(GL_texture_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 			// NOTE: using NULL instead of pixelbuf crashes some drivers, but then so does pixelbuf
-			glTexImage2D(GL_state.Texture.GetTarget(), 0, GL_LUMINANCE8, 2048, 2048, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, NULL);
+			glTexImage2D(GL_state.Texture.GetTarget(), 0, GL_RED, 2048, 2048, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
 
 			GL_state.Texture.SetActiveUnit(1);
 			GL_state.Texture.SetTarget(GL_texture_target);
@@ -425,7 +425,7 @@ static void OGG_video_init(theora_info *tinfo)
 			glTexParameteri(GL_texture_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 			// NOTE: using NULL instead of pixelbuf crashes some drivers, but then so does pixelbuf
-			glTexImage2D(GL_state.Texture.GetTarget(), 0, GL_LUMINANCE8, 1024, 1024, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, NULL);
+			glTexImage2D(GL_state.Texture.GetTarget(), 0, GL_RED, 1024, 1024, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
 
 			GL_state.Texture.SetActiveUnit(2);
 			GL_state.Texture.SetTarget(GL_texture_target);
@@ -436,7 +436,7 @@ static void OGG_video_init(theora_info *tinfo)
 			glTexParameteri(GL_texture_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 			// NOTE: using NULL instead of pixelbuf crashes some drivers, but then so does pixelbuf
-			glTexImage2D(GL_state.Texture.GetTarget(), 0, GL_LUMINANCE8, 1024, 1024, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, NULL);
+			glTexImage2D(GL_state.Texture.GetTarget(), 0, GL_RED, 1024, 1024, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
 		}
 		float screen_ratio = (float)gr_screen.center_w / (float)gr_screen.center_h;
 		float movie_ratio = (float)g_screenWidth / (float)g_screenHeight;
@@ -671,11 +671,11 @@ static void OGG_video_draw(theora_state *tstate)
 	if (gr_screen.mode == GR_OPENGL) {
 		if(use_shaders) {
 			GL_state.Texture.SetActiveUnit(0);
-			glTexSubImage2D(GL_state.Texture.GetTarget(), 0, 0, 0, yuv.y_stride, yuv.y_height, GL_LUMINANCE, GL_UNSIGNED_BYTE, yuv.y);
+			glTexSubImage2D(GL_state.Texture.GetTarget(), 0, 0, 0, yuv.y_stride, yuv.y_height, GL_RED, GL_UNSIGNED_BYTE, yuv.y);
 			GL_state.Texture.SetActiveUnit(1);
-			glTexSubImage2D(GL_state.Texture.GetTarget(), 0, 0, 0, yuv.uv_stride, yuv.uv_height, GL_LUMINANCE, GL_UNSIGNED_BYTE, yuv.u);
+			glTexSubImage2D(GL_state.Texture.GetTarget(), 0, 0, 0, yuv.uv_stride, yuv.uv_height, GL_RED, GL_UNSIGNED_BYTE, yuv.u);
 			GL_state.Texture.SetActiveUnit(2);
-			glTexSubImage2D(GL_state.Texture.GetTarget(), 0, 0, 0, yuv.uv_stride, yuv.uv_height, GL_LUMINANCE, GL_UNSIGNED_BYTE, yuv.v);
+			glTexSubImage2D(GL_state.Texture.GetTarget(), 0, 0, 0, yuv.uv_stride, yuv.uv_height, GL_RED, GL_UNSIGNED_BYTE, yuv.v);
 		} else {
 			glTexSubImage2D(GL_state.Texture.GetTarget(), 0, 0, 0, g_screenWidth, g_screenHeight, GL_BGR, GL_UNSIGNED_BYTE, pixelbuf);
 		}

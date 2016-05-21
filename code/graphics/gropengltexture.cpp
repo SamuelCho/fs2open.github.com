@@ -610,10 +610,12 @@ int opengl_create_texture_sub(int bitmap_handle, int bitmap_type, int bmap_w, in
 				}
 			}
 
+			GLenum aa_format = is_minimum_GLSL_version() ? GL_RED : GL_ALPHA;
+
 			if ( !reload ) {
-				glTexImage2D (t->texture_target, 0, GL_ALPHA, tex_w, tex_h, 0, GL_ALPHA, GL_UNSIGNED_BYTE, texmem);
+				glTexImage2D (t->texture_target, 0, aa_format, tex_w, tex_h, 0, aa_format, GL_UNSIGNED_BYTE, texmem);
 			} else { // faster anis
-				glTexSubImage2D (t->texture_target, 0, 0, 0, tex_w, tex_h, GL_ALPHA, GL_UNSIGNED_BYTE, texmem);
+				glTexSubImage2D (t->texture_target, 0, 0, 0, tex_w, tex_h, aa_format, GL_UNSIGNED_BYTE, texmem);
 			}
 
 			if (texmem != NULL) {

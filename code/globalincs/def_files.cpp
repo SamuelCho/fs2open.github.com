@@ -2917,8 +2917,7 @@ char* Default_passthrough_fragment_shader =
 "{\n"
 "	vec4 baseColor = texture2D(baseMap, fragTexCoord.xy);\n"
 "	baseColor.rgb = (srgb == 1) ? pow(baseColor.rgb, vec3(SRGB_GAMMA)) : baseColor.rgb;\n"
-"	baseColor *= fragColor;\n"
-"	gl_FragColor = mix(mix(baseColor, vec4(fragColor.rgb, baseColor.a), float(alphaTexture)), fragColor, float(noTexturing)) * intensity;\n"
+"	gl_FragColor = mix(mix(baseColor * fragColor, vec4(fragColor.rgb, baseColor.r), float(alphaTexture)), fragColor, float(noTexturing)) * intensity;\n"
 "}";
 
 char *Default_deferred_vertex_shader =

@@ -1099,4 +1099,7 @@ void opengl_shader_set_passthrough(bool textured, bool alpha, color *clr, float 
 	} else {
 		GL_state.Uniform.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
 	}
+
+	GL_state.Uniform.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
+	GL_state.Uniform.setUniformMatrix4f("projMatrix", GL_projection_matrix);
 }
