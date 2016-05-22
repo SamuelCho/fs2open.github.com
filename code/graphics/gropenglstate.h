@@ -247,6 +247,8 @@ class opengl_array_state
 		GLuint uniform_buffer;
 
 		GLuint uniform_buffer_index_bindings[MAX_UNIFORM_BUFFERS];
+
+		GLuint vertex_array_object;
 	public:
 		opengl_array_state(): active_client_texture_unit(0), client_texture_units(NULL) {
 			for ( int i = 0; i < MAX_UNIFORM_BUFFERS; ++i ) {

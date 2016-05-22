@@ -107,6 +107,7 @@ static int GL_minimized = 0;
 
 static GLenum GL_read_format = GL_BGRA;
 
+static GLuint GL_vao = 0;
 
 void opengl_go_fullscreen()
 {
@@ -1343,6 +1344,11 @@ void gr_opengl_shutdown()
 	opengl_post_process_shutdown();
 	opengl_shader_shutdown();
 
+	if ( Is_Extension_Enabled(OGL_ARB_VERTEX_ARRAY_OBJECT) ) {
+		vglDeleteVertexArrays(1, &GL_vao);
+		GL_vao = 0;
+	}
+
 	GL_initted = false;
 
 #ifdef _WIN32
@@ -1927,6 +1933,12 @@ bool gr_opengl_init()
 	}
 
 	glGetIntegerv(GL_MAX_TEXTURE_COORDS, &max_texture_coords);
+
+	// create vertex array object to make OpenGL Core happy if we can
+	if ( Is_Extension_Enabled(OGL_ARB_VERTEX_ARRAY_OBJECT) ) {
+		vglGenVertexArrays(1, &GL_vao);
+		vglBindVertexArray(GL_vao);
+	}
 
 	GL_state.Texture.init(max_texture_units);
 	GL_state.Array.init(max_texture_coords);

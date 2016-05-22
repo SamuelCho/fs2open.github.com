@@ -82,9 +82,10 @@ extern ogl_function GL_EXT_Special[];
 #define OGL_EXT_TRANSFORM_FEEDBACK			31
 #define OGL_ARB_DRAW_INSTANCED				32
 #define OGL_ARB_TEXTURE_BUFFER				33
-#define OGL_EXT_GPU_SHADER4					34
+#define OGL_EXT_GPU_SHADER4					35
+#define OGL_ARB_VERTEX_ARRAY_OBJECT			36
 
-#define NUM_OGL_EXTENSIONS					35
+#define NUM_OGL_EXTENSIONS					37
 
 
 // Functions
@@ -185,8 +186,12 @@ extern ogl_function GL_EXT_Special[];
 #define OGL_ARB_TEX_BUFFER					90
 #define OGL_BIND_FRAG_DATA_LOCATION			91
 #define OGL_GET_FRAG_DATA_LOCATION			92
+#define OGL_BIND_VERTEX_ARRAY				93
+#define OGL_DELETE_VERTEX_ARRAYS			94
+#define OGL_GEN_VERTEX_ARRAYS				95
+#define OGL_IS_VERTEX_ARRAY					96
 
-#define NUM_OGL_FUNCTIONS					93
+#define NUM_OGL_FUNCTIONS					97
 
 // special extensions/functions (OS specific, non-GL stuff)
 #define OGL_SPC_WGL_SWAP_INTERVAL		0
@@ -318,6 +323,10 @@ typedef GLuint (* glGetUniformBlockIndexARBProcPtr) (GLuint program, const GLcha
 #define PFNGLTEXBUFFERARBPROC					glTexBufferARBProcPtr
 #define PFNGLBINDFRAGDATALOCATIONEXTPROC		glBindFragDataLocationEXTProcPtr
 #define PFNGLGETFRAGDATALOCATIONEXTPROC			glGetFragDataLocationEXTProcPtr
+#define PFNGLBINDVERTEXARRAYPROC				glBindVertexArrayProcPtr
+#define PFNGLDELETEVERTEXARRAYSPROC				glDeleteVertexArraysProcPtr
+#define PFNGLGENVERTEXARRAYSPROC				glGenVertexArraysProcPtr
+#define PFNGLISVERTEXARRAYPROC					glIsVertexArrayProcPtr
 #endif	// __APPLE__
 
 #define vglFogCoordfEXT					GLEXT_CALL( OGL_FOG_COORDF, PFNGLFOGCOORDFEXTPROC )
@@ -415,6 +424,10 @@ typedef GLuint (* glGetUniformBlockIndexARBProcPtr) (GLuint program, const GLcha
 #define vglTexBufferARB					GLEXT_CALL( OGL_ARB_TEX_BUFFER, PFNGLTEXBUFFERARBPROC )
 #define vglBindFragDataLocationEXT		GLEXT_CALL( OGL_BIND_FRAG_DATA_LOCATION, PFNGLBINDFRAGDATALOCATIONEXTPROC )
 #define vglGetFragDataLocationEXT		GLEXT_CALL( OGL_GET_FRAG_DATA_LOCATION, PFNGLGETFRAGDATALOCATIONEXTPROC )
+#define vglBindVertexArray				GLEXT_CALL( OGL_BIND_VERTEX_ARRAY, PFNGLBINDVERTEXARRAYPROC )
+#define vglDeleteVertexArrays			GLEXT_CALL( OGL_DELETE_VERTEX_ARRAYS, PFNGLDELETEVERTEXARRAYSPROC )
+#define vglGenVertexArrays				GLEXT_CALL( OGL_GEN_VERTEX_ARRAYS, PFNGLGENVERTEXARRAYSPROC )
+#define vglIsVertexArray				GLEXT_CALL( OGL_IS_VERTEX_ARRAY, PFNGLISVERTEXARRAYPROC )
 #ifndef __APPLE__
 #define vglTexImage3D					GLEXT_CALL( OGL_TEXIMAGE3D, PFNGLTEXIMAGE3DPROC )
 #else
