@@ -2438,7 +2438,7 @@ void render_arc(color *clr, int xc, int yc, float r, float angle_start, float an
 		vertex_layout vert_def;
 		vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, 0);
 
-		gr_render_primitives_2d_immediate(&material_params, PRIM_TYPE_QUADSTRIP, &vert_def, segments * 2, arc, sizeof(float) * segments * 4);
+		gr_render_primitives_2d_immediate(&material_params, PRIM_TYPE_TRISTRIP, &vert_def, segments * 2, arc, sizeof(float) * segments * 4);
 	}
 
 	delete [] arc;
@@ -2528,7 +2528,7 @@ void render_unfilled_circle(color *clr, float linewidth, int xc, int yc, int d, 
 	vertex_layout vert_def;
 	vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, 0);
 
-	gr_render_primitives_2d_immediate(&material_params, PRIM_TYPE_QUADSTRIP, &vert_def, segments * 2, circle, sizeof(float) * segments * 4);
+	gr_render_primitives_2d_immediate(&material_params, PRIM_TYPE_TRISTRIP, &vert_def, segments * 2, circle, sizeof(float) * segments * 4);
 
 	delete [] circle;
 }

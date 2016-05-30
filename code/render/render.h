@@ -68,6 +68,7 @@ void render_arc(color *clr, int xc, int yc, float r, float angle_start, float an
 void render_curve(color *clr, int xc, int yc, int r, int direction, int resize_mode = GR_RESIZE_FULL);
 void render_curve(int xc, int yc, int r, int direction, int resize_mode = GR_RESIZE_FULL);
 
+void render_unfilled_circle(float linewidth, int xc, int yc, int d, int resize_mode = GR_RESIZE_FULL);
 void render_unfilled_circle(color *clr, float linewidth, int xc, int yc, int d, int resize_mode = GR_RESIZE_FULL);
 
 void render_colored_rect(color *clr, int x, int y, int w, int h, int resize_mode = GR_RESIZE_FULL);
