@@ -2440,7 +2440,7 @@ void opengl_tnl_set_material(material* material_info, bool set_base_map)
 
 	GL_state.Color(clr.red, clr.green, clr.blue, clr.alpha);
 
-	gr_set_cull(material_info->get_cull_mode());
+	gr_set_cull(material_info->get_cull_mode() ? 1 : 0);
 
 	gr_zbias(material_info->get_depth_bias());
 
@@ -2719,6 +2719,14 @@ void opengl_tnl_set_model_material(model_material *material_info)
 			GL_state.Uniform.setUniformf("fogScale", 1.0f / fog_params.dist_far);
 			GL_state.Uniform.setUniform4f("fogColor", fog_params.r, fog_params.g, fog_params.b, 1.0f);
 		}
+	}
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_NORMAL_ALPHA ) {
+		GL_state.Uniform.setUniform2f("normalAlphaMinMax", material_info->get_normal_alpha_min(), material_info->get_normal_alpha_max());
+	}
+
+	if ( Current_shader->flags & SDR_FLAG_MODEL_NORMAL_EXTRUDE ) {
+		GL_state.Uniform.setUniformf("extrudeWidth", material_info->get_normal_extrude_width());
 	}
 }
 

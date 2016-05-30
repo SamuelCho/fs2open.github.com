@@ -184,6 +184,8 @@ enum shader_type {
 #define SDR_FLAG_MODEL_SHADOWS		(1<<15)
 #define SDR_FLAG_MODEL_THRUSTER		(1<<16)
 #define SDR_FLAG_MODEL_CLIP			(1<<17)
+#define SDR_FLAG_MODEL_NORMAL_ALPHA	(1<<18)
+#define SDR_FLAG_MODEL_NORMAL_EXTRUDE (1<<19)
 
 #define SDR_FLAG_PARTICLE_POINT_GEN			(1<<0)
 

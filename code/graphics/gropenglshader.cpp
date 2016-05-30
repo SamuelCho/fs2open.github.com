@@ -178,8 +178,16 @@ static opengl_shader_variant_t GL_shader_variants[] = {
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_CLIP, "FLAG_CLIP", 
 		3, { "use_clip_plane", "clip_normal", "clip_position" }, 0, {  }, 
-		"Clip Plane" },
+		"Clip Plane" }, // FLAG_NORMAL_ALPHA
 	
+	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_NORMAL_ALPHA, "FLAG_NORMAL_ALPHA",
+		1, { "normalAlphaMinMax" }, 0, { },
+		"Normal Alpha" },
+
+	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_NORMAL_EXTRUDE, "FLAG_NORMAL_EXTRUDE",
+		1, { "extrudeWidth" }, 0, {},
+		"Normal Extrusion" },
+
 	{ SDR_TYPE_EFFECT_PARTICLE, true, SDR_FLAG_PARTICLE_POINT_GEN, "FLAG_EFFECT_GEOMETRY", 
 		0, { NULL }, 1, { opengl_vert_attrib::UVEC },
 		"Geometry shader point-based particles" },

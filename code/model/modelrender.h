@@ -112,6 +112,13 @@ class model_render_params
 	float Animated_timer;
 
 	mst_info Thruster_info;
+
+	bool Normal_alpha;
+	float Normal_alpha_min;
+	float Normal_alpha_max;
+
+	bool Normal_extrude;
+	float Normal_extrude_width;
 public:
 	model_render_params();
 
@@ -132,9 +139,13 @@ public:
 	void set_clip_plane(vec3d &pos, vec3d &normal);
 	void set_animated_effect(int effect_num, float timer);
 	void set_thruster_info(mst_info &info);
+	void set_normal_alpha(float min, float max);
+	void set_normal_extrude_width(float width);
 
 	bool is_clip_plane_set();
 	bool is_team_color_set();
+	bool is_normal_alpha_set();
+	bool is_normal_extrude_set();
 
 	uint get_model_flags();
 	uint get_debug_flags();
@@ -155,6 +166,9 @@ public:
 	int get_animated_effect_num();
 	float get_animated_effect_timer();
 	const mst_info& get_thruster_info();
+	float get_normal_alpha_min();
+	float get_normal_alpha_max();
+	float get_normal_extrude_width();
 };
 
 struct arc_effect

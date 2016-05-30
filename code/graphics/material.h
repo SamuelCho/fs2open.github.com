@@ -506,6 +506,13 @@ class model_material : public material
 	bool Team_color_set;
 	team_color Tm_color;
 
+	bool Normal_alpha;
+	float Normal_alpha_min;
+	float Normal_alpha_max;
+
+	bool Normal_extrude;
+	float Normal_extrude_width;
+
 public:
 	model_material();
 
@@ -537,6 +544,17 @@ public:
 	void set_animated_effect();
 	int get_animated_effect();
 	float get_animated_effect_time();
+
+	void set_normal_alpha(float min, float max);
+	void set_normal_alpha();
+	bool is_normal_alpha_active();
+	float get_normal_alpha_min();
+	float get_normal_alpha_max();
+
+	void set_normal_extrude(float width);
+	void set_normal_extrude();
+	bool is_normal_extrude_active();
+	float get_normal_extrude_width();
 
 	void set_batching(bool enabled);
 	bool is_batched();

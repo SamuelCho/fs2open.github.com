@@ -247,7 +247,11 @@ Light_factor(1.0f),
 Batched(false), 
 Team_color_set(false), 
 Center_alpha(0),
-Desaturate(false)
+Desaturate(false),
+Normal_alpha(false),
+Normal_alpha_min(0.0f),
+Normal_alpha_max(1.0f),
+Normal_extrude(false)
 { 
 	set_shader_type(SDR_TYPE_MODEL); 
 }
@@ -360,6 +364,54 @@ bool model_material::is_batched()
 	return Batched;
 }
 
+void model_material::set_normal_alpha(float min, float max)
+{
+	Normal_alpha = true;
+	Normal_alpha_min = min;
+	Normal_alpha_max = max;
+}
+
+void model_material::set_normal_alpha()
+{
+	Normal_alpha = false;
+}
+
+bool model_material::is_normal_alpha_active()
+{
+	return Normal_alpha;
+}
+
+float model_material::get_normal_alpha_min()
+{
+	return Normal_alpha_min;
+}
+
+float model_material::get_normal_alpha_max()
+{
+	return Normal_alpha_max;
+}
+
+void model_material::set_normal_extrude(float width)
+{
+	Normal_extrude = true;
+	Normal_extrude_width = width;
+}
+
+void model_material::set_normal_extrude()
+{
+	Normal_extrude = false;
+}
+
+bool model_material::is_normal_extrude_active()
+{
+	return Normal_extrude;
+}
+
+float model_material::get_normal_extrude_width()
+{
+	return Normal_extrude_width;
+}
+
 uint model_material::get_shader_flags()
 {
 	uint Shader_flags = 0;
@@ -433,6 +485,14 @@ uint model_material::get_shader_flags()
 
 	if ( Thrust_scale > 0.0f ) {
 		Shader_flags |= SDR_FLAG_MODEL_THRUSTER;
+	}
+
+	if ( Normal_alpha ) {
+		Shader_flags |= SDR_FLAG_MODEL_NORMAL_ALPHA;
+	}
+
+	if ( Normal_extrude ) {
+		Shader_flags |= SDR_FLAG_MODEL_NORMAL_EXTRUDE;
 	}
 
 	return Shader_flags;

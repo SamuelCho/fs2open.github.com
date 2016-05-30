@@ -7173,11 +7173,9 @@ void HudGaugeHardpoints::render(float frametime)
 	gr_set_color_buffer(1);
 	gr_stencil_set(GR_STENCIL_READ);
 	gr_set_cull(cull);
-	gr_set_line_width(_line_width*2.0f);
 
-	//model_set_alpha( gr_screen.current_color.alpha / 255.0f );
-	//model_set_forced_texture(0);
-	render_info.set_flags(MR_NO_LIGHTING | MR_AUTOCENTER | MR_NO_FOGGING | MR_NO_TEXTURING | MR_SHOW_OUTLINE_HTL | MR_NO_POLYS | MR_NO_ZBUFFER | MR_NO_CULL);
+	render_info.set_flags(MR_NO_LIGHTING | MR_AUTOCENTER | MR_NO_FOGGING | MR_NO_TEXTURING | MR_NO_ZBUFFER | MR_NO_CULL);
+	render_info.set_normal_extrude_width(_line_width * 0.01f);
 
 	model_render_immediate( 
 		&render_info,
@@ -7188,7 +7186,6 @@ void HudGaugeHardpoints::render(float frametime)
 
 	gr_stencil_set(GR_STENCIL_NONE);
 	gr_zbuffer_set(zbuffer);
-	gr_set_line_width(1.0f);
 	
 	// draw weapon models
 	int i, k;
