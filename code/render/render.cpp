@@ -2309,19 +2309,14 @@ void render_gradient(color *clr, int x1, int y1, int x2, int y2, int resize_mode
 	vertices[0].b = clr->blue;
 	vertices[0].a = ba;
 
-	vertices[1].screen.xyw.y = sx1;
+	vertices[1].screen.xyw.x = sx1;
 	vertices[1].screen.xyw.y = sy1;
 	vertices[1].r = clr->red;
 	vertices[1].g = clr->green;
 	vertices[1].b = clr->blue;
 	vertices[1].a = aa;
-
-	vertex_layout vert_def;
-
-	vert_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), (int)offsetof(vertex, screen));
-	vert_def.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), (int)offsetof(vertex, r));
 	
-	gr_render_primitives_2d_immediate(&mat, PRIM_TYPE_LINES, &vert_def, 2, vertices, sizeof(vertex) * 2);
+	render_primitives_colored(&mat, vertices, 2, PRIM_TYPE_LINES, true);
 }
 
 void render_gradient(int x1, int y1, int x2, int y2, int resize_mode)
