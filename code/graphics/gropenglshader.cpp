@@ -1103,7 +1103,7 @@ void opengl_shader_set_passthrough(bool textured, bool alpha, color *clr, float 
 	GL_state.Uniform.setUniformf("intensity", color_scale);
 
 	if ( clr != NULL ) {
-		GL_state.Uniform.setUniform4f("color", clr->red / 255.0f, clr->green / 255.0f, clr->blue / 255.0f, clr->alpha / 255.0f);
+		GL_state.Uniform.setUniform4f("color", i2fl(clr->red) / 255.0f, i2fl(clr->green) / 255.0f, i2fl(clr->blue) / 255.0f, i2fl(clr->alpha) / 255.0f);
 	} else {
 		GL_state.Uniform.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
 	}

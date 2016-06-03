@@ -3011,6 +3011,8 @@ void gr_opengl_scene_texture_end()
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 		GL_state.Color(255, 255, 255, 255);
+		
+		opengl_shader_set_passthrough(true, false);
 
 		GL_state.Array.BindArrayBuffer(0);
 
@@ -3279,7 +3281,7 @@ void gr_opengl_deferred_lighting_finish()
 		0.0f, Scene_texture_v_scale
 	};
 
-	opengl_shader_set_current();
+	opengl_shader_set_passthrough(true, false);
 
 	GL_state.Array.BindArrayBuffer(0);
 	GL_state.Array.BindElementBuffer(0);
@@ -3326,7 +3328,7 @@ void gr_opengl_update_distortion()
 	GLboolean blend = GL_state.Blend(GL_FALSE);
 	GLboolean cull = GL_state.CullFace(GL_FALSE);
 
-	opengl_shader_set_current();
+	opengl_shader_set_passthrough(true, false);
 	vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Distortion_framebuffer);
 	vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Distortion_texture[!Distortion_switch], 0);
 	glDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);

@@ -2045,7 +2045,7 @@ void gr_opengl_set_view_matrix(const vec3d *pos, const matrix *orient)
 	glScalef(1.0f, 1.0f, -1.0f);
 
 	GL_model_matrix_stack.clear();
-	vm_matrix4_set_identity(&GL_model_view_matrix);
+	GL_model_view_matrix = GL_view_matrix;
 
 	if (Cmdline_env) {
 		GL_env_texture_matrix_set = true;
@@ -2426,12 +2426,12 @@ void opengl_tnl_set_material(material* material_info, bool set_base_map)
 {
 	int shader_handle = material_info->get_shader_handle();
 	int base_map = material_info->get_texture_map(TM_BASE_TYPE);
-	color &clr = material_info->get_color();
+	color clr = material_info->get_color();
 
 	if ( shader_handle >= 0 ) {
 		opengl_shader_set_current(shader_handle);
 	} else {
-		opengl_shader_set_passthrough(base_map >= 0, material_info->get_texture_type() == TCACHE_TYPE_AABITMAP, &clr, 1.0f);
+		opengl_shader_set_passthrough(base_map >= 0, material_info->get_texture_type() == TCACHE_TYPE_AABITMAP, &clr);
 	}
 
 	GL_state.SetTextureSource(material_info->get_texture_source());

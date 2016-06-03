@@ -2912,9 +2912,7 @@ char *Default_passthrough_vertex_shader =
 "{\n"
 "	fragTexCoord = vertTexCoord;\n"
 "	fragColor = vertColor * color;\n"
-"	//fragColor = vec4(1.0, 1.0, 1.0, 1.0);\n"
-"	//gl_Position = projMatrix * modelViewMatrix * vertPosition;\n"
-"	gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * vertPosition;\n"
+"	gl_Position = projMatrix * modelViewMatrix * vertPosition;\n"
 "}";
 
 char* Default_passthrough_fragment_shader =
@@ -2930,7 +2928,7 @@ char* Default_passthrough_fragment_shader =
 "{\n"
 "	vec4 baseColor = texture2D(baseMap, fragTexCoord.xy);\n"
 "	baseColor.rgb = (srgb == 1) ? pow(baseColor.rgb, vec3(SRGB_GAMMA)) : baseColor.rgb;\n"
-"	gl_FragColor = mix(mix(baseColor * fragColor, vec4(fragColor.rgb, baseColor.r), float(alphaTexture)), fragColor, float(noTexturing)) * intensity;\n"
+"	fragOut0 = mix(mix(baseColor * fragColor, vec4(fragColor.rgb, baseColor.r * fragColor.a), float(alphaTexture)), fragColor, float(noTexturing)) * intensity;\n"
 "}";
 
 char *Default_deferred_vertex_shader =
