@@ -154,7 +154,7 @@ ogl_extension GL_Extensions[NUM_OGL_EXTENSIONS] =
 	{ false, false, 1, {"GL_EXT_framebuffer_blit" }, 1, { "glBlitFramebufferEXT" } },
 
 	// geometry shaders
-	{ false, false, 1, { "GL_EXT_geometry_shader4" }, 2, { "glProgramParameteriEXT", "glFramebufferTextureEXT" } },
+	{ false, false, 1, { "GL_ARB_geometry_shader4" }, 2, { "glProgramParameteriARB", "glFramebufferTextureARB" } },
 
 	// array textures
 	{ false, false, 1, { "GL_EXT_texture_array" }, 1, { "glTexImage3D" } },
@@ -256,9 +256,9 @@ ogl_function GL_Functions[NUM_OGL_FUNCTIONS] =
 	{ "glDrawElementsInstancedBaseVertex", 0 },
 	{ "glMultiDrawElementsBaseVertex", 0 },
 	{ "glBlitFramebufferEXT", 0},
-	{ "glProgramParameteriEXT", 0 },
+	{ "glProgramParameteriARB", 0 },
 	{ "glTexImage3D", 0 },
-	{ "glFramebufferTextureEXT", 0 },
+	{ "glFramebufferTextureARB", 0 },
 	{ "glGetUniformIndices", 0 },
 	{ "glGetActiveUniformsiv", 0 },
 	{ "glGetActiveUniformName", 0 },
@@ -450,7 +450,7 @@ void opengl_extensions_init()
 		Cmdline_env = 0;
 	}
 	
-	if ( !(Is_Extension_Enabled(OGL_EXT_GEOMETRY_SHADER4) && Is_Extension_Enabled(OGL_EXT_TEXTURE_ARRAY) && Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX)) ) {
+	if ( !(Is_Extension_Enabled(OGL_ARB_GEOMETRY_SHADER4) && Is_Extension_Enabled(OGL_EXT_TEXTURE_ARRAY) && Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX)) ) {
 		Cmdline_shadow_quality = 0;
 		mprintf(("  No hardware support for shadow mapping. Shadows will be disabled. \n"));
 	}

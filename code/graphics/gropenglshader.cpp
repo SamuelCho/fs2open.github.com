@@ -486,7 +486,7 @@ int opengl_compile_shader(shader_type sdr, uint flags)
 	SCP_vector<SCP_string> geom_content;
 
 	if ( use_geo_sdr ) {
-		if (!Is_Extension_Enabled(OGL_EXT_GEOMETRY_SHADER4)) {
+		if (!Is_Extension_Enabled(OGL_ARB_GEOMETRY_SHADER4)) {
 			return -1;
 		}
 
@@ -708,18 +708,6 @@ GLhandleARB opengl_shader_link_object(GLhandleARB vertex_object, GLhandleARB fra
 
 	if (geometry_object) {
 		vglAttachObjectARB(shader_object, geometry_object);
-		
-		if ( Current_geo_sdr_params != NULL) {
-#ifdef __APPLE__
-			vglProgramParameteriEXT((long)shader_object, GL_GEOMETRY_INPUT_TYPE_EXT, Current_geo_sdr_params->input_type);
-			vglProgramParameteriEXT((long)shader_object, GL_GEOMETRY_OUTPUT_TYPE_EXT, Current_geo_sdr_params->output_type);
-			vglProgramParameteriEXT((long)shader_object, GL_GEOMETRY_VERTICES_OUT_EXT, Current_geo_sdr_params->vertices_out);
-#else
-			vglProgramParameteriEXT((GLuint)shader_object, GL_GEOMETRY_INPUT_TYPE_EXT, Current_geo_sdr_params->input_type);
-			vglProgramParameteriEXT((GLuint)shader_object, GL_GEOMETRY_OUTPUT_TYPE_EXT, Current_geo_sdr_params->output_type);
-			vglProgramParameteriEXT((GLuint)shader_object, GL_GEOMETRY_VERTICES_OUT_EXT, Current_geo_sdr_params->vertices_out);
-#endif
-		}
 	}
 
 	for ( int i = 0; i < opengl_vert_attrib::NUM_ATTRIBS; ++i ) {
@@ -787,7 +775,7 @@ GLhandleARB opengl_shader_create(const SCP_vector<SCP_string>& vs, const SCP_vec
 	}
 
 	if (!gs.empty()) {
-		gs_o = opengl_shader_compile_object( gs, GL_GEOMETRY_SHADER_EXT );
+		gs_o = opengl_shader_compile_object( gs, GL_GEOMETRY_SHADER_ARB );
 
 		if ( !gs_o ) {
 			mprintf(("ERROR! Unable to create fragment shader!\n"));

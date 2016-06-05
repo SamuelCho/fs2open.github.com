@@ -737,7 +737,7 @@ int batch_add_bitmap(int texture, int tmap_flags, vertex *pnt, int orient, float
 		tmap_flags &= ~(TMAP_FLAG_SOFT_QUAD);
 	}
 
-	if ( GLSL_version > 120 && Cmdline_softparticles && !Cmdline_no_geo_sdr_effects && Is_Extension_Enabled(OGL_EXT_GEOMETRY_SHADER4) && (tmap_flags & TMAP_FLAG_VERTEX_GEN) ) {
+	if ( GLSL_version > 120 && Cmdline_softparticles && !Cmdline_no_geo_sdr_effects && Is_Extension_Enabled(OGL_ARB_GEOMETRY_SHADER4) && (tmap_flags & TMAP_FLAG_VERTEX_GEN) ) {
 		geometry_batch_add_bitmap(texture, tmap_flags, pnt, orient, rad, alpha, depth);
 		return 0;
 	} else if ( tmap_flags & TMAP_FLAG_VERTEX_GEN ) {

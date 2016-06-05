@@ -2060,11 +2060,11 @@ bool gr_opengl_is_capable(gr_capability capability)
 	case CAPABILITY_DEFERRED_LIGHTING:
 		return !Cmdline_no_fbo && !Cmdline_no_deferred_lighting && (GLSL_version >= 120);
 	case CAPABILITY_SHADOWS:
-		return Is_Extension_Enabled(OGL_EXT_GEOMETRY_SHADER4) && Is_Extension_Enabled(OGL_EXT_TEXTURE_ARRAY) && Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) && (GLSL_version >= 120);
+		return Is_Extension_Enabled(OGL_ARB_GEOMETRY_SHADER4) && Is_Extension_Enabled(OGL_EXT_TEXTURE_ARRAY) && Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) && (GLSL_version >= 120);
 	case CAPABILITY_BATCHED_SUBMODELS:
 		return (GLSL_version >= 150) && Is_Extension_Enabled(OGL_ARB_TEXTURE_BUFFER) && Is_Extension_Enabled(OGL_ARB_FLOATING_POINT_TEXTURES);
 	case CAPABILITY_POINT_PARTICLES:
-		return Is_Extension_Enabled(OGL_EXT_GEOMETRY_SHADER4) && !Cmdline_no_geo_sdr_effects;
+		return Is_Extension_Enabled(OGL_ARB_GEOMETRY_SHADER4) && !Cmdline_no_geo_sdr_effects;
 	}
 
 	return false;
