@@ -1363,7 +1363,7 @@ void gr_opengl_update_texture(int bitmap_handle, int bpp, const ubyte* data, int
 	}
 	if (byte_mult == 1) {
 		texFormat = GL_UNSIGNED_BYTE;
-		glFormat = GL_ALPHA;
+		glFormat = is_minimum_GLSL_version() ? GL_RED : GL_ALPHA;
 		texmem = (ubyte *) vm_malloc (width*height*byte_mult);
 		ubyte* texmemp = texmem;
 
