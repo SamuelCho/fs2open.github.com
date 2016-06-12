@@ -329,12 +329,7 @@ void model_batch_buffer::set_num_models(int n_models)
 {
 	matrix4 init_mat;
 
-	memset(&init_mat, 0, sizeof(matrix4));
-
-	init_mat.a1d[0] = 1.0f;
-	init_mat.a1d[5] = 1.0f;
-	init_mat.a1d[10] = 1.0f;
-	init_mat.a1d[15] = 1.0f;	// set this to zero to indicate it's not to be drawn in the shader
+	vm_matrix4_set_identity(&init_mat);
 
 	Current_offset = Submodel_matrices.size();
 
@@ -417,7 +412,7 @@ void draw_list::add_submodel_to_batch(int model_num)
 {
 	matrix4 transform;
 
-	memset(&transform, 0, sizeof(matrix4));
+	vm_matrix4_set_identity(&transform);
 
 	// set basis
 	transform.a1d[0] = Current_transform.basis.a1d[0] * Current_scale.xyz.x;

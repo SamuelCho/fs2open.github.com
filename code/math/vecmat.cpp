@@ -2724,11 +2724,24 @@ bool vm_inverse_matrix4(const matrix4 *m, matrix4 *invOut)
 
 void vm_matrix4_set_identity(matrix4 *out)
 {
-	memset(out, 0, sizeof(matrix4));
-
 	out->a2d[0][0] = 1.0f;
+	out->a2d[0][1] = 0.0f;
+	out->a2d[0][2] = 0.0f;
+	out->a2d[0][3] = 0.0f;
+
+	out->a2d[1][0] = 0.0f;
 	out->a2d[1][1] = 1.0f;
+	out->a2d[1][2] = 0.0f;
+	out->a2d[1][3] = 0.0f;
+
+	out->a2d[2][0] = 0.0f;
+	out->a2d[2][1] = 0.0f;
 	out->a2d[2][2] = 1.0f;
+	out->a2d[2][3] = 0.0f;
+
+	out->a2d[3][0] = 0.0f;
+	out->a2d[3][1] = 0.0f;
+	out->a2d[3][2] = 0.0f;
 	out->a2d[3][3] = 1.0f;
 }
 

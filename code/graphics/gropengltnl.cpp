@@ -364,6 +364,13 @@ void gr_opengl_update_transform_buffer(void* data, uint size)
 	}
 
 	gr_opengl_update_buffer_data(Transform_buffer_handle, size, data);
+
+	opengl_buffer_object &buffer_obj = GL_buffer_objects[Transform_buffer_handle];
+
+	// need to rebind the buffer object to the texture buffer after it's been updated.
+	// didn't have to do this on AMD and Nvidia drivers but Intel drivers seem to want it.
+	glBindTexture(GL_TEXTURE_BUFFER_ARB, buffer_obj.texture);
+	vglTexBufferARB(GL_TEXTURE_BUFFER_ARB, GL_RGBA32F_ARB, buffer_obj.buffer_id);
 }
 
 GLuint opengl_get_transform_buffer_texture()
