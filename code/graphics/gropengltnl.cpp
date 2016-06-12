@@ -2550,9 +2550,9 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		}
 
 		if ( material_info->get_light_factor() > 0.25f && !Cmdline_no_emissive ) {
-			GL_state.Uniform.setUniform4f("emissionFactor", GL_light_emission[0], GL_light_emission[1], GL_light_emission[2], GL_light_emission[3]);
+			GL_state.Uniform.setUniform3f("emissionFactor", GL_light_emission[0], GL_light_emission[1], GL_light_emission[2]);
 		} else {
-			GL_state.Uniform.setUniform4f("emissionFactor", GL_light_zero[0], GL_light_zero[1], GL_light_zero[2], GL_light_zero[3]);
+			GL_state.Uniform.setUniform3f("emissionFactor", GL_light_zero[0], GL_light_zero[1], GL_light_zero[2]);
 		}
 
 		GL_state.Uniform.setUniformf("specPower", Cmdline_ogl_spec);

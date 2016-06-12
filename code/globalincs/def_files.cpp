@@ -1770,7 +1770,7 @@ char *Default_main_fragment_shader =
 "\n"
 "#ifdef FLAG_LIGHT\n"
 "	vec3 lightDir; \n"
-"   lightAmbient = vec3(emissionFactor + ambientFactor);\n"
+"   lightAmbient = emissionFactor + ambientFactor;\n"
 "   float dist;\n"
 "   #pragma optionNV unroll all\n"
 "   for (int i = 0; i < MAX_LIGHTS; ++i) {\n"
