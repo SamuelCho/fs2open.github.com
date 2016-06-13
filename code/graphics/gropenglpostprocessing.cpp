@@ -331,8 +331,6 @@ void gr_opengl_post_process_end()
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	GL_state.Color(255, 255, 255, 255);
-
 	// set and configure post shader ...
 	int flags = 0;
 	for ( int i = 0; i < (int)Post_effects.size(); i++) {

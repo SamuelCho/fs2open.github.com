@@ -1428,7 +1428,8 @@ void Window::DoDraw(float frametime)
 
 	// shade the background of the window so that it's just slightly transparent
 	gr_set_shader(&WindowShade);
-	gr_opengl_shade(Coords[0], Coords[1], Coords[2], Coords[3], GR_RESIZE_NONE);
+	//gr_opengl_shade(Coords[0], Coords[1], Coords[2], Coords[3], GR_RESIZE_NONE);
+	render_colored_rect(&WindowShade, Coords[0], Coords[1], Coords[2], Coords[3], GR_RESIZE_NONE);
 
 	gr_set_color_fast(&Color_text_normal);
 

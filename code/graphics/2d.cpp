@@ -76,9 +76,6 @@ int gr_global_zbuffering = 0;
 // stencil buffer stuff
 int gr_stencil_mode = 0;
 
-// alpha mask stuff
-int gr_alpha_test = 0;
-
 // Default clipping distances
 const float Default_min_draw_distance = 1.0f;
 const float Default_max_draw_distance = 1e10;

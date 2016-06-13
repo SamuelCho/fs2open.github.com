@@ -3010,8 +3010,11 @@ void gr_opengl_scene_texture_end()
 
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
-		GL_state.Color(255, 255, 255, 255);
-		
+
+		if ( !is_minimum_GLSL_version() ) {
+			GL_state.Color(255, 255, 255, 255);
+		}
+
 		opengl_shader_set_passthrough(true, false);
 
 		GL_state.Array.BindArrayBuffer(0);
@@ -3339,7 +3342,6 @@ void gr_opengl_update_distortion()
 	GL_state.Texture.Enable(Distortion_texture[Distortion_switch]);
 	glClearColor(0.5f, 0.5f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
-	GL_state.Color(255, 255, 255, 255);
 
 	GLfloat texcoord[8] = {
 		0.0f, 0.0f,

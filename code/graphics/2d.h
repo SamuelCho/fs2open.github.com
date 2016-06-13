@@ -298,9 +298,6 @@ public:
 // stencil buffering stuff
 extern int gr_stencil_mode;
 
-// alpha test
-extern int gr_alpha_test;
-
 /**
  * This is a structure used by the shader to keep track
  * of the values you want to use in the shade primitive.

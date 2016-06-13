@@ -89,6 +89,8 @@ static int GL_mouse_saved_y1 = 0;
 static int GL_mouse_saved_x2 = 0;
 static int GL_mouse_saved_y2 = 0;
 
+float GL_alpha_threshold = 0.0f;
+
 void opengl_save_mouse_area(int x, int y, int w, int h);
 
 extern const char *Osreg_title;
@@ -806,9 +808,15 @@ void gr_opengl_stencil_clear()
 
 int gr_opengl_alpha_mask_set(int mode, float alpha)
 {
-	int tmp = gr_alpha_test;
+	if ( mode ) {
+		GL_alpha_threshold = alpha;
+	} else {
+		GL_alpha_threshold = 0.0f;
+	}
 
-	gr_alpha_test = mode;
+	if ( is_minimum_GLSL_version() ) { // alpha masking is deprecated
+		return mode;
+	}
 
 	if ( mode ) {
 		GL_state.AlphaTest(GL_TRUE);
@@ -818,7 +826,7 @@ int gr_opengl_alpha_mask_set(int mode, float alpha)
 		GL_state.AlphaFunc(GL_ALWAYS, 1.0f);
 	}
 
-	return tmp;
+	return mode;
 }
 
 // I feel dirty...
@@ -1302,26 +1310,41 @@ void opengl_set_vsync(int status)
 	GL_CHECK_FOR_ERRORS("end of set_vsync()");
 }
 
-void opengl_setup_viewport()
+void opengl_setup_viewport_fixed_pipeline()
 {
 	glViewport(0, 0, gr_screen.max_w, gr_screen.max_h);
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 
-	GL_last_projection_matrix = GL_projection_matrix;
-
 	// the top and bottom positions are reversed on purpose, but RTT needs them the other way
-	if (GL_rendering_to_texture) {
+	if ( GL_rendering_to_texture ) {
 		glOrtho(0, gr_screen.max_w, 0, gr_screen.max_h, -1.0, 1.0);
-		opengl_create_orthographic_projection_matrix(&GL_projection_matrix, 0, gr_screen.max_w, 0, gr_screen.max_h, -1.0, 1.0);
 	} else {
 		glOrtho(0, gr_screen.max_w, gr_screen.max_h, 0, -1.0, 1.0);
-		opengl_create_orthographic_projection_matrix(&GL_projection_matrix, 0, gr_screen.max_w, gr_screen.max_h, 0, -1.0, 1.0);
 	}
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
+}
+
+void opengl_setup_viewport()
+{
+	if ( !is_minimum_GLSL_version() ) {
+		opengl_setup_viewport_fixed_pipeline();
+		return;
+	}
+
+	glViewport(0, 0, gr_screen.max_w, gr_screen.max_h);
+
+	GL_last_projection_matrix = GL_projection_matrix;
+
+	// the top and bottom positions are reversed on purpose, but RTT needs them the other way
+	if (GL_rendering_to_texture) {
+		opengl_create_orthographic_projection_matrix(&GL_projection_matrix, 0, gr_screen.max_w, 0, gr_screen.max_h, -1.0, 1.0);
+	} else {
+		opengl_create_orthographic_projection_matrix(&GL_projection_matrix, 0, gr_screen.max_w, gr_screen.max_h, 0, -1.0, 1.0);
+	}
 }
 
 // NOTE: This should only ever be called through os_cleanup(), or when switching video APIs
@@ -1970,7 +1993,9 @@ bool gr_opengl_init()
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glClear(GL_STENCIL_BUFFER_BIT);
 
-	glShadeModel(GL_SMOOTH);
+	if ( !is_minimum_GLSL_version() ) {
+		glShadeModel(GL_SMOOTH);
+	}
 
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 	glHint(GL_FOG_HINT, GL_NICEST);

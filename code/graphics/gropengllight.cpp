@@ -160,20 +160,53 @@ void FSLight2GLLight(light *FSLight, opengl_light *GLLight)
 	}
 }
 
-void opengl_set_light(int light_num, opengl_light *ltp)
+void opengl_set_light_fixed_pipeline(int light_num, opengl_light *ltp)
 {
 	Assert(light_num < GL_max_lights);
 
 	GLfloat diffuse[4];
 	memcpy(diffuse, ltp->Diffuse, sizeof(GLfloat) * 4);
 
-	if ( !is_minimum_GLSL_version() && (ltp->type == LT_DIRECTIONAL) && (GL_light_factor < 1.0f) ) {
+	if ( (ltp->type == LT_DIRECTIONAL) && (GL_light_factor < 1.0f) ) {
 		// if we're not using shaders, manually adjust the diffuse light factor.
 		diffuse[0] *= GL_light_factor;
 		diffuse[1] *= GL_light_factor;
 		diffuse[2] *= GL_light_factor;
 	}
 
+	vec3d new_light_dir;
+	vec3d light_dir;
+
+	light_dir.xyz.x = ltp->SpotDir[0];
+	light_dir.xyz.y = ltp->SpotDir[1];
+	light_dir.xyz.z = ltp->SpotDir[2];
+	
+	vm_vec_rotate(&new_light_dir, &light_dir, &Object_matrix);
+
+	glLightfv(GL_LIGHT0 + light_num, GL_POSITION, ltp->Position);
+	glLightfv(GL_LIGHT0 + light_num, GL_AMBIENT, ltp->Ambient);
+	glLightfv(GL_LIGHT0 + light_num, GL_DIFFUSE, diffuse);
+	glLightfv(GL_LIGHT0 + light_num, GL_SPECULAR, ltp->Specular);
+	glLightfv(GL_LIGHT0 + light_num, GL_SPOT_DIRECTION, &new_light_dir.a1d[0]);
+	//glLightf(GL_LIGHT0+light_num, GL_CONSTANT_ATTENUATION, ltp->ConstantAtten); Default is 1.0 and we only use 1.0 - Valathil
+	glLightf(GL_LIGHT0 + light_num, GL_LINEAR_ATTENUATION, ltp->LinearAtten);
+	//glLightf(GL_LIGHT0+light_num, GL_QUADRATIC_ATTENUATION, ltp->QuadraticAtten); Default is 0.0 and we only use 0.0 - Valathil
+	glLightf(GL_LIGHT0 + light_num, GL_SPOT_EXPONENT, ltp->SpotExp);
+	glLightf(GL_LIGHT0 + light_num, GL_SPOT_CUTOFF, ltp->SpotCutOff);
+}
+
+void opengl_set_light(int light_num, opengl_light *ltp)
+{
+	if ( !is_minimum_GLSL_version() ) {
+		opengl_set_light_fixed_pipeline(light_num, ltp);
+		return;
+	}
+
+	Assert(light_num < GL_max_lights);
+
+	GLfloat diffuse[4];
+	memcpy(diffuse, ltp->Diffuse, sizeof(GLfloat) * 4);
+	
 	vec3d new_light_pos;
 	vec3d light_pos;
 
@@ -194,17 +227,6 @@ void opengl_set_light(int light_num, opengl_light *ltp)
 	
 	vm_vec_rotate(&new_light_pos, &light_pos, &Object_matrix);
 	vm_vec_rotate(&new_light_dir, &light_dir, &Object_matrix);
-
-	glLightfv(GL_LIGHT0+light_num, GL_POSITION, ltp->Position);
-	glLightfv(GL_LIGHT0+light_num, GL_AMBIENT, ltp->Ambient);
-	glLightfv(GL_LIGHT0+light_num, GL_DIFFUSE, diffuse);
-	glLightfv(GL_LIGHT0+light_num, GL_SPECULAR, ltp->Specular);
-	glLightfv(GL_LIGHT0+light_num, GL_SPOT_DIRECTION, &new_light_dir.a1d[0]);
-	//glLightf(GL_LIGHT0+light_num, GL_CONSTANT_ATTENUATION, ltp->ConstantAtten); Default is 1.0 and we only use 1.0 - Valathil
-	glLightf(GL_LIGHT0+light_num, GL_LINEAR_ATTENUATION, ltp->LinearAtten);
-	//glLightf(GL_LIGHT0+light_num, GL_QUADRATIC_ATTENUATION, ltp->QuadraticAtten); Default is 0.0 and we only use 0.0 - Valathil
-	glLightf(GL_LIGHT0+light_num, GL_SPOT_EXPONENT, ltp->SpotExp);
-	glLightf(GL_LIGHT0+light_num, GL_SPOT_CUTOFF, ltp->SpotCutOff);
 
 	vec4 light_pos_world;
 	light_pos_world.xyzw.x = ltp->Position[0];
@@ -516,7 +538,10 @@ void gr_opengl_reset_lighting()
 //	memset( opengl_lights, 0, sizeof(opengl_light) * MAX_LIGHTS );
 
 	for (i = 0; i < GL_max_lights; i++) {
-		GL_state.Light(i, GL_FALSE);
+		if ( is_minimum_GLSL_version() ) {
+			GL_state.Light(i, GL_FALSE);
+		}
+
 		opengl_lights[i].occupied = false;
 	}
 
@@ -582,13 +607,15 @@ void opengl_light_init()
 {
 	opengl_calculate_ambient_factor();
 
-	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0);
+	if ( !is_minimum_GLSL_version() ) {
+		glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0);
 
-	glMaterialf(GL_FRONT, GL_SHININESS, Cmdline_ogl_spec /*80.0f*/ );
+		glMaterialf(GL_FRONT, GL_SHININESS, Cmdline_ogl_spec /*80.0f*/);
 
-	// more realistic lighting model
-	glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, 1);
-
+		// more realistic lighting model
+		glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, 1);
+	}
+	
 	glGetIntegerv(GL_MAX_LIGHTS, &GL_max_lights); // Get the max number of lights supported
 
 	// allocate memory for enabled lights
@@ -660,9 +687,9 @@ void opengl_default_light_settings(int ambient, int emission, int specular)
 	}
 }
 
-void gr_opengl_set_lighting(bool set, bool state)
+void opengl_set_lighting_fixed_pipeline(bool set, bool state)
 {
-	if (Cmdline_nohtl) {
+	if ( Cmdline_nohtl ) {
 		return;
 	}
 
@@ -672,12 +699,12 @@ void gr_opengl_set_lighting(bool set, bool state)
 
 	if ( (gr_screen.current_alphablend_mode == GR_ALPHABLEND_FILTER) && !set ) {
 		float amb[4] = { gr_screen.current_alpha, gr_screen.current_alpha, gr_screen.current_alpha, gr_screen.current_alpha };
-		glLightModelfv( GL_LIGHT_MODEL_AMBIENT, amb );
+		glLightModelfv(GL_LIGHT_MODEL_AMBIENT, amb);
 	} else {
-		glLightModelfv( GL_LIGHT_MODEL_AMBIENT, GL_light_ambient );
+		glLightModelfv(GL_LIGHT_MODEL_AMBIENT, GL_light_ambient);
 	}
 
-	GL_state.Lighting( (state) ? GL_TRUE : GL_FALSE );
+	GL_state.Lighting((state) ? GL_TRUE : GL_FALSE);
 
 	if ( !state ) {
 		for ( int i = 0; i < GL_max_lights; i++ ) {
@@ -691,7 +718,7 @@ void gr_opengl_set_lighting(bool set, bool state)
 	extern bool Deferred_lighting;
 	if ( !Deferred_lighting )
 		opengl_pre_render_init_lights();
-	
+
 	int i = 0;
 
 	for ( i = 0; i < GL_max_lights; i++ ) {
@@ -713,6 +740,50 @@ void gr_opengl_set_lighting(bool set, bool state)
 	// make sure that we turn off any lights that we aren't using right now
 	for ( ; i < GL_max_lights; i++ ) {
 		GL_state.Light(i, GL_FALSE);
+		opengl_set_light(i, &zero);
+	}
+}
+
+void gr_opengl_set_lighting(bool set, bool state)
+{
+	if ( !is_minimum_GLSL_version() ) {
+		opengl_set_lighting_fixed_pipeline(set, state);
+		return;
+	}
+
+	if (Cmdline_nohtl) {
+		return;
+	}
+
+	lighting_is_enabled = set;
+
+	if ( !state ) {
+		return;
+	}
+
+	//Valathil: Sort lights by priority
+	extern bool Deferred_lighting;
+	if ( !Deferred_lighting )
+		opengl_pre_render_init_lights();
+	
+	int i = 0;
+
+	for ( i = 0; i < GL_max_lights; i++ ) {
+		if ( i >= Num_active_gl_lights ) {
+			break;
+		}
+
+		if ( opengl_lights[i].occupied ) {
+			opengl_set_light(i, &opengl_lights[i]);
+		}
+	}
+
+	opengl_light zero;
+	memset(&zero, 0, sizeof(opengl_light));
+	zero.Position[0] = 1.0f;
+
+	// make sure that we turn off any lights that we aren't using right now
+	for ( ; i < GL_max_lights; i++ ) {
 		opengl_set_light(i, &zero);
 	}
 }

@@ -103,7 +103,7 @@ static opengl_shader_type_t GL_shader_types[] = {
 		2, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD }, "Video Playback" },
 
 	{ SDR_TYPE_PASSTHROUGH_RENDER, "passthrough-v.sdr", "passthrough-f.sdr", 0,{ 0, 0, 0 },
-		8, { "modelViewMatrix", "projMatrix", "baseMap", "noTexturing", "alphaTexture", "srgb", "intensity", "color" },
+		9, { "modelViewMatrix", "projMatrix", "baseMap", "noTexturing", "alphaTexture", "srgb", "intensity", "color", "alphaThreshold" },
 		3, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD, opengl_vert_attrib::COLOR }, "Passthrough" }
 };
 
@@ -1089,6 +1089,8 @@ void opengl_shader_set_passthrough(bool textured, bool alpha, color *clr, float 
 	GL_state.Uniform.setUniformi("srgb", 0);
 
 	GL_state.Uniform.setUniformf("intensity", color_scale);
+
+	GL_state.Uniform.setUniformf("alphaThreshold", GL_alpha_threshold);
 
 	if ( clr != NULL ) {
 		GL_state.Uniform.setUniform4f("color", i2fl(clr->red) / 255.0f, i2fl(clr->green) / 255.0f, i2fl(clr->blue) / 255.0f, i2fl(clr->alpha) / 255.0f);

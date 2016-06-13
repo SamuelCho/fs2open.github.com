@@ -459,7 +459,9 @@ static void OGG_video_init(theora_info *tinfo)
 		}
 
 		// set our color so that we can make sure that it's correct
-		GL_state.Color(255, 255, 255, 255);
+		if ( !is_minimum_GLSL_version() ) {
+			GL_state.Color(255, 255, 255, 255);
+		}
 	}
 
 	if(!use_shaders) {

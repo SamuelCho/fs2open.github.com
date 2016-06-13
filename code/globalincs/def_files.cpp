@@ -2947,10 +2947,12 @@ char* Default_passthrough_fragment_shader =
 "uniform int noTexturing;\n"
 "uniform int srgb;\n"
 "uniform float intensity;\n"
+"uniform float alphaThreshold;\n"
 "#define SRGB_GAMMA 2.2\n"
 "void main()\n"
 "{\n"
 "	vec4 baseColor = texture2D(baseMap, fragTexCoord.xy);\n"
+"	if(alphaThreshold > baseColor.a) discard;\n"
 "	baseColor.rgb = (srgb == 1) ? pow(baseColor.rgb, vec3(SRGB_GAMMA)) : baseColor.rgb;\n"
 "	fragOut0 = mix(mix(baseColor * fragColor, vec4(fragColor.rgb, baseColor.r * fragColor.a), float(alphaTexture)), fragColor, float(noTexturing)) * intensity;\n"
 "}";
