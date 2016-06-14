@@ -2308,35 +2308,9 @@ void gr_opengl_sphere(material* material_def, float rad)
 		return;
 	}
 
-	GLUquadricObj *quad = NULL;
-
-	// FIXME: before this is used in anything other than FRED2 we need to make this creation/deletion
-	// stuff global so that it's not so slow (it can be reused for multiple quadratic objects)
-	quad = gluNewQuadric();
-
-	if (quad == NULL) {
-		Int3();
-		return;
-	}
-
 	opengl_tnl_set_material(material_def, true);
-	GL_state.Array.BindArrayBuffer(0);
 
-	// FIXME: opengl_check_for_errors() needs to be modified to work with this at
-	// some point but for now I just don't care so it does nothing
-	gluQuadricCallback(quad, GLU_ERROR, NULL);
-
-	// FIXME: maybe support fill/wireframe with a future flag?
-	gluQuadricDrawStyle(quad, GLU_FILL);
-
-	// assuming unlit spheres, otherwise use GLU_SMOOTH so that it looks better
-	gluQuadricNormals(quad, GLU_NONE);
-
-	// we could set the slices/stacks at some point in the future but just use 16 now since it looks ok
-	gluSphere(quad, (GLdouble)rad, 16, 16);
-
-	// FIXME: I just heard this scream "Globalize Me!!".  It was really scary.  I even cried.
-	gluDeleteQuadric(quad);
+	opengl_draw_sphere();
 }
 
 void gr_opengl_deferred_light_sphere_init(int rings, int segments) // Generate a VBO of a sphere of radius 1.0f, based on code at http://www.ogre3d.org/tikiwiki/ManualSphereMeshes
@@ -2426,6 +2400,20 @@ void gr_opengl_deferred_light_sphere_init(int rings, int segments) // Generate a
 
 }
 
+void opengl_draw_sphere()
+{
+	GL_state.Array.BindArrayBuffer(deferred_light_sphere_vbo);
+	GL_state.Array.BindElementBuffer(deferred_light_sphere_ibo);
+
+	vertex_layout vertex_declare;
+
+	vertex_declare.add_vertex_component(vertex_format_data::POSITION3, 0, 0);
+
+	opengl_bind_vertex_layout(vertex_declare);
+
+	vglDrawRangeElements(GL_TRIANGLES, 0, deferred_light_sphere_vcount, deferred_light_sphere_icount, GL_UNSIGNED_SHORT, 0);
+}
+
 void gr_opengl_draw_deferred_light_sphere(vec3d *position, float rad, bool clearStencil = true)
 {
 	if (Cmdline_nohtl) {
@@ -2438,16 +2426,7 @@ void gr_opengl_draw_deferred_light_sphere(vec3d *position, float rad, bool clear
 	GL_state.Uniform.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
 	GL_state.Uniform.setUniformMatrix4f("projMatrix", GL_projection_matrix);
 
-	GL_state.Array.BindArrayBuffer(deferred_light_sphere_vbo);
-	GL_state.Array.BindElementBuffer(deferred_light_sphere_ibo);
-
-	vertex_layout vertex_declare;
-
-	vertex_declare.add_vertex_component(vertex_format_data::POSITION3, 0, 0);
-
-	opengl_bind_vertex_layout(vertex_declare);
-
-	vglDrawRangeElements(GL_TRIANGLES, 0, deferred_light_sphere_vcount, deferred_light_sphere_icount, GL_UNSIGNED_SHORT, 0);
+	opengl_draw_sphere();
 
 	g3_done_instance(true);
 }
