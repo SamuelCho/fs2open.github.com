@@ -168,31 +168,57 @@ void opengl_set_light_fixed_pipeline(int light_num, opengl_light *ltp)
 	memcpy(diffuse, ltp->Diffuse, sizeof(GLfloat) * 4);
 
 	if ( (ltp->type == LT_DIRECTIONAL) && (GL_light_factor < 1.0f) ) {
-		// if we're not using shaders, manually adjust the diffuse light factor.
 		diffuse[0] *= GL_light_factor;
 		diffuse[1] *= GL_light_factor;
 		diffuse[2] *= GL_light_factor;
 	}
 
-	vec3d new_light_dir;
-	vec3d light_dir;
+	// transform lights into eyespace
 
-	light_dir.xyz.x = ltp->SpotDir[0];
-	light_dir.xyz.y = ltp->SpotDir[1];
-	light_dir.xyz.z = ltp->SpotDir[2];
+	vec3d light_pos_world;
+	vec3d light_pos_eye;
+	vec4 light_pos_eye_4d;
+
+	light_pos_world.xyz.x = ltp->Position[0];
+	light_pos_world.xyz.y = ltp->Position[1];
+	light_pos_world.xyz.z = ltp->Position[2];
+
+	if ( ltp->type == LT_POINT ) {
+		vm_vec_sub2(&light_pos_world, &Object_position);
+	}
+
+	vm_vec_rotate(&light_pos_eye, &light_pos_world, &Object_matrix);
+
+	light_pos_eye_4d.a1d[0] = light_pos_eye.a1d[0];
+	light_pos_eye_4d.a1d[1] = light_pos_eye.a1d[1];
+	light_pos_eye_4d.a1d[2] = light_pos_eye.a1d[2];
+	light_pos_eye_4d.a1d[3] = 1.0f;
+
+	vec3d light_dir_world;
+	vec3d light_dir_eye;
+
+	light_dir_world.xyz.x = ltp->SpotDir[0];
+	light_dir_world.xyz.y = ltp->SpotDir[1];
+	light_dir_world.xyz.z = ltp->SpotDir[2];
 	
-	vm_vec_rotate(&new_light_dir, &light_dir, &Object_matrix);
+	vm_vec_rotate(&light_dir_eye, &light_dir_world, &Object_matrix);
 
-	glLightfv(GL_LIGHT0 + light_num, GL_POSITION, ltp->Position);
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+	
+	glLightfv(GL_LIGHT0 + light_num, GL_POSITION, light_pos_eye_4d.a1d);
 	glLightfv(GL_LIGHT0 + light_num, GL_AMBIENT, ltp->Ambient);
 	glLightfv(GL_LIGHT0 + light_num, GL_DIFFUSE, diffuse);
 	glLightfv(GL_LIGHT0 + light_num, GL_SPECULAR, ltp->Specular);
-	glLightfv(GL_LIGHT0 + light_num, GL_SPOT_DIRECTION, &new_light_dir.a1d[0]);
+	glLightfv(GL_LIGHT0 + light_num, GL_SPOT_DIRECTION, light_dir_eye.a1d);
 	//glLightf(GL_LIGHT0+light_num, GL_CONSTANT_ATTENUATION, ltp->ConstantAtten); Default is 1.0 and we only use 1.0 - Valathil
 	glLightf(GL_LIGHT0 + light_num, GL_LINEAR_ATTENUATION, ltp->LinearAtten);
 	//glLightf(GL_LIGHT0+light_num, GL_QUADRATIC_ATTENUATION, ltp->QuadraticAtten); Default is 0.0 and we only use 0.0 - Valathil
 	glLightf(GL_LIGHT0 + light_num, GL_SPOT_EXPONENT, ltp->SpotExp);
 	glLightf(GL_LIGHT0 + light_num, GL_SPOT_CUTOFF, ltp->SpotCutOff);
+
+	glPopMatrix();
 }
 
 void opengl_set_light(int light_num, opengl_light *ltp)
@@ -203,31 +229,7 @@ void opengl_set_light(int light_num, opengl_light *ltp)
 	}
 
 	Assert(light_num < GL_max_lights);
-
-	GLfloat diffuse[4];
-	memcpy(diffuse, ltp->Diffuse, sizeof(GLfloat) * 4);
-	
-	vec3d new_light_pos;
-	vec3d light_pos;
-
-	light_pos.xyz.x = ltp->Position[0];
-	light_pos.xyz.y = ltp->Position[1];
-	light_pos.xyz.z = ltp->Position[2];
-
-	vec3d new_light_dir;
-	vec3d light_dir;
-
-	light_dir.xyz.x = ltp->SpotDir[0];
-	light_dir.xyz.y = ltp->SpotDir[1];
-	light_dir.xyz.z = ltp->SpotDir[2];
-
-	if ( ltp->type == LT_POINT ) {
-		vm_vec_sub2(&light_pos, &Object_position);
-	}
-	
-	vm_vec_rotate(&new_light_pos, &light_pos, &Object_matrix);
-	vm_vec_rotate(&new_light_dir, &light_dir, &Object_matrix);
-
+		
 	vec4 light_pos_world;
 	light_pos_world.xyzw.x = ltp->Position[0];
 	light_pos_world.xyzw.y = ltp->Position[1];
@@ -242,9 +244,9 @@ void opengl_set_light(int light_num, opengl_light *ltp)
 	vm_vec_transform(&opengl_light_uniforms.Position[light_num], &light_pos_world, &GL_view_matrix);
 	vm_vec_transform(&opengl_light_uniforms.Direction[light_num], &light_dir_world, &GL_view_matrix, false);
 
-	opengl_light_uniforms.Diffuse_color[light_num].xyz.x = diffuse[0];
-	opengl_light_uniforms.Diffuse_color[light_num].xyz.y = diffuse[1];
-	opengl_light_uniforms.Diffuse_color[light_num].xyz.z = diffuse[2];
+	opengl_light_uniforms.Diffuse_color[light_num].xyz.x = ltp->Diffuse[0];
+	opengl_light_uniforms.Diffuse_color[light_num].xyz.y = ltp->Diffuse[1];
+	opengl_light_uniforms.Diffuse_color[light_num].xyz.z = ltp->Diffuse[2];
 
 	opengl_light_uniforms.Spec_color[light_num].xyz.x = ltp->Specular[0];
 	opengl_light_uniforms.Spec_color[light_num].xyz.y = ltp->Specular[1];

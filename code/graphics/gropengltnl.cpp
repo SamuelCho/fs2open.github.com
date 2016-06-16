@@ -2213,26 +2213,23 @@ void gr_opengl_set_view_matrix(const vec3d *pos, const matrix *orient)
 	if (Cmdline_env) {
 		GL_env_texture_matrix_set = true;
 
-		// if our view setup is the same as previous call then we can skip this
-		if ( !use_last_view ) {
-			// setup the texture matrix which will make the the envmap keep lined
-			// up properly with the environment
+		// setup the texture matrix which will make the the envmap keep lined
+		// up properly with the environment
 
-			// r.xyz  <--  r.x, u.x, f.x
-			GL_env_texture_matrix[0] = GL_model_view_matrix.a1d[0];
-			GL_env_texture_matrix[1] = GL_model_view_matrix.a1d[4];
-			GL_env_texture_matrix[2] = GL_model_view_matrix.a1d[8];
-			// u.xyz  <--  r.y, u.y, f.y
-			GL_env_texture_matrix[4] = GL_model_view_matrix.a1d[1];
-			GL_env_texture_matrix[5] = GL_model_view_matrix.a1d[5];
-			GL_env_texture_matrix[6] = GL_model_view_matrix.a1d[9];
-			// f.xyz  <--  r.z, u.z, f.z
-			GL_env_texture_matrix[8] = GL_model_view_matrix.a1d[2];
-			GL_env_texture_matrix[9] = GL_model_view_matrix.a1d[6];
-			GL_env_texture_matrix[10] = GL_model_view_matrix.a1d[10];
+		// r.xyz  <--  r.x, u.x, f.x
+		GL_env_texture_matrix[0] = GL_model_view_matrix.a1d[0];
+		GL_env_texture_matrix[1] = GL_model_view_matrix.a1d[4];
+		GL_env_texture_matrix[2] = GL_model_view_matrix.a1d[8];
+		// u.xyz  <--  r.y, u.y, f.y
+		GL_env_texture_matrix[4] = GL_model_view_matrix.a1d[1];
+		GL_env_texture_matrix[5] = GL_model_view_matrix.a1d[5];
+		GL_env_texture_matrix[6] = GL_model_view_matrix.a1d[9];
+		// f.xyz  <--  r.z, u.z, f.z
+		GL_env_texture_matrix[8] = GL_model_view_matrix.a1d[2];
+		GL_env_texture_matrix[9] = GL_model_view_matrix.a1d[6];
+		GL_env_texture_matrix[10] = GL_model_view_matrix.a1d[10];
 
-			GL_env_texture_matrix[15] = 1.0f;
-		}
+		GL_env_texture_matrix[15] = 1.0f;
 	}
 
 	GL_CHECK_FOR_ERRORS("end of set_view_matrix()");

@@ -501,6 +501,8 @@ void draw_list::render_buffer(queued_buffer_draw &render_elements)
 	gr_set_transform_buffer_offset(render_elements.transform_buffer_offset);
 
 	if ( render_elements.render_material.is_lit() ) {
+		gr_set_light_factor(render_elements.render_material.get_light_factor());
+
 		Scene_light_handler.setLights(&render_elements.lights);
 	} else {
 		gr_set_lighting(false, false);
