@@ -149,8 +149,7 @@ void bez_spline::bez_render(int divs, color *c)
 		g3_rotate_vertex(&b, &pt);
 
 		// draw the line
-		//g3_draw_line(&a, &b);
-		render_aaline(&a, &b);
+		g3_draw_line(&a, &b);
 
 		// store b
 		a = b;
@@ -279,8 +278,7 @@ void herm_spline::herm_render(int divs, color *clc)
 		herm_get_deriv(&d_pt, 0.0f, idx);
 		vm_vec_add2(&d_pt, &pt);
 		g3_rotate_vertex(&c, &d_pt);
-		//g3_draw_line(&a, &c);
-		render_aaline(&a, &c);
+		g3_draw_line(&a, &c);
 
 		for(s_idx=1; s_idx<divs * 2; s_idx++){
 			// second point
@@ -290,15 +288,13 @@ void herm_spline::herm_render(int divs, color *clc)
 			g3_rotate_vertex(&b, &pt);
 
 			// draw the line
-			//g3_draw_line(&a, &b);
-			render_aaline(&a, &b);
+			g3_draw_line(&a, &b);
 
 			// draw the deriv line
 			herm_get_deriv(&d_pt, (float)s_idx * inc, idx);			
 			vm_vec_add2(&d_pt, &pt);
 			g3_rotate_vertex(&c, &d_pt);
-			//g3_draw_line(&b, &c);
-			render_aaline(&b, &c);
+			g3_draw_line(&b, &c);
 
 			// store b
 			a = b;

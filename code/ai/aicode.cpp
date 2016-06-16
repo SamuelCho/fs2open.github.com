@@ -6178,8 +6178,7 @@ void render_all_ship_bay_paths(object *objp)
 			render_sphere_fast( &v, 1.5f);
 
 			if ( j > 0 ) {
-				//g3_draw_line(&v, &prev_vertex);
-				render_aaline(&v, &prev_vertex);
+				g3_draw_line(&v, &prev_vertex);
 			}
 
 			prev_vertex = v;
@@ -6225,8 +6224,7 @@ void render_all_subsys_paths(object *objp)
 			render_sphere_fast(&v, 1.5f);
 
 			if ( j > 0 ) {
-				//g3_draw_line(&v, &prev_vertex);
-				render_aaline(&v, &prev_vertex);
+				g3_draw_line(&v, &prev_vertex);
 			}
 
 			prev_vertex = v;
@@ -6276,8 +6274,7 @@ void render_path_points(object *objp)
 
 			gr_set_color(0, 128, 96);
 			if (i != 0) {
-				//g3_draw_line(&v0, &prev_vertex);
-				render_aaline(&v0, &prev_vertex);
+				g3_draw_line(&v0, &prev_vertex);
 			}
 
 			if (pp-Path_points == aip->path_cur)
@@ -11117,8 +11114,7 @@ void ai_debug_render_stuff()
 		gr_set_color(255, 0, 255);
 		//g3_draw_sphere(&vert2, 2.0f);
 		render_sphere_fast(&vert2, 2.0f);
-		//g3_draw_line(&vert1, &vert2);
-		render_aaline(&vert1, &vert2);
+		g3_draw_line(&vert1, &vert2);
 	}
 
 	Num_AI_debug_render_stuff = 0;

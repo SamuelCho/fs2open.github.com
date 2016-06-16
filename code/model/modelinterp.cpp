@@ -1226,35 +1226,20 @@ void model_draw_debug_points( polymodel *pm, bsp_info * submodel, uint flags )
 			g3_rotate_vertex( &pts[i], &submodel->bounding_box[i] );
 		}
 		gr_set_color(128,128,128);
-		//g3_draw_line( &pts[0], &pts[1] );
-		//g3_draw_line( &pts[1], &pts[2] );
-		//g3_draw_line( &pts[2], &pts[3] );
-		//g3_draw_line( &pts[3], &pts[0] );
+		g3_draw_line( &pts[0], &pts[1] );
+		g3_draw_line( &pts[1], &pts[2] );
+		g3_draw_line( &pts[2], &pts[3] );
+		g3_draw_line( &pts[3], &pts[0] );
 
-		//g3_draw_line( &pts[4], &pts[5] );
-		//g3_draw_line( &pts[5], &pts[6] );
-		//g3_draw_line( &pts[6], &pts[7] );
-		//g3_draw_line( &pts[7], &pts[4] );
+		g3_draw_line( &pts[4], &pts[5] );
+		g3_draw_line( &pts[5], &pts[6] );
+		g3_draw_line( &pts[6], &pts[7] );
+		g3_draw_line( &pts[7], &pts[4] );
 
-		//g3_draw_line( &pts[0], &pts[4] );
-		//g3_draw_line( &pts[1], &pts[5] );
-		//g3_draw_line( &pts[2], &pts[6] );
-		//g3_draw_line( &pts[3], &pts[7] );
-
-		render_aaline( &pts[0], &pts[1] );
-		render_aaline( &pts[1], &pts[2] );
-		render_aaline( &pts[2], &pts[3] );
-		render_aaline( &pts[3], &pts[0] );
-
-		render_aaline( &pts[4], &pts[5] );
-		render_aaline( &pts[5], &pts[6] );
-		render_aaline( &pts[6], &pts[7] );
-		render_aaline( &pts[7], &pts[4] );
-
-		render_aaline( &pts[0], &pts[4] );
-		render_aaline( &pts[1], &pts[5] );
-		render_aaline( &pts[2], &pts[6] );
-		render_aaline( &pts[3], &pts[7] );
+		g3_draw_line( &pts[0], &pts[4] );
+		g3_draw_line( &pts[1], &pts[5] );
+		g3_draw_line( &pts[2], &pts[6] );
+		g3_draw_line( &pts[3], &pts[7] );
 	} else {
 		gr_set_color(0,255,0);
 
@@ -1268,35 +1253,20 @@ void model_draw_debug_points( polymodel *pm, bsp_info * submodel, uint flags )
 				g3_rotate_vertex( &pts[i], &bounding_box[i] );
 			}
 			gr_set_color(128,0,0);
-			//g3_draw_line( &pts[0], &pts[1] );
-			//g3_draw_line( &pts[1], &pts[2] );
-			//g3_draw_line( &pts[2], &pts[3] );
-			//g3_draw_line( &pts[3], &pts[0] );
+			g3_draw_line( &pts[0], &pts[1] );
+			g3_draw_line( &pts[1], &pts[2] );
+			g3_draw_line( &pts[2], &pts[3] );
+			g3_draw_line( &pts[3], &pts[0] );
 
-			//g3_draw_line( &pts[4], &pts[5] );
-			//g3_draw_line( &pts[5], &pts[6] );
-			//g3_draw_line( &pts[6], &pts[7] );
-			//g3_draw_line( &pts[7], &pts[4] );
+			g3_draw_line( &pts[4], &pts[5] );
+			g3_draw_line( &pts[5], &pts[6] );
+			g3_draw_line( &pts[6], &pts[7] );
+			g3_draw_line( &pts[7], &pts[4] );
 
-			//g3_draw_line( &pts[0], &pts[4] );
-			//g3_draw_line( &pts[1], &pts[5] );
-			//g3_draw_line( &pts[2], &pts[6] );
-			//g3_draw_line( &pts[3], &pts[7] );			
-
-			render_aaline( &pts[0], &pts[1] );
-			render_aaline( &pts[1], &pts[2] );
-			render_aaline( &pts[2], &pts[3] );
-			render_aaline( &pts[3], &pts[0] );
-
-			render_aaline( &pts[4], &pts[5] );
-			render_aaline( &pts[5], &pts[6] );
-			render_aaline( &pts[6], &pts[7] );
-			render_aaline( &pts[7], &pts[4] );
-
-			render_aaline( &pts[0], &pts[4] );
-			render_aaline( &pts[1], &pts[5] );
-			render_aaline( &pts[2], &pts[6] );
-			render_aaline( &pts[3], &pts[7] );
+			g3_draw_line( &pts[0], &pts[4] );
+			g3_draw_line( &pts[1], &pts[5] );
+			g3_draw_line( &pts[2], &pts[6] );
+			g3_draw_line( &pts[3], &pts[7] );	
 		}		
 	}
 }
@@ -1344,8 +1314,7 @@ void model_draw_paths( int model_num, uint flags )
 				render_sphere_fast( &tmp, 0.5f );
 
 				if (j) {
-					//g3_draw_line(&prev_pnt, &tmp);
-					render_aaline(&prev_pnt, &tmp);
+					g3_draw_line(&prev_pnt, &tmp);
 				}
 
 				prev_pnt = tmp;
@@ -1484,8 +1453,7 @@ void model_draw_bay_paths(int model_num)
 			// draw the point and normal
 			//g3_draw_sphere(&l1, 2.0);
 			render_sphere_fast(&l1, 2.0);
-			//g3_draw_line(&l1, &l2);
-			render_aaline(&l1, &l2);
+			g3_draw_line(&l1, &l2);
 		}
 	}
 
@@ -1502,8 +1470,7 @@ void model_draw_bay_paths(int model_num)
 				// rotate and draw
 				g3_rotate_vertex(&l1, &v1);
 				g3_rotate_vertex(&l2, &v2);
-				//g3_draw_line(&l1, &l2);
-				render_aaline(&l1, &l2);
+				g3_draw_line(&l1, &l2);
 			}
 		}
 	}	
@@ -1869,8 +1836,7 @@ void model_render_shields( polymodel * pm, uint flags )
 				g3_rotate_vertex(&tmp, &pm->shield.verts[tri->verts[j]].pos );
 
 				if (j) {
-					//g3_draw_line(&prev_pnt, &tmp);
-					render_aaline(&prev_pnt, &tmp);
+					g3_draw_line(&prev_pnt, &tmp);
 				} else {
 					pnt0 = tmp;
 				}
@@ -1878,8 +1844,7 @@ void model_render_shields( polymodel * pm, uint flags )
 				prev_pnt = tmp;
 			}
 
-			//g3_draw_line(&pnt0, &prev_pnt);
-			render_aaline(&pnt0, &prev_pnt);
+			g3_draw_line(&pnt0, &prev_pnt);
 		}
 	}
 }

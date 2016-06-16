@@ -138,8 +138,7 @@ void HudGaugeRadarOrb::drawContact(vec3d *pnt, int rad)
 		render_sphere_fast(&verts[1],size/300.0f);
 	}
 
-	//g3_draw_line(&verts[0],&verts[1]);
-	render_aaline(&verts[0],&verts[1]);
+	g3_draw_line(&verts[0],&verts[1]);
 }
 
 void HudGaugeRadarOrb::drawContactHtl(vec3d *pnt, int rad)
@@ -395,20 +394,16 @@ void HudGaugeRadarOrb::drawOutlines()
 		gr_set_color(192,96,32);
 		//g3_draw_sphere(&proj_orb_lines_xy[i-1], .01f);
 		//g3_draw_sphere(&proj_orb_lines_xz[i-1], .01f);
-		//g3_draw_line(&proj_orb_lines_xy[i-1],&proj_orb_lines_xy[i]);
-		//g3_draw_line(&proj_orb_lines_xz[i-1],&proj_orb_lines_xz[i]);
-
 		render_sphere_fast(&proj_orb_lines_xy[i-1], .01f);
 		render_sphere_fast(&proj_orb_lines_xz[i-1], .01f);
-		render_aaline(&proj_orb_lines_xy[i-1],&proj_orb_lines_xy[i]);
-		render_aaline(&proj_orb_lines_xz[i-1],&proj_orb_lines_xz[i]);
+		g3_draw_line(&proj_orb_lines_xy[i-1],&proj_orb_lines_xy[i]);
+		g3_draw_line(&proj_orb_lines_xz[i-1],&proj_orb_lines_xz[i]);
 
 		gr_set_color(112,16,192);
-		//g3_draw_sphere(&proj_orb_lines_yz[i-1], .01f);
-		//g3_draw_line(&proj_orb_lines_yz[i-1],&proj_orb_lines_yz[i]);
 
+		//g3_draw_sphere(&proj_orb_lines_yz[i-1], .01f);
 		render_sphere_fast(&proj_orb_lines_yz[i-1], .01f);
-		render_aaline(&proj_orb_lines_yz[i-1],&proj_orb_lines_yz[i]);
+		g3_draw_line(&proj_orb_lines_yz[i-1],&proj_orb_lines_yz[i]);
 	}
 
 	g3_done_instance(false);

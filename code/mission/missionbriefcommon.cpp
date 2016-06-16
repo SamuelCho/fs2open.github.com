@@ -2116,8 +2116,7 @@ void brief_rpd_line(vec3d *v0, vec3d *v1)
 	g3_rotate_vertex(&tv1, v1);
 
 	gr_set_color_fast(&Color_briefing_grid);
-	//g3_draw_line(&tv0, &tv1);
-	render_aaline(&tv0, &tv1);
+	g3_draw_line(&tv0, &tv1);
 }
 
 /**

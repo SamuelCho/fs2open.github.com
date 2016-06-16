@@ -6592,8 +6592,7 @@ void render_dock_bays(object *objp)
 	g3_rotate_vertex(&v1, &p1);
 
 	gr_set_color(255, 0, 0);
-	//g3_draw_line(&v0, &v1);
-	render_aaline(&v0, &v1);
+	g3_draw_line(&v0, &v1);
 
 	vm_vec_avg(&p2, &p0, &p1);
 
@@ -6603,8 +6602,7 @@ void render_dock_bays(object *objp)
 	g3_rotate_vertex(&v0, &p2);
 	g3_rotate_vertex(&v1, &p3);
 	gr_set_color(255, 255, 0);
-	//g3_draw_line(&v0, &v1);
-	render_aaline(&v0, &v1);
+	g3_draw_line(&v0, &v1);
 	//g3_draw_sphere(&v1, 1.25f);
 	render_sphere_fast(&v1, 1.25f);
 
@@ -7248,8 +7246,7 @@ void ship_render_DEPRECATED(object * obj)
 
 				//g3_draw_sphere(&l1, 2.0f);
 				render_sphere_fast(&l1, 2.0f);
-				//g3_draw_line(&l1, &l2);
-				render_aaline(&l1, &l2);
+				g3_draw_line(&l1, &l2);
 
 				systemp = GET_NEXT(systemp);
 			}

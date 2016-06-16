@@ -961,8 +961,7 @@ void ship_draw_shield( object *objp)
 				g3_rotate_vertex(&tmp, &pnt);
 
 				if (j) {
-					//g3_draw_line(&prev_pnt, &tmp);
-					render_aaline(&prev_pnt, &tmp);
+					g3_draw_line(&prev_pnt, &tmp);
 				} else {
 					pnt0 = tmp;
 				}
@@ -970,8 +969,7 @@ void ship_draw_shield( object *objp)
 				prev_pnt = tmp;
 			}
 
-			//g3_draw_line(&pnt0, &prev_pnt);
-			render_aaline(&pnt0, &prev_pnt);
+			g3_draw_line(&pnt0, &prev_pnt);
 		}
 	}
 }

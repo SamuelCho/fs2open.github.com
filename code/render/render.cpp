@@ -2158,38 +2158,10 @@ void render_aaline(color *clr, vertex *v1, vertex *v2)
 //	glHint( GL_LINE_SMOOTH_HINT, GL_FASTEST );
 //	glLineWidth( 1.0 );
 
-	vertex temp1 = *v1;
-	vertex temp2 = *v2;
-	vertex *ptr1 = &temp1;
-	vertex *ptr2 = &temp2;
-
-	clip_line(&ptr1, &ptr2, temp1.codes | temp2.codes, 0);
-
-	vertex p1 = *ptr1;
-	vertex p2 = *ptr2;
-
-	if ( ptr1->flags & PF_TEMP_POINT )
-		free_temp_point(ptr1);
-
-	if ( ptr2->flags & PF_TEMP_POINT )
-		free_temp_point(ptr2);
-
-	if ( !( v1->flags & PF_PROJECTED ) ) {
-		g3_project_vertex(&p1);
-	}
-
-	if ( !( v2->flags & PF_PROJECTED ) ) {
-		g3_project_vertex(&p2);
-	}
-
-	if ( p1.flags & PF_OVERFLOW && p2.flags & PF_OVERFLOW ) {
-		return;
-	}
-
-	float x1 = p1.screen.xyw.x;
-	float y1 = p1.screen.xyw.y;
-	float x2 = p2.screen.xyw.x;
-	float y2 = p2.screen.xyw.y;
+	float x1 = v1->screen.xyw.x;
+	float y1 = v1->screen.xyw.y;
+	float x2 = v2->screen.xyw.x;
+	float y2 = v2->screen.xyw.y;
 	float sx1, sy1;
 	float sx2, sy2;
 
