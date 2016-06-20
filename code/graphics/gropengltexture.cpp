@@ -65,7 +65,7 @@ void opengl_set_additive_tex_env()
 {
 	GL_CHECK_FOR_ERRORS("start of set_additive_tex_env()");
 
-	if ( Is_Extension_Enabled(OGL_ARB_TEXTURE_ENV_COMBINE) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_ENV_COMBINE) ) {
 		GL_state.Texture.SetEnvCombineMode(GL_COMBINE_RGB, GL_ADD);
 		GL_state.Texture.SetRGBScale(1.0f);
 	} else {
@@ -79,7 +79,7 @@ void opengl_set_modulate_tex_env()
 {
 	GL_CHECK_FOR_ERRORS("start of set_modulate_tex_env()");
 
-	if ( Is_Extension_Enabled(OGL_ARB_TEXTURE_ENV_COMBINE) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_ENV_COMBINE) ) {
 		GL_state.Texture.SetEnvCombineMode(GL_COMBINE_RGB, GL_MODULATE);
 		GL_state.Texture.SetRGBScale(4.0f);
 	} else {
@@ -91,7 +91,7 @@ void opengl_set_modulate_tex_env()
 
 GLfloat opengl_get_max_anisotropy()
 {
-	if ( !Is_Extension_Enabled(OGL_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
+	if ( !Is_Extension_Enabled(GL_EXTENSION_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
 		return 0.0f;
 	}
 
@@ -158,18 +158,18 @@ void opengl_tcache_init()
 	}
 
 	// max size (width and/or height) that we can use for framebuffer/renderbuffer
-	if ( Is_Extension_Enabled(OGL_EXT_FRAMEBUFFER_OBJECT) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT) ) {
 		glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE_EXT, &GL_max_renderbuffer_size);
 
 		// if we can't do at least 128x128 then just disable FBOs
 		if (GL_max_renderbuffer_size < 128) {
 			mprintf(("WARNING: Max dimensions of FBO, %ix%i, is less the required minimum!!  Extension will be disabled!\n", GL_max_renderbuffer_size, GL_max_renderbuffer_size));
-			GL_Extensions[OGL_EXT_FRAMEBUFFER_OBJECT].enabled = 0;
+			GL_extensions_availability[GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT] = false;
 		}
 	}
 
 	// anisotropy
-	if ( Is_Extension_Enabled(OGL_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
 		// set max value first thing
 		opengl_get_max_anisotropy();
 
@@ -180,7 +180,7 @@ void opengl_tcache_init()
 		CLAMP(GL_anisotropy, 1.0f, GL_max_anisotropy);
 	}
 
-	if ( Is_Extension_Enabled(OGL_EXT_TEXTURE_LOD_BIAS) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_EXT_TEXTURE_LOD_BIAS) ) {
 		if (GL_anisotropy > 1.0f) {
 			glTexEnvf(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, 0.0f);
 		} else {
@@ -329,7 +329,7 @@ void opengl_tcache_get_adjusted_texture_size(int w_in, int h_in, int *w_out, int
 	}
 
 	// if we can support non-power-of-2 textures then just return current sizes - taylor
-	if ( Is_Extension_Enabled(OGL_ARB_TEXTURE_NON_POWER_OF_TWO) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_NON_POWER_OF_TWO) ) {
 		*w_out = w_in;
 		*h_out = h_in;
 
@@ -492,7 +492,7 @@ int opengl_create_texture_sub(int bitmap_handle, int bitmap_type, int bmap_w, in
 	if (t->mipmap_levels > 1) {
 		min_filter = (GL_mipmap_filter) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR_MIPMAP_NEAREST;
 
-		if ( Is_Extension_Enabled(OGL_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
+		if ( Is_Extension_Enabled(GL_EXTENSION_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
 			glTexParameterf(t->texture_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, GL_anisotropy);
 		}
 	}
@@ -664,7 +664,7 @@ int opengl_create_texture_sub(int bitmap_handle, int bitmap_type, int bmap_w, in
 		case TCACHE_TYPE_CUBEMAP: {
 			Assert( !resize );
 			Assert( texmem == NULL );
-			Assert( Is_Extension_Enabled(OGL_ARB_TEXTURE_CUBE_MAP) );
+			Assert( Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_CUBE_MAP) );
 
 			// we have to load in all 6 faces...
 			for (i = 0; i < 6; i++) {
@@ -1193,7 +1193,7 @@ void gr_opengl_set_texture_addressing(int mode)
 			break;
 
 		case TMAP_ADDRESS_MIRROR: {
-			if ( Is_Extension_Enabled(OGL_ARB_TEXTURE_MIRRORED_REPEAT) ) {
+			if ( Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_MIRRORED_REPEAT) ) {
 				GL_texture_addressing = GL_MIRRORED_REPEAT_ARB;
 			} else {
 				GL_texture_addressing = GL_REPEAT;

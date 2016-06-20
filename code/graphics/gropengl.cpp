@@ -1367,7 +1367,7 @@ void gr_opengl_shutdown()
 	opengl_post_process_shutdown();
 	opengl_shader_shutdown();
 
-	if ( Is_Extension_Enabled(OGL_ARB_VERTEX_ARRAY_OBJECT) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_ARB_VERTEX_ARRAY_OBJECT) ) {
 		vglDeleteVertexArrays(1, &GL_vao);
 		GL_vao = 0;
 	}
@@ -1958,7 +1958,7 @@ bool gr_opengl_init()
 	glGetIntegerv(GL_MAX_TEXTURE_COORDS, &max_texture_coords);
 
 	// create vertex array object to make OpenGL Core happy if we can
-	if ( Is_Extension_Enabled(OGL_ARB_VERTEX_ARRAY_OBJECT) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_ARB_VERTEX_ARRAY_OBJECT) ) {
 		vglGenVertexArrays(1, &GL_vao);
 		vglBindVertexArray(GL_vao);
 	}
@@ -2030,7 +2030,7 @@ bool gr_opengl_init()
 	mprintf(( "  Max elements indices: %i\n", GL_max_elements_indices ));
 	mprintf(( "  Max texture size: %ix%i\n", GL_max_texture_width, GL_max_texture_height ));
 
-	if ( Is_Extension_Enabled(OGL_EXT_FRAMEBUFFER_OBJECT) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT) ) {
 		mprintf(( "  Max render buffer size: %ix%i\n",
 			  GL_max_renderbuffer_size,
 			  GL_max_renderbuffer_size ));
@@ -2066,13 +2066,13 @@ bool gr_opengl_is_capable(gr_capability capability)
 		return false;
 	}
 
-	if ( !Is_Extension_Enabled(OGL_EXT_FRAMEBUFFER_OBJECT) || !Is_Extension_Enabled(OGL_ARB_TEXTURE_NON_POWER_OF_TWO) ) {
+	if ( !Is_Extension_Enabled(GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT) || !Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_NON_POWER_OF_TWO) ) {
 		return false;
 	}
 
 	switch ( capability ) {
 	case CAPABILITY_ENVIRONMENT_MAP:
-		return Is_Extension_Enabled(OGL_ARB_TEXTURE_CUBE_MAP) && Is_Extension_Enabled(OGL_ARB_TEXTURE_ENV_COMBINE);
+		return Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_CUBE_MAP) && Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_ENV_COMBINE);
 	case CAPABILITY_NORMAL_MAP:
 		return Cmdline_normal ? true : false;
 	case CAPABILITY_HEIGHT_MAP:
@@ -2085,11 +2085,11 @@ bool gr_opengl_is_capable(gr_capability capability)
 	case CAPABILITY_DEFERRED_LIGHTING:
 		return !Cmdline_no_fbo && !Cmdline_no_deferred_lighting && (GLSL_version >= 120);
 	case CAPABILITY_SHADOWS:
-		return Is_Extension_Enabled(OGL_ARB_GEOMETRY_SHADER4) && Is_Extension_Enabled(OGL_EXT_TEXTURE_ARRAY) && Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) && (GLSL_version >= 120);
+		return Is_Extension_Enabled(GL_EXTENSION_ARB_GEOMETRY_SHADER4) && Is_Extension_Enabled(GL_EXTENSION_EXT_TEXTURE_ARRAY) && Is_Extension_Enabled(GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX) && (GLSL_version >= 120);
 	case CAPABILITY_BATCHED_SUBMODELS:
-		return (GLSL_version >= 150) && Is_Extension_Enabled(OGL_ARB_TEXTURE_BUFFER) && Is_Extension_Enabled(OGL_ARB_FLOATING_POINT_TEXTURES);
+		return (GLSL_version >= 150) && Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_BUFFER) && Is_Extension_Enabled(GL_EXTENSION_ARB_FLOATING_POINT_TEXTURES);
 	case CAPABILITY_POINT_PARTICLES:
-		return Is_Extension_Enabled(OGL_ARB_GEOMETRY_SHADER4) && !Cmdline_no_geo_sdr_effects;
+		return Is_Extension_Enabled(GL_EXTENSION_ARB_GEOMETRY_SHADER4) && !Cmdline_no_geo_sdr_effects;
 	}
 
 	return false;
@@ -2170,7 +2170,7 @@ DCF(ogl_anisotropy, "toggles anisotropic filtering")
 		return;
 	}
 
-	if ( !Is_Extension_Enabled(OGL_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
+	if ( !Is_Extension_Enabled(GL_EXTENSION_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
 		dc_printf("Error: Anisotropic filter is not settable!\n");
 		return;
 	}

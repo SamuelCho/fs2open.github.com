@@ -335,7 +335,7 @@ void opengl_reset_immediate_buffer()
 
 int opengl_create_texture_buffer_object()
 {
-	if ( GLSL_version < 150 || !Is_Extension_Enabled(OGL_ARB_TEXTURE_BUFFER) || !Is_Extension_Enabled(OGL_ARB_FLOATING_POINT_TEXTURES) ) {
+	if ( GLSL_version < 150 || !Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_BUFFER) || !Is_Extension_Enabled(GL_EXTENSION_ARB_FLOATING_POINT_TEXTURES) ) {
 		return -1;
 	}
 
@@ -849,7 +849,7 @@ static void opengl_init_arrays(opengl_vertex_buffer *vert_src, vertex_buffer *bu
 	GLint vert_offset = (GLint)bufferp->vertex_num_offset;
 	GLubyte *ptr = NULL;
 
-	if ( is_minimum_GLSL_version() && !GLSL_override && Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+	if ( is_minimum_GLSL_version() && !GLSL_override && Is_Extension_Enabled(GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
 		vert_offset = 0;
 	}
 
@@ -867,7 +867,7 @@ static void opengl_init_arrays(indexed_vertex_source *vert_src, vertex_buffer *b
 	GLint vert_offset = (GLint)bufferp->vertex_num_offset;
 	GLubyte *ptr = NULL;
 
-	if ( is_minimum_GLSL_version() && !GLSL_override && Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+	if ( is_minimum_GLSL_version() && !GLSL_override && Is_Extension_Enabled(GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
 		vert_offset = 0;
 	}
 
@@ -973,7 +973,7 @@ static void opengl_render_pipeline_program(int start, vertex_buffer *bufferp, bu
 	if(Rendering_to_shadow_map) {
 		vglDrawElementsInstancedBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), 4, (GLint)bufferp->vertex_num_offset);
 	} else {
-		if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+		if ( Is_Extension_Enabled(GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
 			if (Cmdline_drawelements) {
 				vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
 			} else {
@@ -1465,7 +1465,7 @@ void opengl_render_model_program(model_material* material_info, indexed_vertex_s
 	if ( Rendering_to_shadow_map ) {
 		vglDrawElementsInstancedBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), 4, (GLint)bufferp->vertex_num_offset);
 	} else {
-		if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+		if ( Is_Extension_Enabled(GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
 			if ( Cmdline_drawelements ) {
 				vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
 			} else {

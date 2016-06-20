@@ -1272,7 +1272,7 @@ void opengl_array_state::BindElementBuffer(GLuint id)
 
 void opengl_array_state::BindTextureBuffer(GLuint id)
 {
-	if ( !Is_Extension_Enabled(OGL_ARB_TEXTURE_BUFFER) ) {
+	if ( !Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_BUFFER) ) {
 		return;
 	}
 
@@ -1287,7 +1287,7 @@ void opengl_array_state::BindTextureBuffer(GLuint id)
 
 void opengl_array_state::BindUniformBufferBindingIndex(GLuint id, GLuint index)
 {
-	if ( !Is_Extension_Enabled(OGL_ARB_UNIFORM_BUFFER_OBJECT) ) {
+	if ( !Is_Extension_Enabled(GL_EXTENSION_ARB_UNIFORM_BUFFER_OBJECT) ) {
 		return;
 	}
 
@@ -1302,7 +1302,7 @@ void opengl_array_state::BindUniformBufferBindingIndex(GLuint id, GLuint index)
 
 void opengl_array_state::BindUniformBuffer(GLuint id)
 {
-	if ( !Is_Extension_Enabled(OGL_ARB_UNIFORM_BUFFER_OBJECT) ) {
+	if ( !Is_Extension_Enabled(GL_EXTENSION_ARB_UNIFORM_BUFFER_OBJECT) ) {
 		return;
 	}
 

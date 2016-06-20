@@ -922,7 +922,7 @@ void opengl_post_process_init()
 		return;
 	}
 
-	if ( !is_minimum_GLSL_version() || Cmdline_no_fbo || !Is_Extension_Enabled(OGL_EXT_FRAMEBUFFER_OBJECT) ) {
+	if ( !is_minimum_GLSL_version() || Cmdline_no_fbo || !Is_Extension_Enabled(GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT) ) {
 		Cmdline_postprocess = 0;
 		return;
 	}
@@ -931,7 +931,7 @@ void opengl_post_process_init()
 	// form or another:
 	//    - the NPOT extension
 	//    - GL version 2.0+ (which should work for non-reporting ATI cards since we don't use mipmaps)
-	if ( !(Is_Extension_Enabled(OGL_ARB_TEXTURE_NON_POWER_OF_TWO) || (GL_version >= 20)) ) {
+	if ( !(Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_NON_POWER_OF_TWO) || (GL_version >= 20)) ) {
 		Cmdline_postprocess = 0;
 		return;
 	}

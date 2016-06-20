@@ -486,7 +486,7 @@ int opengl_compile_shader(shader_type sdr, uint flags)
 	SCP_vector<SCP_string> geom_content;
 
 	if ( use_geo_sdr ) {
-		if (!Is_Extension_Enabled(OGL_ARB_GEOMETRY_SHADER4)) {
+		if (!Is_Extension_Enabled(GL_EXTENSION_ARB_GEOMETRY_SHADER4)) {
 			return -1;
 		}
 
