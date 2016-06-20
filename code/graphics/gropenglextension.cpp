@@ -282,6 +282,29 @@ int opengl_get_extensions()
 		}
 	}
 
+	// look for functions based on version
+	for ( j = 0; j < NUM_GL_FUNCTIONS; j++ ) {
+		if ( GL_function_info[j].ext_handle != GL_EXTENSION_NONE ) {
+			continue;
+		}
+
+		if ( GL_function_info[j].min_version > GL_version ) {
+			continue;
+		}
+
+		func = &GL_function_info[j];
+
+		if ( func == NULL )
+			break;
+
+		ptr_u &func_ptr = GL_function_ptrs[func->func_handle];
+		if ( !func_ptr )
+			func_ptr = (ptr_u)GET_PROC_ADDRESS(func->function_name);
+
+		if ( !func_ptr )
+			break;
+	}
+
 	num_found += opengl_get_extensions_special();
 
 	mprintf(( "\n" ));
