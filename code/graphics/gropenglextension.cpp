@@ -23,7 +23,7 @@
 
 char *OGL_extension_string = NULL;
 
-ogl_extension GL_extension_info[NUM_GL_EXTENSIONS] =
+ogl_extension GL_extension_info[] =
 {
 	{ GL_EXTENSION_EXT_FOG_COORD,					false,	"GL_EXT_fog_coord" },
 	{ GL_EXTENSION_ARB_MULTITEXTURE,				true,	"GL_ARB_multitexture" },
@@ -33,7 +33,6 @@ ogl_extension GL_extension_info[NUM_GL_EXTENSIONS] =
 	{ GL_EXTENSION_EXT_TEXTURE_FILTER_ANISOTROPIC,	false,	"GL_EXT_texture_filter_anisotropic" },
 	{ GL_EXTENSION_ARB_TEXTURE_ENV_COMBINE,			false,	"GL_ARB_texture_env_combine" },
 	{ GL_EXTENSION_EXT_COMPILED_VERTEX_ARRAY,		false,	"GL_EXT_compiled_vertex_array" },
-	{ GL_EXTENSION_EXT_DRAW_RANGE_ELEMENTS,			true,	"GL_EXT_draw_range_elements" },
 	{ GL_EXTENSION_ARB_TEXTURE_MIRRORED_REPEAT,		false,	"GL_ARB_texture_mirrored_repeat" },
 	{ GL_EXTENSION_ARB_TEXTURE_NON_POWER_OF_TWO,	false,	"GL_ARB_texture_non_power_of_two" },
 	{ GL_EXTENSION_ARB_VERTEX_BUFFER_OBJECT,		false,	"GL_ARB_vertex_buffer_object" },
@@ -60,107 +59,109 @@ ogl_extension GL_extension_info[NUM_GL_EXTENSIONS] =
 	{ GL_EXTENSION_EXT_TRANSFORM_FEEDBACK,			false,	"GL_EXT_transform_feedback" },
 	{ GL_EXTENSION_ARB_DRAW_INSTANCED,				false,	"GL_ARB_draw_instanced" },
 	{ GL_EXTENSION_ARB_TEXTURE_BUFFER,				false,	"GL_ARB_texture_buffer_object" },
-	{ GL_EXTENSION_EXT_GPU_SHADER4,					false,	"GL_EXT_gpu_shader4" },
 	{ GL_EXTENSION_ARB_VERTEX_ARRAY_OBJECT,			false,	"GL_ARB_vertex_array_object" }
 };
 
-ogl_function GL_function_info[NUM_GL_FUNCTIONS] =
+ogl_function GL_function_info[] =
 {
-	{ GL_FUNC_MULTI_TEX_COORD_2F,						GL_EXTENSION_ARB_MULTITEXTURE, 0, "glMultiTexCoord2fARB", 0 },
-	{ GL_FUNC_ACTIVE_TEXTURE,							GL_EXTENSION_ARB_MULTITEXTURE, 0, "glActiveTextureARB", 0 },
-	{ GL_FUNC_CLIENT_ACTIVE_TEXTURE,					GL_EXTENSION_ARB_MULTITEXTURE, 0, "glClientActiveTextureARB", 0 },
-	{ GL_FUNC_COMPRESSED_TEX_IMAGE_2D,					GL_EXTENSION_ARB_TEXTURE_COMPRESSION, 0, "glCompressedTexImage2D", 0 },
-	{ GL_FUNC_COMPRESSED_TEX_SUB_IMAGE_2D,				GL_EXTENSION_ARB_TEXTURE_COMPRESSION, 0, "glCompressedTexSubImage2D", 0 },
-	{ GL_FUNC_GET_COMPRESSED_TEX_IMAGE,					GL_EXTENSION_ARB_TEXTURE_COMPRESSION, 0, "glGetCompressedTexImageARB", 0 },
-	{ GL_FUNC_LOCK_ARRAYS,								GL_EXTENSION_EXT_COMPILED_VERTEX_ARRAY, 0, "glLockArraysEXT", 0 },
-	{ GL_FUNC_UNLOCK_ARRAYS,							GL_EXTENSION_EXT_COMPILED_VERTEX_ARRAY, 0, "glUnlockArraysEXT", 0 },
-	{ GL_FUNC_DRAW_RANGE_ELEMENTS,						GL_EXTENSION_EXT_DRAW_RANGE_ELEMENTS, 0, "glDrawRangeElements", 0 },
-	{ GL_FUNC_BIND_BUFFER,								GL_EXTENSION_ARB_VERTEX_BUFFER_OBJECT, 0, "glBindBufferARB", 0 },
-	{ GL_FUNC_DELETE_BUFFERS,							GL_EXTENSION_ARB_VERTEX_BUFFER_OBJECT, 0, "glDeleteBuffersARB", 0 },
-	{ GL_FUNC_GEN_BUFFERS,								GL_EXTENSION_ARB_VERTEX_BUFFER_OBJECT, 0, "glGenBuffersARB", 0 },
-	{ GL_FUNC_BUFFER_DATA,								GL_EXTENSION_ARB_VERTEX_BUFFER_OBJECT, 0, "glBufferDataARB", 0 },
-	{ GL_FUNC_BUFFER_SUB_DATA,							GL_EXTENSION_ARB_VERTEX_BUFFER_OBJECT, 0, "glBufferSubDataARB", 0 },
-	{ GL_FUNC_MAP_BUFFER,								GL_EXTENSION_ARB_VERTEX_BUFFER_OBJECT, 0, "glMapBufferARB", 0 },
-	{ GL_FUNC_UNMAP_BUFFER,								GL_EXTENSION_ARB_VERTEX_BUFFER_OBJECT, 0, "glUnmapBufferARB", 0 },
-	{ GL_FUNC_IS_RENDERBUFFER,							GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glIsRenderbufferEXT", 0 },
-	{ GL_FUNC_BIND_RENDERBUFFER,						GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glBindRenderbufferEXT", 0 },
-	{ GL_FUNC_DELETE_RENDERBUFFERS,						GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glDeleteRenderbuffersEXT", 0 },
-	{ GL_FUNC_GEN_RENDERBUFFERS,						GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glGenRenderbuffersEXT", 0 },
-	{ GL_FUNC_RENDERBUFFER_STORAGE,						GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glRenderbufferStorageEXT", 0 },
-	{ GL_FUNC_GET_RENDERBUFFER_PARAMETER_IV,			GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glGetRenderbufferParameterivEXT", 0 },
-	{ GL_FUNC_IS_FRAMEBUFFER,							GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glIsFramebufferEXT", 0 },
-	{ GL_FUNC_BIND_FRAMEBUFFER,							GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glBindFramebufferEXT", 0 },
-	{ GL_FUNC_DELETE_FRAMEBUFFERS,						GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glDeleteFramebuffersEXT", 0 },
-	{ GL_FUNC_GEN_FRAMEBUFFERS,							GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glGenFramebuffersEXT", 0 },
-	{ GL_FUNC_CHECK_FRAMEBUFFER_STATUS,					GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glCheckFramebufferStatusEXT", 0 },
-	{ GL_FUNC_FRAMEBUFFER_TEXTURE_2D,					GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glFramebufferTexture2DEXT", 0 },
-	{ GL_FUNC_FRAMEBUFFER_RENDERBUFFER,					GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glFramebufferRenderbufferEXT", 0 },
-	{ GL_FUNC_GET_FRAMEBUFFER_ATTACHMENT_PARAMETER_IV,	GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glGetFramebufferAttachmentParameterivEXT", 0 },
-	{ GL_FUNC_GENERATE_MIPMAP,							GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glGenerateMipmapEXT", 0 },
-	{ GL_FUNC_DRAWBUFFERS,								GL_EXTENSION_NONE, 20, "glDrawBuffers", 0 },
-	{ GL_FUNC_DELETE_OBJECT,							GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glDeleteObjectARB", 0 },
-	{ GL_FUNC_CREATE_SHADER_OBJECT,						GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glCreateShaderObjectARB", 0 },
-	{ GL_FUNC_SHADER_SOURCE,							GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glShaderSourceARB", 0 },
-	{ GL_FUNC_COMPILE_SHADER,							GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glCompileShaderARB", 0 },
-	{ GL_FUNC_GET_OBJECT_PARAMETERIV,					GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glGetObjectParameterivARB", 0 },
-	{ GL_FUNC_GET_INFO_LOG,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glGetInfoLogARB", 0 },
-	{ GL_FUNC_CREATE_PROGRAM_OBJECT,					GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glCreateProgramObjectARB", 0 },
-	{ GL_FUNC_ATTACH_OBJECT,							GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glAttachObjectARB", 0 },
-	{ GL_FUNC_LINK_PROGRAM,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glLinkProgramARB", 0 },
-	{ GL_FUNC_USE_PROGRAM_OBJECT,						GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUseProgramObjectARB", 0 },
-	{ GL_FUNC_VALIDATE_PROGRAM,							GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glValidateProgramARB", 0 },
-	{ GL_FUNC_GET_UNIFORM_LOCATION,						GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glGetUniformLocationARB", 0 },
-	{ GL_FUNC_GET_UNIFORMIV,							GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glGetUniformivARB", 0 },
-	{ GL_FUNC_UNIFORM1F,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniform1fARB", 0 },
-	{ GL_FUNC_UNIFORM2F,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniform2fARB", 0 },
-	{ GL_FUNC_UNIFORM3F,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniform3fARB", 0 },
-	{ GL_FUNC_UNIFORM4F,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniform4fARB", 0 },
-	{ GL_FUNC_UNIFORM1FV,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniform1fvARB", 0 },
-	{ GL_FUNC_UNIFORM3FV,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniform3fvARB", 0 },
-	{ GL_FUNC_UNIFORM4FV,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniform4fvARB", 0 },
-	{ GL_FUNC_UNIFORM1I,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniform1iARB", 0 },
-	{ GL_FUNC_UNIFORM1IV,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniform1ivARB", 0 },
-	{ GL_FUNC_UNIFORM_MATRIX4FV,						GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniformMatrix4fvARB", 0 },
-	{ GL_FUNC_ENABLE_VERTEX_ATTRIB_ARRAY,				GL_EXTENSION_ARB_VERTEX_PROGRAM, 0, "glEnableVertexAttribArrayARB", 0 },
-	{ GL_FUNC_DISABLE_VERTEX_ATTRIB_ARRAY,				GL_EXTENSION_ARB_VERTEX_PROGRAM, 0, "glDisableVertexAttribArrayARB", 0 },
-	{ GL_FUNC_VERTEX_ATTRIB_POINTER,					GL_EXTENSION_ARB_VERTEX_PROGRAM, 0, "glVertexAttribPointerARB", 0 },
-	{ GL_FUNC_VERTEX_ATTRIB1F,							GL_EXTENSION_ARB_VERTEX_PROGRAM, 0, "glVertexAttrib1fARB", 0 },
-	{ GL_FUNC_VERTEX_ATTRIB2F,							GL_EXTENSION_ARB_VERTEX_PROGRAM, 0, "glVertexAttrib2fARB", 0 },
-	{ GL_FUNC_VERTEX_ATTRIB3F,							GL_EXTENSION_ARB_VERTEX_PROGRAM, 0, "glVertexAttrib3fARB", 0 },
-	{ GL_FUNC_VERTEX_ATTRIB4F,							GL_EXTENSION_ARB_VERTEX_PROGRAM, 0, "glVertexAttrib4fARB", 0 },
-	{ GL_FUNC_GET_ATTRIB_LOCATION,						GL_EXTENSION_ARB_VERTEX_SHADER, 0, "glGetAttribLocationARB", 0 },
-	{ GL_FUNC_BIND_ATTRIB_LOCATION,						GL_EXTENSION_ARB_VERTEX_SHADER, 0, "glBindAttribLocationARB", 0 },
-	{ GL_FUNC_DRAW_ELEMENTS_BASE_VERTEX,				GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX, 0, "glDrawElementsBaseVertex", 0	},
-	{ GL_FUNC_DRAW_RANGE_ELEMENTS_BASE_VERTEX,			GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX, 0, "glDrawRangeElementsBaseVertex", 0 },
-	{ GL_FUNC_DRAW_ELEMENTS_INSTANCED_BASE_VERTEX,		GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX, 0, "glDrawElementsInstancedBaseVertex", 0 },
-	{ GL_FUNC_MULTI_DRAW_ELEMENTS_BASE_VERTEX,			GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX, 0, "glMultiDrawElementsBaseVertex", 0 },
-	{ GL_FUNC_BLITFRAMEBUFFER,							GL_EXTENSION_EXT_FRAMEBUFFER_BLIT, 0, "glBlitFramebufferEXT", 0},
-	{ GL_FUNC_PROGRAM_PARAMETERI,						GL_EXTENSION_ARB_GEOMETRY_SHADER4, 0, "glProgramParameteriARB", 0 },
-	{ GL_FUNC_FRAMEBUFFER_TEXTURE,						GL_EXTENSION_ARB_GEOMETRY_SHADER4, 0, "glFramebufferTextureARB", 0 },
-	{ GL_FUNC_TEXIMAGE3D,								GL_EXTENSION_NONE, 12, "glTexImage3D", 0 },
-	{ GL_FUNC_GET_UNIFORM_INDICES,						GL_EXTENSION_ARB_UNIFORM_BUFFER_OBJECT, 0, "glGetUniformIndices", 0 },
-	{ GL_FUNC_GET_ACTIVE_UNIFORMS_IV,					GL_EXTENSION_ARB_UNIFORM_BUFFER_OBJECT, 0, "glGetActiveUniformsiv", 0 },
-	{ GL_FUNC_GET_ACTIVE_UNIFORM_NAME,					GL_EXTENSION_ARB_UNIFORM_BUFFER_OBJECT, 0, "glGetActiveUniformName", 0 },
-	{ GL_FUNC_GET_UNIFORM_BLOCK_INDEX,					GL_EXTENSION_ARB_UNIFORM_BUFFER_OBJECT, 0, "glGetUniformBlockIndex", 0 },
-	{ GL_FUNC_GET_ACTIVE_UNIFORM_BLOCK_IV,				GL_EXTENSION_ARB_UNIFORM_BUFFER_OBJECT, 0, "glGetActiveUniformBlockName", 0 },
-	{ GL_FUNC_UNIFORM_BLOCK_BINDING,					GL_EXTENSION_ARB_UNIFORM_BUFFER_OBJECT, 0, "glUniformBlockBinding", 0 },
-	{ GL_FUNC_BEGIN_TRANSFORM_FEEDBACK,					GL_EXTENSION_EXT_TRANSFORM_FEEDBACK, 0, "glBeginTransformFeedbackEXT", 0 },
-	{ GL_FUNC_END_TRANSFORM_FEEDBACK,					GL_EXTENSION_EXT_TRANSFORM_FEEDBACK, 0, "glEndTransformFeedbackEXT", 0 },
-	{ GL_FUNC_BIND_BUFFER_RANGE,						GL_EXTENSION_EXT_TRANSFORM_FEEDBACK, 0, "glBindBufferRangeEXT", 0 },
-	{ GL_FUNC_BIND_BUFFER_OFFSET,						GL_EXTENSION_EXT_TRANSFORM_FEEDBACK, 0, "glBindBufferOffsetEXT", 0 },
-	{ GL_FUNC_BIND_BUFFER_BASE,							GL_EXTENSION_EXT_TRANSFORM_FEEDBACK, 0, "glBindBufferBaseEXT", 0 },
-	{ GL_FUNC_TRANSFORM_FEEDBACK_VARYINGS,				GL_EXTENSION_EXT_TRANSFORM_FEEDBACK, 0, "glTransformFeedbackVaryingsEXT", 0 },
-	{ GL_FUNC_GET_TRANSFORM_FEEDBACK_VARYING,			GL_EXTENSION_EXT_TRANSFORM_FEEDBACK, 0, "glGetTransformFeedbackVaryingEXT", 0 },
-	{ GL_FUNC_ARB_DRAW_ARRAYS_INSTANCED,				GL_EXTENSION_ARB_DRAW_INSTANCED, 0, "glDrawArraysInstancedARB", 0	},
-	{ GL_FUNC_ARB_DRAW_ELEMENTS_INSTANCED,				GL_EXTENSION_ARB_DRAW_INSTANCED, 0, "glDrawElementsInstancedARB", 0 },
-	{ GL_FUNC_ARB_TEX_BUFFER,							GL_EXTENSION_ARB_TEXTURE_BUFFER, 0, "glTexBufferARB", 0 },
-	{ GL_FUNC_BIND_FRAG_DATA_LOCATION,					GL_EXTENSION_NONE, 30, "glBindFragDataLocation", 0 },
-	{ GL_FUNC_GET_FRAG_DATA_LOCATION,					GL_EXTENSION_NONE, 30, "glGetFragDataLocation", 0 },
-	{ GL_FUNC_BIND_VERTEX_ARRAY,						GL_EXTENSION_ARB_VERTEX_ARRAY_OBJECT, 0, "glBindVertexArray", 0 },
-	{ GL_FUNC_DELETE_VERTEX_ARRAYS,						GL_EXTENSION_ARB_VERTEX_ARRAY_OBJECT, 0, "glDeleteVertexArrays", 0 },
-	{ GL_FUNC_GEN_VERTEX_ARRAYS,						GL_EXTENSION_ARB_VERTEX_ARRAY_OBJECT, 0, "glGenVertexArrays", 0 },
-	{ GL_FUNC_IS_VERTEX_ARRAY,							GL_EXTENSION_ARB_VERTEX_ARRAY_OBJECT, 0, "glIsVertexArray", 0 }
+	{ GL_FUNC_MULTI_TEX_COORD_2F,						GL_EXTENSION_ARB_MULTITEXTURE, 0, "glMultiTexCoord2fARB" },
+	{ GL_FUNC_ACTIVE_TEXTURE,							GL_EXTENSION_ARB_MULTITEXTURE, 0, "glActiveTextureARB" },
+	{ GL_FUNC_CLIENT_ACTIVE_TEXTURE,					GL_EXTENSION_ARB_MULTITEXTURE, 0, "glClientActiveTextureARB" },
+	{ GL_FUNC_COMPRESSED_TEX_IMAGE_2D,					GL_EXTENSION_ARB_TEXTURE_COMPRESSION, 0, "glCompressedTexImage2DARB" },
+	{ GL_FUNC_COMPRESSED_TEX_SUB_IMAGE_2D,				GL_EXTENSION_ARB_TEXTURE_COMPRESSION, 0, "glCompressedTexSubImage2DARB" },
+	{ GL_FUNC_GET_COMPRESSED_TEX_IMAGE,					GL_EXTENSION_ARB_TEXTURE_COMPRESSION, 0, "glGetCompressedTexImageARB" },
+	{ GL_FUNC_LOCK_ARRAYS,								GL_EXTENSION_EXT_COMPILED_VERTEX_ARRAY, 0, "glLockArraysEXT" },
+	{ GL_FUNC_UNLOCK_ARRAYS,							GL_EXTENSION_EXT_COMPILED_VERTEX_ARRAY, 0, "glUnlockArraysEXT" },
+	{ GL_FUNC_DRAW_RANGE_ELEMENTS,						GL_EXTENSION_NONE, 12, "glDrawRangeElements" },
+	{ GL_FUNC_BIND_BUFFER,								GL_EXTENSION_ARB_VERTEX_BUFFER_OBJECT, 0, "glBindBufferARB" },
+	{ GL_FUNC_DELETE_BUFFERS,							GL_EXTENSION_ARB_VERTEX_BUFFER_OBJECT, 0, "glDeleteBuffersARB" },
+	{ GL_FUNC_GEN_BUFFERS,								GL_EXTENSION_ARB_VERTEX_BUFFER_OBJECT, 0, "glGenBuffersARB" },
+	{ GL_FUNC_BUFFER_DATA,								GL_EXTENSION_ARB_VERTEX_BUFFER_OBJECT, 0, "glBufferDataARB" },
+	{ GL_FUNC_BUFFER_SUB_DATA,							GL_EXTENSION_ARB_VERTEX_BUFFER_OBJECT, 0, "glBufferSubDataARB" },
+	{ GL_FUNC_MAP_BUFFER,								GL_EXTENSION_ARB_VERTEX_BUFFER_OBJECT, 0, "glMapBufferARB" },
+	{ GL_FUNC_UNMAP_BUFFER,								GL_EXTENSION_ARB_VERTEX_BUFFER_OBJECT, 0, "glUnmapBufferARB" },
+	{ GL_FUNC_IS_RENDERBUFFER,							GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glIsRenderbufferEXT" },
+	{ GL_FUNC_BIND_RENDERBUFFER,						GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glBindRenderbufferEXT" },
+	{ GL_FUNC_DELETE_RENDERBUFFERS,						GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glDeleteRenderbuffersEXT" },
+	{ GL_FUNC_GEN_RENDERBUFFERS,						GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glGenRenderbuffersEXT" },
+	{ GL_FUNC_RENDERBUFFER_STORAGE,						GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glRenderbufferStorageEXT" },
+	{ GL_FUNC_GET_RENDERBUFFER_PARAMETER_IV,			GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glGetRenderbufferParameterivEXT" },
+	{ GL_FUNC_IS_FRAMEBUFFER,							GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glIsFramebufferEXT" },
+	{ GL_FUNC_BIND_FRAMEBUFFER,							GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glBindFramebufferEXT" },
+	{ GL_FUNC_DELETE_FRAMEBUFFERS,						GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glDeleteFramebuffersEXT" },
+	{ GL_FUNC_GEN_FRAMEBUFFERS,							GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glGenFramebuffersEXT" },
+	{ GL_FUNC_CHECK_FRAMEBUFFER_STATUS,					GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glCheckFramebufferStatusEXT" },
+	{ GL_FUNC_FRAMEBUFFER_TEXTURE_2D,					GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glFramebufferTexture2DEXT" },
+	{ GL_FUNC_FRAMEBUFFER_RENDERBUFFER,					GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glFramebufferRenderbufferEXT" },
+	{ GL_FUNC_GET_FRAMEBUFFER_ATTACHMENT_PARAMETER_IV,	GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glGetFramebufferAttachmentParameterivEXT" },
+	{ GL_FUNC_GENERATE_MIPMAP,							GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT, 0, "glGenerateMipmapEXT" },
+	{ GL_FUNC_DRAWBUFFERS,								GL_EXTENSION_NONE, 20, "glDrawBuffers" },
+	{ GL_FUNC_DELETE_OBJECT,							GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glDeleteObjectARB" },
+	{ GL_FUNC_CREATE_SHADER_OBJECT,						GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glCreateShaderObjectARB" },
+	{ GL_FUNC_SHADER_SOURCE,							GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glShaderSourceARB" },
+	{ GL_FUNC_COMPILE_SHADER,							GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glCompileShaderARB" },
+	{ GL_FUNC_GET_OBJECT_PARAMETERIV,					GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glGetObjectParameterivARB" },
+	{ GL_FUNC_GET_INFO_LOG,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glGetInfoLogARB" },
+	{ GL_FUNC_CREATE_PROGRAM_OBJECT,					GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glCreateProgramObjectARB" },
+	{ GL_FUNC_ATTACH_OBJECT,							GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glAttachObjectARB" },
+	{ GL_FUNC_LINK_PROGRAM,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glLinkProgramARB" },
+	{ GL_FUNC_USE_PROGRAM_OBJECT,						GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUseProgramObjectARB" },
+	{ GL_FUNC_VALIDATE_PROGRAM,							GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glValidateProgramARB" },
+	{ GL_FUNC_GET_UNIFORM_LOCATION,						GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glGetUniformLocationARB" },
+	{ GL_FUNC_GET_UNIFORMIV,							GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glGetUniformivARB" },
+	{ GL_FUNC_UNIFORM1F,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniform1fARB" },
+	{ GL_FUNC_UNIFORM2F,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniform2fARB" },
+	{ GL_FUNC_UNIFORM3F,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniform3fARB" },
+	{ GL_FUNC_UNIFORM4F,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniform4fARB" },
+	{ GL_FUNC_UNIFORM1FV,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniform1fvARB" },
+	{ GL_FUNC_UNIFORM3FV,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniform3fvARB" },
+	{ GL_FUNC_UNIFORM4FV,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniform4fvARB" },
+	{ GL_FUNC_UNIFORM1I,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniform1iARB" },
+	{ GL_FUNC_UNIFORM1IV,								GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniform1ivARB" },
+	{ GL_FUNC_UNIFORM_MATRIX4FV,						GL_EXTENSION_ARB_SHADER_OBJECTS, 0, "glUniformMatrix4fvARB" },
+	{ GL_FUNC_ENABLE_VERTEX_ATTRIB_ARRAY,				GL_EXTENSION_ARB_VERTEX_PROGRAM, 0, "glEnableVertexAttribArrayARB" },
+	{ GL_FUNC_DISABLE_VERTEX_ATTRIB_ARRAY,				GL_EXTENSION_ARB_VERTEX_PROGRAM, 0, "glDisableVertexAttribArrayARB" },
+	{ GL_FUNC_VERTEX_ATTRIB_POINTER,					GL_EXTENSION_ARB_VERTEX_PROGRAM, 0, "glVertexAttribPointerARB" },
+	{ GL_FUNC_VERTEX_ATTRIB1F,							GL_EXTENSION_ARB_VERTEX_PROGRAM, 0, "glVertexAttrib1fARB" },
+	{ GL_FUNC_VERTEX_ATTRIB2F,							GL_EXTENSION_ARB_VERTEX_PROGRAM, 0, "glVertexAttrib2fARB" },
+	{ GL_FUNC_VERTEX_ATTRIB3F,							GL_EXTENSION_ARB_VERTEX_PROGRAM, 0, "glVertexAttrib3fARB" },
+	{ GL_FUNC_VERTEX_ATTRIB4F,							GL_EXTENSION_ARB_VERTEX_PROGRAM, 0, "glVertexAttrib4fARB" },
+	{ GL_FUNC_GET_ATTRIB_LOCATION,						GL_EXTENSION_ARB_VERTEX_SHADER, 0, "glGetAttribLocationARB" },
+	{ GL_FUNC_BIND_ATTRIB_LOCATION,						GL_EXTENSION_ARB_VERTEX_SHADER, 0, "glBindAttribLocationARB" },
+	{ GL_FUNC_DRAW_ELEMENTS_BASE_VERTEX,				GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX, 0, "glDrawElementsBaseVertex" },
+	{ GL_FUNC_DRAW_RANGE_ELEMENTS_BASE_VERTEX,			GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX, 0, "glDrawRangeElementsBaseVertex" },
+	{ GL_FUNC_DRAW_ELEMENTS_INSTANCED_BASE_VERTEX,		GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX, 0, "glDrawElementsInstancedBaseVertex" },
+	{ GL_FUNC_MULTI_DRAW_ELEMENTS_BASE_VERTEX,			GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX, 0, "glMultiDrawElementsBaseVertex" },
+	{ GL_FUNC_BLITFRAMEBUFFER,							GL_EXTENSION_EXT_FRAMEBUFFER_BLIT, 0, "glBlitFramebufferEXT" },
+	{ GL_FUNC_PROGRAM_PARAMETERI,						GL_EXTENSION_ARB_GEOMETRY_SHADER4, 0, "glProgramParameteriARB" },
+	{ GL_FUNC_FRAMEBUFFER_TEXTURE,						GL_EXTENSION_ARB_GEOMETRY_SHADER4, 0, "glFramebufferTextureARB" },
+	{ GL_FUNC_TEXIMAGE3D,								GL_EXTENSION_NONE, 12, "glTexImage3D" },
+	{ GL_FUNC_GET_UNIFORM_INDICES,						GL_EXTENSION_ARB_UNIFORM_BUFFER_OBJECT, 0, "glGetUniformIndices" },
+	{ GL_FUNC_GET_ACTIVE_UNIFORMS_IV,					GL_EXTENSION_ARB_UNIFORM_BUFFER_OBJECT, 0, "glGetActiveUniformsiv" },
+	{ GL_FUNC_GET_ACTIVE_UNIFORM_NAME,					GL_EXTENSION_ARB_UNIFORM_BUFFER_OBJECT, 0, "glGetActiveUniformName" },
+	{ GL_FUNC_GET_UNIFORM_BLOCK_INDEX,					GL_EXTENSION_ARB_UNIFORM_BUFFER_OBJECT, 0, "glGetUniformBlockIndex" },
+	{ GL_FUNC_GET_ACTIVE_UNIFORM_BLOCK_IV,				GL_EXTENSION_ARB_UNIFORM_BUFFER_OBJECT, 0, "glGetActiveUniformBlockName" },
+	{ GL_FUNC_UNIFORM_BLOCK_BINDING,					GL_EXTENSION_ARB_UNIFORM_BUFFER_OBJECT, 0, "glUniformBlockBinding" },
+	{ GL_FUNC_BEGIN_TRANSFORM_FEEDBACK,					GL_EXTENSION_EXT_TRANSFORM_FEEDBACK, 0, "glBeginTransformFeedbackEXT" },
+	{ GL_FUNC_END_TRANSFORM_FEEDBACK,					GL_EXTENSION_EXT_TRANSFORM_FEEDBACK, 0, "glEndTransformFeedbackEXT" },
+	{ GL_FUNC_BIND_BUFFER_RANGE,						GL_EXTENSION_EXT_TRANSFORM_FEEDBACK, 0, "glBindBufferRangeEXT" },
+	{ GL_FUNC_BIND_BUFFER_OFFSET,						GL_EXTENSION_EXT_TRANSFORM_FEEDBACK, 0, "glBindBufferOffsetEXT" },
+	{ GL_FUNC_BIND_BUFFER_BASE,							GL_EXTENSION_EXT_TRANSFORM_FEEDBACK, 0, "glBindBufferBaseEXT" },
+	{ GL_FUNC_TRANSFORM_FEEDBACK_VARYINGS,				GL_EXTENSION_EXT_TRANSFORM_FEEDBACK, 0, "glTransformFeedbackVaryingsEXT" },
+	{ GL_FUNC_GET_TRANSFORM_FEEDBACK_VARYING,			GL_EXTENSION_EXT_TRANSFORM_FEEDBACK, 0, "glGetTransformFeedbackVaryingEXT" },
+	{ GL_FUNC_ARB_DRAW_ARRAYS_INSTANCED,				GL_EXTENSION_ARB_DRAW_INSTANCED, 0, "glDrawArraysInstancedARB" },
+	{ GL_FUNC_ARB_DRAW_ELEMENTS_INSTANCED,				GL_EXTENSION_ARB_DRAW_INSTANCED, 0, "glDrawElementsInstancedARB" },
+	{ GL_FUNC_ARB_TEX_BUFFER,							GL_EXTENSION_ARB_TEXTURE_BUFFER, 0, "glTexBufferARB" },
+	{ GL_FUNC_BIND_FRAG_DATA_LOCATION,					GL_EXTENSION_NONE, 30, "glBindFragDataLocation" },
+	{ GL_FUNC_GET_FRAG_DATA_LOCATION,					GL_EXTENSION_NONE, 30, "glGetFragDataLocation" },
+	{ GL_FUNC_BIND_VERTEX_ARRAY,						GL_EXTENSION_ARB_VERTEX_ARRAY_OBJECT, 0, "glBindVertexArray" },
+	{ GL_FUNC_DELETE_VERTEX_ARRAYS,						GL_EXTENSION_ARB_VERTEX_ARRAY_OBJECT, 0, "glDeleteVertexArrays" },
+	{ GL_FUNC_GEN_VERTEX_ARRAYS,						GL_EXTENSION_ARB_VERTEX_ARRAY_OBJECT, 0, "glGenVertexArrays" },
+	{ GL_FUNC_IS_VERTEX_ARRAY,							GL_EXTENSION_ARB_VERTEX_ARRAY_OBJECT, 0, "glIsVertexArray" }
 };
+
+static const int GL_num_extensions = sizeof(GL_extension_info) / sizeof(ogl_extension);
+static const int GL_num_functions = sizeof(GL_function_info) / sizeof(ogl_function);
 
 // special extensions (only special functions are supported at the moment)
 ogl_spc_function GL_special_function_info[NUM_GL_SPC_FUNCTIONS] = {
@@ -219,11 +220,12 @@ int opengl_get_extensions()
 	
 	OGL_extension_string = (char*)glGetString(GL_EXTENSIONS);
 
-	for (i = 0; i < NUM_GL_EXTENSIONS; i++) {
+	for (i = 0; i < GL_num_extensions; i++) {
 		ext = &GL_extension_info[i];
 		
 		GL_extension_handle current_ext = ext->ext_handle;
 		int num_functions = 0;
+		int num_functions_found = 0;
 
 		if ( !opengl_find_extension(ext->extension_name) ) {
 			GL_extensions_availability[current_ext] = false;
@@ -236,7 +238,7 @@ int opengl_get_extensions()
 		}
 
 		// count the number of functions required by this extension
-		for ( j = 0; j < NUM_GL_FUNCTIONS; ++j ) {
+		for ( j = 0; j < GL_num_functions; ++j ) {
 			if ( GL_function_info[j].ext_handle == current_ext ) {
 				++num_functions;
 			}
@@ -251,15 +253,12 @@ int opengl_get_extensions()
 		}
 
 		// we do have functions so check any/all of them
-		for ( j = 0; j < NUM_GL_FUNCTIONS; j++ ) {
-			if ( GL_function_info[j].ext_handle != current_ext ) {
-				continue;
-			}
-
+		for ( j = 0; j < GL_num_functions; j++ ) {
 			func = &GL_function_info[j];
 
-			if (func == NULL)
-				break;
+			if ( func->ext_handle != current_ext ) {
+				continue;
+			}
 
 			ptr_u &func_ptr = GL_function_ptrs[func->func_handle];
 			if ( !func_ptr )
@@ -267,9 +266,11 @@ int opengl_get_extensions()
 
 			if ( !func_ptr )
 				break;
+			else
+				++num_functions_found;
 		}
 
-		if ( j != num_functions ) {
+		if ( num_functions_found != num_functions ) {
 			GL_extensions_availability[current_ext] = false;
 			mprintf(("  Found extension \"%s\", but can't find the required function \"%s()\".  Extension will be disabled!\n", ext->extension_name, func->function_name));
 
@@ -283,7 +284,7 @@ int opengl_get_extensions()
 	}
 
 	// look for functions based on version
-	for ( j = 0; j < NUM_GL_FUNCTIONS; j++ ) {
+	for ( j = 0; j < GL_num_functions; j++ ) {
 		if ( GL_function_info[j].ext_handle != GL_EXTENSION_NONE ) {
 			continue;
 		}
@@ -301,8 +302,8 @@ int opengl_get_extensions()
 		if ( !func_ptr )
 			func_ptr = (ptr_u)GET_PROC_ADDRESS(func->function_name);
 
-		if ( !func_ptr )
-			break;
+		if( !func_ptr )
+			mprintf(("  Unable to find function \"%s\".\n", func->function_name));
 	}
 
 	num_found += opengl_get_extensions_special();

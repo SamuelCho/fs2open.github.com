@@ -463,6 +463,7 @@ int opengl_compile_shader(shader_type sdr, uint flags)
 
 	opengl_shader_type_t *sdr_info = &GL_shader_types[sdr];
 
+	Assert(sdr_info->type_id == sdr);
 	mprintf(("Compiling new shader:\n"));
 	mprintf(("	%s\n", sdr_info->description));
 
@@ -509,11 +510,11 @@ int opengl_compile_shader(shader_type sdr, uint flags)
 
 	// bind fragment data locations
 	if ( GL_version >= 32 && GLSL_version >= 150 ) {
-		vglBindFragDataLocationEXT(new_shader.program_id, 0, "fragOut0");
-		vglBindFragDataLocationEXT(new_shader.program_id, 1, "fragOut1");
-		vglBindFragDataLocationEXT(new_shader.program_id, 2, "fragOut2");
-		vglBindFragDataLocationEXT(new_shader.program_id, 3, "fragOut3");
-		vglBindFragDataLocationEXT(new_shader.program_id, 4, "fragOut4");
+		vglBindFragDataLocation(new_shader.program_id, 0, "fragOut0");
+		vglBindFragDataLocation(new_shader.program_id, 1, "fragOut1");
+		vglBindFragDataLocation(new_shader.program_id, 2, "fragOut2");
+		vglBindFragDataLocation(new_shader.program_id, 3, "fragOut3");
+		vglBindFragDataLocation(new_shader.program_id, 4, "fragOut4");
 	}
 
 	// initialize uniforms and attributes
