@@ -3000,53 +3000,11 @@ void gr_opengl_scene_texture_end()
 
 		if (GL_rendering_to_texture)
 		{
-			GLfloat vertices[8] = {
-				0.0f, (float)gr_screen.max_h,
-				(float)gr_screen.max_w, (float)gr_screen.max_h,
-				(float)gr_screen.max_w, 0.0f,
-				0.0f, 0.0f
-			};
-
-			GLfloat uvcoords[8] = {
-				Scene_texture_u_scale, 0.0f,
-				0.0f, 0.0f,
-				0.0f, Scene_texture_v_scale,
-				Scene_texture_u_scale, Scene_texture_v_scale
-			};
-
-			vertex_layout vert_def;
-
-			vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, vertices);
-			vert_def.add_vertex_component(vertex_format_data::TEX_COORD, 0, uvcoords);
-
-			opengl_bind_vertex_layout(vert_def);
-
-			glDrawArrays(GL_QUADS, 0, 4);
+			opengl_draw_textured_quad(0.0f, 0.0f, 0.0f, 0.0f, (float)gr_screen.max_w, (float)gr_screen.max_h, Scene_texture_u_scale, Scene_texture_v_scale);
 		}
 		else
 		{
-			GLfloat vertices[8] = {
-				0.0f, (float)gr_screen.max_h,
-				(float)gr_screen.max_w, (float)gr_screen.max_h,
-				(float)gr_screen.max_w, 0.0f,
-				0.0f, 0.0f
-			};
-
-			GLfloat uvcoords[8] = {
-				0.0f, 0.0f,
-				Scene_texture_u_scale, 0.0f,
-				Scene_texture_u_scale, Scene_texture_v_scale,
-				0.0f, Scene_texture_v_scale
-			};
-
-			vertex_layout vert_def;
-
-			vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, vertices);
-			vert_def.add_vertex_component(vertex_format_data::TEX_COORD, 0, uvcoords);
-
-			opengl_bind_vertex_layout(vert_def);
-
-			glDrawArrays(GL_QUADS, 0, 4);
+			opengl_draw_textured_quad(0.0f, 0.0f, 0.0f, Scene_texture_v_scale, (float)gr_screen.max_w, (float)gr_screen.max_h, Scene_texture_u_scale, 0.0f);
 		}
 
 		GL_state.Texture.SetActiveUnit(0);
@@ -3248,34 +3206,8 @@ void gr_opengl_deferred_lighting_finish()
 	GLboolean lighting = GL_state.Lighting(GL_FALSE);
 	GLboolean blend = GL_state.Blend(GL_FALSE);
 	GLboolean cull = GL_state.CullFace(GL_FALSE);
-
-	GLfloat vertices[8] = {
-		0.0f, (float)gr_screen.max_h,
-		(float)gr_screen.max_w, (float)gr_screen.max_h,
-		(float)gr_screen.max_w, 0.0f,
-		0.0f, 0.0f
-	};
-
-	GLfloat uvcoords[8] = {
-		0.0f, 0.0f,
-		Scene_texture_u_scale, 0.0f,
-		Scene_texture_u_scale, Scene_texture_v_scale,
-		0.0f, Scene_texture_v_scale
-	};
-
+	
 	opengl_shader_set_passthrough(true, false);
-
-	GL_state.Array.BindArrayBuffer(0);
-	GL_state.Array.BindElementBuffer(0);
-
-	vertex_layout vert_def;
-
-	vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, vertices);
-	vert_def.add_vertex_component(vertex_format_data::TEX_COORD, 0, uvcoords);
-
-	opengl_bind_vertex_layout(vert_def);
-
-	GL_state.Texture.DisableAll();
 
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
@@ -3283,7 +3215,7 @@ void gr_opengl_deferred_lighting_finish()
 
 	GL_state.SetAlphaBlendMode( ALPHA_BLEND_ADDITIVE );
 
-	glDrawArrays(GL_QUADS, 0, 4);
+	opengl_draw_textured_quad(0.0f, 0.0f, 0.0f, Scene_texture_v_scale, (float)gr_screen.max_w, (float)gr_screen.max_h, Scene_texture_u_scale, 0.0f);
 
 	gr_set_proj_matrix(Proj_fov, gr_screen.clip_aspect, Min_draw_distance, Max_draw_distance);
 	gr_set_view_matrix(&Eye_position, &Eye_matrix);
@@ -3322,56 +3254,62 @@ void gr_opengl_update_distortion()
 	glClearColor(0.5f, 0.5f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	GLfloat texcoord[8] = {
-		0.0f, 0.0f,
-		0.96875f, 0.0f,
-		0.96875f, 1.0f,
-		0.0f, 1.0f
-	};
+	vertex vertices[4];
 
-	GLfloat vertices[8] = {
-		0.03f*(float)gr_screen.max_w,(float)gr_screen.max_h,
-		(float)gr_screen.max_w, (float)gr_screen.max_h,
-		(float)gr_screen.max_w, 0.0f,
-		0.03f*(float)gr_screen.max_w, 0.0f
-	};
+	vertices[0].texture_position.u = 0.0f;
+	vertices[0].texture_position.v = 0.0f;
 
-	GL_state.Array.BindArrayBuffer(0);
+	vertices[1].texture_position.u = 0.96875f;
+	vertices[1].texture_position.v = 0.0f;
+
+	vertices[2].texture_position.u = 0.0f;
+	vertices[2].texture_position.v = 1.0f;
+
+	vertices[3].texture_position.u = 0.96875f;
+	vertices[3].texture_position.v = 1.0f;
+	
+	vertices[0].screen.xyw.x = 0.03f*(float)gr_screen.max_w;
+	vertices[0].screen.xyw.y = (float)gr_screen.max_h;
+
+	vertices[1].screen.xyw.x = (float)gr_screen.max_w;
+	vertices[1].screen.xyw.y = (float)gr_screen.max_h;
+
+	vertices[2].screen.xyw.x = 0.03f*(float)gr_screen.max_w;
+	vertices[2].screen.xyw.y = 0.0f;
+
+	vertices[3].screen.xyw.x = (float)gr_screen.max_w;
+	vertices[3].screen.xyw.y = 0.0f;
 
 	vertex_layout vert_def;
 
-	vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, vertices);
-	vert_def.add_vertex_component(vertex_format_data::TEX_COORD, 0, texcoord);
+	vert_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), offsetof(vertex, screen));
+	vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), offsetof(vertex, texture_position));
 
-	opengl_bind_vertex_layout(vert_def);
-
-	glDrawArrays(GL_QUADS, 0, 4);
+	opengl_render_primitives_immediate(PRIM_TYPE_TRISTRIP, &vert_def, 4, vertices, sizeof(vertex) * 4);
 
 	GL_state.Texture.Disable();
 
-	SCP_vector<ubyte> colours;
-	SCP_vector<GLfloat> distortion_vertex;
-	colours.reserve(33 * 4);
-	distortion_vertex.reserve(33 * 2);
+	opengl_shader_set_passthrough(false, false);
+
+	vertex distortion_verts[33];
+
 	for(int i = 0; i < 33; i++)
 	{
-		colours.push_back((ubyte) rand()%256);
-		colours.push_back((ubyte) rand()%256);
-		colours.push_back(255);
-		colours.push_back(255);
+		distortion_verts[i].r = (ubyte)rand() % 256;
+		distortion_verts[i].g = (ubyte)rand() % 256;
+		distortion_verts[i].b = 255;
+		distortion_verts[i].a = 255;
 
-		distortion_vertex.push_back(0.04f);
-		distortion_vertex.push_back((float)gr_screen.max_h*0.03125f*i);
+		distortion_verts[i].screen.xyw.x = 0.04f;
+		distortion_verts[i].screen.xyw.y = (float)gr_screen.max_h*0.03125f*i;
 	}
 
 	vert_def = vertex_layout();
 
-	vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, &distortion_vertex.front());
-	vert_def.add_vertex_component(vertex_format_data::COLOR4, 0, &colours.front());
+	vert_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), offsetof(vertex, screen));
+	vert_def.add_vertex_component(vertex_format_data::COLOR4, sizeof(vertex), offsetof(vertex, r));
 
-	opengl_bind_vertex_layout(vert_def);
-
-	glDrawArrays(GL_POINTS, 0, 33);
+	opengl_render_primitives_immediate(PRIM_TYPE_POINTS, &vert_def, 33, distortion_verts, 33 * sizeof(vertex));
 
 	Distortion_switch = !Distortion_switch;
 
@@ -3387,36 +3325,42 @@ void gr_opengl_update_distortion()
 	GL_state.CullFace(cull);
 }
 
-void gr_opengl_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+void opengl_render_primitives(primitive_type prim_type, vertex_layout* layout, int n_verts, int buffer_handle, uint vert_offset, uint byte_offset)
 {
-	GL_CHECK_FOR_ERRORS("start of gr_opengl_render_primitives()");
-
-	opengl_tnl_set_material(material_info, true);
-
 	if ( buffer_handle >= 0 ) {
 		opengl_bind_buffer_object(buffer_handle);
 	} else {
 		GL_state.Array.BindArrayBuffer(0);
 	}
 
-	opengl_bind_vertex_layout(*layout);
-	
-	glDrawArrays(opengl_primitive_type(prim_type), offset, n_verts);
+	opengl_bind_vertex_layout(*layout, 0, (ubyte*)byte_offset);
+
+	glDrawArrays(opengl_primitive_type(prim_type), vert_offset, n_verts);
+}
+
+void opengl_render_primitives_immediate(primitive_type prim_type, vertex_layout* layout, int n_verts, void* data, int size)
+{
+	uint offset = opengl_add_to_immediate_buffer(size, data);
+
+	opengl_render_primitives(prim_type, layout, n_verts, GL_immediate_buffer_handle, 0, offset);
+}
+
+void gr_opengl_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+{
+	GL_CHECK_FOR_ERRORS("start of gr_opengl_render_primitives()");
+
+	opengl_tnl_set_material(material_info, true);
+
+	opengl_render_primitives(prim_type, layout, n_verts, buffer_handle, offset, 0);
 
 	GL_CHECK_FOR_ERRORS("end of gr_opengl_render_primitives()");
 }
 
 void gr_opengl_render_primitives_immediate(material* material_info, primitive_type prim_type, vertex_layout* layout, int n_verts, void* data, int size)
 {
-	uint offset = opengl_add_to_immediate_buffer(size, data);
-
 	opengl_tnl_set_material(material_info, true);
 
-	opengl_bind_buffer_object(GL_immediate_buffer_handle);
-
-	opengl_bind_vertex_layout(*layout, 0, (ubyte*)offset);
-
-	glDrawArrays(opengl_primitive_type(prim_type), 0, n_verts);
+	opengl_render_primitives_immediate(prim_type, layout, n_verts, data, size);
 }
 
 void gr_opengl_render_primitives_2d(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
@@ -3439,7 +3383,7 @@ void gr_opengl_render_primitives_2d(material* material_info, primitive_type prim
 
 void gr_opengl_render_primitives_2d_immediate(material* material_info, primitive_type prim_type, vertex_layout* layout, int n_verts, void* data, int size)
 {
-	GL_CHECK_FOR_ERRORS("start of gr_opengl_render_primitives_2d()");
+	GL_CHECK_FOR_ERRORS("start of gr_opengl_render_primitives_2d_immediate()");
 
 	//glPushMatrix();
 	//glTranslatef((float)gr_screen.offset_x, (float)gr_screen.offset_y, -0.99f);
@@ -3452,40 +3396,32 @@ void gr_opengl_render_primitives_2d_immediate(material* material_info, primitive
 
 	//glPopMatrix();
 
-	GL_CHECK_FOR_ERRORS("end of gr_opengl_render_primitives_2d()");
+	GL_CHECK_FOR_ERRORS("end of gr_opengl_render_primitives_2d_immediate()");
 }
 
 void gr_opengl_render_primitives_particle(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
 {
+	GL_CHECK_FOR_ERRORS("start of gr_opengl_render_primitives_particle()");
+
 	opengl_tnl_set_material_particle(material_info);
-
-	if ( buffer_handle >= 0 ) {
-		opengl_bind_buffer_object(buffer_handle);
-	} else {
-		GL_state.Array.BindArrayBuffer(0);
-	}
-
-	opengl_bind_vertex_layout(*layout);
 	
-	glDrawArrays(opengl_primitive_type(prim_type), offset, n_verts);
+	opengl_render_primitives(prim_type, layout, n_verts, buffer_handle, offset, 0);
+
+	GL_CHECK_FOR_ERRORS("end of gr_opengl_render_primitives_particle()");
 }
 
 void gr_opengl_render_primitives_distortion(distortion_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
 {
+	GL_CHECK_FOR_ERRORS("start of gr_opengl_render_primitives_distortion()");
+
 	opengl_tnl_set_material_distortion(material_info);
-
-	if ( buffer_handle >= 0 ) {
-		opengl_bind_buffer_object(buffer_handle);
-	} else {
-		GL_state.Array.BindArrayBuffer(0);
-	}
-
-	opengl_bind_vertex_layout(*layout);
-
+	
 	glDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);
 	
-	glDrawArrays(opengl_primitive_type(prim_type), offset, n_verts);
+	opengl_render_primitives(prim_type, layout, n_verts, buffer_handle, offset, 0);
 
 	GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT };
 	vglDrawBuffers(2, buffers);
+
+	GL_CHECK_FOR_ERRORS("start of gr_opengl_render_primitives_distortion()");
 }

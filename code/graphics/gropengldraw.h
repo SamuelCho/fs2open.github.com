@@ -74,6 +74,9 @@ void gr_opengl_deferred_lighting_begin();
 void gr_opengl_deferred_lighting_end();
 void gr_opengl_deferred_lighting_finish();
 
+void opengl_render_primitives(primitive_type prim_type, vertex_layout* layout, int n_verts, int buffer_handle, uint vert_offset, uint byte_offset);
+void opengl_render_primitives_immediate(primitive_type prim_type, vertex_layout* layout, int n_verts, void* data, int size);
+
 void gr_opengl_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
 void gr_opengl_render_primitives_immediate(material* material_info, primitive_type prim_type, vertex_layout* layout, int n_verts, void* data, int size);
 void gr_opengl_render_primitives_2d(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
@@ -119,16 +122,12 @@ inline void opengl_draw_textured_quad(
 		{ x2, y2, u2, v2 }
 	};
 
-	GL_state.Array.BindArrayBuffer(0);
-
 	vertex_layout vert_def;
 
-	vert_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(glVertices[0]), glVertices);
-	vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(glVertices[0]), &(glVertices[0][2]));
+	vert_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(GLfloat) * 4, 0);
+	vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(GLfloat) * 4, sizeof(GLfloat) * 2);
 
-	opengl_bind_vertex_layout(vert_def);
-
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	opengl_render_primitives_immediate(PRIM_TYPE_TRISTRIP, &vert_def, 4, glVertices, sizeof(GLfloat) * 4 * 4);
 }
 
 inline void opengl_draw_coloured_quad(
