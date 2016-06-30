@@ -2973,8 +2973,8 @@ void opengl_tnl_set_model_material(model_material *material_info)
 
 		if ( fog_params.enabled ) {
 			GL_state.Uniform.setUniformf("fogStart", fog_params.dist_near);
-			GL_state.Uniform.setUniformf("fogScale", 1.0f / fog_params.dist_far);
-			GL_state.Uniform.setUniform4f("fogColor", fog_params.r, fog_params.g, fog_params.b, 1.0f);
+			GL_state.Uniform.setUniformf("fogScale", 1.0f / (fog_params.dist_far - fog_params.dist_near));
+			GL_state.Uniform.setUniform4f("fogColor", i2fl(fog_params.r) / 255.0f, i2fl(fog_params.g) / 255.0f, i2fl(fog_params.b) / 255.0f, 1.0f);
 		}
 	}
 
