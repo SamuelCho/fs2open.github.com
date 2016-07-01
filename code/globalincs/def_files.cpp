@@ -2711,7 +2711,7 @@ char* Default_effect_particle_fragment_shader =
 "fragIn vec4 fragColor;\n"
 "void main()\n"
 "{\n"
-"	vec4 fragmentColor = tex2D(baseMap, fragTexCoord.xy) * fragColor.a;\n"
+"	vec4 fragmentColor = tex2D(baseMap, fragTexCoord.xy) * fragColor;\n"
 "	vec2 offset = vec2(fragRadius * abs(0.5 - fragTexCoord.x) * 2.0, fragRadius * abs(0.5 - fragTexCoord.y) * 2.0);\n"
 "	float offset_len = length(offset);\n"
 "	if ( offset_len > fragRadius ) {\n"
