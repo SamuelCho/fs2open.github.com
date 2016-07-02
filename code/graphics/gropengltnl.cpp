@@ -50,7 +50,6 @@ extern bool Envmap_override;
 extern bool Specmap_override;
 extern bool Normalmap_override;
 extern bool Heightmap_override;
-extern bool GLSL_override;
 extern bool Shadow_override;
 
 static int GL_modelview_matrix_depth = 1;
@@ -675,7 +674,7 @@ void gr_opengl_set_buffer(int idx)
 			GL_state.Array.BindElementBuffer(0);
 		}
 
-		if ( is_minimum_GLSL_version() && !GLSL_override ) {
+		if ( is_minimum_GLSL_version() ) {
 			opengl_shader_set_current();
 		}
 
@@ -849,7 +848,7 @@ static void opengl_init_arrays(opengl_vertex_buffer *vert_src, vertex_buffer *bu
 	GLint vert_offset = (GLint)bufferp->vertex_num_offset;
 	GLubyte *ptr = NULL;
 
-	if ( is_minimum_GLSL_version() && !GLSL_override && Is_Extension_Enabled(GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+	if ( is_minimum_GLSL_version() && Is_Extension_Enabled(GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
 		vert_offset = 0;
 	}
 
@@ -867,7 +866,7 @@ static void opengl_init_arrays(indexed_vertex_source *vert_src, vertex_buffer *b
 	GLint vert_offset = (GLint)bufferp->vertex_num_offset;
 	GLubyte *ptr = NULL;
 
-	if ( is_minimum_GLSL_version() && !GLSL_override && Is_Extension_Enabled(GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+	if ( is_minimum_GLSL_version() && Is_Extension_Enabled(GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
 		vert_offset = 0;
 	}
 
@@ -1406,7 +1405,7 @@ void gr_opengl_render_buffer(int start, vertex_buffer *bufferp, int texi, int fl
 
 	buffer_data *datap = &bufferp->tex_buf[texi];
 
-	if ( is_minimum_GLSL_version() && !GLSL_override ) {
+	if ( is_minimum_GLSL_version() ) {
 		opengl_render_pipeline_program(start, bufferp, datap, flags);
 	} else {
 		opengl_render_pipeline_fixed(start, bufferp, datap, flags);
@@ -1428,7 +1427,7 @@ void gr_opengl_render_model(model_material* material_info, indexed_vertex_source
 
 	buffer_data *datap = &bufferp->tex_buf[texi];
 
-	if ( is_minimum_GLSL_version() && !GLSL_override ) {
+	if ( is_minimum_GLSL_version() ) {
 		opengl_render_model_program(material_info, vert_source, bufferp, datap);
 	} else {
 		opengl_render_model_fixed(material_info, vert_source, bufferp, datap);
