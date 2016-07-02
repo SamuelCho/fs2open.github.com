@@ -1960,7 +1960,7 @@ bool gr_opengl_init()
 	// create vertex array object to make OpenGL Core happy if we can
 	if ( Is_Extension_Enabled(GL_EXTENSION_ARB_VERTEX_ARRAY_OBJECT) ) {
 		vglGenVertexArrays(1, &GL_vao);
-		//vglBindVertexArray(GL_vao);
+		vglBindVertexArray(GL_vao);
 	}
 
 	GL_state.Texture.init(max_texture_units);

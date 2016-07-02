@@ -302,7 +302,6 @@ void gr_opengl_post_process_end()
 				GL_state.Texture.SetActiveUnit(1);
 				GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 				GL_state.Texture.Enable(Cockpit_depth_texture);
-				GL_state.Color(255, 255, 255, 255);
 				GL_state.Blend(GL_TRUE);
 				GL_state.SetAlphaBlendMode(ALPHA_BLEND_ADDITIVE);
 				
