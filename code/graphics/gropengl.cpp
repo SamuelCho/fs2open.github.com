@@ -2030,7 +2030,7 @@ bool gr_opengl_init()
 	mprintf(( "  Max elements indices: %i\n", GL_max_elements_indices ));
 	mprintf(( "  Max texture size: %ix%i\n", GL_max_texture_width, GL_max_texture_height ));
 
-	if ( Is_Extension_Enabled(GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_ARB_FRAMEBUFFER_OBJECT) ) {
 		mprintf(( "  Max render buffer size: %ix%i\n",
 			  GL_max_renderbuffer_size,
 			  GL_max_renderbuffer_size ));
@@ -2066,7 +2066,7 @@ bool gr_opengl_is_capable(gr_capability capability)
 		return false;
 	}
 
-	if ( !Is_Extension_Enabled(GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT) || !Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_NON_POWER_OF_TWO) ) {
+	if ( !Is_Extension_Enabled(GL_EXTENSION_ARB_FRAMEBUFFER_OBJECT) || !Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_NON_POWER_OF_TWO) ) {
 		return false;
 	}
 
@@ -2085,11 +2085,11 @@ bool gr_opengl_is_capable(gr_capability capability)
 	case CAPABILITY_DEFERRED_LIGHTING:
 		return !Cmdline_no_fbo && !Cmdline_no_deferred_lighting && (GLSL_version >= 120);
 	case CAPABILITY_SHADOWS:
-		return Is_Extension_Enabled(GL_EXTENSION_ARB_GEOMETRY_SHADER4) && Is_Extension_Enabled(GL_EXTENSION_EXT_TEXTURE_ARRAY) && Is_Extension_Enabled(GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX) && (GLSL_version >= 120);
+		return Is_Extension_Enabled(GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX) && GL_version >= 32;
 	case CAPABILITY_BATCHED_SUBMODELS:
 		return (GLSL_version >= 150) && Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_BUFFER) && Is_Extension_Enabled(GL_EXTENSION_ARB_FLOATING_POINT_TEXTURES);
 	case CAPABILITY_POINT_PARTICLES:
-		return Is_Extension_Enabled(GL_EXTENSION_ARB_GEOMETRY_SHADER4) && !Cmdline_no_geo_sdr_effects;
+		return GL_version >= 32 && !Cmdline_no_geo_sdr_effects;
 	}
 
 	return false;

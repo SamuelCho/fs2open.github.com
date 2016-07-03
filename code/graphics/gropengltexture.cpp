@@ -158,13 +158,13 @@ void opengl_tcache_init()
 	}
 
 	// max size (width and/or height) that we can use for framebuffer/renderbuffer
-	if ( Is_Extension_Enabled(GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_ARB_FRAMEBUFFER_OBJECT) ) {
 		glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE_EXT, &GL_max_renderbuffer_size);
 
 		// if we can't do at least 128x128 then just disable FBOs
 		if (GL_max_renderbuffer_size < 128) {
 			mprintf(("WARNING: Max dimensions of FBO, %ix%i, is less the required minimum!!  Extension will be disabled!\n", GL_max_renderbuffer_size, GL_max_renderbuffer_size));
-			GL_extensions_availability[GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT] = false;
+			GL_extensions_availability[GL_EXTENSION_ARB_FRAMEBUFFER_OBJECT] = false;
 		}
 	}
 

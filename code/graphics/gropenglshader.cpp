@@ -207,7 +207,7 @@ opengl_shader_t *Current_shader = NULL;
 
 // Forward declarations
 GLhandleARB opengl_shader_create(const SCP_vector<SCP_string>& vs, const SCP_vector<SCP_string>& fs, const SCP_vector<SCP_string>& gs);
-void opengl_shader_check_info_log(GLhandleARB shader_object);
+void opengl_shader_check_program_info_log(GLhandleARB shader_object);
 
 /**
  * Set the currently active shader 
@@ -226,10 +226,10 @@ void opengl_shader_set_current(opengl_shader_t *shader_obj)
 				vglValidateProgramARB(Current_shader->program_id);
 
 				GLint obj_status = 0;
-				vglGetObjectParameterivARB(Current_shader->program_id, GL_OBJECT_VALIDATE_STATUS_ARB, &obj_status);
+				vglGetProgramiv(Current_shader->program_id, GL_OBJECT_VALIDATE_STATUS_ARB, &obj_status);
 
 				if ( !obj_status ) {
-					opengl_shader_check_info_log(Current_shader->program_id);
+					opengl_shader_check_program_info_log(Current_shader->program_id);
 	
 					mprintf(("VALIDATE INFO-LOG:\n"));
 
@@ -487,7 +487,7 @@ int opengl_compile_shader(shader_type sdr, uint flags)
 	SCP_vector<SCP_string> geom_content;
 
 	if ( use_geo_sdr ) {
-		if (!Is_Extension_Enabled(GL_EXTENSION_ARB_GEOMETRY_SHADER4)) {
+		if ( GL_version < 32 ) {
 			return -1;
 		}
 
@@ -619,7 +619,7 @@ void opengl_shader_init()
  *
  * @param shader_object		OpenGL handle of a shader object
  */
-void opengl_shader_check_info_log(GLhandleARB shader_object)
+void opengl_shader_check_shader_info_log(GLhandleARB shader_object)
 {
 	if (GLshader_info_log == NULL) {
 		GLshader_info_log = (char *) vm_malloc(GLshader_info_log_size);
@@ -627,7 +627,23 @@ void opengl_shader_check_info_log(GLhandleARB shader_object)
 
 	memset(GLshader_info_log, 0, GLshader_info_log_size);
 
-	vglGetInfoLogARB(shader_object, GLshader_info_log_size-1, 0, GLshader_info_log);
+	vglGetShaderInfoLogARB(shader_object, GLshader_info_log_size-1, 0, GLshader_info_log);
+}
+
+/**
+* Retrieve the compilation log for a given program object, and store it in the GLshader_info_log global variable
+*
+* @param program_object		OpenGL handle of a program object
+*/
+void opengl_shader_check_program_info_log(GLhandleARB program_object)
+{
+	if ( GLshader_info_log == NULL ) {
+		GLshader_info_log = (char *)vm_malloc(GLshader_info_log_size);
+	}
+
+	memset(GLshader_info_log, 0, GLshader_info_log_size);
+
+	vglGetProgramInfoLogARB(program_object, GLshader_info_log_size - 1, 0, GLshader_info_log);
 }
 
 /**
@@ -656,9 +672,9 @@ GLhandleARB opengl_shader_compile_object(const SCP_vector<SCP_string>& shader_so
 	vglCompileShaderARB(shader_object);
 
 	// check if the compile was successful
-	vglGetObjectParameterivARB(shader_object, GL_OBJECT_COMPILE_STATUS_ARB, &status);
+	vglGetShaderiv(shader_object, GL_COMPILE_STATUS, &status);
 
-	opengl_shader_check_info_log(shader_object);
+	opengl_shader_check_shader_info_log(shader_object);
 
 	// we failed, bail out now...
 	if (status == 0) {
@@ -719,9 +735,9 @@ GLhandleARB opengl_shader_link_object(GLhandleARB vertex_object, GLhandleARB fra
 	vglLinkProgramARB(shader_object);
 
 	// check if the link was successful
-	vglGetObjectParameterivARB(shader_object, GL_OBJECT_LINK_STATUS_ARB, &status);
+	vglGetProgramiv(shader_object, GL_LINK_STATUS, &status);
 
-	opengl_shader_check_info_log(shader_object);
+	opengl_shader_check_program_info_log(shader_object);
 
 	// we failed, bail out now...
 	if (status == 0) {
@@ -758,7 +774,7 @@ GLhandleARB opengl_shader_create(const SCP_vector<SCP_string>& vs, const SCP_vec
 	GLhandleARB program = 0;
 
 	if (!vs.empty()) {
-		vs_o = opengl_shader_compile_object( vs, GL_VERTEX_SHADER_ARB );
+		vs_o = opengl_shader_compile_object( vs, GL_VERTEX_SHADER );
 
 		if ( !vs_o ) {
 			mprintf(("ERROR! Unable to create vertex shader!\n"));
@@ -767,7 +783,7 @@ GLhandleARB opengl_shader_create(const SCP_vector<SCP_string>& vs, const SCP_vec
 	}
 
 	if (!fs.empty()) {
-		fs_o = opengl_shader_compile_object( fs, GL_FRAGMENT_SHADER_ARB );
+		fs_o = opengl_shader_compile_object( fs, GL_FRAGMENT_SHADER );
 
 		if ( !fs_o ) {
 			mprintf(("ERROR! Unable to create fragment shader!\n"));
@@ -776,7 +792,7 @@ GLhandleARB opengl_shader_create(const SCP_vector<SCP_string>& vs, const SCP_vec
 	}
 
 	if (!gs.empty()) {
-		gs_o = opengl_shader_compile_object( gs, GL_GEOMETRY_SHADER_ARB );
+		gs_o = opengl_shader_compile_object( gs, GL_GEOMETRY_SHADER );
 
 		if ( !gs_o ) {
 			mprintf(("ERROR! Unable to create fragment shader!\n"));

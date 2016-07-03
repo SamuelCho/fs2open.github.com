@@ -2576,7 +2576,7 @@ void opengl_setup_scene_textures()
 {
 	Scene_texture_initialized = 0;
 
-	if ( !is_minimum_GLSL_version() || Cmdline_no_fbo || !Is_Extension_Enabled(GL_EXTENSION_EXT_FRAMEBUFFER_OBJECT) ) {
+	if ( !is_minimum_GLSL_version() || Cmdline_no_fbo || !Is_Extension_Enabled(GL_EXTENSION_ARB_FRAMEBUFFER_OBJECT) ) {
 		Cmdline_postprocess = 0;
 		Cmdline_softparticles = 0;
 		Cmdline_fb_explosions = 0;

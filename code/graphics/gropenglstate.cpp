@@ -924,6 +924,11 @@ void opengl_array_state::init(GLuint n_units)
 
 void opengl_array_state::SetActiveClientUnit(GLuint id)
 {
+	// this function is deprecated in OGL Core
+	if ( is_minimum_GLSL_version() ) {
+		return;
+	}
+
 	if ( id >= num_client_texture_units ) {
 		Int3();
 		id = 0;
