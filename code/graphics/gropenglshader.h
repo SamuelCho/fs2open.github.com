@@ -135,7 +135,7 @@ typedef struct opengl_shader_uniform_t {
 } opengl_shader_uniform_t;
 
 typedef struct opengl_shader_t {
-	GLhandleARB program_id;
+	GLuint program_id;
 
 	shader_type shader;
 	unsigned int flags;
