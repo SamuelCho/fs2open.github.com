@@ -31,7 +31,7 @@
 #include "missionui/missionweaponchoice.h"
 #include "network/multiui.h"
 #include "parse/parselo.h"
-
+#include "render/render.h"
 
 
 ////////////////////////////////////////////////////////////////////
@@ -185,8 +185,9 @@ void context_help_init()
 
 void context_help_grey_screen()
 {
-	gr_set_shader(&Grey_shader);
-	gr_shade(0,0,gr_screen.clip_width, gr_screen.clip_height, GR_RESIZE_NONE);
+	//gr_set_shader(&Grey_shader);
+	//gr_shade(0,0,gr_screen.clip_width, gr_screen.clip_height, GR_RESIZE_NONE);
+	render_colored_rect(&Grey_shader, 0, 0, gr_screen.clip_width, gr_screen.clip_height, GR_RESIZE_NONE);
 }
 
 // launch_context_help() will switch to a context sensitive help state
@@ -515,7 +516,8 @@ void help_overlay_blit(int overlay_id, int resolution_index)
 	for (idx = 0; idx < textcount; idx++) {
 		gr_set_color_fast(&Color_black);
 		gr_get_string_size(&width, &height, help_overlaylist[overlay_id].textlist.at(0).at(idx).string, strlen(help_overlaylist[overlay_id].textlist.at(0).at(idx).string));
-		gr_rect(help_overlaylist[overlay_id].textlist.at(resolution_index).at(idx).x_coord-2*HELP_PADDING, help_overlaylist[overlay_id].textlist.at(resolution_index).at(idx).y_coord-3*HELP_PADDING, width+4*HELP_PADDING, height+4*HELP_PADDING, GR_RESIZE_MENU);
+		//gr_rect(help_overlaylist[overlay_id].textlist.at(resolution_index).at(idx).x_coord-2*HELP_PADDING, help_overlaylist[overlay_id].textlist.at(resolution_index).at(idx).y_coord-3*HELP_PADDING, width+4*HELP_PADDING, height+4*HELP_PADDING, GR_RESIZE_MENU);
+		render_colored_rect(help_overlaylist[overlay_id].textlist.at(resolution_index).at(idx).x_coord-2*HELP_PADDING, help_overlaylist[overlay_id].textlist.at(resolution_index).at(idx).y_coord-3*HELP_PADDING, width+4*HELP_PADDING, height+4*HELP_PADDING, GR_RESIZE_MENU);
 		gr_set_color_fast(&Color_bright_white);
 		gr_printf_menu(help_overlaylist[overlay_id].textlist.at(resolution_index).at(idx).x_coord, help_overlaylist[overlay_id].textlist.at(resolution_index).at(idx).y_coord, help_overlaylist[overlay_id].textlist.at(0).at(idx).string);
 	}
@@ -523,21 +525,27 @@ void help_overlay_blit(int overlay_id, int resolution_index)
 
 	// this draws each right bracket
 	for (idx = 0; idx < rbracketcount; idx++) {
-		gr_set_bitmap(help_right_bracket_bitmap);
-		gr_bitmap(help_overlaylist[overlay_id].rbracketlist.at(resolution_index).at(idx).x_coord, help_overlaylist[overlay_id].rbracketlist.at(resolution_index).at(idx).y_coord, GR_RESIZE_MENU);
+		//gr_set_bitmap(help_right_bracket_bitmap);
+		//gr_bitmap(help_overlaylist[overlay_id].rbracketlist.at(resolution_index).at(idx).x_coord, help_overlaylist[overlay_id].rbracketlist.at(resolution_index).at(idx).y_coord, GR_RESIZE_MENU);
+		render_bitmap(help_right_bracket_bitmap, help_overlaylist[overlay_id].rbracketlist.at(resolution_index).at(idx).x_coord, help_overlaylist[overlay_id].rbracketlist.at(resolution_index).at(idx).y_coord, GR_RESIZE_MENU);
 	}
 
 	// this draws each left bracket
 	for (idx = 0; idx < lbracketcount; idx++) {
-		gr_set_bitmap(help_left_bracket_bitmap);
-		gr_bitmap(help_overlaylist[overlay_id].lbracketlist.at(resolution_index).at(idx).x_coord, help_overlaylist[overlay_id].lbracketlist.at(resolution_index).at(idx).y_coord, GR_RESIZE_MENU);
+		//gr_set_bitmap(help_left_bracket_bitmap);
+		//gr_bitmap(help_overlaylist[overlay_id].lbracketlist.at(resolution_index).at(idx).x_coord, help_overlaylist[overlay_id].lbracketlist.at(resolution_index).at(idx).y_coord, GR_RESIZE_MENU);
+		render_bitmap(help_left_bracket_bitmap, help_overlaylist[overlay_id].lbracketlist.at(resolution_index).at(idx).x_coord, help_overlaylist[overlay_id].lbracketlist.at(resolution_index).at(idx).y_coord, GR_RESIZE_MENU);
 	}	
 
 	// this draws each 2d line for the help screen
 	//gr_set_color_fast(&Color_yellow);
-	gr_set_color(255, 255, 0);
+	//gr_set_color(255, 255, 0);
+	color pline_clr;
+	gr_init_color(&pline_clr, 255, 255, 0);
+	
 	for (idx = 0; idx<plinecount; idx++) {
-		gr_pline_special(&help_overlaylist[overlay_id].plinelist.at(resolution_index).at(idx).vtx, HELP_PLINE_THICKNESS, GR_RESIZE_MENU);
+		//gr_pline_special(&help_overlaylist[overlay_id].plinelist.at(resolution_index).at(idx).vtx, HELP_PLINE_THICKNESS, GR_RESIZE_MENU);
+		render_pline_special(&pline_clr, &help_overlaylist[overlay_id].plinelist.at(resolution_index).at(idx).vtx, HELP_PLINE_THICKNESS, GR_RESIZE_MENU);
 	}
 }
 

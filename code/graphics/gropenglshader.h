@@ -12,6 +12,7 @@
 #define _GROPENGLSHADER_H
 
 #include "globalincs/pstypes.h"
+#include "graphics/2d.h"
 #include "graphics/gropengl.h"
 
 #include <string>
@@ -21,9 +22,35 @@
 #define SDR_ATTRIB_RADIUS		0
 #define SDR_ATTRIB_SUBMODEL		1
 
-#define MAX_SDR_ATTRIBUTES		5
+#define MAX_SDR_ATTRIBUTES		8
 
 #define MAX_SDR_UNIFORM_BLOCKS	5
+
+enum shader_stage {
+	SDR_STAGE_VERTEX,
+	SDR_STAGE_FRAGMENT,
+	SDR_STAGE_GEOMETRY
+};
+
+struct opengl_vert_attrib {
+	enum attrib_id {
+		POSITION,
+		COLOR,
+		TEXCOORD,
+		NORMAL,
+		TANGENT,
+		MODEL_ID,
+		RADIUS,
+		UVEC,
+		NUM_ATTRIBS
+	};
+
+	attrib_id attribute_id;
+	SCP_string name;
+	vec4 default_value;
+};
+
+extern opengl_vert_attrib GL_vertex_attrib_info[];
 
 struct geometry_sdr_params
 {
@@ -45,7 +72,8 @@ struct opengl_shader_type_t {
 	char* uniforms[MAX_SHADER_UNIFORMS];
 
 	int num_attributes;
-	char* attributes[MAX_SDR_ATTRIBUTES];
+	//char* attributes[MAX_SDR_ATTRIBUTES];
+	opengl_vert_attrib::attrib_id attributes[MAX_SDR_ATTRIBUTES];
 
 	const char* description;
 };
@@ -62,7 +90,8 @@ struct opengl_shader_variant_t {
 	char* uniforms[MAX_SHADER_UNIFORMS];
 
 	int num_attributes;
-	char* attributes[MAX_SDR_ATTRIBUTES];
+	//char* attributes[MAX_SDR_ATTRIBUTES];
+	opengl_vert_attrib::attrib_id attributes[MAX_SDR_ATTRIBUTES];
 
 	const char* description;
 };
@@ -106,7 +135,7 @@ typedef struct opengl_shader_uniform_t {
 } opengl_shader_uniform_t;
 
 typedef struct opengl_shader_t {
-	GLhandleARB program_id;
+	GLuint program_id;
 
 	shader_type shader;
 	unsigned int flags;
@@ -137,9 +166,9 @@ void opengl_shader_init();
 void opengl_shader_shutdown();
 
 int opengl_compile_shader(shader_type sdr, uint flags);
-GLhandleARB opengl_shader_create(const char *vs, const char *fs, const char *gs);
 
 void opengl_shader_init_attribute(const char *attribute_text);
+void opengl_shader_init_attribute(const opengl_vert_attrib *attrib_info);
 GLint opengl_shader_get_attribute(const char *attribute_text);
 
 void opengl_shader_init_uniform(const char *uniform_text);
@@ -155,6 +184,9 @@ float opengl_shader_get_animated_timer();
 
 void opengl_shader_compile_deferred_light_shader();
 void opengl_shader_compile_deferred_light_clear_shader();
+
+void opengl_shader_compile_passthrough_shader();
+void opengl_shader_set_passthrough(bool textured, bool alpha, color* clr = NULL, float color_scale = 1.0f);
 
 #define ANIMATED_SHADER_LOADOUTSELECT_FS1	0
 #define ANIMATED_SHADER_LOADOUTSELECT_FS2	1

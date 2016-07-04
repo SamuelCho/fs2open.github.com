@@ -20,6 +20,7 @@
 #include "movie.h"
 #include "parse/parselo.h"
 #include "popup/popup.h"
+#include "render/render.h"
 #include "ui/ui.h"
 
 
@@ -579,8 +580,9 @@ void cutscenes_screen_do_frame()
 
 	GR_MAYBE_CLEAR_RES(Background_bitmap);
 	if (Background_bitmap >= 0) {
-		gr_set_bitmap(Background_bitmap);
-		gr_bitmap(0, 0, GR_RESIZE_MENU);
+		//gr_set_bitmap(Background_bitmap);
+		//gr_bitmap(0, 0, GR_RESIZE_MENU);
+		render_bitmap(Background_bitmap, 0, 0, GR_RESIZE_MENU);
 	} 
 
 	Ui_window.draw();
@@ -649,7 +651,8 @@ void cutscenes_screen_do_frame()
 
 			strncpy(line, Text_lines[z], len);
 			line[len] = 0;
-			gr_string(Cutscene_desc_coords[gr_screen.res][0], Cutscene_desc_coords[gr_screen.res][1] + y, line, GR_RESIZE_MENU);
+			//gr_string(Cutscene_desc_coords[gr_screen.res][0], Cutscene_desc_coords[gr_screen.res][1] + y, line, GR_RESIZE_MENU);
+			render_string(Cutscene_desc_coords[gr_screen.res][0], Cutscene_desc_coords[gr_screen.res][1] + y, line, GR_RESIZE_MENU);
 
 			y += font_height;
 			z++;

@@ -39,6 +39,7 @@
 #include "parse/parselo.h"
 #include "playerman/player.h"
 #include "render/3dinternal.h"
+#include "render/render.h"
 #include "ship/awacs.h"
 #include "ship/ship.h"
 #include "ship/subsysdamage.h"
@@ -2870,24 +2871,35 @@ void hud_tri(float x1,float y1,float x2,float y2,float x3,float y3)
 	for (i=0; i<3; i++)
 		gr_resize_screen_posf(&verts[i].screen.xyw.x, &verts[i].screen.xyw.y);
 
-	uint saved_mode = gr_zbuffer_get();
-	int cull = gr_set_cull(0);
+	//uint saved_mode = gr_zbuffer_get();
+	//int cull = gr_set_cull(0);
 	
-	gr_zbuffer_set( GR_ZBUFF_NONE );
+	//gr_zbuffer_set( GR_ZBUFF_NONE );
 	
-	//gr_tmapper( 3, vertlist, TMAP_FLAG_TRILIST );
-	g3_draw_poly_constant_sw(3, vertlist, TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_FLAG_ALPHA, 0.1f);	
+	material material_def;
 
-	gr_zbuffer_set( saved_mode );
-	gr_set_cull(cull);
+	material_def.set_blend_mode(ALPHA_BLEND_NONE);
+	material_def.set_depth_mode(ZBUFFER_TYPE_NONE);
+	material_def.set_texture_source(TEXTURE_SOURCE_NONE);
+	material_def.set_cull_mode(false);
+
+	render_primitives_colored(&material_def, verts, 3, PRIM_TYPE_TRIFAN, true);
+
+	//g3_draw_poly_constant_sw(3, vertlist, TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_FLAG_ALPHA, 0.1f);	
+
+	//gr_zbuffer_set( saved_mode );
+	//gr_set_cull(cull);
 }
 
 
 void hud_tri_empty(float x1,float y1,float x2,float y2,float x3,float y3)
 {
-	gr_line(fl2i(x1),fl2i(y1),fl2i(x2),fl2i(y2));
-	gr_line(fl2i(x2),fl2i(y2),fl2i(x3),fl2i(y3));
-	gr_line(fl2i(x3),fl2i(y3),fl2i(x1),fl2i(y1));
+// 	gr_line(fl2i(x1),fl2i(y1),fl2i(x2),fl2i(y2));
+// 	gr_line(fl2i(x2),fl2i(y2),fl2i(x3),fl2i(y3));
+// 	gr_line(fl2i(x3),fl2i(y3),fl2i(x1),fl2i(y1));
+	render_line(fl2i(x1),fl2i(y1),fl2i(x2),fl2i(y2));
+	render_line(fl2i(x2),fl2i(y2),fl2i(x3),fl2i(y3));
+	render_line(fl2i(x3),fl2i(y3),fl2i(x1),fl2i(y1));
 }
 
 HudGaugeReticleTriangle::HudGaugeReticleTriangle():
@@ -2984,7 +2996,8 @@ void HudGaugeReticleTriangle::renderTriangleMissileTail(float ang, float xpos, f
 
 	// draw the tail indicating length
 	if ( tail_len > 0 ) {
-		gr_line(fl2i(xpos), fl2i(ypos), fl2i(xtail), fl2i(ytail));
+		//gr_line(fl2i(xpos), fl2i(ypos), fl2i(xtail), fl2i(ytail));
+		render_line(fl2i(xpos), fl2i(ypos), fl2i(xtail), fl2i(ytail));
 	}
 	gr_reset_screen_scale();
 }
@@ -6507,7 +6520,8 @@ void HudGaugeOffscreen::renderOffscreenIndicator(vec2d *coords, int dir, float d
 		y6 = y5 + Offscreen_tri_base;
 
 		if ( buf[0] ) {
-			gr_string( fl2i(xpos - w - 10), fl2i(ypos - h/2.0f+0.5f), buf);
+			//gr_string( fl2i(xpos - w - 10), fl2i(ypos - h/2.0f+0.5f), buf);
+			render_string( fl2i(xpos - w - 10), fl2i(ypos - h/2.0f+0.5f), buf);
 		}
 	} else if (dir == 1) {
 		x1 = x4 = (xpos-1);
@@ -6520,7 +6534,8 @@ void HudGaugeOffscreen::renderOffscreenIndicator(vec2d *coords, int dir, float d
 		y6 = y5 + Offscreen_tri_base;
 
 		if ( buf[0] ) {
-			gr_string(fl2i(xpos + 10), fl2i(ypos - h/2.0f+0.5f), buf);
+			//gr_string(fl2i(xpos + 10), fl2i(ypos - h/2.0f+0.5f), buf);
+			render_string(fl2i(xpos + 10), fl2i(ypos - h/2.0f+0.5f), buf);
 		}
 	} else if (dir == 2) {
 		y1 = y4 = (ypos-1);
@@ -6533,7 +6548,8 @@ void HudGaugeOffscreen::renderOffscreenIndicator(vec2d *coords, int dir, float d
 		x6 = x5 + Offscreen_tri_base;
 
 		if ( buf[0] ) {
-			gr_string(fl2i(xpos - w/2.0f+0.5f), fl2i(ypos+10), buf);
+			//gr_string(fl2i(xpos - w/2.0f+0.5f), fl2i(ypos+10), buf);
+			render_string(fl2i(xpos - w/2.0f+0.5f), fl2i(ypos+10), buf);
 		}
 	} else if (dir == 3) {
 		y1 = y4 = (ypos+2);
@@ -6546,7 +6562,8 @@ void HudGaugeOffscreen::renderOffscreenIndicator(vec2d *coords, int dir, float d
 		x6 = x5 + Offscreen_tri_base;
 
 		if ( buf[0] ) {
-			gr_string(fl2i(xpos - w/2.0f+0.5f), fl2i(ypos-h-10), buf);
+			//gr_string(fl2i(xpos - w/2.0f+0.5f), fl2i(ypos-h-10), buf);
+			render_string(fl2i(xpos - w/2.0f+0.5f), fl2i(ypos-h-10), buf);
 		}
 	}
 
@@ -6559,11 +6576,14 @@ void HudGaugeOffscreen::renderOffscreenIndicator(vec2d *coords, int dir, float d
 	}
 
 	if (dir == 0 || dir == 3){
-		gr_line(fl2i(x2),fl2i(y2),fl2i(x5),fl2i(y5));
+		//gr_line(fl2i(x2),fl2i(y2),fl2i(x5),fl2i(y5));
+		render_line(fl2i(x2),fl2i(y2),fl2i(x5),fl2i(y5));
 	} else if (dir == 1) {
-		gr_line(fl2i(x2-1),fl2i(y2),fl2i(x5-1),fl2i(y5));
+		//gr_line(fl2i(x2-1),fl2i(y2),fl2i(x5-1),fl2i(y5));
+		render_line(fl2i(x2-1),fl2i(y2),fl2i(x5-1),fl2i(y5));
 	} else {
-		gr_line(fl2i(x2),fl2i(y2-1),fl2i(x5),fl2i(y5-1));
+		//gr_line(fl2i(x2),fl2i(y2-1),fl2i(x5),fl2i(y5-1));
+		render_line(fl2i(x2),fl2i(y2-1),fl2i(x5),fl2i(y5-1));
 	}
 
 	gr_reset_screen_scale();
@@ -7153,11 +7173,9 @@ void HudGaugeHardpoints::render(float frametime)
 	gr_set_color_buffer(1);
 	gr_stencil_set(GR_STENCIL_READ);
 	gr_set_cull(cull);
-	gr_set_line_width(_line_width*2.0f);
 
-	//model_set_alpha( gr_screen.current_color.alpha / 255.0f );
-	//model_set_forced_texture(0);
-	render_info.set_flags(MR_NO_LIGHTING | MR_AUTOCENTER | MR_NO_FOGGING | MR_NO_TEXTURING | MR_SHOW_OUTLINE_HTL | MR_NO_POLYS | MR_NO_ZBUFFER | MR_NO_CULL);
+	render_info.set_flags(MR_NO_LIGHTING | MR_AUTOCENTER | MR_NO_FOGGING | MR_NO_TEXTURING | MR_NO_ZBUFFER | MR_NO_CULL);
+	render_info.set_normal_extrude_width(_line_width * 0.01f);
 
 	model_render_immediate( 
 		&render_info,
@@ -7168,7 +7186,6 @@ void HudGaugeHardpoints::render(float frametime)
 
 	gr_stencil_set(GR_STENCIL_NONE);
 	gr_zbuffer_set(zbuffer);
-	gr_set_line_width(1.0f);
 	
 	// draw weapon models
 	int i, k;

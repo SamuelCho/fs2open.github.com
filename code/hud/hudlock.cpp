@@ -22,6 +22,7 @@
 #include "object/object.h"
 #include "playerman/player.h"
 #include "render/3d.h"
+#include "render/render.h"
 #include "ship/ship.h"
 #include "weapon/emp.h"
 #include "weapon/weapon.h"

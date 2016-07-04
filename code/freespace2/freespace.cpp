@@ -139,6 +139,8 @@
 #include "radar/radar.h"
 #include "radar/radarsetup.h"
 #include "render/3d.h"
+#include "render/batching.h"
+#include "render/render.h"
 #include "ship/afterburner.h"
 #include "ship/awacs.h"
 #include "ship/ship.h"
@@ -589,7 +591,8 @@ void game_framerate_check()
 	// display if we're above the critical framerate
 	if(Framerate < Gf_critical){
 		gr_set_color_fast(&Color_bright_red);
-		gr_string(gr_screen.center_offset_x + 200, y_start, "Framerate warning", GR_RESIZE_NONE);
+		//gr_string(gr_screen.center_offset_x + 200, y_start, "Framerate warning", GR_RESIZE_NONE);
+		render_string(gr_screen.center_offset_x + 200, y_start, "Framerate warning", GR_RESIZE_NONE);
 
 		y_start += 10;
 	}
@@ -865,7 +868,8 @@ void game_flash_diminish(float frametime)
 		if ( b < 0 ) b = 0; else if ( b > 255 ) b = 255;
 
 		if ( (r!=0) || (g!=0) || (b!=0) ) {
-			gr_flash( r, g, b );
+			//gr_flash( r, g, b );
+			render_flash( r, g, b );
 		}
 	}
 	
@@ -1150,12 +1154,14 @@ void game_loading_callback(int count)
 	if ( Game_loading_ani.num_frames > 0 )	{
 		GR_MAYBE_CLEAR_RES(Game_loading_background);
 		if ( Game_loading_background > -1 )	{
-			gr_set_bitmap( Game_loading_background );
-			gr_bitmap(0,0,GR_RESIZE_MENU);
+			//gr_set_bitmap( Game_loading_background );
+			//gr_bitmap(0,0,GR_RESIZE_MENU);
+			render_bitmap(Game_loading_background, 0, 0, GR_RESIZE_MENU);
 		}
 
-		gr_set_bitmap( Game_loading_ani.first_frame + framenum );
-		gr_bitmap(Game_loading_ani_coords[gr_screen.res][0],Game_loading_ani_coords[gr_screen.res][1], GR_RESIZE_MENU);
+		//gr_set_bitmap( Game_loading_ani.first_frame + framenum );
+		//gr_bitmap(Game_loading_ani_coords[gr_screen.res][0],Game_loading_ani_coords[gr_screen.res][1], GR_RESIZE_MENU);
+		render_bitmap(Game_loading_ani.first_frame + framenum, Game_loading_ani_coords[gr_screen.res][0],Game_loading_ani_coords[gr_screen.res][1], GR_RESIZE_MENU);
 
 		do_flip = 1;
 	}
@@ -1171,11 +1177,13 @@ void game_loading_callback(int count)
 	}
 
 	if (Processing_filename[0] != '\0') {
-		gr_set_shader(&busy_shader);
-		gr_shade(0, 0, gr_screen.max_w_unscaled, 17, GR_RESIZE_MENU); // make sure it goes across the entire width
+		//gr_set_shader(&busy_shader);
+		//gr_shade(0, 0, gr_screen.max_w_unscaled, 17, GR_RESIZE_MENU); // make sure it goes across the entire width
+		render_colored_rect(&busy_shader, 0, 0, gr_screen.max_w_unscaled, 17, GR_RESIZE_MENU); // make sure it goes across the entire width
 
 		gr_set_color_fast(&Color_white);
-		gr_string(5, 5, Processing_filename, GR_RESIZE_MENU);
+		//gr_string(5, 5, Processing_filename, GR_RESIZE_MENU);
+		render_string(5, 5, Processing_filename, GR_RESIZE_MENU);
 
 		do_flip = 1;
 		memset( Processing_filename, 0, MAX_PATH_LEN );
@@ -1212,10 +1220,12 @@ void game_loading_callback(int count)
 				short_name++;
 
 			sprintf(mem_buffer,"%s:\t%d K", short_name, size);
-			gr_string( 20, 220 + (i*line_height), mem_buffer, GR_RESIZE_MENU);
+			//gr_string( 20, 220 + (i*line_height), mem_buffer, GR_RESIZE_MENU);
+			render_string( 20, 220 + (i*line_height), mem_buffer, GR_RESIZE_MENU);
 		}
 		sprintf(mem_buffer,"Total RAM:\t%d K", TotalRam / 1024);
-		gr_string( 20, 230 + (i*line_height), mem_buffer, GR_RESIZE_MENU);
+		//gr_string( 20, 230 + (i*line_height), mem_buffer, GR_RESIZE_MENU);
+		render_string( 20, 230 + (i*line_height), mem_buffer, GR_RESIZE_MENU);
 #endif	// _WIN32
 	}
 #endif	// !NDEBUG
@@ -2163,14 +2173,17 @@ void game_show_framerate()
 		gr_set_color_fast(&HUD_color_debug);
 
 		if (Cmdline_frame_profile) {
-			gr_string(gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 + line_height, profile_output.c_str(), GR_RESIZE_NONE);
+			//gr_string(gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 + line_height, profile_output.c_str(), GR_RESIZE_NONE);
+			render_string(gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 + line_height, profile_output.c_str(), GR_RESIZE_NONE);
 		}
 
 		if (Show_framerate) {
-			if (frametotal != 0.0f)
+			if (frametotal != 0.0f) {
 				gr_printf_no_resize( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100, "FPS: %0.1f", Framerate );
-			else
-				gr_string( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100, "FPS: ?", GR_RESIZE_NONE );
+			} else {
+				//gr_string( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100, "FPS: ?", GR_RESIZE_NONE );
+				render_string( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100, "FPS: ?", GR_RESIZE_NONE );
+			}
 		}
 	}
 
@@ -2199,13 +2212,16 @@ void game_show_framerate()
 		else
 			sprintf(mem_buffer,"Using Physical: %d Meg",(Mem_starttime_phys - mem_stats.dwAvailPhys)/1024/1024);
 
-		gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		//gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		render_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
 		sy += line_height;
 		sprintf(mem_buffer,"Using Pagefile: %d Meg",(Mem_starttime_pagefile - mem_stats.dwAvailPageFile)/1024/1024);
-		gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		//gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		render_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
 		sy += line_height;
 		sprintf(mem_buffer,"Using Virtual:  %d Meg",(Mem_starttime_virtual - mem_stats.dwAvailVirtual)/1024/1024);
-		gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		//gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		render_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
 		sy += line_height * 2;
 
 		if ( ((int)mem_stats.dwAvailPhys == -1) || ((int)mem_stats.dwTotalPhys == -1) )
@@ -2213,13 +2229,16 @@ void game_show_framerate()
 		else
 			sprintf(mem_buffer,"Physical Free: %d / %d Meg",mem_stats.dwAvailPhys/1024/1024, mem_stats.dwTotalPhys/1024/1024);
 
-		gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		//gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		render_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
 		sy += line_height;
 		sprintf(mem_buffer,"Pagefile Free: %d / %d Meg",mem_stats.dwAvailPageFile/1024/1024, mem_stats.dwTotalPageFile/1024/1024);
-		gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		//gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		render_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
 		sy += line_height;
 		sprintf(mem_buffer,"Virtual Free:  %d / %d Meg",mem_stats.dwAvailVirtual/1024/1024, mem_stats.dwTotalVirtual/1024/1024);
-		gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		//gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+		render_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
 	}
 #endif
 
@@ -2341,11 +2360,13 @@ void game_show_framerate()
 				short_name++;
 
 			sprintf(mem_buffer,"%s:\t%d K", short_name, size);
-			gr_string( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 + (line_height * 12) + (mi*line_height), mem_buffer, GR_RESIZE_NONE);
+			//gr_string( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 + (line_height * 12) + (mi*line_height), mem_buffer, GR_RESIZE_NONE);
+			render_string( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 + (line_height * 12) + (mi*line_height), mem_buffer, GR_RESIZE_NONE);
 		}
 
 		sprintf(mem_buffer,"Total RAM:\t%d K", TotalRam / 1024);
-		gr_string( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 + (line_height * 13) + (mi*line_height), mem_buffer, GR_RESIZE_NONE);
+		//gr_string( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 + (line_height * 13) + (mi*line_height), mem_buffer, GR_RESIZE_NONE);
+		render_string( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 + (line_height * 13) + (mi*line_height), mem_buffer, GR_RESIZE_NONE);
 	}
 #endif
 
@@ -2588,10 +2609,16 @@ void game_set_view_clip(float frametime)
 
 		if (g3_in_frame() == 0) {
 			// Ensure that the bars are black
-			gr_set_color(0,0,0);
-			gr_set_bitmap(0); // Valathil - Don't ask me why this has to be here but otherwise the black bars don't draw
-			gr_rect(0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
-			gr_rect(0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			//gr_set_color(0,0,0);
+			//gr_set_bitmap(0); // Valathil - Don't ask me why this has to be here but otherwise the black bars don't draw
+			//gr_rect(0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			//gr_rect(0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+
+			color clr;
+			gr_init_color(&clr, 0, 0, 0);
+
+			render_colored_rect(&clr, 0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			render_colored_rect(&clr, 0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
 		} else {
 			//	Numeric constants encouraged by J "pig farmer" S, who shall remain semi-anonymous.
 			// J.S. I've changed my ways!! See the new "no constants" code!!!
@@ -2771,8 +2798,9 @@ void game_tst_frame()
 		}
 
 		// draw the bitmap
-		gr_set_bitmap(tst_bitmap);
-		gr_bitmap((int)tst_x, (int)tst_y, GR_RESIZE_NONE);
+		//gr_set_bitmap(tst_bitmap);
+		//gr_bitmap((int)tst_x, (int)tst_y, GR_RESIZE_NONE);
+		render_bitmap(tst_bitmap, (int)tst_x, (int)tst_y, GR_RESIZE_NONE);
 
 		if(tst_mode == 1){
 			if(timestamp_elapsed_safe(tst_stamp, 1100)){
@@ -3774,7 +3802,8 @@ void game_render_frame( camid cid )
 	}
 	effect_ships.clear();
 
-	batch_render_distortion_map_bitmaps();
+	//batch_render_distortion_map_bitmaps();
+	batching_render_distortions_all();
 
 	Shadow_override = true;
 	//Draw the viewer 'cause we didn't before.
@@ -4228,7 +4257,7 @@ void game_shade_frame(float frametime)
 		}
 	}
 
-	gr_flash_alpha(Viewer_shader.r, Viewer_shader.g, Viewer_shader.b, Viewer_shader.c);
+	render_flash_alpha(Viewer_shader.r, Viewer_shader.g, Viewer_shader.b, Viewer_shader.c);
 }
 
 const static int CUTSCENE_BAR_DIVISOR = 8;
@@ -4256,10 +4285,16 @@ void bars_do_frame(float frametime)
 
 		if (g3_in_frame() == 0) {
 			//Set rectangles
-			gr_set_color(0,0,0);
-			gr_set_bitmap(0); // Valathil - Don't ask me why this has to be here but otherwise the black bars don't draw
-			gr_rect(0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
-			gr_rect(0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			//gr_set_color(0,0,0);
+			//gr_set_bitmap(0); // Valathil - Don't ask me why this has to be here but otherwise the black bars don't draw
+			//gr_rect(0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			//gr_rect(0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+
+			color clr;
+			gr_init_color(&clr, 0, 0, 0);
+
+			render_colored_rect(&clr, 0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			render_colored_rect(&clr, 0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
 		} else {
 			//Set clipping
 			gr_reset_clip();
@@ -4271,10 +4306,16 @@ void bars_do_frame(float frametime)
 		int yborder = gr_screen.max_h/CUTSCENE_BAR_DIVISOR;
 
 		if (g3_in_frame() == 0) {
-			gr_set_color(0,0,0);
-			gr_set_bitmap(0); // Valathil - Don't ask me why this has to be here but otherwise the black bars don't draw
-			gr_rect(0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
-			gr_rect(0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			//gr_set_color(0,0,0);
+			//gr_set_bitmap(0); // Valathil - Don't ask me why this has to be here but otherwise the black bars don't draw
+			//gr_rect(0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			//gr_rect(0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+
+			color clr;
+			gr_init_color(&clr, 0, 0, 0);
+
+			render_colored_rect(&clr, 0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			render_colored_rect(&clr, 0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
 		} else {
 			gr_reset_clip();
 			gr_set_clip(0, yborder, gr_screen.max_w, gr_screen.max_h - (yborder*2), GR_RESIZE_NONE );
@@ -8391,7 +8432,7 @@ void game_title_screen_display()
 		if (Game_title_bitmap != -1)
 		{
 			// set
-			gr_set_bitmap(Game_title_bitmap);
+			//gr_set_bitmap(Game_title_bitmap);
 
 			// get bitmap's width and height
 			int width, height;
@@ -8401,13 +8442,15 @@ void game_title_screen_display()
 			gr_set_screen_scale(width, height);
 
 			// draw it in the center of the screen
-			gr_bitmap((gr_screen.max_w_unscaled - width)/2, (gr_screen.max_h_unscaled - height)/2, GR_RESIZE_MENU);
+			//gr_bitmap((gr_screen.max_w_unscaled - width)/2, (gr_screen.max_h_unscaled - height)/2, GR_RESIZE_MENU);
+			render_bitmap(Game_title_bitmap, (gr_screen.max_w_unscaled - width)/2, (gr_screen.max_h_unscaled - height)/2, GR_RESIZE_MENU);
 
 			if (Game_title_logo != -1)
 			{
-				gr_set_bitmap(Game_title_logo);
+				//gr_set_bitmap(Game_title_logo);
 
-				gr_bitmap(0, 0, GR_RESIZE_MENU);
+				//gr_bitmap(0, 0, GR_RESIZE_MENU);
+				render_bitmap(Game_title_logo, 0, 0, GR_RESIZE_MENU);
 
 			}
 

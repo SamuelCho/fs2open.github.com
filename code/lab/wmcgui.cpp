@@ -16,6 +16,7 @@
 #include "lab/wmcgui.h"
 #include "localization/localize.h"
 #include "parse/parselo.h"
+#include "render/render.h"
 
 //Gobals
 GUISystem GUI_system;
@@ -1404,10 +1405,14 @@ void Window::DoMove(int dx, int dy)
 
 void draw_open_rect(int x1, int y1, int x2, int y2, int resize_mode = GR_RESIZE_NONE)
 {
-	gr_line(x1, y1, x2, y1, resize_mode);
-	gr_line(x2, y1, x2, y2, resize_mode);
-	gr_line(x2, y2, x1, y2, resize_mode);
-	gr_line(x1, y2, x1, y1, resize_mode);
+// 	gr_line(x1, y1, x2, y1, resize_mode);
+// 	gr_line(x2, y1, x2, y2, resize_mode);
+// 	gr_line(x2, y2, x1, y2, resize_mode);
+// 	gr_line(x1, y2, x1, y1, resize_mode);
+	render_line(x1, y1, x2, y1, resize_mode);
+	render_line(x2, y1, x2, y2, resize_mode);
+	render_line(x2, y2, x1, y2, resize_mode);
+	render_line(x1, y2, x1, y1, resize_mode);
 }
 
 extern void gr_opengl_shade(int x, int y, int w, int h, int resize_mode);
@@ -1423,69 +1428,74 @@ void Window::DoDraw(float frametime)
 
 	// shade the background of the window so that it's just slightly transparent
 	gr_set_shader(&WindowShade);
-	gr_opengl_shade(Coords[0], Coords[1], Coords[2], Coords[3], GR_RESIZE_NONE);
+	//gr_opengl_shade(Coords[0], Coords[1], Coords[2], Coords[3], GR_RESIZE_NONE);
+	render_colored_rect(&WindowShade, Coords[0], Coords[1], Coords[2], Coords[3], GR_RESIZE_NONE);
 
 	gr_set_color_fast(&Color_text_normal);
 
 	if (IMG_HANDLE_IS_VALID(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_TL))) {
-		IMG_SET(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_TL));
-		IMG_DRAW(Coords[0], Coords[1]);
+		IMG_DRAW(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_TL), Coords[0], Coords[1]);
 	}
 
 	if (IMG_HANDLE_IS_VALID(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_TR))) {
-		IMG_SET(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_TR));
 		IMG_INFO(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_TR), &w, NULL);
-		IMG_DRAW(Coords[2] - w, Coords[1]);
+		IMG_DRAW(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_TR), Coords[2] - w, Coords[1]);
 	}
 
 	if (IMG_HANDLE_IS_VALID(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_BL))) {
 		IMG_INFO(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_BL), NULL, &h);
-		IMG_SET(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_BL));
-		IMG_DRAW(Coords[0], Coords[3] - h);
+		IMG_DRAW(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_BL), Coords[0], Coords[3] - h);
 	}
 
 	if (IMG_HANDLE_IS_VALID(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_BR))) {
-		IMG_SET(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_BR));
 		IMG_INFO(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_BR), &w, &h);
-		//IMG_DRAW(Coords[2] - w, Coords[3] - h, false);
-		IMG_DRAW(Coords[2]-w, Coords[3] - h);
+		IMG_DRAW(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_BR), Coords[2]-w, Coords[3] - h);
 	}
 
 	if (IMG_HANDLE_IS_VALID(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_TM))) {
-		IMG_SET(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_TM));
-		gr_bitmap_list(&BorderRectLists[CIE_HANDLE_TM], 1, GR_RESIZE_NONE);
+		//IMG_SET(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_TM));
+		//gr_bitmap_list(&BorderRectLists[CIE_HANDLE_TM], 1, GR_RESIZE_NONE);
+		render_bitmap_list(&BorderRectLists[CIE_HANDLE_TM], 1, GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_TM), 1.0f, false, GR_RESIZE_NONE);
 	} else {
-		gr_line(Coords[0] + BorderSizes[0], Coords[1], Coords[2] - BorderSizes[2], Coords[1], GR_RESIZE_NONE);
+		//gr_line(Coords[0] + BorderSizes[0], Coords[1], Coords[2] - BorderSizes[2], Coords[1], GR_RESIZE_NONE);
+		render_line(Coords[0] + BorderSizes[0], Coords[1], Coords[2] - BorderSizes[2], Coords[1], GR_RESIZE_NONE);
 	}
 
 	if (IMG_HANDLE_IS_VALID(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_BM))) {
-		IMG_SET(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_BM));
-		gr_bitmap_list(&BorderRectLists[CIE_HANDLE_BM], 1, GR_RESIZE_NONE);
+		//IMG_SET(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_BM));
+		//gr_bitmap_list(&BorderRectLists[CIE_HANDLE_BM], 1, GR_RESIZE_NONE);
+		render_bitmap_list(&BorderRectLists[CIE_HANDLE_BM], 1, GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_BM), 1.0f, false, GR_RESIZE_NONE);
 	} else {
-		gr_line(Coords[0] + BorderSizes[0], Coords[3], Coords[2] - BorderSizes[2], Coords[3], GR_RESIZE_NONE);
+		//gr_line(Coords[0] + BorderSizes[0], Coords[3], Coords[2] - BorderSizes[2], Coords[3], GR_RESIZE_NONE);
+		render_line(Coords[0] + BorderSizes[0], Coords[3], Coords[2] - BorderSizes[2], Coords[3], GR_RESIZE_NONE);
 	}
 
 	if (!(Style & GS_HIDDEN)) {
 		if (IMG_HANDLE_IS_VALID(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_ML))) {
-			IMG_SET(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_ML));
-			gr_bitmap_list(&BorderRectLists[CIE_HANDLE_ML], 1, GR_RESIZE_NONE);
+			//IMG_SET(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_ML));
+			//gr_bitmap_list(&BorderRectLists[CIE_HANDLE_ML], 1, GR_RESIZE_NONE);
+			render_bitmap_list(&BorderRectLists[CIE_HANDLE_ML], 1, GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_ML), 1.0f, false, GR_RESIZE_NONE);
 		} else {
-			gr_line(Coords[0], Coords[1] + BorderSizes[1], Coords[0], Coords[3] - BorderSizes[3], GR_RESIZE_NONE);
+			//gr_line(Coords[0], Coords[1] + BorderSizes[1], Coords[0], Coords[3] - BorderSizes[3], GR_RESIZE_NONE);
+			render_line(Coords[0], Coords[1] + BorderSizes[1], Coords[0], Coords[3] - BorderSizes[3], GR_RESIZE_NONE);
 		}
 
 		if (IMG_HANDLE_IS_VALID(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_MR))) {
-			IMG_SET(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_MR));
-			gr_bitmap_list(&BorderRectLists[CIE_HANDLE_MR], 1, GR_RESIZE_NONE);
+			//IMG_SET(GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_MR));
+			//gr_bitmap_list(&BorderRectLists[CIE_HANDLE_MR], 1, GR_RESIZE_NONE);
+			render_bitmap_list(&BorderRectLists[CIE_HANDLE_MR], 1, GetCIEImageHandle(WCI_BORDER, CIE_HANDLE_MR), 1.0f, false, GR_RESIZE_NONE);
 		} else {
-			gr_line(Coords[2], Coords[1] + BorderSizes[1], Coords[2], Coords[3] - BorderSizes[3], GR_RESIZE_NONE);
+			//gr_line(Coords[2], Coords[1] + BorderSizes[1], Coords[2], Coords[3] - BorderSizes[3], GR_RESIZE_NONE);
+			render_line(Coords[2], Coords[1] + BorderSizes[1], Coords[2], Coords[3] - BorderSizes[3], GR_RESIZE_NONE);
 		}
 	}
 
 	if (!(Style & WS_NOTITLEBAR)) {
 		//Draw the caption background
 		if (IMG_HANDLE_IS_VALID(GetCIEImageHandle(WCI_CAPTION))) {
-			IMG_SET(GetCIEImageHandle(WCI_CAPTION));
-			gr_bitmap_list(&CaptionRectList, 1, GR_RESIZE_NONE);
+			//IMG_SET(GetCIEImageHandle(WCI_CAPTION));
+			//gr_bitmap_list(&CaptionRectList, 1, GR_RESIZE_NONE);
+			render_bitmap_list(&CaptionRectList, 1, GetCIEImageHandle(WCI_CAPTION), 1.0f, false, GR_RESIZE_NONE);
 		} else {
 			draw_open_rect(Coords[0], Coords[1], Coords[2], CaptionCoords[3]);
 		}
@@ -1493,42 +1503,43 @@ void Window::DoDraw(float frametime)
 		//Close button
 		if (IMG_HANDLE_IS_VALID(GetCIEImageHandle(WCI_CLOSE))) {
 			if (CloseHighlight && IMG_HANDLE_IS_VALID(GetCIEImageHandle(WCI_CLOSE, CIE_HANDLE_M))) {
-				IMG_SET(GetCIEImageHandle(WCI_CLOSE, CIE_HANDLE_M));
+				IMG_DRAW(GetCIEImageHandle(WCI_CLOSE, CIE_HANDLE_M), CloseCoords[0], CloseCoords[1]);
 			} else {
-				IMG_SET(GetCIEImageHandle(WCI_CLOSE));
+				IMG_DRAW(GetCIEImageHandle(WCI_CLOSE), CloseCoords[0], CloseCoords[1]);
 			}
-			IMG_DRAW(CloseCoords[0], CloseCoords[1]);
 		} else {
 			if (CloseHighlight) {
 				gr_set_color_fast(&Color_text_active);
 			} else {
 				gr_set_color_fast(&Color_text_normal);
 			}
-			gr_string(CloseCoords[0], CloseCoords[1], "X", GR_RESIZE_NONE);
+			//gr_string(CloseCoords[0], CloseCoords[1], "X", GR_RESIZE_NONE);
+			render_string(CloseCoords[0], CloseCoords[1], "X", GR_RESIZE_NONE);
 		}
 		
 
 		//Hide button
 		if (IMG_HANDLE_IS_VALID(GetCIEImageHandle(WCI_HIDE))) {
 			if (HideHighlight && IMG_HANDLE_IS_VALID(GetCIEImageHandle(WCI_HIDE, CIE_HANDLE_M))) {
-				IMG_SET(GetCIEImageHandle(WCI_HIDE, CIE_HANDLE_M));
+				IMG_DRAW(GetCIEImageHandle(WCI_HIDE, CIE_HANDLE_M), HideCoords[0], HideCoords[1]);
 			} else {
-				IMG_SET(GetCIEImageHandle(WCI_HIDE));
+				IMG_DRAW(GetCIEImageHandle(WCI_HIDE), HideCoords[0], HideCoords[1]);
 			}
-			IMG_DRAW(HideCoords[0], HideCoords[1]);
 		} else {
 			if (HideHighlight) {
 				gr_set_color_fast(&Color_text_active);
 			} else {
 				gr_set_color_fast(&Color_text_normal);
 			}
-			gr_string(HideCoords[0], HideCoords[1], "-", GR_RESIZE_NONE);
+			//gr_string(HideCoords[0], HideCoords[1], "-", GR_RESIZE_NONE);
+			render_string(HideCoords[0], HideCoords[1], "-", GR_RESIZE_NONE);
 		}
 
 		//Caption text
 		gr_set_color_fast(&Color_text_normal);
 
-		gr_string(CaptionCoords[0], CaptionCoords[1], Caption.c_str(), GR_RESIZE_NONE);
+		//gr_string(CaptionCoords[0], CaptionCoords[1], Caption.c_str(), GR_RESIZE_NONE);
+		render_string(CaptionCoords[0], CaptionCoords[1], Caption.c_str(), GR_RESIZE_NONE);
 	}
 }
 
@@ -1608,13 +1619,12 @@ void Button::DoDraw(float frametime)
 		IMG_SET(GetCIEImageHandle(BCI_BUTTON));
 
 		if ((Status & GST_MOUSE_OVER) && IMG_HANDLE_IS_VALID(GetCIEImageHandle(BCI_BUTTON, CIE_HANDLE_M))) {
-			IMG_SET(GetCIEImageHandle(BCI_BUTTON, CIE_HANDLE_M));
+			IMG_DRAW(GetCIEImageHandle(BCI_BUTTON, CIE_HANDLE_M), Coords[0], Coords[1]);
 		} else if ((Status & GST_MOUSE_LEFT_BUTTON) && IMG_HANDLE_IS_VALID(GetCIEImageHandle(BCI_BUTTON, CIE_HANDLE_C))) {
-			IMG_SET(GetCIEImageHandle(BCI_BUTTON, CIE_HANDLE_C));
+			IMG_DRAW(GetCIEImageHandle(BCI_BUTTON, CIE_HANDLE_C), Coords[0], Coords[1]);
 		} else if((Style & BS_STICKY) && IsDown && IMG_HANDLE_IS_VALID(GetCIEImageHandle(BCI_BUTTON, CIE_HANDLE_S))) {
-			IMG_SET(GetCIEImageHandle(BCI_BUTTON, CIE_HANDLE_S));
+			IMG_DRAW(GetCIEImageHandle(BCI_BUTTON, CIE_HANDLE_S), Coords[0], Coords[1]);
 		}
-		IMG_DRAW(Coords[0], Coords[1]);
 	} else {
 		if (Status == 0) {
 			gr_set_color_fast(&Color_text_normal);
@@ -1629,7 +1639,8 @@ void Button::DoDraw(float frametime)
 		gr_get_string_size(&half_x, &half_y, Caption.c_str());
 		half_x = Coords[0] +(((Coords[2]-Coords[0]) - half_x) / 2);
 		half_y = Coords[1] +(((Coords[3]-Coords[1]) - half_y) / 2);
-		gr_string(half_x, half_y, Caption.c_str(), GR_RESIZE_NONE);
+		//gr_string(half_x, half_y, Caption.c_str(), GR_RESIZE_NONE);
+		render_string(half_x, half_y, Caption.c_str(), GR_RESIZE_NONE);
 	}
 }
 
@@ -1800,7 +1811,8 @@ void Tree::DrawItems(TreeItem *items)
 				gr_set_color_fast(&Color_text_normal);
 			}
 
-			gr_string(tip->Coords[0], tip->Coords[1], tip->Name.c_str(), GR_RESIZE_NONE);
+			//gr_string(tip->Coords[0], tip->Coords[1], tip->Name.c_str(), GR_RESIZE_NONE);
+			render_string(tip->Coords[0], tip->Coords[1], tip->Name.c_str(), GR_RESIZE_NONE);
 
 			if (NOT_EMPTY(&tip->Children) && tip->ShowChildren) {
 				DrawItems((TreeItem*)&tip->Children);
@@ -2029,7 +2041,8 @@ void Text::DoDraw(float frametime)
 	int font_height = gr_get_font_height();
 
 	for (int i = 0; i < NumLines; i++) {
-		gr_string(ChildCoords[0], ChildCoords[1] + (i*font_height), Content.substr(LineStartPoints[i] - Content.c_str(), LineLengths[i]).c_str(), GR_RESIZE_NONE);
+		//gr_string(ChildCoords[0], ChildCoords[1] + (i*font_height), Content.substr(LineStartPoints[i] - Content.c_str(), LineLengths[i]).c_str(), GR_RESIZE_NONE);
+		render_string(ChildCoords[0], ChildCoords[1] + (i*font_height), Content.substr(LineStartPoints[i] - Content.c_str(), LineLengths[i]).c_str(), GR_RESIZE_NONE);
 	}
 }
 
@@ -2402,11 +2415,13 @@ void Checkbox::DoDraw(float frametime)
 	if ( (IsChecked && ((FlagPtr == NULL) && (BoolFlagPtr == NULL)))
 		|| ((FlagPtr != NULL) && ((*FlagPtr) & Flag))
 		|| ((BoolFlagPtr != NULL) && (*BoolFlagPtr)) ) {
-		gr_string(CheckCoords[0], CheckCoords[1], "X", GR_RESIZE_NONE);
+		//gr_string(CheckCoords[0], CheckCoords[1], "X", GR_RESIZE_NONE);
+		render_string(CheckCoords[0], CheckCoords[1], "X", GR_RESIZE_NONE);
 	}
 
 	gr_set_color_fast(&Color_text_normal);
-	gr_string(CheckCoords[2] + CB_TEXTCHECKDIST, CheckCoords[1], Label.c_str(), GR_RESIZE_NONE);
+	//gr_string(CheckCoords[2] + CB_TEXTCHECKDIST, CheckCoords[1], Label.c_str(), GR_RESIZE_NONE);
+	render_string(CheckCoords[2] + CB_TEXTCHECKDIST, CheckCoords[1], Label.c_str(), GR_RESIZE_NONE);
 }
 
 int Checkbox::DoMouseOver(float frametime)
@@ -2537,10 +2552,8 @@ void ImageAnim::DoDraw(float frametime)
 	}
 
 	//IMG_SET_FRAME(ImageHandle, CurrentFrame);
-	gr_set_bitmap( ImageHandle + CurrentFrame, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, 1-((Progress - (float)(CurrentFrame / TotalFrames)) / (float)(TotalFrames/CurrentFrame)));
-	IMG_DRAW(Coords[0], Coords[1]);
-	gr_set_bitmap( ImageHandle + CurrentFrame + 1, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, ((Progress - (float)(CurrentFrame / TotalFrames)) / (float)(TotalFrames/CurrentFrame)));
-	IMG_DRAW(Coords[0], Coords[1]);
+	render_bitmap(ImageHandle + CurrentFrame, 1-((Progress - (float)(CurrentFrame / TotalFrames)) / (float)(TotalFrames/CurrentFrame)), Coords[0], Coords[1]);
+	render_bitmap(ImageHandle + CurrentFrame + 1, ((Progress - (float)(CurrentFrame / TotalFrames)) / (float)(TotalFrames/CurrentFrame)), Coords[0], Coords[1]);
 }
 
 int ImageAnim::DoRefreshSize()

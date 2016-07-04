@@ -13,7 +13,7 @@
 #include "graphics/2d.h"
 #include "math/spline.h"
 #include "render/3d.h"
-
+#include "render/render.h"
 
 
 // -------------------------------------------------------------------------------------------------
@@ -158,7 +158,8 @@ void bez_spline::bez_render(int divs, color *c)
 	// draw the control points
 	gr_set_color_fast(&Color_bright_green);
 	for(idx=0; idx<num_pts; idx++){
-		g3_draw_sphere_ez(&pts[idx], 0.75f);
+		//g3_draw_sphere_ez(&pts[idx], 0.75f);
+		render_sphere_fast(&pts[idx], 0.75f);
 	}
 }
 
@@ -303,6 +304,7 @@ void herm_spline::herm_render(int divs, color *clc)
 	// draw the control points
 	gr_set_color_fast(&Color_bright_green);
 	for(idx=0; idx<num_pts; idx++){
-		g3_draw_sphere_ez(&pts[idx], 0.75f);
+		//g3_draw_sphere_ez(&pts[idx], 0.75f);
+		render_sphere_fast(&pts[idx], 0.75f);
 	}
 }

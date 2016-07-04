@@ -15,6 +15,7 @@
 #include "globalincs/alphacolors.h"
 #include "io/timer.h"
 #include "missionui/missionscreencommon.h"
+#include "render/render.h"
 #include "ui/ui.h"
 #include "ui/uidefs.h"
 
@@ -236,8 +237,9 @@ void UI_DOT_SLIDER::draw()
 		down_button.draw();
 	}
 	Assert((pos >= 0) && (pos <= num_pos));
-	gr_set_bitmap(first_frame + pos);  // draw the dot level
-	gr_bitmap(x, y, GR_RESIZE_MENU);
+	//gr_set_bitmap(first_frame + pos);  // draw the dot level
+	//gr_bitmap(x, y, GR_RESIZE_MENU);
+	render_bitmap(first_frame + pos, x, y, GR_RESIZE_MENU);
 }
 
 void UI_DOT_SLIDER::process(int focus)

@@ -50,6 +50,8 @@ typedef struct tcache_slot_opengl {
 	}
 } tcache_slot_opengl;
 
+extern matrix4 GL_texture_matrix;
+
 extern int GL_min_texture_width;
 extern GLint GL_max_texture_width;
 extern int GL_min_texture_height;
@@ -86,5 +88,6 @@ int gr_opengl_preload(int bitmap_num, int is_aabitmap);
 void gr_opengl_set_texture_panning(float u, float v, bool enable);
 void gr_opengl_set_texture_addressing(int mode);
 GLuint opengl_get_rtt_framebuffer();
+void gr_opengl_get_texture_scale(int bitmap_handle, float *u_scale, float *v_scale);
 
 #endif	//_GROPENGLTEXTURE_H

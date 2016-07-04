@@ -13,7 +13,6 @@
 
 #include "globalincs/globals.h" // just in case pstypes.h messed up
 #include "globalincs/pstypes.h" // IAM_64BIT
-#include "graphics/2d.h"
 #include "graphics/font.h"
 
 extern ubyte Gr_original_palette[768];		// The palette 
@@ -82,5 +81,18 @@ typedef enum gr_stencil_type {
     STENCIL_TYPE_READ,
     STENCIL_TYPE_WRITE
 } gr_stencil_type;
+
+typedef enum gr_capability {
+	CAPABILITY_ENVIRONMENT_MAP,
+	CAPABILITY_NORMAL_MAP,
+	CAPABILITY_HEIGHT_MAP,
+	CAPABILITY_SOFT_PARTICLES,
+	CAPABILITY_DISTORTION,
+	CAPABILITY_POST_PROCESSING,
+	CAPABILITY_DEFERRED_LIGHTING,
+	CAPABILITY_SHADOWS,
+	CAPABILITY_BATCHED_SUBMODELS,
+	CAPABILITY_POINT_PARTICLES
+} gr_capability;
 
 #endif

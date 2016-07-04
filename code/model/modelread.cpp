@@ -184,6 +184,7 @@ void model_unload(int modelnum, int force)
 	if (!force && (--pm->used_this_mission > 0))
 		return;
 
+	mprintf(("Unloading model '%s' from slot '%i'\n", pm->filename, num));
 
 	// so that the textures can be released
 	pm->used_this_mission = 0;
@@ -298,6 +299,29 @@ void model_unload(int modelnum, int force)
 		vm_free(pm->shield_collision_tree);
 	}
 
+	if ( pm->vert_source.Vbuffer_handle > -1 ) {
+		gr_delete_buffer(pm->vert_source.Vbuffer_handle);
+		pm->vert_source.Vbuffer_handle = -1;
+	}
+
+	if ( pm->vert_source.Vertex_list != NULL ) {
+		vm_free(pm->vert_source.Vertex_list);
+		pm->vert_source.Vertex_list = NULL;
+	}
+
+	if ( pm->vert_source.Ibuffer_handle > -1 ) {
+		gr_delete_buffer(pm->vert_source.Ibuffer_handle);
+		pm->vert_source.Ibuffer_handle = -1;
+	}
+
+	if ( pm->vert_source.Index_list != NULL ) {
+		vm_free(pm->vert_source.Index_list);
+		pm->vert_source.Index_list = NULL;
+	}
+
+	pm->vert_source.Vertex_list_size = 0;
+	pm->vert_source.Index_list_size = 0;
+
 	for (i = 0; i < MAX_MODEL_DETAIL_LEVELS; ++i) {
 		pm->detail_buffers[i].clear();
 	}
@@ -314,6 +338,16 @@ void model_unload(int modelnum, int force)
 
 		if ( pm->id == it->model_num_hud ) {
 			it->model_num_hud = -1;
+		}
+	}
+
+	// need to reset weapon models as well
+	for (int k = 0; k < MAX_WEAPON_TYPES; ++k) {
+		if ( pm->id == Weapon_info[k].model_num ) {
+			Weapon_info[k].model_num = -1;
+		}
+		if ( pm->id == Weapon_info[k].external_model_num ) {
+			Weapon_info[k].external_model_num = -1;
 		}
 	}
 
@@ -799,7 +833,7 @@ void create_vertex_buffer(polymodel *pm)
 
 	bool use_batched_rendering = true;
 
-	if ( GLSL_version >= 130 && !Cmdline_no_batching ) {
+	if ( GLSL_version >= 150 && !Cmdline_no_batching ) {
 		uint stride = 0;
 
 		// figure out if the vertex stride of this entire model matches. if not, turn off batched rendering for this model
@@ -840,7 +874,7 @@ void create_vertex_buffer(polymodel *pm)
 				continue;
 			}
 
-			gr_pack_buffer(pm->vertex_buffer_id, &pm->detail_buffers[i]);
+			model_interp_pack_buffer(&pm->vert_source, &pm->detail_buffers[i]);
 			pm->detail_buffers[i].release();
 		}
 
@@ -848,7 +882,7 @@ void create_vertex_buffer(polymodel *pm)
 	}
 
 	// ... and then finalize buffer
-	gr_pack_buffer(pm->vertex_buffer_id, NULL);
+	model_interp_pack_buffer(&pm->vert_source, NULL);
 }
 
 // Goober5000
@@ -1267,7 +1301,12 @@ int read_model_file(polymodel * pm, char *filename, int n_subsystems, model_subs
 					pm->submodel[n].movement_type = MOVEMENT_TYPE_INTRINSIC_ROTATE;
 					pm->flags |= PM_FLAG_HAS_INTRINSIC_ROTATE;
 
-					pm->submodel[n].dumb_turn_rate = (float)atof(p + 13);
+					// calculate turn rate from turn time, the same way as regular $rotate
+					char buf[64];
+					get_user_prop_value(p + 13, buf);
+					float turn_time = (float)atof(buf);
+
+					pm->submodel[n].dumb_turn_rate = PI2 / turn_time;
 				} else {
 					pm->submodel[n].dumb_turn_rate = 0.0f;
 				}
@@ -2452,7 +2491,7 @@ void model_load_texture(polymodel *pm, int i, char *file)
 	gr_maybe_create_shader(SDR_TYPE_MODEL, shader_flags | SDR_FLAG_MODEL_LIGHT);
 	gr_maybe_create_shader(SDR_TYPE_MODEL, shader_flags | SDR_FLAG_MODEL_LIGHT | SDR_FLAG_MODEL_FOG);
 	
-	if( !Cmdline_no_batching && GLSL_version >= 130 ) {
+	if( !Cmdline_no_batching && GLSL_version >= 150 ) {
 		shader_flags &= ~SDR_FLAG_MODEL_DEFERRED;
 		shader_flags |= SDR_FLAG_MODEL_TRANSFORM;
 
@@ -2506,7 +2545,7 @@ int model_load(char *filename, int n_subsystems, model_subsystem *subsystems, in
 		return -1;
 	}	
 
-	mprintf(( "Loading model '%s'\n", filename ));
+	mprintf(( "Loading model '%s' into slot '%i'\n", filename, num ));
 
 	pm = new polymodel;	
 	Polygon_models[num] = pm;

@@ -33,6 +33,7 @@
 #include "parse/parselo.h"
 #include "pcxutils/pcxutils.h"
 #include "pngutils/pngutils.h"
+#include "render/render.h"
 #include "ship/ship.h"
 #include "tgautils/tgautils.h"
 
@@ -281,7 +282,8 @@ DCF(bm_frag, "Shows BmpMan fragmentation") {
 			break;
 		}
 
-		gr_rect(x + xs, y + ys, w, h);
+		//gr_rect(x + xs, y + ys, w, h);
+		render_colored_rect(x + xs, y + ys, w, h);
 		x += w + xs + xs;
 		if (x > 639) {
 			x = 0;

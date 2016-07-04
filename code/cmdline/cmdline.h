@@ -79,6 +79,7 @@ extern bool Cmdline_fb_explosions;
 extern bool Cmdline_no_batching;
 extern int Cmdline_shadow_quality;
 extern int Cmdline_no_deferred_lighting;
+extern int Cmdline_no_emissive;
 
 // Game Speed related
 extern int Cmdline_cache_bitmaps;

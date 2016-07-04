@@ -25,6 +25,8 @@
 static tcache_slot_opengl *Textures = NULL;
 static int *Tex_used_this_frame = NULL;
 
+matrix4 GL_texture_matrix;
+
 int GL_texture_ram = 0;
 int GL_min_texture_width = 0;
 GLint GL_max_texture_width = 0;
@@ -63,7 +65,7 @@ void opengl_set_additive_tex_env()
 {
 	GL_CHECK_FOR_ERRORS("start of set_additive_tex_env()");
 
-	if ( Is_Extension_Enabled(OGL_ARB_TEXTURE_ENV_COMBINE) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_ENV_COMBINE) ) {
 		GL_state.Texture.SetEnvCombineMode(GL_COMBINE_RGB, GL_ADD);
 		GL_state.Texture.SetRGBScale(1.0f);
 	} else {
@@ -77,7 +79,7 @@ void opengl_set_modulate_tex_env()
 {
 	GL_CHECK_FOR_ERRORS("start of set_modulate_tex_env()");
 
-	if ( Is_Extension_Enabled(OGL_ARB_TEXTURE_ENV_COMBINE) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_ENV_COMBINE) ) {
 		GL_state.Texture.SetEnvCombineMode(GL_COMBINE_RGB, GL_MODULATE);
 		GL_state.Texture.SetRGBScale(4.0f);
 	} else {
@@ -89,7 +91,7 @@ void opengl_set_modulate_tex_env()
 
 GLfloat opengl_get_max_anisotropy()
 {
-	if ( !Is_Extension_Enabled(OGL_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
+	if ( !Is_Extension_Enabled(GL_EXTENSION_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
 		return 0.0f;
 	}
 
@@ -156,18 +158,18 @@ void opengl_tcache_init()
 	}
 
 	// max size (width and/or height) that we can use for framebuffer/renderbuffer
-	if ( Is_Extension_Enabled(OGL_EXT_FRAMEBUFFER_OBJECT) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_ARB_FRAMEBUFFER_OBJECT) ) {
 		glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE_EXT, &GL_max_renderbuffer_size);
 
 		// if we can't do at least 128x128 then just disable FBOs
 		if (GL_max_renderbuffer_size < 128) {
 			mprintf(("WARNING: Max dimensions of FBO, %ix%i, is less the required minimum!!  Extension will be disabled!\n", GL_max_renderbuffer_size, GL_max_renderbuffer_size));
-			GL_Extensions[OGL_EXT_FRAMEBUFFER_OBJECT].enabled = 0;
+			GL_extensions_availability[GL_EXTENSION_ARB_FRAMEBUFFER_OBJECT] = false;
 		}
 	}
 
 	// anisotropy
-	if ( Is_Extension_Enabled(OGL_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
 		// set max value first thing
 		opengl_get_max_anisotropy();
 
@@ -178,7 +180,7 @@ void opengl_tcache_init()
 		CLAMP(GL_anisotropy, 1.0f, GL_max_anisotropy);
 	}
 
-	if ( Is_Extension_Enabled(OGL_EXT_TEXTURE_LOD_BIAS) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_EXT_TEXTURE_LOD_BIAS) ) {
 		if (GL_anisotropy > 1.0f) {
 			glTexEnvf(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, 0.0f);
 		} else {
@@ -202,6 +204,8 @@ void opengl_tcache_init()
 
 	GL_textures_in = 0;
 	GL_textures_in_frame = 0;
+
+	vm_matrix4_set_identity(&GL_texture_matrix);
 }
 
 void opengl_free_texture_with_handle(int handle)
@@ -325,7 +329,7 @@ void opengl_tcache_get_adjusted_texture_size(int w_in, int h_in, int *w_out, int
 	}
 
 	// if we can support non-power-of-2 textures then just return current sizes - taylor
-	if ( Is_Extension_Enabled(OGL_ARB_TEXTURE_NON_POWER_OF_TWO) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_NON_POWER_OF_TWO) ) {
 		*w_out = w_in;
 		*h_out = h_in;
 
@@ -488,7 +492,7 @@ int opengl_create_texture_sub(int bitmap_handle, int bitmap_type, int bmap_w, in
 	if (t->mipmap_levels > 1) {
 		min_filter = (GL_mipmap_filter) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR_MIPMAP_NEAREST;
 
-		if ( Is_Extension_Enabled(OGL_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
+		if ( Is_Extension_Enabled(GL_EXTENSION_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
 			glTexParameterf(t->texture_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, GL_anisotropy);
 		}
 	}
@@ -606,10 +610,12 @@ int opengl_create_texture_sub(int bitmap_handle, int bitmap_type, int bmap_w, in
 				}
 			}
 
+			GLenum aa_format = is_minimum_GLSL_version() ? GL_RED : GL_ALPHA;
+
 			if ( !reload ) {
-				glTexImage2D (t->texture_target, 0, GL_ALPHA, tex_w, tex_h, 0, GL_ALPHA, GL_UNSIGNED_BYTE, texmem);
+				glTexImage2D (t->texture_target, 0, aa_format, tex_w, tex_h, 0, aa_format, GL_UNSIGNED_BYTE, texmem);
 			} else { // faster anis
-				glTexSubImage2D (t->texture_target, 0, 0, 0, tex_w, tex_h, GL_ALPHA, GL_UNSIGNED_BYTE, texmem);
+				glTexSubImage2D (t->texture_target, 0, 0, 0, tex_w, tex_h, aa_format, GL_UNSIGNED_BYTE, texmem);
 			}
 
 			if (texmem != NULL) {
@@ -658,7 +664,7 @@ int opengl_create_texture_sub(int bitmap_handle, int bitmap_type, int bmap_w, in
 		case TCACHE_TYPE_CUBEMAP: {
 			Assert( !resize );
 			Assert( texmem == NULL );
-			Assert( Is_Extension_Enabled(OGL_ARB_TEXTURE_CUBE_MAP) );
+			Assert( Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_CUBE_MAP) );
 
 			// we have to load in all 6 faces...
 			for (i = 0; i < 6; i++) {
@@ -1150,6 +1156,10 @@ void gr_opengl_set_texture_panning(float u, float v, bool enable)
 	GLint current_matrix;
 
 	if (enable) {
+		vm_matrix4_set_identity(&GL_texture_matrix);
+		GL_texture_matrix.vec.pos.xyzw.x = u;
+		GL_texture_matrix.vec.pos.xyzw.y = v;
+
 		glGetIntegerv(GL_MATRIX_MODE, &current_matrix);
 		glMatrixMode( GL_TEXTURE );
 		glPushMatrix();
@@ -1158,6 +1168,8 @@ void gr_opengl_set_texture_panning(float u, float v, bool enable)
 
 		GL_texture_panning_enabled = 1;
 	} else if (GL_texture_panning_enabled) {
+		vm_matrix4_set_identity(&GL_texture_matrix);
+
 		glGetIntegerv(GL_MATRIX_MODE, &current_matrix);
 		glMatrixMode( GL_TEXTURE );
 		glPopMatrix();
@@ -1181,7 +1193,7 @@ void gr_opengl_set_texture_addressing(int mode)
 			break;
 
 		case TMAP_ADDRESS_MIRROR: {
-			if ( Is_Extension_Enabled(OGL_ARB_TEXTURE_MIRRORED_REPEAT) ) {
+			if ( Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_MIRRORED_REPEAT) ) {
 				GL_texture_addressing = GL_MIRRORED_REPEAT_ARB;
 			} else {
 				GL_texture_addressing = GL_REPEAT;
@@ -1242,6 +1254,15 @@ int opengl_get_texture( GLenum target, GLenum pixel_format, GLenum data_format, 
 	}
 
 	return m_offset;
+}
+
+void gr_opengl_get_texture_scale(int bitmap_handle, float *u_scale, float *v_scale)
+{
+	int n = bm_get_cache_slot (bitmap_handle, 1);
+	tcache_slot_opengl *t = &Textures[n];
+
+	*u_scale = t->u_scale;
+	*v_scale = t->v_scale;
 }
 
 /**
@@ -1342,7 +1363,7 @@ void gr_opengl_update_texture(int bitmap_handle, int bpp, const ubyte* data, int
 	}
 	if (byte_mult == 1) {
 		texFormat = GL_UNSIGNED_BYTE;
-		glFormat = GL_ALPHA;
+		glFormat = is_minimum_GLSL_version() ? GL_RED : GL_ALPHA;
 		texmem = (ubyte *) vm_malloc (width*height*byte_mult);
 		ubyte* texmemp = texmem;
 

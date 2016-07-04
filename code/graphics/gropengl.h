@@ -25,7 +25,9 @@
 #elif defined(SCP_UNIX)
 #ifdef __APPLE__
 	#define GL_GLEXT_LEGACY // I'd like to punch the idiot that made this needed
-	#include <OpenGL/gl.h>
+    #define GL_DO_NOT_WARN_IF_MULTI_GL_VERSION_HEADERS_INCLUDED
+    #include <OpenGL/gl3.h>
+    #include <OpenGL/gl.h>
 	#include <OpenGL/glu.h>
 	#define GL_GLEXT_FUNCTION_POINTERS	// we need the ptr versions of the functions
 	#include <OpenGL/glext.h>
@@ -653,6 +655,8 @@ const ubyte GL_zero_3ub[3] = { 0, 0, 0 };
 bool gr_opengl_init();
 void gr_opengl_cleanup(bool closing, int minimize=1);
 int opengl_check_for_errors(char *err_at = NULL);
+bool gr_opengl_is_capable(gr_capability capability);
+uint opengl_data_type_size(GLenum data_type);
 bool is_minimum_GLSL_version();
 
 #ifndef NDEBUG
@@ -666,5 +670,7 @@ extern int GLSL_version;
 
 extern int Use_VBOs;
 extern int Use_PBOs;
+
+extern float GL_alpha_threshold;
 
 #endif

@@ -25,6 +25,7 @@
 #include "missionui/missionscreencommon.h"
 #include "parse/parselo.h"
 #include "playerman/player.h"
+#include "render/render.h"
 #include "sound/audiostr.h"
 #include "ui/ui.h"
 
@@ -710,8 +711,9 @@ void credits_do_frame(float frametime)
 	gr_reset_clip();	
 	GR_MAYBE_CLEAR_RES(Background_bitmap);
 	if (Background_bitmap >= 0) {
-		gr_set_bitmap(Background_bitmap);
-		gr_bitmap(0, 0, GR_RESIZE_MENU);
+		//gr_set_bitmap(Background_bitmap);
+		//gr_bitmap(0, 0, GR_RESIZE_MENU);
+		render_bitmap(Background_bitmap, 0, 0, GR_RESIZE_MENU);
 	} 
 
 	percent = (int) (100.0f - (Credits_artwork_display_time - Credits_counter) * 100.0f / Credits_artwork_fade_time);
@@ -762,7 +764,7 @@ void credits_do_frame(float frametime)
 		bx2 = Credits_image_coords[gr_screen.res][CREDITS_X_COORD] + ((Credits_image_coords[gr_screen.res][CREDITS_W_COORD] - bw2)/2);
 		by2 = Credits_image_coords[gr_screen.res][CREDITS_Y_COORD] + ((Credits_image_coords[gr_screen.res][CREDITS_H_COORD] - bh2)/2);
 
-		gr_cross_fade(bm1, bm2, bx1, by1, bx2, by2, (float)percent / 100.0f, GR_RESIZE_MENU);
+		render_cross_fade(bm1, bm2, bx1, by1, bx2, by2, (float)percent / 100.0f, GR_RESIZE_MENU);
 	}
 
 	Ui_window.draw();
@@ -791,8 +793,9 @@ void credits_do_frame(float frametime)
 		// Check if the text part is actually visible
 		if (Credit_position + y_offset + height > 0.0f)
 		{
-			extern void gr_opengl_string(float sx, float sy, const char *s, int resize_mode);
-			gr_opengl_string((float)0x8000, Credit_position + y_offset, iter->c_str(), GR_RESIZE_MENU);
+			//extern void gr_opengl_string(float sx, float sy, const char *s, int resize_mode);
+			//gr_opengl_string((float)0x8000, Credit_position + y_offset, iter->c_str(), GR_RESIZE_MENU);
+			render_string((float)0x8000, Credit_position + y_offset, iter->c_str(), GR_RESIZE_MENU);
 		}
 
 		y_offset += height;

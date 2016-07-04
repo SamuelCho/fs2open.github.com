@@ -35,6 +35,7 @@
 #include "parse/scripting.h"
 #include "parse/parselo.h"
 #include "render/3d.h"
+#include "render/render.h"
 
 #if ( SDL_VERSION_ATLEAST(1, 2, 7) )
 #include "SDL_cpuinfo.h"
@@ -73,9 +74,6 @@ int gr_global_zbuffering = 0;
 
 // stencil buffer stuff
 int gr_stencil_mode = 0;
-
-// alpha mask stuff
-int gr_alpha_test = 0;
 
 // Default clipping distances
 const float Default_min_draw_distance = 1.0f;
@@ -1678,7 +1676,7 @@ void poly_list::allocate(int _verts)
 			tsb = (tsb_t*)vm_malloc(sizeof(tsb_t) * _verts);
 		}
 
-		if ( GLSL_version >= 130 ) {
+		if ( GLSL_version >= 150 ) {
 			submodels = (int*)vm_malloc(sizeof(int) * _verts);
 		}
 
@@ -1860,7 +1858,7 @@ void poly_list::make_index_buffer(SCP_vector<int> &vertex_list)
 			buffer_list_internal.tsb[z] = tsb[j];
 		}
 
-		if ( GLSL_version >= 130 ) {
+		if ( GLSL_version >= 150 ) {
 			buffer_list_internal.submodels[z] = submodels[j];
 		}
 
@@ -1890,7 +1888,7 @@ poly_list& poly_list::operator = (poly_list &other_list)
 		memcpy(tsb, other_list.tsb, sizeof(tsb_t) * other_list.n_verts);
 	}
 
-	if ( GLSL_version >= 130 ) {
+	if ( GLSL_version >= 150 ) {
 		memcpy(submodels, other_list.submodels, sizeof(int) * other_list.n_verts);
 	}
 

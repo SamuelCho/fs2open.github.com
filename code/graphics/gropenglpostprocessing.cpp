@@ -65,9 +65,6 @@ static int Post_active_shader_index = -1;
 
 static GLuint Post_framebuffer_id[2] = { 0 };
 static GLuint Post_bloom_texture_id[3] = { 0 };
-static GLuint Post_shadow_framebuffer_id = 0;
-static GLuint Post_shadow_texture_id = 0;
-static GLuint Post_shadow_depth_texture_id = 0;
 
 static int Post_texture_width = 0;
 static int Post_texture_height = 0;
@@ -305,7 +302,6 @@ void gr_opengl_post_process_end()
 				GL_state.Texture.SetActiveUnit(1);
 				GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 				GL_state.Texture.Enable(Cockpit_depth_texture);
-				GL_state.Color(255, 255, 255, 255);
 				GL_state.Blend(GL_TRUE);
 				GL_state.SetAlphaBlendMode(ALPHA_BLEND_ADDITIVE);
 				
@@ -333,8 +329,6 @@ void gr_opengl_post_process_end()
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
-
-	GL_state.Color(255, 255, 255, 255);
 
 	// set and configure post shader ...
 	int flags = 0;
@@ -678,94 +672,94 @@ static bool opengl_post_init_table()
 	}
 }
 
-void opengl_post_load_shader(SCP_string &sflags, shader_type shader_t, int flags)
+void opengl_post_shader_header(SCP_stringstream &sflags, shader_type shader_t, int flags)
 {
 	if ( shader_t == SDR_TYPE_POST_PROCESS_MAIN ) {
 		for (size_t idx = 0; idx < Post_effects.size(); idx++) {
 			if (flags & (1 << idx)) {
-				sflags += "#define ";
-				sflags += Post_effects[idx].define_name.c_str();
-				sflags += "\n";
+				sflags << "#define ";
+				sflags << Post_effects[idx].define_name.c_str();
+				sflags << "\n";
 			}
 		}
 	} else if ( shader_t == SDR_TYPE_POST_PROCESS_LIGHTSHAFTS ) {
 		char temp[64];
 		sprintf(temp, "#define SAMPLE_NUM %d\n", ls_samplenum);
-		sflags += temp;
+		sflags << temp;
 	} else if ( shader_t == SDR_TYPE_POST_PROCESS_FXAA ) {
 		/* GLSL version < 120 are guarded against reaching this code
 		   path via testing is_minimum_GLSL_version().
 		   Accordingly do not test for them again here. */
 		if (GLSL_version == 120) {
-			sflags += "#define FXAA_GLSL_120 1\n";
-			sflags += "#define FXAA_GLSL_130 0\n";
+			sflags << "#define FXAA_GLSL_120 1\n";
+			sflags << "#define FXAA_GLSL_130 0\n";
 		}
 		if (GLSL_version > 120) {
-			sflags += "#define FXAA_GLSL_120 0\n";
-			sflags += "#define FXAA_GLSL_130 1\n";
+			sflags << "#define FXAA_GLSL_120 0\n";
+			sflags << "#define FXAA_GLSL_130 1\n";
 		}
 
 		switch (Cmdline_fxaa_preset) {
 		case 0:
-			sflags += "#define FXAA_QUALITY_PRESET 10\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/6.0)\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/12.0)\n";
-			sflags += "#define FXAA_QUALITY_SUBPIX 0.33\n";
+			sflags << "#define FXAA_QUALITY_PRESET 10\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/6.0)\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/12.0)\n";
+			sflags << "#define FXAA_QUALITY_SUBPIX 0.33\n";
 			break;
 		case 1:
-			sflags += "#define FXAA_QUALITY_PRESET 11\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/7.0)\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/14.0)\n";
-			sflags += "#define FXAA_QUALITY_SUBPIX 0.33\n";
+			sflags << "#define FXAA_QUALITY_PRESET 11\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/7.0)\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/14.0)\n";
+			sflags << "#define FXAA_QUALITY_SUBPIX 0.33\n";
 			break;
 		case 2:
-			sflags += "#define FXAA_QUALITY_PRESET 12\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/8.0)\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/16.0)\n";
-			sflags += "#define FXAA_QUALITY_SUBPIX 0.33\n";
+			sflags << "#define FXAA_QUALITY_PRESET 12\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/8.0)\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/16.0)\n";
+			sflags << "#define FXAA_QUALITY_SUBPIX 0.33\n";
 			break;
 		case 3:
-			sflags += "#define FXAA_QUALITY_PRESET 13\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/9.0)\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/18.0)\n";
-			sflags += "#define FXAA_QUALITY_SUBPIX 0.33\n";
+			sflags << "#define FXAA_QUALITY_PRESET 13\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/9.0)\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/18.0)\n";
+			sflags << "#define FXAA_QUALITY_SUBPIX 0.33\n";
 			break;
 		case 4:
-			sflags += "#define FXAA_QUALITY_PRESET 14\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/10.0)\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/20.0)\n";
-			sflags += "#define FXAA_QUALITY_SUBPIX 0.33\n";
+			sflags << "#define FXAA_QUALITY_PRESET 14\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/10.0)\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/20.0)\n";
+			sflags << "#define FXAA_QUALITY_SUBPIX 0.33\n";
 			break;
 		case 5:
-			sflags += "#define FXAA_QUALITY_PRESET 25\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/11.0)\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/22.0)\n";
-			sflags += "#define FXAA_QUALITY_SUBPIX 0.33\n";
+			sflags << "#define FXAA_QUALITY_PRESET 25\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/11.0)\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/22.0)\n";
+			sflags << "#define FXAA_QUALITY_SUBPIX 0.33\n";
 			break;
 		case 6:
-			sflags += "#define FXAA_QUALITY_PRESET 26\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/12.0)\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/24.0)\n";
-			sflags += "#define FXAA_QUALITY_SUBPIX 0.33\n";
+			sflags << "#define FXAA_QUALITY_PRESET 26\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/12.0)\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/24.0)\n";
+			sflags << "#define FXAA_QUALITY_SUBPIX 0.33\n";
 			break;
 		case 7:
-			sflags += "#define FXAA_PC 1\n";
-			sflags += "#define FXAA_QUALITY_PRESET 27\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/13.0)\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/26.0)\n";
-			sflags += "#define FXAA_QUALITY_SUBPIX 0.33\n";
+			sflags << "#define FXAA_PC 1\n";
+			sflags << "#define FXAA_QUALITY_PRESET 27\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/13.0)\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/26.0)\n";
+			sflags << "#define FXAA_QUALITY_SUBPIX 0.33\n";
 			break;
 		case 8:
-			sflags += "#define FXAA_QUALITY_PRESET 28\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/14.0)\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/28.0)\n";
-			sflags += "#define FXAA_QUALITY_SUBPIX 0.33\n";
+			sflags << "#define FXAA_QUALITY_PRESET 28\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/14.0)\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/28.0)\n";
+			sflags << "#define FXAA_QUALITY_SUBPIX 0.33\n";
 			break;
 		case 9:
-			sflags += "#define FXAA_QUALITY_PRESET 39\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/15.0)\n";
-			sflags += "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/32.0)\n";
-			sflags += "#define FXAA_QUALITY_SUBPIX 0.33\n";
+			sflags << "#define FXAA_QUALITY_PRESET 39\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD (1.0/15.0)\n";
+			sflags << "#define FXAA_QUALITY_EDGE_THRESHOLD_MIN (1.0/32.0)\n";
+			sflags << "#define FXAA_QUALITY_SUBPIX 0.33\n";
 			break;
 		}
 	}
@@ -894,62 +888,7 @@ static bool opengl_post_init_framebuffer()
 			}
 		}
 	}
-
-	if ( Cmdline_shadow_quality ) {
-		int size = (Cmdline_shadow_quality == 2 ? 1024 : 512);
-
-		vglGenFramebuffersEXT(1, &Post_shadow_framebuffer_id);
-		vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Post_shadow_framebuffer_id);
-
-		glGenTextures(1, &Post_shadow_texture_id);
-		
-		GL_state.Texture.SetActiveUnit(0);
-		GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY_EXT);
-//		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-		GL_state.Texture.Enable(Post_shadow_texture_id);
-
-		glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		vglTexImage3D(GL_TEXTURE_2D_ARRAY_EXT, 0, GL_RGBA32F_ARB, size, size, 4, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
-
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-// 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, size, size, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
-
-//		vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Post_shadow_texture_id, 0);
-		vglFramebufferTextureEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, Post_shadow_texture_id, 0);
-
-		glGenTextures(1, &Post_shadow_depth_texture_id);
-
-		GL_state.Texture.SetActiveUnit(0);
-		GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY_EXT);
-//		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-		GL_state.Texture.Enable(Post_shadow_depth_texture_id);
-
-		glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		vglTexImage3D(GL_TEXTURE_2D_ARRAY_EXT, 0, GL_DEPTH_COMPONENT32, size, size, 4, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-// 		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, size, size, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-
-//		vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, Post_shadow_depth_texture_id, 0);
-		vglFramebufferTextureEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, Post_shadow_depth_texture_id, 0);
-	}
-
+	
 	vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 
 	GL_state.Texture.Disable();
@@ -982,7 +921,7 @@ void opengl_post_process_init()
 		return;
 	}
 
-	if ( !is_minimum_GLSL_version() || Cmdline_no_fbo || !Is_Extension_Enabled(OGL_EXT_FRAMEBUFFER_OBJECT) ) {
+	if ( !is_minimum_GLSL_version() || Cmdline_no_fbo || !Is_Extension_Enabled(GL_EXTENSION_ARB_FRAMEBUFFER_OBJECT) ) {
 		Cmdline_postprocess = 0;
 		return;
 	}
@@ -991,7 +930,7 @@ void opengl_post_process_init()
 	// form or another:
 	//    - the NPOT extension
 	//    - GL version 2.0+ (which should work for non-reporting ATI cards since we don't use mipmaps)
-	if ( !(Is_Extension_Enabled(OGL_ARB_TEXTURE_NON_POWER_OF_TWO) || (GL_version >= 20)) ) {
+	if ( !(Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_NON_POWER_OF_TWO) || (GL_version >= 20)) ) {
 		Cmdline_postprocess = 0;
 		return;
 	}
