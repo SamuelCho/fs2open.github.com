@@ -184,7 +184,7 @@ void opengl_bind_buffer_object(int handle)
 	case GL_ELEMENT_ARRAY_BUFFER_ARB:
 		GL_state.Array.BindElementBuffer(buffer_obj.buffer_id);
 		break;
-	case GL_TEXTURE_BUFFER_ARB:
+	case GL_TEXTURE_BUFFER:
 		GL_state.Array.BindTextureBuffer(buffer_obj.buffer_id);
 		break;
 	case GL_UNIFORM_BUFFER:
@@ -244,7 +244,7 @@ void gr_opengl_delete_buffer(int handle)
 	case GL_ELEMENT_ARRAY_BUFFER_ARB:
 		GL_state.Array.BindElementBuffer(0);
 		break;
-	case GL_TEXTURE_BUFFER_ARB:
+	case GL_TEXTURE_BUFFER:
 		GL_state.Array.BindTextureBuffer(0);
 		break;
 	case GL_UNIFORM_BUFFER:
@@ -256,7 +256,7 @@ void gr_opengl_delete_buffer(int handle)
 		break;
 	}
 
-	if ( buffer_obj.type == GL_TEXTURE_BUFFER_ARB ) {
+	if ( buffer_obj.type == GL_TEXTURE_BUFFER ) {
 		glDeleteTextures(1, &buffer_obj.texture);
 	}
 
@@ -339,17 +339,17 @@ int opengl_create_texture_buffer_object()
 	}
 
 	// create the buffer
-	int buffer_object_handle = opengl_create_buffer_object(GL_TEXTURE_BUFFER_ARB, GL_DYNAMIC_DRAW_ARB);
+	int buffer_object_handle = opengl_create_buffer_object(GL_TEXTURE_BUFFER, GL_DYNAMIC_DRAW_ARB);
 
 	opengl_buffer_object &buffer_obj = GL_buffer_objects[buffer_object_handle];
 
 	// create the texture
 	glGenTextures(1, &buffer_obj.texture);
-	glBindTexture(GL_TEXTURE_BUFFER_ARB, buffer_obj.texture);
+	glBindTexture(GL_TEXTURE_BUFFER, buffer_obj.texture);
 
 	gr_opengl_update_buffer_data(buffer_object_handle, 100, NULL);
 
-	vglTexBufferARB(GL_TEXTURE_BUFFER_ARB, GL_RGBA32F_ARB, buffer_obj.buffer_id);
+	vglTexBufferARB(GL_TEXTURE_BUFFER, GL_RGBA32F_ARB, buffer_obj.buffer_id);
 
 	opengl_check_for_errors();
 
@@ -368,8 +368,8 @@ void gr_opengl_update_transform_buffer(void* data, uint size)
 
 	// need to rebind the buffer object to the texture buffer after it's been updated.
 	// didn't have to do this on AMD and Nvidia drivers but Intel drivers seem to want it.
-	glBindTexture(GL_TEXTURE_BUFFER_ARB, buffer_obj.texture);
-	vglTexBufferARB(GL_TEXTURE_BUFFER_ARB, GL_RGBA32F_ARB, buffer_obj.buffer_id);
+	glBindTexture(GL_TEXTURE_BUFFER, buffer_obj.texture);
+	vglTexBufferARB(GL_TEXTURE_BUFFER, GL_RGBA32F_ARB, buffer_obj.buffer_id);
 }
 
 GLuint opengl_get_transform_buffer_texture()
@@ -2936,7 +2936,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		GL_state.Uniform.setUniformi("buffer_matrix_offset", GL_transform_buffer_offset);
 
 		GL_state.Texture.SetActiveUnit(render_pass);
-		GL_state.Texture.SetTarget(GL_TEXTURE_BUFFER_ARB);
+		GL_state.Texture.SetTarget(GL_TEXTURE_BUFFER);
 		GL_state.Texture.Enable(opengl_get_transform_buffer_texture());
 
 		++render_pass;
@@ -3159,7 +3159,7 @@ void opengl_tnl_set_model_material_fixed(model_material *material_info)
 		GL_state.Uniform.setUniformi("buffer_matrix_offset", GL_transform_buffer_offset);
 
 		GL_state.Texture.SetActiveUnit(render_pass);
-		GL_state.Texture.SetTarget(GL_TEXTURE_BUFFER_ARB);
+		GL_state.Texture.SetTarget(GL_TEXTURE_BUFFER);
 		GL_state.Texture.Enable(opengl_get_transform_buffer_texture());
 
 		++render_pass;
@@ -3373,7 +3373,7 @@ void opengl_tnl_set_material(int flags, uint shader_flags, int tmap_type)
 		GL_state.Uniform.setUniformi("buffer_matrix_offset", GL_transform_buffer_offset);
 		
 		GL_state.Texture.SetActiveUnit(render_pass);
-		GL_state.Texture.SetTarget(GL_TEXTURE_BUFFER_ARB);
+		GL_state.Texture.SetTarget(GL_TEXTURE_BUFFER);
 		GL_state.Texture.Enable(opengl_get_transform_buffer_texture());
 
 		++render_pass;

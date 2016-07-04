@@ -25,12 +25,6 @@ struct uniform_data
 	}
 
 	template <class T> SCP_vector<T>& get_array();
-	template <> SCP_vector<int>& get_array<int>() { return int_data; }
-	template <> SCP_vector<float>& get_array<float>() { return float_data; }
-	template <> SCP_vector<vec2d>& get_array<vec2d>() { return vec2_data; }
-	template <> SCP_vector<vec3d>& get_array<vec3d>() { return vec3_data; }
-	template <> SCP_vector<vec4>& get_array<vec4>() { return vec4_data; }
-	template <> SCP_vector<matrix4>& get_array<matrix4>() { return matrix4_data; }
 
 	// add a single value to the data pool
 	template <class T> int set_value(const T& val)
@@ -86,47 +80,6 @@ struct uniform_data
 
 	template <class T> bool compare(int index, const T& val);
 	template <class T> bool compare(int index, T* val, int count);
-
-	template <> bool compare<int>(int index, const int& val)
-	{
-		return int_data[index] == val;
-	}
-
-	template <> bool compare<float>(int index, const float& val)
-	{
-		return fl_equal(float_data[index], val);
-	}
-
-	template <> bool compare<vec2d>(int index, const vec2d& val)
-	{
-		return vm_vec_equal(vec2_data[index], val);
-	}
-
-	template <> bool compare<vec3d>(int index, const vec3d& val)
-	{
-		return vm_vec_equal(vec3_data[index], val);
-	}
-
-	template <> bool compare<vec4>(int index, const vec4& val)
-	{
-		return vm_vec_equal(vec4_data[index], val);
-	}
-
-	template <> bool compare<matrix4>(int index, const matrix4& val)
-	{
-		return vm_matrix_equal(matrix4_data[index], val);
-	}
-
-	template <> bool compare<matrix4>(int index, matrix4* val, int count)
-	{
-		for (int i = 0; i < count; ++i) {
-			if (!vm_matrix_equal(matrix4_data[index + i], val[i])) {
-				return false;
-			}
-		}
-
-		return true;
-	}
 };
 
 struct uniform
@@ -169,13 +122,7 @@ struct uniform
 		data_src = u.data_src;
 	}
 
-	template <class T> data_type determine_type();
-	template <> data_type determine_type<int>() { return INT; }
-	template <> data_type determine_type<float>() { return FLOAT; }
-	template <> data_type determine_type<vec2d>() { return VEC2; }
-	template <> data_type determine_type<vec3d>() { return VEC3; }
-	template <> data_type determine_type<vec4>() { return VEC4; }
-	template <> data_type determine_type<matrix4>() { return MATRIX4; }
+	template <class T> static data_type determine_type();
 
 	template <class T>
 	void init(const SCP_string& init_name, const T& val)
@@ -222,7 +169,7 @@ struct uniform
 	template <class T>
 	bool update(T* val, int size)
 	{
-		data_type uniform_type = determine_type<T>();
+        data_type uniform_type = uniform::determine_type<T>();
 
 		if (uniform_type == type) {
 			if (count == size && data_src->compare(index, val, size)) {

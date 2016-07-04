@@ -27,7 +27,9 @@
 #elif defined(SCP_UNIX)
 #ifdef __APPLE__
 	#define GL_GLEXT_LEGACY // I'd like to punch the idiot that made this needed
-	#include <OpenGL/gl.h>
+    #define GL_DO_NOT_WARN_IF_MULTI_GL_VERSION_HEADERS_INCLUDED
+    #include <OpenGL/gl3.h>
+    #include <OpenGL/gl.h>
 	#include <OpenGL/glu.h>
 	#define GL_GLEXT_FUNCTION_POINTERS	// we need the ptr versions of the functions
 	#include <OpenGL/glext.h>

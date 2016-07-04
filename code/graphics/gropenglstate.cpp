@@ -1285,7 +1285,7 @@ void opengl_array_state::BindTextureBuffer(GLuint id)
 		return;
 	}
 
-	vglBindBufferARB(GL_TEXTURE_BUFFER_ARB, id);
+	vglBindBufferARB(GL_TEXTURE_BUFFER, id);
 
 	texture_array_buffer = id;
 }
