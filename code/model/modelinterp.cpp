@@ -4975,7 +4975,7 @@ void interp_create_transparency_index_buffer(polymodel *pm, int mn)
 	}
 
 	if ( trans_buffer->flags & VB_FLAG_TRANS ) {
-		gr_config_buffer(pm->vertex_buffer_id, trans_buffer, true);
+		model_interp_config_buffer(&pm->vert_source, trans_buffer, true);
 	}
 }
 

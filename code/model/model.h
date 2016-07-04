@@ -1400,6 +1400,7 @@ void model_draw_bay_paths(int model_num);
 
 void model_draw_bay_paths_htl(int model_num);
 
+bool model_interp_config_buffer(indexed_vertex_source *vert_src, vertex_buffer *vb, bool update_ibuffer_only);
 bool model_interp_pack_buffer(indexed_vertex_source *vert_src, vertex_buffer *vb);
 
 void glowpoint_init();
