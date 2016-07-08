@@ -609,20 +609,22 @@ void opengl_light_init()
 {
 	opengl_calculate_ambient_factor();
 
-	if ( !is_minimum_GLSL_version() ) {
+	if ( is_minimum_GLSL_version() ) {
+		GL_max_lights = 8;
+	} else {
 		glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0);
 
 		glMaterialf(GL_FRONT, GL_SHININESS, Cmdline_ogl_spec /*80.0f*/);
 
 		// more realistic lighting model
 		glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, 1);
+
+		glGetIntegerv(GL_MAX_LIGHTS, &GL_max_lights); // Get the max number of lights supported
+
+		// allocate memory for enabled lights
+		Verify(GL_max_lights > 0);
 	}
 	
-	glGetIntegerv(GL_MAX_LIGHTS, &GL_max_lights); // Get the max number of lights supported
-
-	// allocate memory for enabled lights
-	Verify(GL_max_lights > 0);
-
 	if ( opengl_lights == NULL )
 		opengl_lights = (opengl_light *) vm_malloc_q(MAX_LIGHTS * sizeof(opengl_light));
 

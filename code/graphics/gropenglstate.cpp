@@ -41,7 +41,7 @@ void opengl_texture_state::init(GLuint n_units)
 		default_values(unit);
 
 		vglActiveTextureARB(GL_TEXTURE0 + unit);
-		if (unit < (GLuint)GL_supported_texture_units) {
+		if (unit < (GLuint)GL_supported_texture_units && !is_minimum_GLSL_version()) {
 			glDisable(GL_TEXTURE_GEN_S);
 			glDisable(GL_TEXTURE_GEN_T);
 			glDisable(GL_TEXTURE_GEN_R);
@@ -53,7 +53,7 @@ void opengl_texture_state::init(GLuint n_units)
 		units[unit].texgen_R = GL_FALSE;
 		units[unit].texgen_Q = GL_FALSE;
 
-		if (unit < (GLuint)GL_supported_texture_units) {
+		if (unit < (GLuint)GL_supported_texture_units && !is_minimum_GLSL_version() ) {
 			glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
 			glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
 			glTexGeni(GL_R, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
@@ -65,7 +65,7 @@ void opengl_texture_state::init(GLuint n_units)
 		units[unit].texgen_mode_R = GL_EYE_LINEAR;
 		units[unit].texgen_mode_Q = GL_EYE_LINEAR;
 
-		if (unit < (GLuint)GL_supported_texture_units) {
+		if (unit < (GLuint)GL_supported_texture_units && !is_minimum_GLSL_version() ) {
 			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 			glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_MODULATE);
 			glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_MODULATE);
@@ -75,7 +75,7 @@ void opengl_texture_state::init(GLuint n_units)
 		units[unit].env_combine_rgb = GL_MODULATE;
 		units[unit].env_combine_alpha = GL_MODULATE;
 
-		if (unit < (GLuint)GL_supported_texture_units) {
+		if (unit < (GLuint)GL_supported_texture_units && !is_minimum_GLSL_version() ) {
 			glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE, 1.0f);
 			glTexEnvf(GL_TEXTURE_ENV, GL_ALPHA_SCALE, 1.0f);
 		}
@@ -92,7 +92,7 @@ void opengl_texture_state::default_values(GLint unit, GLenum target)
 	vglActiveTextureARB(GL_TEXTURE0 + unit);
 
 	if (target == GL_INVALID_ENUM) {
-		if (unit < GL_supported_texture_units) {
+		if (unit < GL_supported_texture_units && !is_minimum_GLSL_version()) {
 			glDisable(GL_TEXTURE_2D);
 			glDisable(GL_TEXTURE_CUBE_MAP);
 		}
@@ -214,7 +214,7 @@ void opengl_texture_state::Enable(GLuint tex_id)
 	}
 
 	if ( !shader_mode && (active_texture_unit < (uint)GL_supported_texture_units) ) {
-		if( units[active_texture_unit].texture_target != GL_TEXTURE_2D_ARRAY_EXT)
+		if( units[active_texture_unit].texture_target != GL_TEXTURE_2D_ARRAY_EXT && !is_minimum_GLSL_version() )
 			glEnable( units[active_texture_unit].texture_target );
 		units[active_texture_unit].enabled = GL_TRUE;
 	}
@@ -234,7 +234,7 @@ void opengl_texture_state::Disable()
 	}
 
 	if ( units[active_texture_unit].enabled ) {
-		if( units[active_texture_unit].texture_target != GL_TEXTURE_2D_ARRAY_EXT)
+		if( units[active_texture_unit].texture_target != GL_TEXTURE_2D_ARRAY_EXT && !is_minimum_GLSL_version() )
 			glDisable( units[active_texture_unit].texture_target );
 		units[active_texture_unit].enabled = GL_FALSE;
 	}
@@ -341,13 +341,18 @@ void opengl_state::init()
 {
 	int i;
 
-	glDisable(GL_FOG);
+	if ( !is_minimum_GLSL_version() ) {
+		glDisable(GL_FOG);
+	}
+	
 	fog_Status = GL_FALSE;
 
 	glDisable(GL_BLEND);
 	blend_Status = GL_FALSE;
 
-	glDisable(GL_ALPHA_TEST);
+	if ( !is_minimum_GLSL_version() ) {
+		glDisable(GL_ALPHA_TEST);
+	}
 	alphatest_Status = GL_FALSE;
 
 	glDisable(GL_DEPTH_TEST);
@@ -365,7 +370,9 @@ void opengl_state::init()
 	polygon_offset_Factor = 0.0f;
 	polygon_offset_Unit = 0.0f;
 
-	glDisable(GL_NORMALIZE);
+	if ( !is_minimum_GLSL_version() ) {
+		glDisable(GL_NORMALIZE);
+	}
 	normalize_Status = GL_FALSE;
 
 	for (i = 0; i < (int)(sizeof(clipplane_Status) / sizeof(GLboolean)); i++) {
@@ -384,14 +391,18 @@ void opengl_state::init()
 	light_Status = (GLboolean*) vm_malloc(GL_max_lights * sizeof(GLboolean));
 
 	for (i = 0; i < GL_max_lights; i++) {
-		glDisable(GL_LIGHT0+i);
+		if ( !is_minimum_GLSL_version() ) {
+			glDisable(GL_LIGHT0 + i);
+		}
 		light_Status[i] = GL_FALSE;
 	}
 
 	glDepthMask(GL_FALSE);
 	depthmask_Status = GL_FALSE;
 
-	glDisable(GL_LIGHTING);
+	if ( !is_minimum_GLSL_version() ) {
+		glDisable(GL_LIGHTING);
+	}
 	lighting_Status = GL_FALSE;
 
 	glFrontFace(GL_CCW);

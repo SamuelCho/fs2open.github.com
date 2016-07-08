@@ -342,8 +342,8 @@ static SCP_string get_shader_header(shader_type type_id, int flags, shader_stage
 
 	// apply different macros for differing GLSL versions
 	if ( GL_version >= 32 && GLSL_version >= 150 ) {
+		sflags << "#version " << GLSL_version << "\n";
 		if ( stage == SDR_STAGE_VERTEX ) {
-			sflags << "#version 150\n";
 			sflags << "#define vertIn in\n";
 			sflags << "#define vertOut out\n";
 			sflags << "#define tex2D texture\n";
@@ -351,7 +351,6 @@ static SCP_string get_shader_header(shader_type type_id, int flags, shader_stage
 			sflags << "#define texCube texture\n";
 			sflags << "#define tex2DArray texture\n";
 		} else if ( stage == SDR_STAGE_FRAGMENT ) {
-			sflags << "#version 150\n";
 			sflags << "#define fragIn in\n";
 			sflags << "#define tex2D texture\n";
 			sflags << "#define tex2DLod textureLod\n";

@@ -1244,12 +1244,19 @@ int opengl_init_display_device()
 		return 1;
 	}
 
+	const int gl_versions[] = { 45, 44, 43, 42, 41, 40, 33, 32, 31, 30, 21, 20 };
+	const int num_gl_versions = sizeof(gl_versions) / sizeof(int);
+	int version_index = 0;
+
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, Gr_red.bits);
 	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, Gr_green.bits);
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, Gr_blue.bits);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, (bpp == 32) ? 24 : 16);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, (bpp == 32) ? 8 : 1);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, db);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, gl_versions[version_index] / 10);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, gl_versions[version_index] % 10);
+	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 
 	int fsaa_samples = os_config_read_uint(NULL, "OGL_AntiAliasSamples", 0);
 
@@ -1278,7 +1285,17 @@ int opengl_init_display_device()
 		os_set_window(window);
 	}
 
-	GL_context = SDL_GL_CreateContext(os_get_window());
+	// find the latest and greatest OpenGL context
+	while ( (GL_context = SDL_GL_CreateContext(os_get_window())) == NULL ) {
+		++version_index;
+
+		if ( version_index >= num_gl_versions ) {
+			return 1;
+		}
+
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, gl_versions[version_index] / 10);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, gl_versions[version_index] % 10);
+	}
 
 	SDL_GL_MakeCurrent(os_get_window(), GL_context);
 	//TODO: set up bpp settings
@@ -1557,9 +1574,10 @@ bool gr_opengl_init()
 
 	if (is_minimum_GLSL_version()) {
 		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
+		max_texture_coords = 1;
+	} else {
+		glGetIntegerv(GL_MAX_TEXTURE_COORDS, &max_texture_coords);
 	}
-
-	glGetIntegerv(GL_MAX_TEXTURE_COORDS, &max_texture_coords);
 
 	// create vertex array object to make OpenGL Core happy if we can
 	if ( Is_Extension_Enabled(GL_EXTENSION_ARB_VERTEX_ARRAY_OBJECT) ) {
@@ -1601,8 +1619,10 @@ bool gr_opengl_init()
 		glShadeModel(GL_SMOOTH);
 	}
 
-	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-	glHint(GL_FOG_HINT, GL_NICEST);
+	if ( !is_minimum_GLSL_version() ) {
+		glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+		glHint(GL_FOG_HINT, GL_NICEST);
+	}
 
 	glDepthRange(0.0, 1.0);
 

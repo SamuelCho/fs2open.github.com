@@ -180,7 +180,7 @@ void opengl_tcache_init()
 		CLAMP(GL_anisotropy, 1.0f, GL_max_anisotropy);
 	}
 
-	if ( Is_Extension_Enabled(GL_EXTENSION_EXT_TEXTURE_LOD_BIAS) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_EXT_TEXTURE_LOD_BIAS) && !is_minimum_GLSL_version() ) {
 		if (GL_anisotropy > 1.0f) {
 			glTexEnvf(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, 0.0f);
 		} else {
@@ -197,7 +197,10 @@ void opengl_tcache_init()
 
 	GL_xlat[15] = GL_xlat[1];
 
-	glGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, &GL_supported_texture_units);
+	if ( !is_minimum_GLSL_version() ) {
+		glGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, &GL_supported_texture_units);
+	}
+	
 	Assert( GL_supported_texture_units >= 2 );
 
 	GL_last_detail = Detail.hardware_textures;
