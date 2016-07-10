@@ -2717,20 +2717,19 @@ void Slider::DoDraw(float frametime)
 {
 	gr_set_color_fast(&Color_text_normal);
 
-	gr_string(Coords[0], Coords[1], Label.c_str(), GR_RESIZE_NONE);
+	render_string(Coords[0], Coords[1], Label.c_str(), GR_RESIZE_NONE);
 
 	char value_txt[32];
 	sprintf(value_txt, "%.2f", GetSliderValue());
 	int w, h;
 	gr_get_string_size(&w, &h, value_txt);
-	gr_string(Coords[2] - 3 - w, Coords[1], value_txt, GR_RESIZE_NONE);
+	render_string(Coords[2] - 3 - w, Coords[1], value_txt, GR_RESIZE_NONE);
 
 	draw_open_rect(BarCoords[0], BarCoords[1], BarCoords[2], BarCoords[3], false);
 
 	float sliderX = GetSliderOffset();
 
-	gr_set_shader(&SliderShade);
-	gr_opengl_shade(sliderX, BarCoords[1], sliderX + SliderWidth, BarCoords[3], false);
+	render_colored_rect(&SliderShade, BarCoords[1], sliderX + SliderWidth, BarCoords[3], false);
 }
 
 int Slider::DoMouseDown(float frametime)

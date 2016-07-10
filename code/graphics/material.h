@@ -440,6 +440,7 @@ class model_material : public material
 	bool Batched;
 
 	bool Deferred;
+	bool HDR;
 	bool lighting;
 	float Light_factor;
 
@@ -476,6 +477,7 @@ public:
 	bool is_lit();
 
 	void set_deferred_lighting(bool enabled);
+	void set_high_dynamic_range(bool enabled);
 	
 	void set_center_alpha(int center_alpha);
 	int get_center_alpha();

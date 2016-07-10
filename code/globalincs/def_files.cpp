@@ -1732,13 +1732,13 @@ char *Default_main_fragment_shader =
 "	attenuation = 1.0;\n"
 "	specIntensity = SPEC_INTENSITY_DIRECTIONAL;\n"
 "#if __VERSION__ > 120\n"
-"	if (gl_LightSource[i].position.w == 1.0) {\n"
+"	if (lightType[i] != LT_DIRECTIONAL) {\n"
 "#else\n"
-"	if (gl_LightSource[i].position.w == 1.0 && i != 0) {\n"
+"	if (lightType[i] != LT_DIRECTIONAL && i != 0) {\n"
 "#endif\n"
 "		// Positional light source\n"
 "		float dist = distance(lightPosition[i].xyz, fragPosition.xyz);\n"
-"		lightDir = (lightPosition[i].xyz - position.xyz);\n"
+"		lightDir = (lightPosition[i].xyz - fragPosition.xyz);\n"
 "#if __VERSION__ > 120\n"
 "		if (lightType[i] == LT_TUBE) {  // Tube light\n"
 "			float beamlength = length(lightDirection[i]);\n"
@@ -1758,7 +1758,7 @@ char *Default_main_fragment_shader =
 "}\n"
 "vec3 CalculateLighting(vec3 normal, vec3 diffuseMaterial, vec3 specularMaterial, float gloss, float shadow, float ambientFactor)\n"
 "{\n"
-"	vec3 eyeDir = vec3(normalize(-position).xyz);\n"
+"	vec3 eyeDir = vec3(normalize(-fragPosition).xyz);\n"
 "	vec3 lightAmbient = emissionFactor + ambientFactor;\n"
 "	vec3 lightAmbientDiffuse = vec3(0.0, 0.0, 0.0);\n"
 "   vec3 lightDiffuse = vec3(0.0, 0.0, 0.0);\n"
@@ -2588,7 +2588,7 @@ char *Default_blur_fragment_shader =
 "}\n";
 
 char *Default_brightpass_fragment_shader = 
-"//fragIn vec4 fragTexCoord;\n"
+"fragIn vec4 fragTexCoord;\n"
 "uniform sampler2D tex;\n"
 "const float Luminance = 0.08;\n"
 "const float fMiddleGray = 0.2;\n"
@@ -2605,12 +2605,13 @@ char *Default_brightpass_fragment_shader =
 "	//ColorOut *= (1.0 + (ColorOut / (fWhiteCutoff * fWhiteCutoff)));\n"
 "	//ColorOut -= 6.0;\n"
 "	//ColorOut /= (10.0 + ColorOut);\n"
-"	fragOut0 = vec4(max(vec3(0.0, 0.0, 0.0), ColorOut.rgb - vec3(1.0, 1.0, 1.0), 1.0);\n"
+"	fragOut0 = vec4(max(vec3(0.0, 0.0, 0.0), ColorOut.rgb - vec3(1.0, 1.0, 1.0)), 1.0);\n"
 "	//float luminance = luminance(ColorOut.rgb);\n"
 "	//gl_FragColor.rgb = luminance > threshold ? ColorOut.rgb : vec3(0.0);\n"
 "}";
 
 char *Default_bloom_composite_fragment_shader = 
+"fragIn vec4 fragTexCoord;\n"
 "uniform sampler2D bloomed;\n"
 "uniform float bloom_intensity;\n"
 "uniform int levels;\n"
@@ -2633,6 +2634,7 @@ char *Default_bloom_composite_fragment_shader =
 "}\n";
 
 char *Default_tonemapping_fragment_shader = 
+"fragIn vec4 fragTexCoord;\n"
 "uniform sampler2D tex;\n"
 "uniform float exposure;\n"
 "vec3 Uncharted2Tonemapping(vec3 hdr_color)\n"

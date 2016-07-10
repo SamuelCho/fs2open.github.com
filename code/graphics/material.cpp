@@ -308,7 +308,9 @@ Desaturate(false),
 Normal_alpha(false),
 Normal_alpha_min(0.0f),
 Normal_alpha_max(1.0f),
-Normal_extrude(false)
+Normal_extrude(false),
+Deferred(false),
+HDR(false)
 { 
 	set_shader_type(SDR_TYPE_MODEL); 
 }
@@ -351,6 +353,11 @@ bool model_material::is_lit()
 void model_material::set_deferred_lighting(bool enabled)
 {
 	Deferred = enabled;
+}
+
+void model_material::set_high_dynamic_range(bool enabled)
+{
+	HDR = enabled;
 }
 
 void model_material::set_center_alpha(int c_alpha)
@@ -538,6 +545,10 @@ uint model_material::get_shader_flags()
 
 	if ( Deferred ) {
 		Shader_flags |= SDR_FLAG_MODEL_DEFERRED;
+	}
+
+	if ( HDR ) {
+		Shader_flags |= SDR_FLAG_MODEL_HDR;
 	}
 
 	if ( Thrust_scale > 0.0f ) {

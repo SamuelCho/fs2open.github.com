@@ -464,6 +464,7 @@ void draw_list::add_buffer_draw(model_material *render_material, indexed_vertex_
 	queued_buffer_draw draw_data;
 
 	render_material->set_deferred_lighting(Deferred_lighting);
+	render_material->set_high_dynamic_range(High_dynamic_range);
 	render_material->set_shadow_casting(Rendering_to_shadow_map ? true : false);
 
 	if (tmap_flags & TMAP_FLAG_BATCH_TRANSFORMS && buffer->flags & VB_FLAG_MODEL_ID) {

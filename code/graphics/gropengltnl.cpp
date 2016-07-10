@@ -2755,8 +2755,8 @@ void opengl_tnl_set_model_material(model_material *material_info)
 			break;
 		}
 
-		if ( material_info->get_texture_map(UNLITMAP) >= 0 ) {
-			gr_opengl_tcache_set(material_info->get_texture_map(UNLITMAP), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
+		if ( material_info->get_texture_map(TM_UNLIT_TYPE) >= 0 ) {
+			gr_opengl_tcache_set(material_info->get_texture_map(TM_UNLIT_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
 		} else {
 			gr_opengl_tcache_set(material_info->get_texture_map(TM_BASE_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
 		}
@@ -3459,7 +3459,7 @@ void opengl_tnl_set_material_particle(particle_material * material_info)
 	GL_state.Uniform.setUniformf("nearZ", Min_draw_distance);
 	GL_state.Uniform.setUniformf("farZ", Max_draw_distance);
 	GL_state.Uniform.setUniformi("srgb", High_dynamic_range ? 1 : 0);
-	GL_state.Uniform.setUniformi("blend_alpha", bm_has_alpha_channel(gr_screen.current_bitmap));
+	GL_state.Uniform.setUniformi("blend_alpha", material_info->get_blend_mode() != ALPHA_BLEND_ADDITIVE);
 
 	if ( Cmdline_no_deferred_lighting ) {
 		GL_state.Uniform.setUniformi("linear_depth", 0);
