@@ -12,7 +12,7 @@
 #include "globalincs/alphacolors.h"
 #include "ui/ui.h"
 #include "ui/uidefs.h"
-
+#include "render/render.h"
 
 
 // ---------------------------------------------------------------------------------------
@@ -46,28 +46,32 @@ void UI_ICON::draw()
 		gr_reset_clip();
 		if (disabled_flag) {
 			if (bmap_ids[ICON_DISABLED] != -1) {
-				gr_set_bitmap(bmap_ids[ICON_DISABLED]);
-				gr_bitmap(x,y,GR_RESIZE_MENU);
+				//gr_set_bitmap(bmap_ids[ICON_DISABLED]);
+				//gr_bitmap(x,y,GR_RESIZE_MENU);
+				render_bitmap(bmap_ids[ICON_DISABLED], x, y, GR_RESIZE_MENU);
 			}
 
 		} else if (this->is_mouse_on()) {
 			if (B1_PRESSED) {
 				if (bmap_ids[ICON_SELECTED] != -1) {
-					gr_set_bitmap(bmap_ids[ICON_SELECTED]);
-					gr_bitmap(x, y, GR_RESIZE_MENU);
+					//gr_set_bitmap(bmap_ids[ICON_SELECTED]);
+					//gr_bitmap(x, y, GR_RESIZE_MENU);
+					render_bitmap(bmap_ids[ICON_SELECTED], x, y, GR_RESIZE_MENU);
 				}
 
 			} else {
 				if (bmap_ids[ICON_HIGHLIGHT] != -1) {
-					gr_set_bitmap(bmap_ids[ICON_HIGHLIGHT]);
-					gr_bitmap(x, y, GR_RESIZE_MENU);
+					//gr_set_bitmap(bmap_ids[ICON_HIGHLIGHT]);
+					//gr_bitmap(x, y, GR_RESIZE_MENU);
+					render_bitmap(bmap_ids[ICON_HIGHLIGHT], x, y, GR_RESIZE_MENU);
 				}
 			}
 
 		} else {
 			if (bmap_ids[ICON_NORMAL] != -1) {
-				gr_set_bitmap(bmap_ids[ICON_NORMAL]);
-				gr_bitmap(x, y, GR_RESIZE_MENU);
+				//gr_set_bitmap(bmap_ids[ICON_NORMAL]);
+				//gr_bitmap(x, y, GR_RESIZE_MENU);
+				render_bitmap(bmap_ids[ICON_NORMAL], x, y, GR_RESIZE_MENU);
 			}
 		}
 

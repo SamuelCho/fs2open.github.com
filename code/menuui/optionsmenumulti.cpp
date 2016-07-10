@@ -24,6 +24,7 @@
 #include "parse/parselo.h"
 #include "playerman/player.h"
 #include "popup/popup.h"
+#include "render/render.h"
 #include "sound/ds.h"
 #include "sound/rtvoice.h"
 
@@ -664,7 +665,8 @@ void options_multi_notify_process()
 		strncpy(line, p_str[idx], n_chars[idx]);
 				
 		gr_get_string_size(&w,NULL,line);
-		gr_string((600 - w)/2,y_start,line,GR_RESIZE_MENU);
+		//gr_string((600 - w)/2,y_start,line,GR_RESIZE_MENU);
+		render_string((600 - w)/2,y_start,line,GR_RESIZE_MENU);
 
 		y_start += line_height;
 	}	
@@ -1971,8 +1973,9 @@ void options_multi_vox_process_waveform()
 	}
 
 	// grey the screen
-	gr_set_shader(&Grey_shader);
-	gr_shade(0,0,gr_screen.clip_width, gr_screen.clip_height, GR_RESIZE_NONE);
+	//gr_set_shader(&Grey_shader);
+	//gr_shade(0,0,gr_screen.clip_width, gr_screen.clip_height, GR_RESIZE_NONE);
+	render_colored_rect(&Grey_shader, 0, 0, gr_screen.clip_width, gr_screen.clip_height, GR_RESIZE_NONE);
 
 	switch(Om_vox_test_status){
 	case OM_VOX_TEST_RECORDING:
@@ -2003,13 +2006,15 @@ void options_multi_vox_process_waveform()
 			}
 
 			running_avg /= avg_len;
-			gr_line((gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y, (gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y + running_avg, GR_RESIZE_MENU);
+			//gr_line((gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y, (gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y + running_avg, GR_RESIZE_MENU);
+			render_line((gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y, (gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y + running_avg, GR_RESIZE_MENU);
 		}		
 
 		// if this packet would have been dropped, notify the user
 		if(multi_voice_test_packet_tossed()){
 			gr_set_color_fast(&Color_bright);
-			gr_string(OM_VOX_DROP_ICON_X,OM_VOX_DROP_ICON_Y, XSTR( "Packet Overflow", 393), GR_RESIZE_MENU);
+			//gr_string(OM_VOX_DROP_ICON_X,OM_VOX_DROP_ICON_Y, XSTR( "Packet Overflow", 393), GR_RESIZE_MENU);
+			render_string(OM_VOX_DROP_ICON_X,OM_VOX_DROP_ICON_Y, XSTR( "Packet Overflow", 393), GR_RESIZE_MENU);
 		}		
 		break;
 
@@ -2035,7 +2040,8 @@ void options_multi_vox_process_waveform()
 			}
 
 			running_avg /= avg_len;			
-			gr_line((gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y, (gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y + running_avg, GR_RESIZE_MENU);
+			//gr_line((gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y, (gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y + running_avg, GR_RESIZE_MENU);
+			render_line((gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y, (gr_screen.max_w_unscaled - OM_VOX_WAVE_WIDTH)/2 + idx, OM_VOX_WAVE_Y + running_avg, GR_RESIZE_MENU);
 		}				
 		break;
 	}
@@ -2081,7 +2087,8 @@ void options_multi_vox_process_player_list()
 			gr_force_fit_string(str, CALLSIGN_LEN+1, Om_vox_plist_coords[gr_screen.res][2]);
 
 			// blit the callsign
-			gr_string(Om_vox_plist_coords[gr_screen.res][0], y_start, str, GR_RESIZE_MENU);
+			//gr_string(Om_vox_plist_coords[gr_screen.res][0], y_start, str, GR_RESIZE_MENU);
+			render_string(Om_vox_plist_coords[gr_screen.res][0], y_start, str, GR_RESIZE_MENU);
 
 			// increment the y index
 			y_start += line_height;

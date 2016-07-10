@@ -47,6 +47,7 @@
 #include "playerman/player.h"
 #include "render/3d.h"
 #include "render/3dinternal.h"
+#include "render/render.h"
 #include "ship/ship.h"
 #include "ship/shipfx.h"
 #include "ship/shiphit.h"
@@ -3621,6 +3622,8 @@ ade_obj<int> l_Texture("texture", "Texture handle");
 
 static float lua_Opacity = 1.0f;
 static int lua_Opacity_type = GR_ALPHABLEND_NONE;
+static float lua_Line_width = 1.0f;
+static color lua_Color;
 
 ADE_FUNC(__gc, l_Texture, NULL, "Auto-deletes texture", NULL, NULL)
 {
@@ -13600,7 +13603,9 @@ ADE_FUNC(setColor, l_Graphics, "integer Red, number Green, number Blue, [integer
 
 	color ac;
 	gr_init_alphacolor(&ac,r,g,b,a);
+	gr_init_alphacolor(&lua_Color,r,g,b,a);
 	gr_set_color_fast(&ac);
+	
 
 	return ADE_RETURN_NIL;
 }
@@ -13619,7 +13624,8 @@ ADE_FUNC(setLineWidth, l_Graphics, "[number width=1.0]", "Sets the line width fo
 		return ADE_RETURN_FALSE;
 	}
 
-	gr_set_line_width(width);
+	//gr_set_line_width(width);
+	lua_Line_width = width;
 
 	return ADE_RETURN_TRUE;
 }
@@ -13637,9 +13643,11 @@ ADE_FUNC(drawCircle, l_Graphics, "number Radius, number X, number Y, [boolean Fi
 
 	if (fill) {
 		//WMC - Circle takes...diameter.
-		gr_circle(x,y, ra*2, GR_RESIZE_NONE);
+		//gr_circle(x,y, ra*2, GR_RESIZE_NONE);
+		render_circle(&lua_Color, x, y, ra*2, GR_RESIZE_NONE);
 	} else {
-		gr_unfilled_circle(x,y, ra*2, GR_RESIZE_NONE);
+		//gr_unfilled_circle(x,y, ra*2, GR_RESIZE_NONE);
+		render_unfilled_circle(&lua_Color, lua_Line_width, x, y, ra*2, GR_RESIZE_NONE);
 	}
 
 	return ADE_RETURN_NIL;
@@ -13658,7 +13666,8 @@ ADE_FUNC(drawArc, l_Graphics, "number Radius, number X, number Y, number StartAn
 		return ADE_RETURN_NIL;
 	}
 
-	gr_arc(x,y, ra, angle_start, angle_end, fill, GR_RESIZE_NONE);
+	//gr_arc(x,y, ra, angle_start, angle_end, fill, GR_RESIZE_NONE);
+	render_arc(&lua_Color, x, y, ra, angle_start, angle_end, fill, lua_Line_width, GR_RESIZE_NONE);
 
 	return ADE_RETURN_NIL;
 }
@@ -13675,7 +13684,8 @@ ADE_FUNC(drawCurve, l_Graphics, "number X, number Y, number Radius", "Draws a cu
 
 	//WMC - direction should be settable at a certain point via enumerations.
 	//Not gonna deal with it now.
-	gr_curve(x,y,ra,0,GR_RESIZE_FULL);
+	//gr_curve(x,y,ra,0,GR_RESIZE_FULL);
+	render_curve(&lua_Color, x, y, ra, 0, GR_RESIZE_FULL);
 
 	return ADE_RETURN_NIL;
 }
@@ -13690,7 +13700,8 @@ ADE_FUNC(drawGradientLine, l_Graphics, "number X1, number Y1, number X2, number 
 	if(!ade_get_args(L, "iiii", &x1, &y1, &x2, &y2))
 		return ADE_RETURN_NIL;
 
-	gr_gradient(x1,y1,x2,y2,GR_RESIZE_NONE);
+	//gr_gradient(x1,y1,x2,y2,GR_RESIZE_NONE);
+	render_gradient(&lua_Color, x1,y1,x2,y2,GR_RESIZE_NONE);
 
 	return ADE_RETURN_NIL;
 }
@@ -13705,7 +13716,8 @@ ADE_FUNC(drawLine, l_Graphics, "number X1, number Y1, number X2, number Y2", "Dr
 	if(!ade_get_args(L, "iiii", &x1, &y1, &x2, &y2))
 		return ADE_RETURN_NIL;
 
-	gr_line(x1,y1,x2,y2,GR_RESIZE_NONE);
+	//gr_line(x1,y1,x2,y2,GR_RESIZE_NONE);
+	render_line(&lua_Color, x1, y1, x2, y2, GR_RESIZE_NONE);
 
 	return ADE_RETURN_NIL;
 }
@@ -13720,7 +13732,8 @@ ADE_FUNC(drawPixel, l_Graphics, "number X, number Y", "Sets pixel to CurrentColo
 	if(!ade_get_args(L, "ii", &x, &y))
 		return ADE_RETURN_NIL;
 
-	gr_pixel(x,y,GR_RESIZE_NONE);
+	//gr_pixel(x,y,GR_RESIZE_NONE);
+	render_pixel(&lua_Color, x, y, GR_RESIZE_NONE);
 
 	return ADE_RETURN_NIL;
 }
@@ -13747,8 +13760,13 @@ ADE_FUNC(drawPolygon, l_Graphics, "texture Texture, [vector Position={0,0,0}, or
 	if(!in_frame)
 		g3_start_frame(0);
 
-	gr_set_bitmap(tdx, lua_Opacity_type, GR_BITBLT_MODE_NORMAL, lua_Opacity);
-	g3_draw_polygon(&pos, orip, width, height, TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT);
+	//gr_set_bitmap(tdx, lua_Opacity_type, GR_BITBLT_MODE_NORMAL, lua_Opacity);
+	//g3_draw_polygon(&pos, orip, width, height, TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT);
+	if ( lua_Opacity_type ) {
+		render_oriented_quad(tdx, lua_Opacity, &pos, orip, width, height);
+	} else {
+		render_oriented_quad(tdx, &pos, orip, width, height);
+	}
 
 	if(!in_frame)
 		g3_end_frame();
@@ -13769,15 +13787,21 @@ ADE_FUNC(drawRectangle, l_Graphics, "number X1, number Y1, number X2, number Y2,
 
 	if(f)
 	{
-		gr_set_bitmap(0);  // gr_rect will use the last bitmaps info, so set to zero to flush any previous alpha state
-		gr_rect(x1, y1, x2-x1, y2-y1, GR_RESIZE_NONE);
+		//gr_set_bitmap(0);  // gr_rect will use the last bitmaps info, so set to zero to flush any previous alpha state
+		//gr_rect(x1, y1, x2-x1, y2-y1, GR_RESIZE_NONE);
+		render_colored_rect(&lua_Color, x1, y1, x2-x1, y2-y1, GR_RESIZE_NONE);
 	}
 	else
 	{
-		gr_line(x1,y1,x2,y1,GR_RESIZE_NONE);	//Top
-		gr_line(x1,y2,x2,y2,GR_RESIZE_NONE); //Bottom
-		gr_line(x1,y1,x1,y2,GR_RESIZE_NONE);	//Left
-		gr_line(x2,y1,x2,y2,GR_RESIZE_NONE);	//Right
+// 		gr_line(x1,y1,x2,y1,GR_RESIZE_NONE);	//Top
+// 		gr_line(x1,y2,x2,y2,GR_RESIZE_NONE); //Bottom
+// 		gr_line(x1,y1,x1,y2,GR_RESIZE_NONE);	//Left
+// 		gr_line(x2,y1,x2,y2,GR_RESIZE_NONE);	//Right
+
+		render_line(&lua_Color, x1, y1, x2, y1, GR_RESIZE_NONE);	//Top
+		render_line(&lua_Color, x1, y2, x2, y2, GR_RESIZE_NONE); //Bottom
+		render_line(&lua_Color, x1, y1, x1, y2, GR_RESIZE_NONE);	//Left
+		render_line(&lua_Color, x2, y1, x2, y2, GR_RESIZE_NONE);	//Right
 	}
 
 	return ADE_RETURN_NIL;
@@ -13819,7 +13843,8 @@ ADE_FUNC(drawSphere, l_Graphics, "[number Radius = 1.0, vector Position]", "Draw
 	vertex vtx;
 	vtx.world = pos;
 	g3_rotate_vertex(&vtx, &pos);
-	g3_draw_sphere(&vtx, rad);
+	//g3_draw_sphere(&vtx, rad);
+	render_sphere_fast(&vtx, rad);
 
 	if(!in_frame) {
 		gr_end_view_matrix();
@@ -14209,7 +14234,8 @@ ADE_FUNC(drawString, l_Graphics, "string Message, [number X1, number Y1, number 
 	if(x2 < 0)
 	{
 		num_lines = 1;
-		gr_string(x,y,s,GR_RESIZE_NONE);
+		//gr_string(x,y,s,GR_RESIZE_NONE);
+		render_string(&lua_Color, x, y, s, GR_RESIZE_NONE);
 
 		int height = 0;
 		gr_get_string_size(NULL, &height, s);
@@ -14246,7 +14272,8 @@ ADE_FUNC(drawString, l_Graphics, "string Message, [number X1, number Y1, number 
 			buf[len] = '\0';
 
 			//Draw the string
-			gr_string(x,curr_y,buf,GR_RESIZE_NONE);
+			//gr_string(x,curr_y,buf,GR_RESIZE_NONE);
+			render_string(&lua_Color, x, curr_y, buf, GR_RESIZE_NONE);
 
 			//Free the string we made
 			delete[] buf;
@@ -14424,9 +14451,10 @@ ADE_FUNC(drawImage, l_Graphics, "string Filename/texture Texture, [number X1=0, 
 	if(y2!=INT_MAX)
 		h = y2-y1;
 
-	gr_set_bitmap(idx, lua_Opacity_type, GR_BITBLT_MODE_NORMAL, alpha);
+	//gr_set_bitmap(idx, lua_Opacity_type, GR_BITBLT_MODE_NORMAL, alpha);
 	bitmap_rect_list brl = bitmap_rect_list(x1, y1, w, h, uv_x1, uv_y1, uv_x2, uv_y2);
-	gr_bitmap_list(&brl, 1, GR_RESIZE_NONE);
+	//gr_bitmap_list(&brl, 1, GR_RESIZE_NONE);
+	render_bitmap_list(&brl, 1, idx, alpha, lua_Opacity_type == GR_ALPHABLEND_FILTER ? true : false, GR_RESIZE_NONE);
 
 	return ADE_RETURN_TRUE;
 }
@@ -14481,8 +14509,9 @@ ADE_FUNC(drawMonochromeImage, l_Graphics, "string Filename/texture Texture, numb
 	if(y2!=INT_MAX)
 		h = y2-y;
 
-	gr_set_bitmap(idx, lua_Opacity_type, GR_BITBLT_MODE_NORMAL,alpha);
-	gr_aabitmap_ex(x, y, w, h, sx, sy, GR_RESIZE_NONE, m);
+	//gr_set_bitmap(idx, lua_Opacity_type, GR_BITBLT_MODE_NORMAL,alpha);
+	//gr_aabitmap_ex(x, y, w, h, sx, sy, GR_RESIZE_NONE, m);
+	render_aabitmap_ex(idx, x, y, w, h, sx, sy, GR_RESIZE_NONE, m);
 
 	return ADE_RETURN_TRUE;
 }
@@ -14531,7 +14560,8 @@ ADE_FUNC(flashScreen, l_Graphics, "number Red, number Green, number Blue", "Flas
 	if(!ade_get_args(L, "iii", &r, &g, &b))
 		return ADE_RETURN_NIL;
 
-	gr_flash(r,g,b);
+	//gr_flash(r,g,b);
+	render_flash(r, g, b);
 
 	return ADE_RETURN_NIL;
 }
@@ -15964,15 +15994,27 @@ ADE_FUNC(avdTest, l_Testing, NULL, "Test the AVD Physics code", NULL, NULL)
 	{
 		float Pc, Vc;
 		avd.get((float)i/1000.0f, &Pc, &Vc);
-		gr_set_color(0, 255, 0);
-		gr_pixel(i/10, gr_screen.clip_bottom - (int)(Pc*10.0f), GR_RESIZE_NONE);
-		gr_set_color(255, 0, 0);
-		gr_pixel(i/10, gr_screen.clip_bottom - (int)(Vc*10.0f), GR_RESIZE_NONE);
+// 		gr_set_color(0, 255, 0);
+// 		gr_pixel(i/10, gr_screen.clip_bottom - (int)(Pc*10.0f), GR_RESIZE_NONE);
+// 		gr_set_color(255, 0, 0);
+// 		gr_pixel(i/10, gr_screen.clip_bottom - (int)(Vc*10.0f), GR_RESIZE_NONE);
+
+		color clr;
+
+		gr_init_color(&clr, 0, 255, 0);
+		render_pixel(&clr, i/10, gr_screen.clip_bottom - (int)(Pc*10.0f), GR_RESIZE_NONE);
+
+		gr_init_color(&clr, 255, 0, 0);
+		render_pixel(&clr, i/10, gr_screen.clip_bottom - (int)(Vc*10.0f), GR_RESIZE_NONE);
 
 		avd.get(&Pc, &Vc);
-		gr_set_color(255, 255, 255);
-		gr_pixel((timestamp()%3000)/10, gr_screen.clip_bottom - (int)(Pc*10.0f), GR_RESIZE_NONE);
-		gr_pixel((timestamp()%3000)/10, gr_screen.clip_bottom - (int)(Vc*10.0f), GR_RESIZE_NONE);
+// 		gr_set_color(255, 255, 255);
+// 		gr_pixel((timestamp()%3000)/10, gr_screen.clip_bottom - (int)(Pc*10.0f), GR_RESIZE_NONE);
+// 		gr_pixel((timestamp()%3000)/10, gr_screen.clip_bottom - (int)(Vc*10.0f), GR_RESIZE_NONE);
+
+		gr_init_color(&clr, 255, 255, 255);
+ 		render_pixel(&clr, (timestamp()%3000)/10, gr_screen.clip_bottom - (int)(Pc*10.0f), GR_RESIZE_NONE);
+ 		render_pixel(&clr, (timestamp()%3000)/10, gr_screen.clip_bottom - (int)(Vc*10.0f), GR_RESIZE_NONE);
 	}
 
 	return ADE_RETURN_NIL;

@@ -14,7 +14,7 @@
 #include "math/fvi.h"
 #include "mission/missiongrid.h"
 #include "render/3d.h"
-
+#include "render/render.h"
 
 grid	Global_grid;
 grid	*The_grid;

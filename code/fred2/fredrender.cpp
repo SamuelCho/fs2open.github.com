@@ -25,6 +25,7 @@
 #include "graphics/tmapper.h"
 #include "graphics/2d.h"
 #include "render/3d.h"
+#include "render/render.h"
 #include "model/model.h"
 #include "bmpman/bmpman.h"
 #include "io/key.h"
@@ -425,15 +426,18 @@ void render_waypoints(void)
 					else
 						gr_set_color(160, 96, 0);
 
-					g3_draw_sphere(&v, LOLLIPOP_SIZE);
+					//g3_draw_sphere(&v, LOLLIPOP_SIZE);
+					render_sphere_fast(&v, LOLLIPOP_SIZE);
 					if (prev_vec == NULL)
 						gr_set_color(160, 96, 0);
 					else
 						gr_set_color(0, 0, 0);
 
-					g3_draw_sphere(&v, LOLLIPOP_SIZE * 0.66667f);
+					//g3_draw_sphere(&v, LOLLIPOP_SIZE * 0.66667f);
+					render_sphere_fast(&v, LOLLIPOP_SIZE * 0.66667f);
 					gr_set_color(160, 96, 0);
-					g3_draw_sphere(&v, LOLLIPOP_SIZE * 0.33333f);
+					//g3_draw_sphere(&v, LOLLIPOP_SIZE * 0.33333f);
+					render_sphere_fast(&v, LOLLIPOP_SIZE * 0.33333f);
 				}
 			}
 
@@ -523,21 +527,35 @@ void fredhtl_render_subsystem_bounding_box(subsys_to_render * s2r)
 	//draw a cube around the subsystem
 	g3_start_instance_matrix(&s2r->ship_obj->pos, &s2r->ship_obj->orient, true);
 	g3_start_instance_matrix(&bsp->offset, &vmd_identity_matrix, true);
-	g3_draw_htl_line(&front_top_left,  &front_top_right);
-	g3_draw_htl_line(&front_top_right, &front_bot_right);
-	g3_draw_htl_line(&front_bot_right, &front_bot_left);
-	g3_draw_htl_line(&front_bot_left,  &front_top_left);
+// 	g3_draw_htl_line(&front_top_left,  &front_top_right);
+// 	g3_draw_htl_line(&front_top_right, &front_bot_right);
+// 	g3_draw_htl_line(&front_bot_right, &front_bot_left);
+// 	g3_draw_htl_line(&front_bot_left,  &front_top_left);
+// 					
+// 	g3_draw_htl_line(&back_top_left,  &back_top_right);
+// 	g3_draw_htl_line(&back_top_right, &back_bot_right);
+// 	g3_draw_htl_line(&back_bot_right, &back_bot_left);
+// 	g3_draw_htl_line(&back_bot_left,  &back_top_left);
+// 
+// 	g3_draw_htl_line(&front_top_left,  &back_top_left);
+// 	g3_draw_htl_line(&front_top_right, &back_top_right);
+// 	g3_draw_htl_line(&front_bot_left,  &back_bot_left);
+// 	g3_draw_htl_line(&front_bot_right, &back_bot_right);
+
+	render_line_3d(true, &front_top_left,  &front_top_right);
+	render_line_3d(true, &front_top_right, &front_bot_right);
+	render_line_3d(true, &front_bot_right, &front_bot_left);
+	render_line_3d(true, &front_bot_left,  &front_top_left);
 					
-	g3_draw_htl_line(&back_top_left,  &back_top_right);
-	g3_draw_htl_line(&back_top_right, &back_bot_right);
-	g3_draw_htl_line(&back_bot_right, &back_bot_left);
-	g3_draw_htl_line(&back_bot_left,  &back_top_left);
+	render_line_3d(true, &back_top_left,  &back_top_right);
+	render_line_3d(true, &back_top_right, &back_bot_right);
+	render_line_3d(true, &back_bot_right, &back_bot_left);
+	render_line_3d(true, &back_bot_left,  &back_top_left);
 
-	g3_draw_htl_line(&front_top_left,  &back_top_left);
-	g3_draw_htl_line(&front_top_right, &back_top_right);
-	g3_draw_htl_line(&front_bot_left,  &back_bot_left);
-	g3_draw_htl_line(&front_bot_right, &back_bot_right);
-
+	render_line_3d(true, &front_top_left,  &back_top_left);
+	render_line_3d(true, &front_top_right, &back_top_right);
+	render_line_3d(true, &front_bot_left,  &back_bot_left);
+	render_line_3d(true, &front_bot_right, &back_bot_right);
 
 	//draw another cube around a gun for a two-part turret
 	if ((s2r->cur_subsys->system_info->turret_gun_sobj >= 0) && (s2r->cur_subsys->system_info->turret_gun_sobj != s2r->cur_subsys->system_info->subobj_num))
@@ -555,20 +573,35 @@ void fredhtl_render_subsystem_bounding_box(subsys_to_render * s2r)
 
 		g3_start_instance_matrix(&bsp_turret->offset, &vmd_identity_matrix, true);
 
-		g3_draw_htl_line(&front_top_left,  &front_top_right);
-		g3_draw_htl_line(&front_top_right, &front_bot_right);
-		g3_draw_htl_line(&front_bot_right, &front_bot_left);
-		g3_draw_htl_line(&front_bot_left,  &front_top_left);
-					
-		g3_draw_htl_line(&back_top_left,  &back_top_right);
-		g3_draw_htl_line(&back_top_right, &back_bot_right);
-		g3_draw_htl_line(&back_bot_right, &back_bot_left);
-		g3_draw_htl_line(&back_bot_left,  &back_top_left);
+// 		g3_draw_htl_line(&front_top_left,  &front_top_right);
+// 		g3_draw_htl_line(&front_top_right, &front_bot_right);
+// 		g3_draw_htl_line(&front_bot_right, &front_bot_left);
+// 		g3_draw_htl_line(&front_bot_left,  &front_top_left);
+// 					
+// 		g3_draw_htl_line(&back_top_left,  &back_top_right);
+// 		g3_draw_htl_line(&back_top_right, &back_bot_right);
+// 		g3_draw_htl_line(&back_bot_right, &back_bot_left);
+// 		g3_draw_htl_line(&back_bot_left,  &back_top_left);
+// 
+// 		g3_draw_htl_line(&front_top_left,  &back_top_left);
+// 		g3_draw_htl_line(&front_top_right, &back_top_right);
+// 		g3_draw_htl_line(&front_bot_left,  &back_bot_left);
+// 		g3_draw_htl_line(&front_bot_right, &back_bot_right);
 
-		g3_draw_htl_line(&front_top_left,  &back_top_left);
-		g3_draw_htl_line(&front_top_right, &back_top_right);
-		g3_draw_htl_line(&front_bot_left,  &back_bot_left);
-		g3_draw_htl_line(&front_bot_right, &back_bot_right);
+		render_line_3d(true, &front_top_left,  &front_top_right);
+		render_line_3d(true, &front_top_right, &front_bot_right);
+		render_line_3d(true, &front_bot_right, &front_bot_left);
+		render_line_3d(true, &front_bot_left,  &front_top_left);
+					
+		render_line_3d(true, &back_top_left,  &back_top_right);
+		render_line_3d(true, &back_top_right, &back_bot_right);
+		render_line_3d(true, &back_bot_right, &back_bot_left);
+		render_line_3d(true, &back_bot_left,  &back_top_left);
+
+		render_line_3d(true, &front_top_left,  &back_top_left);
+		render_line_3d(true, &front_top_right, &back_top_right);
+		render_line_3d(true, &front_bot_left,  &back_bot_left);
+		render_line_3d(true, &front_bot_right, &back_bot_right);
 
 		g3_done_instance(true);
 	}
@@ -935,12 +968,12 @@ void render_one_model_htl(object *objp)
 		if (Fred_outline)
 		{
 			gr_set_color(__min(r*2,255),__min(g*2,255),__min(b*2,255));
-			g3_draw_htl_sphere(&objp->pos,  size * 1.5f);
+			render_sphere(&objp->pos,  size * 1.5f);
 		}
 		else
 		{
 			gr_set_color(r,g,b);
-			g3_draw_htl_sphere(&objp->pos, size);
+			render_sphere(&objp->pos, size);
 		}
 	}
 
@@ -953,7 +986,8 @@ void render_one_model_htl(object *objp)
 			{
 				if ((o2->instance == objp->instance - 1) || (o2->instance == objp->instance + 1))
 				{
-					g3_draw_htl_line(&o2->pos, &objp->pos);
+					//g3_draw_htl_line(&o2->pos, &objp->pos);
+					render_line_3d(true, &o2->pos, &objp->pos);
 				}
 			}
 		}
@@ -1122,10 +1156,12 @@ void draw_orient_sphere(object *obj, int r, int g, int b)
 
 	gr_set_color(r, g, b);
 	g3_rotate_vertex(&v, &obj->pos);
-	if (!(v.codes & CC_BEHIND))
-		if (!(g3_project_vertex(&v) & PF_OVERFLOW))
-			g3_draw_sphere(&v, size);
-
+	if ( !(v.codes & CC_BEHIND) ) {
+		if ( !(g3_project_vertex(&v) & PF_OVERFLOW) ) {
+			//g3_draw_sphere(&v, size);
+			render_sphere_fast(&v, size);
+		}
+	}
 	if (flag)	{
 		gr_set_color(192, 192, 192);
 		rpd_line(&v1, &v2);
@@ -1162,9 +1198,11 @@ void draw_orient_sphere2(int col, object *obj, int r, int g, int b)
 		if (!(g3_project_vertex(&v) & PF_OVERFLOW))
 		{
 			gr_set_color((col >> 16) & 0xff, (col >> 8) & 0xff, col & 0xff);
-			g3_draw_sphere(&v, size);
+			//g3_draw_sphere(&v, size);
+			render_sphere_fast(&v, size);
 			gr_set_color(r, g, b);
-			g3_draw_sphere(&v, size * 0.75f);
+			//g3_draw_sphere(&v, size * 0.75f);
+			render_sphere_fast(&v, size * 0.75f);
 		}
 
 	if (flag)	{
@@ -1241,7 +1279,8 @@ void render_model_x_htl(vec3d *pos, grid *gridp, int col_scheme)
 		gr_set_color(192, 192, 192);
 
 
-	g3_draw_htl_line(&gpos, pos);	//	Line from grid to object center.
+	//g3_draw_htl_line(&gpos, pos);	//	Line from grid to object center.
+	render_line_3d(true, &gpos, pos);	//	Line from grid to object center.
 
 	tpos = gpos;
 
@@ -1251,22 +1290,31 @@ void render_model_x_htl(vec3d *pos, grid *gridp, int col_scheme)
 	vm_vec_scale_add2(&tpos, &gridp->gmatrix.vec.rvec, dxz/2);
 	vm_vec_scale_add2(&tpos, &gridp->gmatrix.vec.fvec, dxz/2);
 	
-	g3_draw_htl_line(&gpos, &tpos);
+	//g3_draw_htl_line(&gpos, &tpos);
+	//g3_draw_htl_line(&gpos, &tpos);
+
+	render_line_3d(true, &gpos, &tpos);
+	render_line_3d(true, &gpos, &tpos);
 
 	vm_vec_scale_add2(&gpos, &gridp->gmatrix.vec.rvec, dxz);
 	vm_vec_scale_add2(&tpos, &gridp->gmatrix.vec.rvec, -dxz);
 
-	g3_draw_htl_line(&gpos, &tpos);
+	//g3_draw_htl_line(&gpos, &tpos);
+	render_line_3d(true, &gpos, &tpos);
 }
 
 void render_active_rect(void)
 {
 	if (box_marking) {
 		gr_set_color(255, 255, 255);
-		gr_line(marking_box.x1, marking_box.y1, marking_box.x1, marking_box.y2);
-		gr_line(marking_box.x1, marking_box.y2, marking_box.x2, marking_box.y2);
-		gr_line(marking_box.x2, marking_box.y2, marking_box.x2, marking_box.y1);
-		gr_line(marking_box.x2, marking_box.y1, marking_box.x1, marking_box.y1);
+// 		gr_line(marking_box.x1, marking_box.y1, marking_box.x1, marking_box.y2);
+// 		gr_line(marking_box.x1, marking_box.y2, marking_box.x2, marking_box.y2);
+// 		gr_line(marking_box.x2, marking_box.y2, marking_box.x2, marking_box.y1);
+// 		gr_line(marking_box.x2, marking_box.y1, marking_box.x1, marking_box.y1);
+		render_line(marking_box.x1, marking_box.y1, marking_box.x1, marking_box.y2);
+		render_line(marking_box.x1, marking_box.y2, marking_box.x2, marking_box.y2);
+		render_line(marking_box.x2, marking_box.y2, marking_box.x2, marking_box.y1);
+		render_line(marking_box.x2, marking_box.y1, marking_box.x1, marking_box.y1);
 	}
 }
 
@@ -1385,12 +1433,12 @@ void fred_render_grid(grid *gridp)
 	//	Draw the column lines.
 	for (i=0; i<=ncols; i++)
 	{
-		g3_draw_htl_line(&gridp->gpoints1[i], &gridp->gpoints2[i]);
+		render_line_3d(false, &gridp->gpoints1[i], &gridp->gpoints2[i]);
 	}
 	//	Draw the row lines.
 	for (i=0; i<=nrows; i++)
 	{
-		g3_draw_htl_line(&gridp->gpoints3[i], &gridp->gpoints4[i]);
+		render_line_3d(false, &gridp->gpoints3[i], &gridp->gpoints4[i]);
 	}
 
 	ncols = gridp->ncols / 2;
@@ -1404,12 +1452,12 @@ void fred_render_grid(grid *gridp)
 	
 	for (i=0; i<=ncols; i++)
 	{
-		g3_draw_htl_line(&gridp->gpoints5[i], &gridp->gpoints6[i]);
+		render_line_3d(false, &gridp->gpoints5[i], &gridp->gpoints6[i]);
 	}
 
 	for (i=0; i<=nrows; i++)
 	{
-		g3_draw_htl_line(&gridp->gpoints7[i], &gridp->gpoints8[i]);
+		render_line_3d(false, &gridp->gpoints7[i], &gridp->gpoints8[i]);
 	}
 
 	fred_disable_htl();
@@ -1450,8 +1498,10 @@ void render_frame()
 
 		g3_start_frame(0); // ** Accounted for
 		gr_set_color(255, 255, 255);
-		gr_line(0, True_rh, True_rw, True_rh);
-		gr_line(True_rw, 0, True_rw, True_rh);
+		//gr_line(0, True_rh, True_rw, True_rh);
+		render_line(0, True_rh, True_rw, True_rh);
+		//gr_line(True_rw, 0, True_rw, True_rh);
+		render_line(True_rw, 0, True_rw, True_rh);
 		g3_end_frame();	 // ** Accounted for
 		gr_set_clip(0, 0, True_rw, True_rh);
 	}
@@ -1475,7 +1525,7 @@ void render_frame()
 
 	if (Show_horizon) {
 		gr_set_color(128, 128, 64);
-		g3_draw_horizon_line();
+		render_horizon_line();
 	}
 
 	if (Show_asteroid_field) {
@@ -1536,10 +1586,12 @@ void render_frame()
 				y = (int) v.screen.xyw.y + 20;
 
 				gr_set_color_fast(&colour_white);
-				gr_rect(x-7, y-6, w+8, h+7);
+				//gr_rect(x-7, y-6, w+8, h+7);
+				render_colored_rect(x-7, y-6, w+8, h+7);
 
 				gr_set_color_fast(&colour_black);
-				gr_rect(x-5, y-5, w+5, h+5);
+				//gr_rect(x-5, y-5, w+5, h+5);
+				render_colored_rect(x-5, y-5, w+5, h+5);
 
 				gr_set_color_fast(&colour_white);
 				gr_string_win(x, y, buf);
@@ -1779,18 +1831,18 @@ void draw_asteroid_field()
 			for (j=0; j<8; j++)
 				g3_rotate_vertex(&v[j], &p[j]);
 
-			g3_draw_line(&v[0], &v[1]);
-			g3_draw_line(&v[2], &v[3]);
-			g3_draw_line(&v[4], &v[5]);
-			g3_draw_line(&v[6], &v[7]);
-			g3_draw_line(&v[0], &v[2]);
-			g3_draw_line(&v[1], &v[3]);
-			g3_draw_line(&v[4], &v[6]);
-			g3_draw_line(&v[5], &v[7]);
-			g3_draw_line(&v[0], &v[4]);
-			g3_draw_line(&v[1], &v[5]);
-			g3_draw_line(&v[2], &v[6]);
-			g3_draw_line(&v[3], &v[7]);
+ 			g3_draw_line(&v[0], &v[1]);
+ 			g3_draw_line(&v[2], &v[3]);
+ 			g3_draw_line(&v[4], &v[5]);
+ 			g3_draw_line(&v[6], &v[7]);
+ 			g3_draw_line(&v[0], &v[2]);
+ 			g3_draw_line(&v[1], &v[3]);
+ 			g3_draw_line(&v[4], &v[6]);
+ 			g3_draw_line(&v[5], &v[7]);
+ 			g3_draw_line(&v[0], &v[4]);
+ 			g3_draw_line(&v[1], &v[5]);
+ 			g3_draw_line(&v[2], &v[6]);
+ 			g3_draw_line(&v[3], &v[7]);
 
 
 			// maybe draw inner box
@@ -1808,18 +1860,18 @@ void draw_asteroid_field()
 				for (j=0; j<8; j++)
 					g3_rotate_vertex(&iv[j], &ip[j]);
 
-				g3_draw_line(&iv[0], &iv[1]);
-				g3_draw_line(&iv[2], &iv[3]);
-				g3_draw_line(&iv[4], &iv[5]);
-				g3_draw_line(&iv[6], &iv[7]);
-				g3_draw_line(&iv[0], &iv[2]);
-				g3_draw_line(&iv[1], &iv[3]);
-				g3_draw_line(&iv[4], &iv[6]);
-				g3_draw_line(&iv[5], &iv[7]);
-				g3_draw_line(&iv[0], &iv[4]);
-				g3_draw_line(&iv[1], &iv[5]);
-				g3_draw_line(&iv[2], &iv[6]);
-				g3_draw_line(&iv[3], &iv[7]);
+ 				g3_draw_line(&iv[0], &iv[1]);
+ 				g3_draw_line(&iv[2], &iv[3]);
+ 				g3_draw_line(&iv[4], &iv[5]);
+ 				g3_draw_line(&iv[6], &iv[7]);
+ 				g3_draw_line(&iv[0], &iv[2]);
+ 				g3_draw_line(&iv[1], &iv[3]);
+ 				g3_draw_line(&iv[4], &iv[6]);
+ 				g3_draw_line(&iv[5], &iv[7]);
+ 				g3_draw_line(&iv[0], &iv[4]);
+ 				g3_draw_line(&iv[1], &iv[5]);
+ 				g3_draw_line(&iv[2], &iv[6]);
+ 				g3_draw_line(&iv[3], &iv[7]);
 			}
 
 		}

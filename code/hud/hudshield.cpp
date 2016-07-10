@@ -22,6 +22,7 @@
 #include "parse/parselo.h"
 #include "playerman/player.h"
 #include "render/3d.h"	//For g3_start_frame
+#include "render/render.h"
 #include "ship/ship.h"
 #include "weapon/emp.h"
 
@@ -393,7 +394,8 @@ void hud_show_mini_ship_integrity(object *objp, int x_force, int y_force)
 		hud_num_make_mono(text_integrity);
 	}	
 
-	gr_string(final_pos[0], final_pos[1], text_integrity);
+	//gr_string(final_pos[0], final_pos[1], text_integrity);
+	render_string(final_pos[0], final_pos[1], text_integrity);
 }
 
 // Draw the miniature shield icon that is drawn near the reticle
@@ -874,7 +876,8 @@ void HudGaugeShield::renderShieldIcon(coord2d coords[6])
 		coords[i].y += ny;
 	}
 
-	gr_shield_icon(coords);
+	//gr_shield_icon(coords);
+	render_shield_icon(coords);
 	gr_reset_screen_scale();
 }
 

@@ -36,56 +36,82 @@ static float GL_anim_timer = 0.0f;
 
 geometry_sdr_params *Current_geo_sdr_params = NULL;
 
+opengl_vert_attrib GL_vertex_attrib_info[] =
+{
+	{ opengl_vert_attrib::POSITION,		"vertPosition",		{ 0.0f, 0.0f, 0.0f, 1.0f } },
+	{ opengl_vert_attrib::COLOR,		"vertColor",		{ 1.0f, 1.0f, 1.0f, 1.0f } },
+	{ opengl_vert_attrib::TEXCOORD,		"vertTexCoord",		{ 1.0f, 1.0f, 1.0f, 1.0f } },
+	{ opengl_vert_attrib::NORMAL,		"vertNormal",		{ 0.0f, 0.0f, 1.0f, 0.0f } },
+	{ opengl_vert_attrib::TANGENT,		"vertTangent",		{ 1.0f, 0.0f, 0.0f, 0.0f } },
+	{ opengl_vert_attrib::MODEL_ID,		"vertModelID",		{ 0.0f, 0.0f, 0.0f, 0.0f } },
+	{ opengl_vert_attrib::RADIUS,		"vertRadius",		{ 1.0f, 0.0f, 0.0f, 0.0f } },
+	{ opengl_vert_attrib::UVEC,			"vertUvec",			{ 0.0f, 1.0f, 0.0f, 0.0f } }
+};
+
 /**
  * Static lookup reference for shader uniforms
  * When adding a new shader, list all associated uniforms and attributes here
  */
 static opengl_shader_type_t GL_shader_types[] = {
 	{ SDR_TYPE_MODEL, "main-v.sdr", "main-f.sdr", "main-g.sdr", {GL_TRIANGLES, GL_TRIANGLE_STRIP, 3}, 
-		0, {}, 0, {}, "Model Rendering" },
+		6, { "modelViewMatrix", "modelMatrix", "viewMatrix", "projMatrix", "textureMatrix", "color" }, 
+		5, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD, opengl_vert_attrib::NORMAL, opengl_vert_attrib::TANGENT, opengl_vert_attrib::MODEL_ID }, "Model Rendering" },
 
 	{ SDR_TYPE_EFFECT_PARTICLE, "effect-v.sdr", "effect-particle-f.sdr", "effect-screen-g.sdr", {GL_POINTS, GL_TRIANGLE_STRIP, 4}, 
-		9, { "baseMap", "depthMap", "window_width", "window_height", "nearZ", "farZ", "linear_depth", "srgb", "blend_alpha" }, 1, {"radius"}, "Particle Effects" },
+		11, { "modelViewMatrix", "projMatrix", "baseMap", "depthMap", "window_width", "window_height", "nearZ", "farZ", "linear_depth", "srgb", "blend_alpha" },
+		4, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD, opengl_vert_attrib::RADIUS, opengl_vert_attrib::COLOR }, "Particle Effects" },
 
 	{ SDR_TYPE_EFFECT_DISTORTION, "effect-distort-v.sdr", "effect-distort-f.sdr", 0, { 0, 0, 0 }, 
-		6, { "baseMap", "window_width", "window_height", "distMap", "frameBuffer", "use_offset" }, 1, { "radius" }, "Distortion Effects" },
+		8, { "modelViewMatrix", "projMatrix", "baseMap", "window_width", "window_height", "distMap", "frameBuffer", "use_offset" },
+		3, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD, opengl_vert_attrib::RADIUS, opengl_vert_attrib::COLOR }, "Distortion Effects" },
 
 	{ SDR_TYPE_POST_PROCESS_MAIN, "post-v.sdr", "post-f.sdr", 0, {0, 0, 0}, 
-		6, { "tex", "depth_tex", "timer", "bloomed", "bloom_intensity", "levels" }, 0, { NULL }, "Post Processing" },
+		6, { "tex", "depth_tex", "timer", "bloomed", "bloom_intensity", "levels" }, 
+		2, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD }, "Post Processing" },
 
 	{ SDR_TYPE_POST_PROCESS_BLUR, "post-v.sdr", "blur-f.sdr", 0, {0, 0, 0}, 
-		4, { "tex", "texSize", "level", "tapSize", "debug" }, 0, { NULL }, "Gaussian Blur" },
+		5, { "tex", "texSize", "level", "tapSize", "debug" }, 
+		2, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD }, "Gaussian Blur" },
 
 	{ SDR_TYPE_POST_PROCESS_BLOOM_COMP, "post-v.sdr", "bloom-comp-f.sdr", 0, {0, 0, 0}, 
-		3, { "bloomed", "bloom_intensity", "levels" }, 0, { NULL }, "Bloom Compositing" },
+		3, { "bloomed", "bloom_intensity", "levels" }, 
+		2, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD }, "Bloom Compositing" },
 
 	{ SDR_TYPE_POST_PROCESS_BRIGHTPASS, "post-v.sdr", "brightpass-f.sdr", 0, { 0, 0, 0 },
-		1, { "tex" }, 0, { NULL }, "Bloom Brightpass" },
+		1, { "tex" }, 
+		2, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD }, "Bloom Brightpass" },
 
 	{ SDR_TYPE_POST_PROCESS_FXAA, "fxaa-v.sdr", "fxaa-f.sdr", 0, {0, 0, 0}, 
-		3, { "tex0", "rt_w", "rt_h" }, 0, { NULL }, "FXAA" },
+		3, { "tex0", "rt_w", "rt_h" }, 
+		1, { opengl_vert_attrib::POSITION }, "FXAA" },
 
 	{ SDR_TYPE_POST_PROCESS_FXAA_PREPASS, "post-v.sdr", "fxaapre-f.sdr", 0, {0, 0, 0}, 
-		1, { "tex" }, 0, { NULL }, "FXAA Prepass" },
+		1, { "tex" }, 
+		2, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD }, "FXAA Prepass" },
 
 	{ SDR_TYPE_POST_PROCESS_LIGHTSHAFTS, "post-v.sdr", "ls-f.sdr", 0, {0, 0, 0}, 
-		8, { "scene", "cockpit", "sun_pos", "weight", "intensity", "falloff", "density", "cp_intensity" }, 0, { NULL }, "Lightshafts" },
+		8, { "scene", "cockpit", "sun_pos", "weight", "intensity", "falloff", "density", "cp_intensity" }, 
+		2, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD }, "Lightshafts" },
 
 	{ SDR_TYPE_POST_PROCESS_TONEMAPPING, "post-v.sdr", "tonemapping-f.sdr", 0, {0, 0, 0},
-		2, { "tex", "exposure" }, 0, { NULL }, "Tonemapping" },
+		2, { "tex", "exposure" }, 2, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD }, "Tonemapping" },
 
 	{ SDR_TYPE_DEFERRED_LIGHTING, "deferred-v.sdr", "deferred-f.sdr", 0, { 0, 0, 0 }, 
-		16, { "scale", "ColorBuffer", "NormalBuffer", "PositionBuffer", "SpecBuffer", "invScreenWidth", "invScreenHeight", "lightType", "lightRadius", "diffuseLightColor", 
-		"specLightColor", "dualCone", "coneDir", "coneAngle", "coneInnerAngle", "specFactor" }, 0, { NULL }, "Deferred Lighting" },
+		18, { "modelViewMatrix", "projMatrix", "scale", "ColorBuffer", "NormalBuffer", "PositionBuffer", "SpecBuffer", "invScreenWidth", "invScreenHeight", "lightType", "lightRadius", 
+		"diffuseLightColor", "specLightColor", "dualCone", "coneDir", "coneAngle", "coneInnerAngle", "specFactor" }, 
+		1, { opengl_vert_attrib::POSITION }, "Deferred Lighting" },
 	
 	{ SDR_TYPE_DEFERRED_CLEAR, "deferred-clear-v.sdr", "deferred-clear-f.sdr", 0, {0, 0, 0}, 
-		0, { NULL }, 0, { NULL }, "Clear Deferred Lighting Buffer" },
+		0, { NULL }, 
+		1, { opengl_vert_attrib::POSITION }, "Clear Deferred Lighting Buffer" },
 
 	{ SDR_TYPE_VIDEO_PROCESS, "video-v.sdr", "video-f.sdr", 0, {0, 0, 0}, 
-		3, { "ytex", "utex", "vtex" }, 0, { NULL }, "Video Playback" },
+		5, { "modelViewMatrix", "projMatrix", "ytex", "utex", "vtex" },
+		2, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD }, "Video Playback" },
 
-	{ SDR_TYPE_PASSTHROUGH_RENDER, "passthrough-v.sdr", "passthrough-f.sdr", 0, { 0, 0, 0 },
-		5, { "baseMap", "noTexturing", "alphaTexture", "srgb", "intensity" }, 0, { NULL }, "Passthrough" }
+	{ SDR_TYPE_PASSTHROUGH_RENDER, "passthrough-v.sdr", "passthrough-f.sdr", 0,{ 0, 0, 0 },
+		9, { "modelViewMatrix", "projMatrix", "baseMap", "noTexturing", "alphaTexture", "srgb", "intensity", "color", "alphaThreshold" },
+		3, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD, opengl_vert_attrib::COLOR }, "Passthrough" }
 };
 
 /**
@@ -94,89 +120,99 @@ static opengl_shader_type_t GL_shader_types[] = {
  */
 static opengl_shader_variant_t GL_shader_variants[] = {
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_LIGHT, "FLAG_LIGHT", 
-		3, { "n_lights", "light_factor", "defaultGloss" }, 0, { NULL }, 
+		11, { "n_lights", "lightPosition", "lightDirection", "lightDiffuseColor", "lightSpecColor", "lightType", "lightAttenuation", "ambientFactor", "diffuseFactor", "emissionFactor", "defaultGloss" }, 0, {  },
 		"Lighting" },
 
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_FOG, "FLAG_FOG", 
-		0, { NULL }, 0, { NULL }, 
+		3, { "fogStart", "fogScale", "fogColor" }, 0, {  }, 
 		"Fog Effect" },
 
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_DIFFUSE_MAP, "FLAG_DIFFUSE_MAP", 
-		6, { "sBasemap", "desaturate", "desaturate_clr", "blend_alpha", "overrideDiffuse", "diffuseClr" }, 0, { NULL }, 
+		6, { "sBasemap", "desaturate", "desaturate_clr", "blend_alpha", "overrideDiffuse", "diffuseClr" }, 0, {  }, 
 		"Diffuse Mapping" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_GLOW_MAP, "FLAG_GLOW_MAP", 
-		3, { "sGlowmap", "overrideGlow", "glowClr" }, 0, { NULL }, 
+		3, { "sGlowmap", "overrideGlow", "glowClr" }, 0, {  }, 
 		"Glow Mapping" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_SPEC_MAP, "FLAG_SPEC_MAP", 
-		5, { "sSpecmap", "overrideSpec", "specClr", "gammaSpec", "alphaGloss" }, 0, { NULL }, 
+		5, { "sSpecmap", "overrideSpec", "specClr", "gammaSpec", "alphaGloss" }, 0, {  }, 
 		"Specular Mapping" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_NORMAL_MAP, "FLAG_NORMAL_MAP", 
-		1, { "sNormalmap" }, 0, { NULL }, 
+		1, { "sNormalmap" }, 0, {  }, 
 		"Normal Mapping" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_HEIGHT_MAP, "FLAG_HEIGHT_MAP", 
-		1, { "sHeightmap" }, 0, { NULL }, 
+		1, { "sHeightmap" }, 0, {  }, 
 		"Parallax Mapping" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_ENV_MAP, "FLAG_ENV_MAP", 
-		3, { "sEnvmap", "envGloss", "envMatrix" }, 0, { NULL }, 
+		3, { "sEnvmap", "envGloss", "envMatrix" }, 0, {  }, 
 		"Environment Mapping" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_ANIMATED, "FLAG_ANIMATED", 
-		5, { "sFramebuffer", "effect_num", "anim_timer", "vpwidth", "vpheight" }, 0, { NULL }, 
+		5, { "sFramebuffer", "effect_num", "anim_timer", "vpwidth", "vpheight" }, 0, {  }, 
 		"Animated Effects" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_MISC_MAP, "FLAG_MISC_MAP", 
-		1, { "sMiscmap" }, 0, { NULL }, 
+		1, { "sMiscmap" }, 0, {  }, 
 		"Utility mapping" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_TEAMCOLOR, "FLAG_TEAMCOLOR", 
-		3, { "stripe_color", "base_color", "team_glow_enabled" }, 0, { NULL }, 
+		3, { "stripe_color", "base_color", "team_glow_enabled" }, 0, {  }, 
 		"Team Colors" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_DEFERRED, "FLAG_DEFERRED", 
-		0, { NULL }, 0, { NULL }, 
+		0, { NULL }, 0, {  }, 
 		"Deferred lighting" },
 	
 	{ SDR_TYPE_MODEL, true, SDR_FLAG_MODEL_SHADOW_MAP, "FLAG_SHADOW_MAP", 
-		1, { "shadow_proj_matrix" }, 0, { NULL }, 
+		1, { "shadow_proj_matrix" }, 0, {  }, 
 		"Shadow Mapping" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_SHADOWS, "FLAG_SHADOWS", 
-		8, { "shadow_map", "shadow_mv_matrix", "shadow_proj_matrix", "model_matrix", "veryneardist", "neardist", "middist", "fardist" }, 0, { NULL }, 
+		7, { "shadow_map", "shadow_mv_matrix", "shadow_proj_matrix", "veryneardist", "neardist", "middist", "fardist" }, 0, { }, 
 		"Shadows" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_THRUSTER, "FLAG_THRUSTER", 
-		1, { "thruster_scale" }, 0, { NULL }, 
+		1, { "thruster_scale" }, 0, {  }, 
 		"Thruster scaling" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_TRANSFORM, "FLAG_TRANSFORM", 
-		2, { "transform_tex", "buffer_matrix_offset" }, 1, { "model_id" }, 
+		2, { "transform_tex", "buffer_matrix_offset" }, 0, {  }, 
 		"Submodel Transforms" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_CLIP, "FLAG_CLIP", 
-		4, { "use_clip_plane", "world_matrix", "clip_normal", "clip_position" }, 0, { NULL }, 
+		3, { "use_clip_plane", "clip_normal", "clip_position" }, 0, {  }, 
 		"Clip Plane" },
 
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_HDR, "FLAG_HDR",
-		0, { NULL }, 0, { NULL}, "High Dynamic Range" },
+		0, { NULL }, 0, {  }, 
+		"High Dynamic Range" },
 
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_AMBIENT_MAP, "FLAG_AMBIENT_MAP",
-		1, { "sAmbientmap" }, 0, { NULL }, "Ambient Occlusion Map" },
+		1, { "sAmbientmap" }, 0, {  }, 
+		"Ambient Occlusion Map" },
 	
+	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_NORMAL_ALPHA, "FLAG_NORMAL_ALPHA",
+		1, { "normalAlphaMinMax" }, 0, { },
+		"Normal Alpha" },
+
+	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_NORMAL_EXTRUDE, "FLAG_NORMAL_EXTRUDE",
+		1, { "extrudeWidth" }, 0, { },
+		"Normal Extrusion" },
+
 	{ SDR_TYPE_EFFECT_PARTICLE, true, SDR_FLAG_PARTICLE_POINT_GEN, "FLAG_EFFECT_GEOMETRY", 
-		0, { NULL }, 1, { "uvec" },
+		0, { NULL }, 1, { opengl_vert_attrib::UVEC },
 		"Geometry shader point-based particles" },
 	
 	{ SDR_TYPE_POST_PROCESS_BLUR, false, SDR_FLAG_BLUR_HORIZONTAL, "PASS_0", 
-		0, { NULL }, 0, { NULL },
+		0, { NULL }, 0, {  },
 		"Horizontal blur pass" },
 	
 	{ SDR_TYPE_POST_PROCESS_BLUR, false, SDR_FLAG_BLUR_VERTICAL, "PASS_1", 
-		0, { NULL }, 0, { NULL },
+		0, { NULL }, 0, {  },
 		"Vertical blur pass" }
 };
 
@@ -185,8 +221,8 @@ static const int GL_num_shader_variants = sizeof(GL_shader_variants) / sizeof(op
 opengl_shader_t *Current_shader = NULL;
 
 // Forward declarations
-GLhandleARB opengl_shader_create(const SCP_vector<SCP_string>& vs, const SCP_vector<SCP_string>& fs, const SCP_vector<SCP_string>& gs);
-void opengl_shader_check_info_log(GLhandleARB shader_object);
+GLuint opengl_shader_create(const SCP_vector<SCP_string>& vs, const SCP_vector<SCP_string>& fs, const SCP_vector<SCP_string>& gs);
+void opengl_shader_check_program_info_log(GLuint shader_object);
 
 /**
  * Set the currently active shader 
@@ -196,18 +232,19 @@ void opengl_shader_set_current(opengl_shader_t *shader_obj)
 {
 	if (shader_obj != NULL) {
 		if(!Current_shader || (Current_shader->program_id != shader_obj->program_id)) {
+			GL_state.Array.ResetVertexAttribs();
+			GL_state.Uniform.reset();
 			Current_shader = shader_obj;
 			vglUseProgramObjectARB(Current_shader->program_id);
-			GL_state.Uniform.reset();
 #ifndef NDEBUG
 			if ( opengl_check_for_errors("shader_set_current()") ) {
 				vglValidateProgramARB(Current_shader->program_id);
 
 				GLint obj_status = 0;
-				vglGetObjectParameterivARB(Current_shader->program_id, GL_OBJECT_VALIDATE_STATUS_ARB, &obj_status);
+				vglGetProgramiv(Current_shader->program_id, GL_OBJECT_VALIDATE_STATUS_ARB, &obj_status);
 
 				if ( !obj_status ) {
-					opengl_shader_check_info_log(Current_shader->program_id);
+					opengl_shader_check_program_info_log(Current_shader->program_id);
 	
 					mprintf(("VALIDATE INFO-LOG:\n"));
 
@@ -221,6 +258,8 @@ void opengl_shader_set_current(opengl_shader_t *shader_obj)
 #endif
 		}
 	} else {
+		GL_state.Array.ResetVertexAttribs();
+		GL_state.Uniform.reset();
 		Current_shader = NULL;
 		vglUseProgramObjectARB(0);
 	}
@@ -308,7 +347,7 @@ void opengl_shader_shutdown()
 	}
 }
 
-static SCP_string get_shader_header(shader_type type_id, int flags) {
+static SCP_string get_shader_header(shader_type type_id, int flags, shader_stage stage) {
 	SCP_stringstream sflags;
 
 #ifdef __APPLE__
@@ -316,6 +355,51 @@ static SCP_string get_shader_header(shader_type type_id, int flags) {
     sflags << "#extension GL_ARB_shader_texture_lod : enable\n";
 	sflags << "#define APPLE\n";
 #endif
+
+	// apply different macros for differing GLSL versions
+	if ( GL_version >= 32 && GLSL_version >= 150 ) {
+		if ( stage == SDR_STAGE_VERTEX ) {
+			sflags << "#version 150\n";
+			sflags << "#define vertIn in\n";
+			sflags << "#define vertOut out\n";
+			sflags << "#define tex2D texture\n";
+			sflags << "#define tex2DLod textureLod\n";
+			sflags << "#define texCube texture\n";
+			sflags << "#define tex2DArray texture\n";
+		} else if ( stage == SDR_STAGE_FRAGMENT ) {
+			sflags << "#version 150\n";
+			sflags << "#define fragIn in\n";
+			sflags << "#define tex2D texture\n";
+			sflags << "#define tex2DLod textureLod\n";
+			sflags << "#define texCube texture\n";
+			sflags << "#define tex2DArray texture\n";
+			sflags << "out vec4 fragOut0;\n";
+			sflags << "out vec4 fragOut1;\n";
+			sflags << "out vec4 fragOut2;\n";
+			sflags << "out vec4 fragOut3;\n";
+			sflags << "out vec4 fragOut4;\n";
+		}
+	} else {
+		if ( stage == SDR_STAGE_VERTEX ) {
+			sflags << "#define vertIn attribute\n";
+			sflags << "#define vertOut varying\n";
+			sflags << "#define tex2D texture2D\n";
+			sflags << "#define tex2DLod texture2DLod\n";
+			sflags << "#define texCube textureCube\n";
+			sflags << "#define tex2DArray texture2DArray\n";
+		} else {
+			sflags << "#define fragIn varying\n";
+			sflags << "#define tex2D texture2D\n";
+			sflags << "#define tex2DLod texture2DLod\n";
+			sflags << "#define texCube textureCube\n";
+			sflags << "#define tex2DArray texture2DArray\n";
+			sflags << "#define fragOut0 gl_FragData[0]\n";
+			sflags << "#define fragOut1 gl_FragData[1]\n";
+			sflags << "#define fragOut2 gl_FragData[2]\n";
+			sflags << "#define fragOut3 gl_FragData[3]\n";
+			sflags << "#define fragOut4 gl_FragData[4]\n";
+		}
+	}
 
 	if (type_id == SDR_TYPE_POST_PROCESS_MAIN || type_id == SDR_TYPE_POST_PROCESS_LIGHTSHAFTS || type_id == SDR_TYPE_POST_PROCESS_FXAA) {
 		// ignore looking for variants. main post process, lightshafts, and FXAA shaders need special headers to be hacked in
@@ -369,9 +453,9 @@ static SCP_string opengl_load_shader(const char *filename)
 	return content;
 }
 
-static SCP_vector<SCP_string> opengl_get_shader_content(shader_type type_id, const char* filename, int flags) {
+static SCP_vector<SCP_string> opengl_get_shader_content(shader_type type_id, const char* filename, int flags, shader_stage stage) {
 	SCP_vector<SCP_string> parts;
-	parts.push_back(get_shader_header(type_id, flags));
+	parts.push_back(get_shader_header(type_id, flags, stage));
 
 	parts.push_back(opengl_load_shader(filename));
 
@@ -395,6 +479,7 @@ int opengl_compile_shader(shader_type sdr, uint flags)
 
 	opengl_shader_type_t *sdr_info = &GL_shader_types[sdr];
 
+	Assert(sdr_info->type_id == sdr);
 	mprintf(("Compiling new shader:\n"));
 	mprintf(("	%s\n", sdr_info->description));
 
@@ -413,17 +498,17 @@ int opengl_compile_shader(shader_type sdr, uint flags)
 		}
 	}
 
-	auto vertex_content = opengl_get_shader_content(sdr_info->type_id, sdr_info->vert, flags);
-	auto fragment_content = opengl_get_shader_content(sdr_info->type_id, sdr_info->frag, flags);
+	auto vertex_content = opengl_get_shader_content(sdr_info->type_id, sdr_info->vert, flags, SDR_STAGE_VERTEX);
+	auto fragment_content = opengl_get_shader_content(sdr_info->type_id, sdr_info->frag, flags, SDR_STAGE_FRAGMENT);
 	SCP_vector<SCP_string> geom_content;
 
 	if ( use_geo_sdr ) {
-		if (!Is_Extension_Enabled(OGL_EXT_GEOMETRY_SHADER4)) {
+		if ( GL_version < 32 ) {
 			return -1;
 		}
 
 		// read geometry shader
-		geom_content = opengl_get_shader_content(sdr_info->type_id, sdr_info->geo, flags);
+		geom_content = opengl_get_shader_content(sdr_info->type_id, sdr_info->geo, flags, SDR_STAGE_GEOMETRY);
 
 		Current_geo_sdr_params = &sdr_info->geo_sdr_info;
 	}
@@ -439,13 +524,22 @@ int opengl_compile_shader(shader_type sdr, uint flags)
 
 	opengl_shader_set_current(&new_shader);
 
+	// bind fragment data locations
+	if ( GL_version >= 32 && GLSL_version >= 150 ) {
+		vglBindFragDataLocation(new_shader.program_id, 0, "fragOut0");
+		vglBindFragDataLocation(new_shader.program_id, 1, "fragOut1");
+		vglBindFragDataLocation(new_shader.program_id, 2, "fragOut2");
+		vglBindFragDataLocation(new_shader.program_id, 3, "fragOut3");
+		vglBindFragDataLocation(new_shader.program_id, 4, "fragOut4");
+	}
+
 	// initialize uniforms and attributes
 	for ( int i = 0; i < sdr_info->num_uniforms; ++i ) {
 		opengl_shader_init_uniform( sdr_info->uniforms[i] );
 	}
 
 	for (int i = 0; i < sdr_info->num_attributes; ++i) {
-		opengl_shader_init_attribute(sdr_info->attributes[i]);
+		opengl_shader_init_attribute(&GL_vertex_attrib_info[sdr_info->attributes[i]]);
 	}
 
 	// if this shader is POST_PROCESS_MAIN, hack in the user-defined flags
@@ -465,7 +559,7 @@ int opengl_compile_shader(shader_type sdr, uint flags)
 			}
 
 			for (int j = 0; j < variant.num_attributes; ++j) {
-				opengl_shader_init_attribute(variant.attributes[j]);
+				opengl_shader_init_attribute(&GL_vertex_attrib_info[variant.attributes[j]]);
 			}
 
 			mprintf(("	%s\n", variant.description));
@@ -536,6 +630,8 @@ void opengl_shader_init()
 	opengl_shader_compile_passthrough_shader();
 
 	mprintf(("\n"));
+
+	opengl_shader_compile_passthrough_shader();
 }
 
 /**
@@ -543,7 +639,7 @@ void opengl_shader_init()
  *
  * @param shader_object		OpenGL handle of a shader object
  */
-void opengl_shader_check_info_log(GLhandleARB shader_object)
+void opengl_shader_check_shader_info_log(GLuint shader_object)
 {
 	if (GLshader_info_log == NULL) {
 		GLshader_info_log = (char *) vm_malloc(GLshader_info_log_size);
@@ -551,7 +647,23 @@ void opengl_shader_check_info_log(GLhandleARB shader_object)
 
 	memset(GLshader_info_log, 0, GLshader_info_log_size);
 
-	vglGetInfoLogARB(shader_object, GLshader_info_log_size-1, 0, GLshader_info_log);
+	vglGetShaderInfoLogARB(shader_object, GLshader_info_log_size-1, 0, GLshader_info_log);
+}
+
+/**
+* Retrieve the compilation log for a given program object, and store it in the GLshader_info_log global variable
+*
+* @param program_object		OpenGL handle of a program object
+*/
+void opengl_shader_check_program_info_log(GLuint program_object)
+{
+	if ( GLshader_info_log == NULL ) {
+		GLshader_info_log = (char *)vm_malloc(GLshader_info_log_size);
+	}
+
+	memset(GLshader_info_log, 0, GLshader_info_log_size);
+
+	vglGetProgramInfoLogARB(program_object, GLshader_info_log_size - 1, 0, GLshader_info_log);
 }
 
 /**
@@ -563,9 +675,9 @@ void opengl_shader_check_info_log(GLhandleARB shader_object)
  * @param shader_type		OpenGL ID for the type of shader being used, like GL_FRAGMENT_SHADER_ARB, GL_VERTEX_SHADER_ARB
  * @return 					OpenGL handle for the compiled shader object
  */
-GLhandleARB opengl_shader_compile_object(const SCP_vector<SCP_string>& shader_source, GLenum shader_type)
+GLuint opengl_shader_compile_object(const SCP_vector<SCP_string>& shader_source, GLenum shader_type)
 {
-	GLhandleARB shader_object = 0;
+	GLuint shader_object = 0;
 	GLint status = 0;
 
 	SCP_vector<const GLcharARB*> sources;
@@ -580,9 +692,9 @@ GLhandleARB opengl_shader_compile_object(const SCP_vector<SCP_string>& shader_so
 	vglCompileShaderARB(shader_object);
 
 	// check if the compile was successful
-	vglGetObjectParameterivARB(shader_object, GL_OBJECT_COMPILE_STATUS_ARB, &status);
+	vglGetShaderiv(shader_object, GL_COMPILE_STATUS, &status);
 
-	opengl_shader_check_info_log(shader_object);
+	opengl_shader_check_shader_info_log(shader_object);
 
 	// we failed, bail out now...
 	if (status == 0) {
@@ -616,9 +728,9 @@ GLhandleARB opengl_shader_compile_object(const SCP_vector<SCP_string>& shader_so
  * @param geometry_object	Compiled geometry shader object
  * @return			Shader executable
  */
-GLhandleARB opengl_shader_link_object(GLhandleARB vertex_object, GLhandleARB fragment_object, GLhandleARB geometry_object)
+GLuint opengl_shader_link_object(GLuint vertex_object, GLuint fragment_object, GLuint geometry_object)
 {
-	GLhandleARB shader_object = 0;
+	GLuint shader_object = 0;
 	GLint status = 0;
 
 	shader_object = vglCreateProgramObjectARB();
@@ -633,25 +745,19 @@ GLhandleARB opengl_shader_link_object(GLhandleARB vertex_object, GLhandleARB fra
 
 	if (geometry_object) {
 		vglAttachObjectARB(shader_object, geometry_object);
-		
-		if ( Current_geo_sdr_params != NULL) {
-#ifdef __APPLE__
-			vglProgramParameteriEXT((long)shader_object, GL_GEOMETRY_INPUT_TYPE_EXT, Current_geo_sdr_params->input_type);
-			vglProgramParameteriEXT((long)shader_object, GL_GEOMETRY_OUTPUT_TYPE_EXT, Current_geo_sdr_params->output_type);
-			vglProgramParameteriEXT((long)shader_object, GL_GEOMETRY_VERTICES_OUT_EXT, Current_geo_sdr_params->vertices_out);
-#else
-			vglProgramParameteriEXT((GLuint)shader_object, GL_GEOMETRY_INPUT_TYPE_EXT, Current_geo_sdr_params->input_type);
-			vglProgramParameteriEXT((GLuint)shader_object, GL_GEOMETRY_OUTPUT_TYPE_EXT, Current_geo_sdr_params->output_type);
-			vglProgramParameteriEXT((GLuint)shader_object, GL_GEOMETRY_VERTICES_OUT_EXT, Current_geo_sdr_params->vertices_out);
-#endif
-		}
 	}
+
+	for ( int i = 0; i < opengl_vert_attrib::NUM_ATTRIBS; ++i ) {
+		// assign vert attribute binding locations before we link the shader
+		vglBindAttribLocationARB(shader_object, i, GL_vertex_attrib_info[i].name.c_str());
+	}
+
 	vglLinkProgramARB(shader_object);
 
 	// check if the link was successful
-	vglGetObjectParameterivARB(shader_object, GL_OBJECT_LINK_STATUS_ARB, &status);
+	vglGetProgramiv(shader_object, GL_LINK_STATUS, &status);
 
-	opengl_shader_check_info_log(shader_object);
+	opengl_shader_check_program_info_log(shader_object);
 
 	// we failed, bail out now...
 	if (status == 0) {
@@ -680,15 +786,15 @@ GLhandleARB opengl_shader_link_object(GLhandleARB vertex_object, GLhandleARB fra
  * @param gs	Geometry shader source code
  * @return 	Internal ID of compiled and linked shader generated by OpenGL
  */
-GLhandleARB opengl_shader_create(const SCP_vector<SCP_string>& vs, const SCP_vector<SCP_string>& fs, const SCP_vector<SCP_string>& gs)
+GLuint opengl_shader_create(const SCP_vector<SCP_string>& vs, const SCP_vector<SCP_string>& fs, const SCP_vector<SCP_string>& gs)
 {
-	GLhandleARB vs_o = 0;
-	GLhandleARB fs_o = 0;
-	GLhandleARB gs_o = 0;
-	GLhandleARB program = 0;
+	GLuint vs_o = 0;
+	GLuint fs_o = 0;
+	GLuint gs_o = 0;
+	GLuint program = 0;
 
 	if (!vs.empty()) {
-		vs_o = opengl_shader_compile_object( vs, GL_VERTEX_SHADER_ARB );
+		vs_o = opengl_shader_compile_object( vs, GL_VERTEX_SHADER );
 
 		if ( !vs_o ) {
 			mprintf(("ERROR! Unable to create vertex shader!\n"));
@@ -697,7 +803,7 @@ GLhandleARB opengl_shader_create(const SCP_vector<SCP_string>& vs, const SCP_vec
 	}
 
 	if (!fs.empty()) {
-		fs_o = opengl_shader_compile_object( fs, GL_FRAGMENT_SHADER_ARB );
+		fs_o = opengl_shader_compile_object( fs, GL_FRAGMENT_SHADER );
 
 		if ( !fs_o ) {
 			mprintf(("ERROR! Unable to create fragment shader!\n"));
@@ -706,7 +812,7 @@ GLhandleARB opengl_shader_create(const SCP_vector<SCP_string>& vs, const SCP_vec
 	}
 
 	if (!gs.empty()) {
-		gs_o = opengl_shader_compile_object( gs, GL_GEOMETRY_SHADER_EXT );
+		gs_o = opengl_shader_compile_object( gs, GL_GEOMETRY_SHADER );
 
 		if ( !gs_o ) {
 			mprintf(("ERROR! Unable to create fragment shader!\n"));
@@ -741,24 +847,33 @@ Done:
  *
  * @param attribute_text	Name of the attribute to be initialized
  */
-void opengl_shader_init_attribute(const char *attribute_text)
+void opengl_shader_init_attribute(const opengl_vert_attrib *attrib_info)
 {
 	opengl_shader_uniform_t new_attribute;
 
-	if ( ( Current_shader == NULL ) || ( attribute_text == NULL ) ) {
+	if ( (Current_shader == NULL) || attrib_info->name.empty() ) {
 		Int3();
 		return;
 	}
 
-	new_attribute.text_id = attribute_text;
-	new_attribute.location = vglGetAttribLocationARB(Current_shader->program_id, attribute_text);
+	new_attribute.text_id = attrib_info->name;
+	new_attribute.location = vglGetAttribLocationARB(Current_shader->program_id, attrib_info->name.c_str());
 
 	if ( new_attribute.location < 0 ) {
-		nprintf(("SHADER-DEBUG", "WARNING: Unable to get shader attribute location for \"%s\"!\n", attribute_text));
+		nprintf(("SHADER-DEBUG", "WARNING: Unable to get shader attribute location for \"%s\"!\n", attrib_info->name.c_str()));
 		return;
 	}
 
-	Current_shader->attributes.push_back( new_attribute );
+	// assign default value to vertex attribute
+	vglVertexAttrib4fARB(
+		new_attribute.location,
+		attrib_info->default_value.xyzw.x,
+		attrib_info->default_value.xyzw.y,
+		attrib_info->default_value.xyzw.z,
+		attrib_info->default_value.xyzw.w
+	);
+
+	Current_shader->attributes.push_back(new_attribute);
 }
 
 /**
@@ -918,7 +1033,7 @@ float opengl_shader_get_animated_timer()
 }
 
 /**
- * Compile the deferred light shader.
+ * Compile the deferred light shader and the clear shader.
  */
 void opengl_shader_compile_deferred_light_shader()
 {
@@ -953,9 +1068,6 @@ void opengl_shader_compile_deferred_light_shader()
 	}
 }
 
-/**
-* Compile the deferred light clear shader.
-*/
 void opengl_shader_compile_passthrough_shader()
 {
 	bool in_error = false;
@@ -964,7 +1076,7 @@ void opengl_shader_compile_passthrough_shader()
 
 	int sdr_handle = gr_opengl_maybe_create_shader(SDR_TYPE_PASSTHROUGH_RENDER, 0);
 
-	if (sdr_handle >= 0) {
+	if ( sdr_handle >= 0 ) {
 		opengl_shader_set_current(sdr_handle);
 
 		//Hardcoded Uniforms
@@ -974,42 +1086,54 @@ void opengl_shader_compile_passthrough_shader()
 		GL_state.Uniform.setUniformi("srgb", 0);
 	} else {
 		opengl_shader_set_current();
-		mprintf(("Failed to compile deferred lighting shader!\n"));
+		mprintf(("Failed to compile passthrough shader!\n"));
 		in_error = true;
 	}
 
-	if (in_error) {
+	if ( in_error ) {
 		mprintf(("  Shader in_error! Passthrough shader unavailable!\n"));
 	}
 
 	opengl_shader_set_current();
 }
 
-void opengl_shader_set_passthrough(bool textured, bool alpha, float color_scale)
+void opengl_shader_set_passthrough(bool textured, bool alpha, color *clr, float color_scale)
 {
 	if ( !is_minimum_GLSL_version() ) {
+		opengl_shader_set_current();
 		return;
 	}
 
 	opengl_shader_set_current(gr_opengl_maybe_create_shader(SDR_TYPE_PASSTHROUGH_RENDER, 0));
 
-	if (textured) {
+	if ( textured ) {
 		GL_state.Uniform.setUniformi("noTexturing", 0);
 	} else {
 		GL_state.Uniform.setUniformi("noTexturing", 1);
 	}
 
-	if (alpha) {
+	if ( alpha ) {
 		GL_state.Uniform.setUniformi("alphaTexture", 1);
 	} else {
 		GL_state.Uniform.setUniformi("alphaTexture", 0);
 	}
 
-	if (High_dynamic_range) {
-		GL_state.Uniform.setUniformi("srgb", 1);
-	} else {
-		GL_state.Uniform.setUniformi("srgb", 0);
-	}
+ 	if ( High_dynamic_range ) {
+ 		GL_state.Uniform.setUniformi("srgb", 1);
+ 	} else {
+ 		GL_state.Uniform.setUniformi("srgb", 0);
+ 	}
 
 	GL_state.Uniform.setUniformf("intensity", color_scale);
+
+	GL_state.Uniform.setUniformf("alphaThreshold", GL_alpha_threshold);
+
+	if ( clr != NULL ) {
+		GL_state.Uniform.setUniform4f("color", i2fl(clr->red) / 255.0f, i2fl(clr->green) / 255.0f, i2fl(clr->blue) / 255.0f, i2fl(clr->alpha) / 255.0f);
+	} else {
+		GL_state.Uniform.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	}
+
+	GL_state.Uniform.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
+	GL_state.Uniform.setUniformMatrix4f("projMatrix", GL_projection_matrix);
 }

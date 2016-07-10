@@ -12,6 +12,7 @@
 #include "globalincs/alphacolors.h"
 #include "ui/ui.h"
 #include "ui/uidefs.h"
+#include "render/render.h"
 
 void UI_CHECKBOX::create(UI_WINDOW *wnd, char *_text, int _x, int _y, int _state )
 {
@@ -51,14 +52,16 @@ void UI_CHECKBOX::draw()
 		if ( disabled_flag ) {
 			if ( flag ) {
 				if ( bmap_ids[CBOX_DISABLED_MARKED] != -1 ) {
-					gr_set_bitmap(bmap_ids[CBOX_DISABLED_MARKED]);
-					gr_bitmap(x,y,GR_RESIZE_MENU);
+					//gr_set_bitmap(bmap_ids[CBOX_DISABLED_MARKED]);
+					//gr_bitmap(x,y,GR_RESIZE_MENU);
+					render_bitmap(bmap_ids[CBOX_DISABLED_MARKED], x, y, GR_RESIZE_MENU);
 				}
 			}
 			else {
 				if ( bmap_ids[CBOX_DISABLED_CLEAR] != -1 ) {
-					gr_set_bitmap(bmap_ids[CBOX_DISABLED_CLEAR]);
-					gr_bitmap(x,y,GR_RESIZE_MENU);
+					//gr_set_bitmap(bmap_ids[CBOX_DISABLED_CLEAR]);
+					//gr_bitmap(x,y,GR_RESIZE_MENU);
+					render_bitmap(bmap_ids[CBOX_DISABLED_CLEAR], x, y, GR_RESIZE_MENU);
 				}
 			}
 		}
@@ -66,28 +69,32 @@ void UI_CHECKBOX::draw()
 			if ( position == 0 )	{	// up
 				if ( flag ) {			// marked
 					if ( bmap_ids[CBOX_UP_MARKED] != -1 ) {
-						gr_set_bitmap(bmap_ids[CBOX_UP_MARKED]);
-						gr_bitmap(x,y,GR_RESIZE_MENU);
+						//gr_set_bitmap(bmap_ids[CBOX_UP_MARKED]);
+						//gr_bitmap(x,y,GR_RESIZE_MENU);
+						render_bitmap(bmap_ids[CBOX_UP_MARKED], x, y, GR_RESIZE_MENU);
 					}
 				}
 				else {					// not marked
 					if ( bmap_ids[CBOX_UP_CLEAR] != -1 ) {
-						gr_set_bitmap(bmap_ids[CBOX_UP_CLEAR]);
-						gr_bitmap(x,y,GR_RESIZE_MENU);
+						//gr_set_bitmap(bmap_ids[CBOX_UP_CLEAR]);
+						//gr_bitmap(x,y,GR_RESIZE_MENU);
+						render_bitmap(bmap_ids[CBOX_UP_CLEAR], x, y, GR_RESIZE_MENU);
 					}
 				}
 			}
 			else {						// down 
 				if ( flag ) {			// marked
 					if ( bmap_ids[CBOX_DOWN_MARKED] != -1 ) {
-						gr_set_bitmap(bmap_ids[CBOX_DOWN_MARKED]);
-						gr_bitmap(x,y,GR_RESIZE_MENU);
+						//gr_set_bitmap(bmap_ids[CBOX_DOWN_MARKED]);
+						//gr_bitmap(x,y,GR_RESIZE_MENU);
+						render_bitmap(bmap_ids[CBOX_DOWN_MARKED], x, y, GR_RESIZE_MENU);
 					}
 				}
 				else {					// not marked
 					if ( bmap_ids[CBOX_DOWN_CLEAR] != -1 ) {
-						gr_set_bitmap(bmap_ids[CBOX_DOWN_CLEAR]);
-						gr_bitmap(x,y,GR_RESIZE_MENU);
+						//gr_set_bitmap(bmap_ids[CBOX_DOWN_CLEAR]);
+						//gr_bitmap(x,y,GR_RESIZE_MENU);
+						render_bitmap(bmap_ids[CBOX_DOWN_CLEAR], x, y, GR_RESIZE_MENU);
 					}
 				}
 			}
@@ -120,7 +127,8 @@ void UI_CHECKBOX::draw()
 
 		if (text) {
 			gr_reset_clip();
-			gr_string( x+w+4, y+2, text, GR_RESIZE_MENU );
+			//gr_string( x+w+4, y+2, text, GR_RESIZE_MENU );
+			render_string( x+w+4, y+2, text, GR_RESIZE_MENU );
 		}
 	}
 }

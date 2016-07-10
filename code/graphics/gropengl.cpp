@@ -30,6 +30,7 @@
 #include "osapi/osregistry.h"
 #include "palman/palman.h"
 #include "render/3d.h"
+#include "render/render.h"
 
 
 #if defined(_WIN32)
@@ -88,6 +89,8 @@ static int GL_mouse_saved_y1 = 0;
 static int GL_mouse_saved_x2 = 0;
 static int GL_mouse_saved_y2 = 0;
 
+float GL_alpha_threshold = 0.0f;
+
 void opengl_save_mouse_area(int x, int y, int w, int h);
 
 extern const char *Osreg_title;
@@ -106,6 +109,7 @@ static int GL_minimized = 0;
 
 static GLenum GL_read_format = GL_BGRA;
 
+static GLuint GL_vao = 0;
 
 void opengl_go_fullscreen()
 {
@@ -349,8 +353,9 @@ void gr_opengl_flip()
 	//	opengl_save_mouse_area(mx, my, Gr_cursor_size, Gr_cursor_size);
 
 		if (Gr_cursor != -1 && bm_is_valid(Gr_cursor)) {
-			gr_set_bitmap(Gr_cursor);
-			gr_bitmap( mx, my, GR_RESIZE_NONE);
+			//gr_set_bitmap(Gr_cursor);
+			//gr_bitmap( mx, my, GR_RESIZE_NONE);
+			render_bitmap(Gr_cursor, mx, my, GR_RESIZE_NONE);
 		}
 	}
 
@@ -363,6 +368,7 @@ void gr_opengl_flip()
 #endif
 
 	opengl_tcache_frame();
+	opengl_reset_immediate_buffer();
 
 #ifndef NDEBUG
 	int ic = opengl_check_for_errors();
@@ -655,6 +661,10 @@ void gr_opengl_fog_set(int fog_mode, int r, int g, int b, float fog_near, float 
 		return;
 	}
 
+	if ( is_minimum_GLSL_version() && Current_shader != NULL && Current_shader->shader == SDR_TYPE_MODEL ) {
+		return;
+	}
+
   	if (OGL_fogmode == 3) {
 		glFogf(GL_FOG_DISTANCE_MODE_NV, GL_EYE_RADIAL_NV);
 		glFogf(GL_FOG_COORDINATE_SOURCE, GL_FRAGMENT_DEPTH);
@@ -799,9 +809,15 @@ void gr_opengl_stencil_clear()
 
 int gr_opengl_alpha_mask_set(int mode, float alpha)
 {
-	int tmp = gr_alpha_test;
+	if ( mode ) {
+		GL_alpha_threshold = alpha;
+	} else {
+		GL_alpha_threshold = 0.0f;
+	}
 
-	gr_alpha_test = mode;
+	if ( is_minimum_GLSL_version() ) { // alpha masking is deprecated
+		return mode;
+	}
 
 	if ( mode ) {
 		GL_state.AlphaTest(GL_TRUE);
@@ -811,7 +827,7 @@ int gr_opengl_alpha_mask_set(int mode, float alpha)
 		GL_state.AlphaFunc(GL_ALWAYS, 1.0f);
 	}
 
-	return tmp;
+	return mode;
 }
 
 // I feel dirty...
@@ -1233,7 +1249,7 @@ void gr_opengl_translate_texture_matrix(int unit, const vec3d *shift)
 
 void gr_opengl_set_line_width(float width)
 {
-	glLineWidth(width);
+	GL_state.SetLineWidth(width);
 }
 
 // Returns the human readable error string if there is an error or NULL if not
@@ -1295,7 +1311,7 @@ void opengl_set_vsync(int status)
 	GL_CHECK_FOR_ERRORS("end of set_vsync()");
 }
 
-void opengl_setup_viewport()
+void opengl_setup_viewport_fixed_pipeline()
 {
 	glViewport(0, 0, gr_screen.max_w, gr_screen.max_h);
 
@@ -1303,7 +1319,7 @@ void opengl_setup_viewport()
 	glLoadIdentity();
 
 	// the top and bottom positions are reversed on purpose, but RTT needs them the other way
-	if (GL_rendering_to_texture) {
+	if ( GL_rendering_to_texture ) {
 		glOrtho(0, gr_screen.max_w, 0, gr_screen.max_h, -1.0, 1.0);
 	} else {
 		glOrtho(0, gr_screen.max_w, gr_screen.max_h, 0, -1.0, 1.0);
@@ -1311,6 +1327,25 @@ void opengl_setup_viewport()
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
+}
+
+void opengl_setup_viewport()
+{
+	if ( !is_minimum_GLSL_version() ) {
+		opengl_setup_viewport_fixed_pipeline();
+		return;
+	}
+
+	glViewport(0, 0, gr_screen.max_w, gr_screen.max_h);
+
+	GL_last_projection_matrix = GL_projection_matrix;
+
+	// the top and bottom positions are reversed on purpose, but RTT needs them the other way
+	if (GL_rendering_to_texture) {
+		opengl_create_orthographic_projection_matrix(&GL_projection_matrix, 0, gr_screen.max_w, 0, gr_screen.max_h, -1.0, 1.0);
+	} else {
+		opengl_create_orthographic_projection_matrix(&GL_projection_matrix, 0, gr_screen.max_w, gr_screen.max_h, 0, -1.0, 1.0);
+	}
 }
 
 // NOTE: This should only ever be called through os_cleanup(), or when switching video APIs
@@ -1332,6 +1367,11 @@ void gr_opengl_shutdown()
 	opengl_scene_texture_shutdown();
 	opengl_post_process_shutdown();
 	opengl_shader_shutdown();
+
+	if ( Is_Extension_Enabled(GL_EXTENSION_ARB_VERTEX_ARRAY_OBJECT) ) {
+		vglDeleteVertexArrays(1, &GL_vao);
+		GL_vao = 0;
+	}
 
 	GL_initted = false;
 
@@ -1742,13 +1782,16 @@ void opengl_setup_function_pointers()
 	gr_screen.gf_set_fill_mode			= gr_opengl_set_fill_mode;
 	gr_screen.gf_set_texture_panning	= gr_opengl_set_texture_panning;
 
+	gr_screen.gf_create_vertex_buffer	= gr_opengl_create_vertex_buffer;
+	gr_screen.gf_create_index_buffer	= gr_opengl_create_index_buffer;
+	gr_screen.gf_delete_buffer		= gr_opengl_delete_buffer;
 	gr_screen.gf_create_buffer		= gr_opengl_create_buffer;
 	gr_screen.gf_config_buffer		= gr_opengl_config_buffer;
 	gr_screen.gf_pack_buffer		= gr_opengl_pack_buffer;
 	gr_screen.gf_destroy_buffer		= gr_opengl_destroy_buffer;
 	gr_screen.gf_render_buffer		= gr_opengl_render_buffer;
 	gr_screen.gf_set_buffer			= gr_opengl_set_buffer;
-	gr_screen.gf_update_buffer_object		= gr_opengl_update_buffer_object;
+	gr_screen.gf_update_buffer_data		= gr_opengl_update_buffer_data;
 
 	gr_screen.gf_update_transform_buffer	= gr_opengl_update_transform_buffer;
 	gr_screen.gf_set_transform_buffer_offset	= gr_opengl_set_transform_buffer_offset;
@@ -1805,6 +1848,7 @@ void opengl_setup_function_pointers()
 
 	gr_screen.gf_line_htl			= gr_opengl_line_htl;
 	gr_screen.gf_sphere_htl			= gr_opengl_sphere_htl;
+	gr_screen.gf_sphere				= gr_opengl_sphere;
 
 	gr_screen.gf_set_animated_effect = gr_opengl_shader_set_animated_effect;
 
@@ -1818,6 +1862,20 @@ void opengl_setup_function_pointers()
 	gr_screen.gf_clear_states	= gr_opengl_clear_states;
 
 	gr_screen.gf_set_team_color		= gr_opengl_set_team_color;
+
+	gr_screen.gf_render_model = gr_opengl_render_model;
+	gr_screen.gf_render_primitives= gr_opengl_render_primitives;
+	gr_screen.gf_render_primitives_immediate = gr_opengl_render_primitives_immediate;
+	gr_screen.gf_render_primitives_2d = gr_opengl_render_primitives_2d;
+	gr_screen.gf_render_primitives_2d_immediate = gr_opengl_render_primitives_2d_immediate;
+	gr_screen.gf_render_primitives_particle	= gr_opengl_render_primitives_particle;
+	gr_screen.gf_render_primitives_distortion = gr_opengl_render_primitives_distortion;
+
+	gr_screen.gf_is_capable = gr_opengl_is_capable;
+
+	// NOTE: All function pointers here should have a Cmdline_nohtl check at the top
+	//       if they shouldn't be run in non-HTL mode, Don't keep separate entries.
+	// *****************************************************************************
 }
 
 
@@ -1895,6 +1953,12 @@ bool gr_opengl_init()
 
 	glGetIntegerv(GL_MAX_TEXTURE_COORDS, &max_texture_coords);
 
+	// create vertex array object to make OpenGL Core happy if we can
+	if ( Is_Extension_Enabled(GL_EXTENSION_ARB_VERTEX_ARRAY_OBJECT) ) {
+		vglGenVertexArrays(1, &GL_vao);
+		vglBindVertexArray(GL_vao);
+	}
+
 	GL_state.Texture.init(max_texture_units);
 	GL_state.Array.init(max_texture_coords);
 
@@ -1919,16 +1983,20 @@ bool gr_opengl_init()
 	opengl_set_vsync( !Cmdline_no_vsync );
 
 	opengl_setup_viewport();
+	vm_matrix4_set_identity(&GL_view_matrix);
+	vm_matrix4_set_identity(&GL_model_view_matrix);
 
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glClear(GL_STENCIL_BUFFER_BIT);
 
-	glShadeModel(GL_SMOOTH);
+	if ( !is_minimum_GLSL_version() ) {
+		glShadeModel(GL_SMOOTH);
+	}
 
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 	glHint(GL_FOG_HINT, GL_NICEST);
 
-	if ( Is_Extension_Enabled(OGL_ARB_SEAMLESS_CUBEMAP) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_ARB_SEAMLESS_CUBE_MAP) ) {
 		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	}
 
@@ -1962,7 +2030,7 @@ bool gr_opengl_init()
 	mprintf(( "  Max elements indices: %i\n", GL_max_elements_indices ));
 	mprintf(( "  Max texture size: %ix%i\n", GL_max_texture_width, GL_max_texture_height ));
 
-	if ( Is_Extension_Enabled(OGL_EXT_FRAMEBUFFER_OBJECT) ) {
+	if ( Is_Extension_Enabled(GL_EXTENSION_ARB_FRAMEBUFFER_OBJECT) ) {
 		mprintf(( "  Max render buffer size: %ix%i\n",
 			  GL_max_renderbuffer_size,
 			  GL_max_renderbuffer_size ));
@@ -1986,6 +2054,75 @@ bool gr_opengl_init()
 		GL_read_format = GL_RGBA;
 
 	return true;
+}
+
+bool gr_opengl_is_capable(gr_capability capability)
+{
+	if ( !is_minimum_GLSL_version() ) {
+		return false;
+	}
+
+	if ( GL_version < 20 ) {
+		return false;
+	}
+
+	if ( !Is_Extension_Enabled(GL_EXTENSION_ARB_FRAMEBUFFER_OBJECT) || !Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_NON_POWER_OF_TWO) ) {
+		return false;
+	}
+
+	switch ( capability ) {
+	case CAPABILITY_ENVIRONMENT_MAP:
+		return Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_CUBE_MAP) && Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_ENV_COMBINE);
+	case CAPABILITY_NORMAL_MAP:
+		return Cmdline_normal ? true : false;
+	case CAPABILITY_HEIGHT_MAP:
+		return Cmdline_height ? true : false;
+	case CAPABILITY_SOFT_PARTICLES:
+	case CAPABILITY_DISTORTION:
+		return Cmdline_softparticles && (GLSL_version >= 120) && !Cmdline_no_fbo;
+	case CAPABILITY_POST_PROCESSING:
+		return Cmdline_postprocess && (GLSL_version >= 120) && !Cmdline_no_fbo;
+	case CAPABILITY_DEFERRED_LIGHTING:
+		return !Cmdline_no_fbo && !Cmdline_no_deferred_lighting && (GLSL_version >= 120);
+	case CAPABILITY_SHADOWS:
+		return Is_Extension_Enabled(GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX) && GL_version >= 32;
+	case CAPABILITY_BATCHED_SUBMODELS:
+		return (GLSL_version >= 150) && Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_BUFFER) && Is_Extension_Enabled(GL_EXTENSION_ARB_FLOATING_POINT_TEXTURES);
+	case CAPABILITY_POINT_PARTICLES:
+		return GL_version >= 32 && !Cmdline_no_geo_sdr_effects;
+	}
+
+	return false;
+}
+
+uint opengl_data_type_size(GLenum data_type)
+{
+	switch ( data_type ) {
+	case GL_BYTE:
+		return sizeof(GLbyte);
+	case GL_UNSIGNED_BYTE:
+		return sizeof(GLubyte);
+	case GL_SHORT:
+		return sizeof(GLshort);
+	case GL_UNSIGNED_SHORT:
+		return sizeof(GLushort);
+	case GL_INT:
+		return sizeof(GLint);
+	case GL_UNSIGNED_INT:
+		return sizeof(GLuint);
+	case GL_FLOAT:
+		return sizeof(GLfloat);
+	case GL_2_BYTES:
+		return sizeof(GLbyte) * 2;
+	case GL_3_BYTES:
+		return sizeof(GLbyte) * 3;
+	case GL_4_BYTES:
+		return sizeof(GLbyte) * 4;
+	case GL_DOUBLE:
+		return sizeof(GLdouble);
+	}
+
+	return 0;
 }
 
 DCF(ogl_minimize, "Minimizes opengl")
@@ -2033,7 +2170,7 @@ DCF(ogl_anisotropy, "toggles anisotropic filtering")
 		return;
 	}
 
-	if ( !Is_Extension_Enabled(OGL_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
+	if ( !Is_Extension_Enabled(GL_EXTENSION_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
 		dc_printf("Error: Anisotropic filter is not settable!\n");
 		return;
 	}

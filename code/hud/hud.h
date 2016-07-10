@@ -76,8 +76,10 @@ extern color HUD_color_defaults[HUD_NUM_COLOR_LEVELS];
 #define HUD_BRIGHT_DELTA				7		// Level added to HUD_color_alpha to make brightness used for flashing
 
 // hud macro for maybe flickering all gauges
-#define GR_AABITMAP(a, b, c)						{ int jx, jy; if(emp_should_blit_gauge()) { gr_set_bitmap(a); jx = b; jy = c; emp_hud_jitter(&jx, &jy); gr_aabitmap(jx, jy); } }
-#define GR_AABITMAP_EX(a, b, c, d, e, f, g)	{ int jx, jy; if(emp_should_blit_gauge()) { gr_set_bitmap(a); jx = b; jy = c; emp_hud_jitter(&jx, &jy); gr_aabitmap_ex(jx, jy, d, e, f, g); } }
+//#define GR_AABITMAP(a, b, c)						{ int jx, jy; if(emp_should_blit_gauge()) { gr_set_bitmap(a); jx = b; jy = c; emp_hud_jitter(&jx, &jy); gr_aabitmap(jx, jy); } }
+#define GR_AABITMAP(a, b, c)						{ int jx, jy; if(emp_should_blit_gauge()) { jx = b; jy = c; emp_hud_jitter(&jx, &jy); render_aabitmap(a, jx, jy); } }
+//#define GR_AABITMAP_EX(a, b, c, d, e, f, g)	{ int jx, jy; if(emp_should_blit_gauge()) { gr_set_bitmap(a); jx = b; jy = c; emp_hud_jitter(&jx, &jy); gr_aabitmap_ex(jx, jy, d, e, f, g); } }
+#define GR_AABITMAP_EX(a, b, c, d, e, f, g)	{ int jx, jy; if(emp_should_blit_gauge()) { jx = b; jy = c; emp_hud_jitter(&jx, &jy); render_aabitmap_ex(a, jx, jy, d, e, f, g); } }
 
 // radar target identification flags
 #define RTIF_CROSSHAIRS	(1<<0)		// draw crosshairs
@@ -303,7 +305,6 @@ public:
 	void setGaugeColor(int bright_index = -4);
 	
 	// rendering functions
-	void renderBitmap(int x, int y);
 	void renderBitmap(int frame, int x, int y);
 	void renderBitmapColor(int frame, int x, int y);
 	void renderBitmapUv(int frame, int x, int y, int w, int h, float u0, float v0, float u1, float v1);

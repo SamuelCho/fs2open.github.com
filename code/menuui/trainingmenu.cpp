@@ -13,7 +13,7 @@
 #include "graphics/2d.h"
 #include "menuui/snazzyui.h"
 #include "menuui/trainingmenu.h"
-
+#include "render/render.h"
 
 
 // global to this file
@@ -86,8 +86,9 @@ void training_menu_do_frame(float frametime)
 	GR_MAYBE_CLEAR_RES(trainingMenuBitmap);	
 	// set the background
 	if(trainingMenuBitmap != -1){
-		gr_set_bitmap(trainingMenuBitmap);
-		gr_bitmap(0,0,GR_RESIZE_MENU);
+		//gr_set_bitmap(trainingMenuBitmap);
+		//gr_bitmap(0,0,GR_RESIZE_MENU);
+		render_bitmap(trainingMenuBitmap, 0, 0, GR_RESIZE_MENU);
 	}
 
 	int snazzy_action = -1;

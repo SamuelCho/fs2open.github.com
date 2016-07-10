@@ -69,6 +69,8 @@
 #include "radar/radar.h"
 #include "radar/radarsetup.h"
 #include "render/3d.h"
+#include "render/batching.h"
+#include "render/render.h"
 #include "ship/afterburner.h"
 #include "ship/ship.h"
 #include "ship/shipcontrails.h"
@@ -6630,7 +6632,8 @@ void render_dock_bays(object *objp)
 	g3_rotate_vertex(&v1, &p3);
 	gr_set_color(255, 255, 0);
 	g3_draw_line(&v0, &v1);
-	g3_draw_sphere(&v1, 1.25f);
+	//g3_draw_sphere(&v1, 1.25f);
+	render_sphere_fast(&v1, 1.25f);
 
 }
 #endif
@@ -6752,7 +6755,6 @@ man_thruster_renderer *man_thruster_get_slot(int bmap_frame)
 }
 
 //WMC - used for FTL and maneuvering thrusters
-geometry_batcher fx_batcher;
 extern bool Rendering_to_shadow_map;
 void ship_render_DEPRECATED(object * obj)
 {
@@ -6802,7 +6804,8 @@ void ship_render_DEPRECATED(object * obj)
 			g3_rotate_vertex( &v0, &p0 );
 			
 			gr_set_color(0,128,0);
-			g3_draw_sphere( &v0, 0.1f );
+			//g3_draw_sphere( &v0, 0.1f );
+			render_sphere_fast( &v0, 0.1f );
 		}
 
 		// Show the shield hit effect for the viewer.
@@ -6879,7 +6882,6 @@ void ship_render_DEPRECATED(object * obj)
 			{
 				physics_info *pi = &Objects[shipp->objnum].phys_info;
 				float render_amount;
-				fx_batcher.allocate(sip->num_maneuvering);	//Act as if all thrusters are going.
 
 				for(int i = 0; i < sip->num_maneuvering; i++)
 				{
@@ -6968,9 +6970,6 @@ void ship_render_DEPRECATED(object * obj)
 							vm_vec_scale_add(&tmpend, &mtp->pos, &mtp->norm, len * render_amount);
 							vm_vec_unrotate(&end, &tmpend, &obj->orient);
 							vm_vec_add2(&end, &obj->pos);
-
-							//Draw
-							fx_batcher.draw_beam(&start, &end, rad, 1.0f);
 
 							int bmap_frame = mtp->tex_id;
 							if(mtp->tex_nframes > 0)
@@ -7274,7 +7273,8 @@ void ship_render_DEPRECATED(object * obj)
 				g3_rotate_vertex(&l1, &v1);
 				g3_rotate_vertex(&l2, &v2);
 
-				g3_draw_sphere(&l1, 2.0f);
+				//g3_draw_sphere(&l1, 2.0f);
+				render_sphere_fast(&l1, 2.0f);
 				g3_draw_line(&l1, &l2);
 
 				systemp = GET_NEXT(systemp);
@@ -7540,13 +7540,15 @@ int ship_start_render_cockpit_display(int cockpit_display_num)
 	gr_clear();
 	
 	if ( display->source >= 0 ) {
-		gr_set_bitmap(display->source);
-		gr_bitmap(0, 0, GR_RESIZE_NONE);
+		//gr_set_bitmap(display->source);
+		//gr_bitmap(0, 0, GR_RESIZE_NONE);
+		render_bitmap(display->source, 0, 0, GR_RESIZE_NONE);
 	}
 
 	if ( display->background >= 0 ) {
-		gr_set_bitmap(display->background);
-		gr_bitmap_ex(display->offset[0], display->offset[1], display->size[0], display->size[1], 0, 0, GR_RESIZE_NONE);
+		//gr_set_bitmap(display->background);
+		//gr_bitmap_ex(display->offset[0], display->offset[1], display->size[0], display->size[1], 0, 0, GR_RESIZE_NONE);
+		render_bitmap_ex(display->background, 1.0f, display->offset[0], display->offset[1], display->size[0], display->size[1], 0, 0, GR_RESIZE_NONE);
 	}
 
 	gr_set_cull(cull);
@@ -7575,8 +7577,9 @@ void ship_end_render_cockpit_display(int cockpit_display_num)
 	int cull = gr_set_cull(0);
 	if ( display->foreground >= 0 ) {
 		gr_reset_clip();
-		gr_set_bitmap(display->foreground);
-		gr_bitmap_ex(display->offset[0], display->offset[1], display->size[0], display->size[1], 0, 0, GR_RESIZE_NONE);
+		//gr_set_bitmap(display->foreground);
+		//gr_bitmap_ex(display->offset[0], display->offset[1], display->size[0], display->size[1], 0, 0, GR_RESIZE_NONE);
+		render_bitmap_ex(display->foreground, 1.0f, display->offset[0], display->offset[1], display->size[0], display->size[1], 0, 0, GR_RESIZE_NONE);
 	}
 
 	gr_set_cull(cull);
@@ -18956,7 +18959,6 @@ void ship_render_batch_thrusters(object *obj)
 
 	physics_info *pi = &Objects[shipp->objnum].phys_info;
 	float render_amount;
-	fx_batcher.allocate(sip->num_maneuvering);	//Act as if all thrusters are going.
 
 	for ( int i = 0; i < sip->num_maneuvering; i++ ) {
 		man_thruster *mtp = &sip->maneuvering[i];
@@ -19044,16 +19046,14 @@ void ship_render_batch_thrusters(object *obj)
 				vm_vec_unrotate(&end, &tmpend, &obj->orient);
 				vm_vec_add2(&end, &obj->pos);
 
-				//Draw
-				fx_batcher.draw_beam(&start, &end, rad, 1.0f);
-
 				int bmap_frame = mtp->tex_id;
 				if(mtp->tex_nframes > 0)
 					bmap_frame += bm_get_anim_frame(mtp->tex_id, i2fl(timestamp() - shipp->thrusters_start[i]) / 1000.0f, 0.0f, true);
 
-				man_thruster_renderer *mtr = man_thruster_get_slot(bmap_frame);
-				mtr->man_batcher.add_allocate(1);
-				mtr->man_batcher.draw_beam(&start, &end, rad, 1.0f);
+				//man_thruster_renderer *mtr = man_thruster_get_slot(bmap_frame);
+				//mtr->man_batcher.add_allocate(1);
+				//mtr->man_batcher.draw_beam(&start, &end, rad, 1.0f);
+				batching_add_beam(bmap_frame, &start, &end, rad, 1.0f);
 			}
 		} else if ( shipp->thrusters_start[i] > 0 ) { 
 			// We've stopped firing a thruster

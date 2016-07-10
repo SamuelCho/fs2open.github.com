@@ -11,6 +11,7 @@
 
 #include "globalincs/alphacolors.h"
 #include "io/timer.h"
+#include "render/render.h"
 #include "ui/ui.h"
 #include "ui/uidefs.h"
 
@@ -121,14 +122,16 @@ void UI_SCROLLBAR::draw()
 		gr_reset_clip();
 		if (disabled_flag) {
 			if ( bmap_ids[SB_DISABLED] != -1 ) {
-				gr_set_bitmap(bmap_ids[SB_DISABLED]);
-				gr_bitmap(x,y,GR_RESIZE_MENU);
+				//gr_set_bitmap(bmap_ids[SB_DISABLED]);
+				//gr_bitmap(x,y,GR_RESIZE_MENU);
+				render_bitmap(bmap_ids[SB_DISABLED], x, y, GR_RESIZE_MENU);
 			}
 
 		} else {
 			if ( bmap_ids[SB_NORMAL] != -1 ) {
-				gr_set_bitmap(bmap_ids[SB_NORMAL]);
-				gr_bitmap(x,y,GR_RESIZE_MENU);
+				//gr_set_bitmap(bmap_ids[SB_NORMAL]);
+				//gr_bitmap(x,y,GR_RESIZE_MENU);
+				render_bitmap(bmap_ids[SB_NORMAL], x, y, GR_RESIZE_MENU);
 			}
 		}
 

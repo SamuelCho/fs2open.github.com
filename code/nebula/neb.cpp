@@ -21,6 +21,7 @@
 #include "parse/parselo.h"
 #include "pcxutils/pcxutils.h"
 #include "render/3d.h"
+#include "render/render.h"
 #include "ship/ship.h"
 #include "starfield/starfield.h"
 #include "tgautils/tgautils.h"
@@ -951,6 +952,7 @@ void neb2_render_player()
 	}
     
     memset(&p, 0, sizeof(p));
+	memset(&ptemp, 0, sizeof(ptemp));
 
 	// get eye position and orientation
 	neb2_get_eye_pos(&eye_pos);
@@ -1043,10 +1045,10 @@ void neb2_render_player()
 					continue;
 				}
 
-				// rotate and project the vertex into viewspace
-				g3_rotate_vertex(&p, &Neb2_cubes[idx1][idx2][idx3].pt);
+				g3_transfer_vertex(&p, &Neb2_cubes[idx1][idx2][idx3].pt);
 
-				ptemp = p;
+				// rotate and project the vertex into viewspace
+				g3_rotate_vertex(&ptemp, &Neb2_cubes[idx1][idx2][idx3].pt);
 				g3_project_vertex(&ptemp);
 
 				// get the proper alpha value
@@ -1080,12 +1082,13 @@ void neb2_render_player()
 				}
 
 				// set the bitmap and render
-				gr_set_bitmap(Neb2_cubes[idx1][idx2][idx3].bmap, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, (alpha + Neb2_cubes[idx1][idx2][idx3].flash));
+				//gr_set_bitmap(Neb2_cubes[idx1][idx2][idx3].bmap, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, (alpha + Neb2_cubes[idx1][idx2][idx3].flash));
 
 				gr_set_lighting(false, false);
-				gr_fog_set(GR_FOGMODE_NONE, 0, 0, 0);
-				g3_draw_rotated_bitmap(&p, fl_radians(Neb2_cubes[idx1][idx2][idx3].rot), Nd->prad, TMAP_FLAG_TEXTURED);
-			} 
+				//gr_fog_set(GR_FOGMODE_NONE, 0, 0, 0);
+				//g3_draw_rotated_bitmap(&p, fl_radians(Neb2_cubes[idx1][idx2][idx3].rot), Nd->prad, TMAP_FLAG_TEXTURED);
+				render_rotated_bitmap(Neb2_cubes[idx1][idx2][idx3].bmap, alpha + Neb2_cubes[idx1][idx2][idx3].flash, &p, fl_radians(Neb2_cubes[idx1][idx2][idx3].rot), Nd->prad);
+			}
 		}
 	}
 
@@ -1098,8 +1101,9 @@ void neb2_render_player()
 #ifdef NEB2_THUMBNAIL
 	extern int tbmap;
 	if (tbmap != -1) {
-		gr_set_bitmap(tbmap);
-		gr_bitmap(0, 0);
+		//gr_set_bitmap(tbmap);
+		//gr_bitmap(0, 0);
+		render_bitmap(tbmap, 0, 0);
 	}
 #endif
 }

@@ -16,6 +16,7 @@
 #include "io/key.h"
 #include "io/timer.h"
 #include "osapi/osapi.h"
+#include "render/render.h"
 
 #include <algorithm>
 #include <cmath>
@@ -187,7 +188,8 @@ void dc_draw(bool show_prompt = FALSE)
 	gr_clear();
 	gr_set_font(dc_font);
 	gr_set_color_fast( &Color_bright );
-	gr_string( 0x8000, gr_screen.center_offset_y + 3, dc_title.c_str(), GR_RESIZE_NONE );
+	//gr_string( 0x8000, gr_screen.center_offset_y + 3, dc_title.c_str(), GR_RESIZE_NONE );
+	render_string( 0x8000, gr_screen.center_offset_y + 3, dc_title.c_str(), GR_RESIZE_NONE );
 
 	gr_set_color_fast( &Color_normal );
 
@@ -207,7 +209,8 @@ void dc_draw_cursor( SCP_string &cmd_string, int x, int y )
 
 		w %= (DCOLS * Current_font->w);
 		//gr_string( w, debug_y*16, "_" );
-		gr_rect(gr_screen.center_offset_x + (x + (w + 1)), gr_screen.center_offset_y + (y + (h + 1)), 2, Current_font->h, GR_RESIZE_NONE);
+		//gr_rect(gr_screen.center_offset_x + (x + (w + 1)), gr_screen.center_offset_y + (y + (h + 1)), 2, Current_font->h, GR_RESIZE_NONE);
+		render_colored_rect(gr_screen.center_offset_x + (x + (w + 1)), gr_screen.center_offset_y + (y + (h + 1)), 2, Current_font->h, GR_RESIZE_NONE);
 	}
 }
 
@@ -243,7 +246,8 @@ void dc_draw_window(bool show_prompt)
 	// Draw the buffer strings
 	for (i = 0; i < buffer_lines; ++i) {
 		if ((i + dc_scroll_y) < dc_buffer.size()) {
-			gr_string(gr_screen.center_offset_x, gr_screen.center_offset_y + ((i * row_height) + row_height), dc_buffer[i + dc_scroll_y].substr(dc_scroll_x).c_str(), GR_RESIZE_NONE);
+			//gr_string(gr_screen.center_offset_x, gr_screen.center_offset_y + ((i * row_height) + row_height), dc_buffer[i + dc_scroll_y].substr(dc_scroll_x).c_str(), GR_RESIZE_NONE);
+			render_string(gr_screen.center_offset_x, gr_screen.center_offset_y + ((i * row_height) + row_height), dc_buffer[i + dc_scroll_y].substr(dc_scroll_x).c_str(), GR_RESIZE_NONE);
 		}
 	}
 
@@ -261,7 +265,9 @@ void dc_draw_window(bool show_prompt)
 				++j;
 			}
 		}
-		gr_string(gr_screen.center_offset_x, gr_screen.center_offset_y + ((i * row_height) + row_height), out_str.c_str(), GR_RESIZE_NONE);
+
+		//gr_string(gr_screen.center_offset_x, gr_screen.center_offset_y + ((i * row_height) + row_height), out_str.c_str(), GR_RESIZE_NONE);
+		render_string(gr_screen.center_offset_x, gr_screen.center_offset_y + ((i * row_height) + row_height), out_str.c_str(), GR_RESIZE_NONE);
 
 		dc_draw_cursor(out_str, 0, ((i * row_height)));
 		gr_set_color_fast(&Color_normal);

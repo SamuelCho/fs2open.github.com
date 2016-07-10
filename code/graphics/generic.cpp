@@ -2,6 +2,7 @@
 #include "globalincs/globals.h"
 #include "graphics/2d.h"
 #include "graphics/generic.h"
+#include "render/render.h"
 #define BMPMAN_INTERNAL
 #include "bmpman/bm_internal.h"
 #ifdef _WIN32
@@ -511,8 +512,9 @@ void generic_render_png_stream(generic_anim* ga)
  *
  * @param [in] *ga  animation data
  * @param [in] frametime  how long this frame took
+ * @return bitmap ID to be used
  */
-void generic_anim_render_fixed_frame_delay(generic_anim* ga, float frametime)
+int generic_anim_render_fixed_frame_delay(generic_anim* ga, float frametime)
 {
 	float keytime = 0.0;
 
@@ -566,6 +568,7 @@ void generic_anim_render_fixed_frame_delay(generic_anim* ga, float frametime)
 		ga->current_frame += fl2i(ga->anim_time * ga->num_frames / ga->total_time);
 		//sanity check
 		CLAMP(ga->current_frame, 0, ga->num_frames - 1);
+
 		if(ga->streaming) {
 			//handle streaming - render one frame
 			if(ga->type == BM_TYPE_ANI) {
@@ -573,10 +576,11 @@ void generic_anim_render_fixed_frame_delay(generic_anim* ga, float frametime)
 			} else {
 				generic_render_eff_stream(ga);
 			}
-			gr_set_bitmap(ga->bitmap_id);
+
+			return ga->bitmap_id;
 		}
 		else {
-			gr_set_bitmap(ga->first_frame + ga->current_frame);
+			return ga->first_frame + ga->current_frame;
 		}
 	}
 }
@@ -587,13 +591,14 @@ void generic_anim_render_fixed_frame_delay(generic_anim* ga, float frametime)
  * @param [in] *ga  animation data
  * @param [in] frametime  how long this frame took
  * @param [in] alpha  transparency to draw frame with (0.0 - 1.0)
+ * @return bitmap ID to be used
  */
-void generic_anim_render_variable_frame_delay(generic_anim* ga, float frametime, float alpha)
+int generic_anim_render_variable_frame_delay(generic_anim* ga, float frametime, float alpha)
 {
 	Assertion(ga->type == BM_TYPE_PNG, "only valid for apngs (currently); get a coder!");
 	if (ga->keyframe != 0) {
 		Warning(LOCATION, "apngs don't support keyframes");
-		return;
+		return -1;
 	}
 
 	// don't change the frame time if we're paused
@@ -660,7 +665,7 @@ void generic_anim_render_variable_frame_delay(generic_anim* ga, float frametime,
 		// note: generic anims are not currently ever non-streaming in FSO
 		// I'm not even sure that the existing ani/eff code would allow non-streaming generic anims
 		generic_render_png_stream(ga);
-		gr_set_bitmap(ga->bitmap_id, GR_ALPHABLEND_NONE, GR_BITBLT_MODE_NORMAL, alpha);
+		return ga->bitmap_id;
 	}
 }
 
@@ -685,27 +690,32 @@ void generic_anim_render(generic_anim *ga, float frametime, int x, int y, bool m
 	if (ge != nullptr) {
 		a = ge->alpha;
 	}
+
+	int bitmap_id;
+
 	if (ga->type == BM_TYPE_PNG) {
-		generic_anim_render_variable_frame_delay(ga, frametime, a);
-	}
-	else {
-		generic_anim_render_fixed_frame_delay(ga, frametime);
+		bitmap_id = generic_anim_render_variable_frame_delay(ga, frametime, a);
+	} else {
+		bitmap_id = generic_anim_render_fixed_frame_delay(ga, frametime);
 	}
 
 	if(ga->num_frames > 0) {
 		ga->previous_frame = ga->current_frame;
 
 		if(ga->use_hud_color) {
-			gr_aabitmap(x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
+			//gr_aabitmap(x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
+			render_aabitmap(bitmap_id, x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
 		}
 		else {
 			if (ge == nullptr) {
-				gr_bitmap(x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
+				//gr_bitmap(x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
+				render_bitmap(bitmap_id, x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
 			}
 			else if (ge->draw == true) {
 				// currently only for lua streaminganim objects
 				// and don't draw them unless requested...
-				gr_bitmap_uv(x, y, ge->width, ge->height, ge->u0, ge->v0, ge->u1, ge->v1, GR_RESIZE_NONE);
+				//gr_bitmap_uv(x, y, ge->width, ge->height, ge->u0, ge->v0, ge->u1, ge->v1, GR_RESIZE_NONE);
+				render_bitmap_uv(bitmap_id, x, y, ge->width, ge->height, ge->u0, ge->v0, ge->u1, ge->v1, GR_RESIZE_NONE);
 			}
 		}
 	}

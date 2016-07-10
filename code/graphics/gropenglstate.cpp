@@ -10,6 +10,7 @@
 
 #include "graphics/gropengllight.h"
 #include "graphics/gropenglshader.h"
+#include "graphics/material.h"
 #include "graphics/gropenglstate.h"
 #include "math/vecmat.h"
 
@@ -405,6 +406,8 @@ void opengl_state::init()
 
 	glDepthFunc(GL_LESS);
 	depthfunc_Value = GL_LESS;
+
+	glGetFloatv(GL_LINE_WIDTH, &line_width_Value);
 
 	Current_alpha_blend_mode = ALPHA_BLEND_NONE;
 	Current_zbuffer_type = ZBUFFER_TYPE_READ;
@@ -852,6 +855,16 @@ void opengl_state::SetStencilType(gr_stencil_type st)
     Current_stencil_type = st;
 }
 
+void opengl_state::SetLineWidth(GLfloat width)
+{
+	if ( width == line_width_Value ) {
+		return;
+	}
+
+	glLineWidth(width);
+	line_width_Value = width;
+}
+
 opengl_array_state::~opengl_array_state()
 {
 	if ( client_texture_units != NULL ) {
@@ -911,6 +924,11 @@ void opengl_array_state::init(GLuint n_units)
 
 void opengl_array_state::SetActiveClientUnit(GLuint id)
 {
+	// this function is deprecated in OGL Core
+	if ( is_minimum_GLSL_version() ) {
+		return;
+	}
+
 	if ( id >= num_client_texture_units ) {
 		Int3();
 		id = 0;
@@ -1171,6 +1189,17 @@ void opengl_array_state::VertexAttribPointer(GLuint index, GLint size, GLenum ty
 	va_unit->ptr_init = true;
 }
 
+void opengl_array_state::ResetVertexAttribs()
+{
+	SCP_map<GLuint, opengl_vertex_attrib_unit>::iterator it;
+
+	for ( it = vertex_attrib_units.begin(); it != vertex_attrib_units.end(); ++it ) {
+		DisableVertexAttrib(it->first);
+	}
+
+	vertex_attrib_units.clear();
+}
+
 void opengl_array_state::BindPointersBegin()
 {
 	// set all available client states to not used
@@ -1248,7 +1277,7 @@ void opengl_array_state::BindElementBuffer(GLuint id)
 
 void opengl_array_state::BindTextureBuffer(GLuint id)
 {
-	if ( !Is_Extension_Enabled(OGL_ARB_TEXTURE_BUFFER) ) {
+	if ( !Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_BUFFER) ) {
 		return;
 	}
 
@@ -1256,14 +1285,14 @@ void opengl_array_state::BindTextureBuffer(GLuint id)
 		return;
 	}
 
-	vglBindBufferARB(GL_TEXTURE_BUFFER_ARB, id);
+	vglBindBufferARB(GL_TEXTURE_BUFFER, id);
 
 	texture_array_buffer = id;
 }
 
 void opengl_array_state::BindUniformBufferBindingIndex(GLuint id, GLuint index)
 {
-	if ( !Is_Extension_Enabled(OGL_ARB_UNIFORM_BUFFER_OBJECT) ) {
+	if ( !Is_Extension_Enabled(GL_EXTENSION_ARB_UNIFORM_BUFFER_OBJECT) ) {
 		return;
 	}
 
@@ -1278,7 +1307,7 @@ void opengl_array_state::BindUniformBufferBindingIndex(GLuint id, GLuint index)
 
 void opengl_array_state::BindUniformBuffer(GLuint id)
 {
-	if ( !Is_Extension_Enabled(OGL_ARB_UNIFORM_BUFFER_OBJECT) ) {
+	if ( !Is_Extension_Enabled(GL_EXTENSION_ARB_UNIFORM_BUFFER_OBJECT) ) {
 		return;
 	}
 
@@ -1345,6 +1374,59 @@ void opengl_uniform_state::setUniformi(const SCP_string &name, const int val)
 	}
 
 	vglUniform1iARB(opengl_shader_get_uniform(name.c_str()), val);
+}
+
+void opengl_uniform_state::setUniform1iv(const SCP_string &name, const int count, const int *val)
+{
+	int uniform_index = findUniform(name);
+	bool resident = false;
+
+	if ( uniform_index >= 0 ) {
+		Assert((size_t)uniform_index < uniforms.size());
+
+		uniform_bind *bind_info = &uniforms[uniform_index];
+
+		if ( bind_info->type == uniform_bind::INT && bind_info->count == count ) {
+			bool equal = true;
+
+			// if the values are close enough, pass.
+			for ( int i = 0; i < count; ++i ) {
+				if ( val[i] != uniform_data_ints[bind_info->index + i] ) {
+					equal = false;
+					break;
+				}
+			}
+
+			if ( equal ) {
+				return;
+			}
+
+			resident = true;
+			for ( int i = 0; i < count; ++i ) {
+				uniform_data_ints[bind_info->index + i] = val[i];
+			}
+		}
+	}
+
+	if ( !resident ) {
+		// uniform doesn't exist in our previous uniform block so queue this new value
+		for ( int i = 0; i < count; ++i ) {
+			uniform_data_ints.push_back(val[i]);
+		}
+
+		uniform_bind new_bind;
+		new_bind.count = count;
+		new_bind.index = uniform_data_ints.size() - count;
+		//	new_bind.index = num_matrix_uniforms - count;
+		new_bind.type = uniform_bind::INT;
+		new_bind.name = name;
+
+		uniforms.push_back(new_bind);
+
+		uniform_lookup[name] = uniforms.size() - 1;
+	}
+
+	vglUniform1ivARB(opengl_shader_get_uniform(name.c_str()), count, (const GLint*)val);
 }
 
 void opengl_uniform_state::setUniformf(const SCP_string &name, const float val)
@@ -1537,6 +1619,165 @@ void opengl_uniform_state::setUniform4f(const SCP_string &name, const vec4 &val)
 	vglUniform4fARB(opengl_shader_get_uniform(name.c_str()), val.a1d[0], val.a1d[1], val.a1d[2], val.a1d[3]);
 }
 
+void opengl_uniform_state::setUniform1fv(const SCP_string &name, const int count, const float *val)
+{
+	int uniform_index = findUniform(name);
+	bool resident = false;
+
+	if ( uniform_index >= 0 ) {
+		Assert((size_t)uniform_index < uniforms.size());
+
+		uniform_bind *bind_info = &uniforms[uniform_index];
+
+		if ( bind_info->type == uniform_bind::FLOAT && bind_info->count == count ) {
+			bool equal = true;
+
+			// if the values are close enough, pass.
+			for ( int i = 0; i < count; ++i ) {
+				if ( !fl_equal(val[i], uniform_data_floats[bind_info->index + i]) ) {
+					equal = false;
+					break;
+				}
+			}
+
+			if ( equal ) {
+				return;
+			}
+
+			resident = true;
+			for ( int i = 0; i < count; ++i ) {
+				uniform_data_floats[bind_info->index + i] = val[i];
+			}
+		}
+	}
+
+	if ( !resident ) {
+		// uniform doesn't exist in our previous uniform block so queue this new value
+		for ( int i = 0; i < count; ++i ) {
+			uniform_data_floats.push_back(val[i]);
+		}
+
+		uniform_bind new_bind;
+		new_bind.count = count;
+		new_bind.index = uniform_data_floats.size() - count;
+		//	new_bind.index = num_matrix_uniforms - count;
+		new_bind.type = uniform_bind::FLOAT;
+		new_bind.name = name;
+
+		uniforms.push_back(new_bind);
+
+		uniform_lookup[name] = uniforms.size() - 1;
+	}
+
+	vglUniform1fvARB(opengl_shader_get_uniform(name.c_str()), count, (const GLfloat*)val);
+}
+
+void opengl_uniform_state::setUniform3fv(const SCP_string &name, const int count, const vec3d *val)
+{
+	int uniform_index = findUniform(name);
+	bool resident = false;
+
+	if ( uniform_index >= 0 ) {
+		Assert((size_t)uniform_index < uniforms.size());
+
+		uniform_bind *bind_info = &uniforms[uniform_index];
+
+		if ( bind_info->type == uniform_bind::VEC3 && bind_info->count == count ) {
+			bool equal = true;
+
+			// if the values are close enough, pass.
+			for ( int i = 0; i < count; ++i ) {
+				if ( !vm_vec_equal(val[i], uniform_data_vec3d[bind_info->index + i]) ) {
+					equal = false;
+					break;
+				}
+			}
+
+			if ( equal ) {
+				return;
+			}
+
+			resident = true;
+			for ( int i = 0; i < count; ++i ) {
+				uniform_data_vec3d[bind_info->index + i] = val[i];
+			}
+		}
+	}
+
+	if ( !resident ) {
+		// uniform doesn't exist in our previous uniform block so queue this new value
+		for ( int i = 0; i < count; ++i ) {
+			uniform_data_vec3d.push_back(val[i]);
+		}
+
+		uniform_bind new_bind;
+		new_bind.count = count;
+		new_bind.index = uniform_data_vec3d.size() - count;
+		//	new_bind.index = num_matrix_uniforms - count;
+		new_bind.type = uniform_bind::VEC3;
+		new_bind.name = name;
+
+		uniforms.push_back(new_bind);
+
+		uniform_lookup[name] = uniforms.size() - 1;
+	}
+
+	vglUniform3fvARB(opengl_shader_get_uniform(name.c_str()), count, (const GLfloat*)val);
+}
+
+void opengl_uniform_state::setUniform4fv(const SCP_string &name, const int count, const vec4 *val)
+{
+	int uniform_index = findUniform(name);
+	bool resident = false;
+
+	if ( uniform_index >= 0 ) {
+		Assert((size_t)uniform_index < uniforms.size());
+
+		uniform_bind *bind_info = &uniforms[uniform_index];
+
+		if ( bind_info->type == uniform_bind::VEC4 && bind_info->count == count ) {
+			bool equal = true;
+
+			// if the values are close enough, pass.
+			for ( int i = 0; i < count; ++i ) {
+				if ( !vm_vec_equal(val[i], uniform_data_vec4[bind_info->index + i]) ) {
+					equal = false;
+					break;
+				}
+			}
+
+			if ( equal ) {
+				return;
+			}
+
+			resident = true;
+			for ( int i = 0; i < count; ++i ) {
+				uniform_data_vec4[bind_info->index + i] = val[i];
+			}
+		}
+	}
+
+	if ( !resident ) {
+		// uniform doesn't exist in our previous uniform block so queue this new value
+		for ( int i = 0; i < count; ++i ) {
+			uniform_data_vec4.push_back(val[i]);
+		}
+
+		uniform_bind new_bind;
+		new_bind.count = count;
+		new_bind.index = uniform_data_vec4.size() - count;
+		//	new_bind.index = num_matrix_uniforms - count;
+		new_bind.type = uniform_bind::VEC4;
+		new_bind.name = name;
+
+		uniforms.push_back(new_bind);
+
+		uniform_lookup[name] = uniforms.size() - 1;
+	}
+
+	vglUniform4fvARB(opengl_shader_get_uniform(name.c_str()), count, (const GLfloat*)val);
+}
+
 void opengl_uniform_state::setUniformMatrix4f(const SCP_string &name, const matrix4 &val)
 {
 	int uniform_index = findUniform(name);
@@ -1644,6 +1885,183 @@ void opengl_uniform_state::reset()
 	uniform_data_matrix4.clear();
 
 	uniform_lookup.clear();
+}
+
+opengl_light_state::opengl_light_state(int light_num): Light_num(light_num)
+{
+
+}
+
+void opengl_light_state::Enable()
+{
+	Assert ( Light_num >= 0 && Light_num < GL_max_lights );
+
+	if ( Enabled ) {
+		return;
+	}
+
+	glEnable(GL_LIGHT0 + Light_num);
+	Enabled = true;
+}
+
+void opengl_light_state::Disable()
+{
+	Assert ( Light_num >= 0 && Light_num < GL_max_lights );
+
+	if ( !Enabled ) {
+		return;
+	}
+
+	glDisable(GL_LIGHT0 + Light_num);
+	Enabled = false;
+}
+
+void opengl_light_state::Invalidate()
+{
+	InvalidPosition = true;
+}
+
+void opengl_light_state::SetPosition(GLfloat *val)
+{
+	Assert(Light_num >= 0 && Light_num < GL_max_lights);
+
+	if ( !InvalidPosition && 
+		fl_equal(Position[0], val[0]) && 
+		fl_equal(Position[1], val[1]) && 
+		fl_equal(Position[2], val[2]) && 
+		fl_equal(Position[3], val[3]) ) {
+		return;
+	}
+
+	Position[0] = val[0];
+	Position[1] = val[1];
+	Position[2] = val[2];
+	Position[3] = val[3];
+
+	glLightfv(GL_LIGHT0 + Light_num, GL_POSITION, val);
+	InvalidPosition = false;
+}
+
+void opengl_light_state::SetAmbient(GLfloat *val)
+{
+	Assert(Light_num >= 0 && Light_num < GL_max_lights);
+
+	if ( fl_equal(Ambient[0], val[0]) &&
+		fl_equal(Ambient[1], val[1]) &&
+		fl_equal(Ambient[2], val[2]) &&
+		fl_equal(Ambient[3], val[3]) ) {
+		return;
+	}
+
+	Ambient[0] = val[0];
+	Ambient[1] = val[1];
+	Ambient[2] = val[2];
+	Ambient[3] = val[3];
+
+	glLightfv(GL_LIGHT0 + Light_num, GL_AMBIENT, val);
+}
+
+void opengl_light_state::SetDiffuse(GLfloat *val)
+{
+	Assert(Light_num >= 0 && Light_num < GL_max_lights);
+
+	if ( fl_equal(Diffuse[0], val[0]) &&
+		fl_equal(Diffuse[1], val[1]) &&
+		fl_equal(Diffuse[2], val[2]) &&
+		fl_equal(Diffuse[3], val[3]) ) {
+		return;
+	}
+
+	Diffuse[0] = val[0];
+	Diffuse[1] = val[1];
+	Diffuse[2] = val[2];
+	Diffuse[3] = val[3];
+
+	glLightfv(GL_LIGHT0 + Light_num, GL_DIFFUSE, val);
+}
+
+void opengl_light_state::SetSpecular(GLfloat *val)
+{
+	Assert(Light_num >= 0 && Light_num < GL_max_lights);
+
+	if ( fl_equal(Specular[0], val[0]) &&
+		fl_equal(Specular[1], val[1]) &&
+		fl_equal(Specular[2], val[2]) &&
+		fl_equal(Specular[3], val[3]) ) {
+		return;
+	}
+
+	Specular[0] = val[0];
+	Specular[1] = val[1];
+	Specular[2] = val[2];
+	Specular[3] = val[3];
+
+	glLightfv(GL_LIGHT0 + Light_num, GL_SPECULAR, val);
+}
+
+void opengl_light_state::SetConstantAttenuation(GLfloat val)
+{
+	Assert(Light_num >= 0 && Light_num < GL_max_lights);
+
+	if ( fl_equal(ConstantAttenuation, val) ) {
+		return;
+	}
+
+	ConstantAttenuation = val;
+
+	glLightf(GL_LIGHT0 + Light_num, GL_CONSTANT_ATTENUATION, val);
+}
+
+void opengl_light_state::SetLinearAttenuation(GLfloat val)
+{
+	Assert(Light_num >= 0 && Light_num < GL_max_lights);
+
+	if ( fl_equal(LinearAttenuation, val) ) {
+		return;
+	}
+
+	LinearAttenuation = val;
+
+	glLightf(GL_LIGHT0 + Light_num, GL_LINEAR_ATTENUATION, val);
+}
+
+void opengl_light_state::SetQuadraticAttenuation(GLfloat val)
+{
+	Assert(Light_num >= 0 && Light_num < GL_max_lights);
+
+	if ( fl_equal(QuadraticAttenuation, val) ) {
+		return;
+	}
+
+	QuadraticAttenuation = val;
+
+	glLightf(GL_LIGHT0 + Light_num, GL_QUADRATIC_ATTENUATION, val);
+}
+
+void opengl_light_state::SetSpotExponent(GLfloat val)
+{
+	Assert(Light_num >= 0 && Light_num < GL_max_lights);
+
+	if ( fl_equal(SpotExponent, val) ) {
+		return;
+	}
+
+	SpotExponent = val;
+
+	glLightf(GL_LIGHT0 + Light_num, GL_SPOT_EXPONENT, val);
+}
+
+void opengl_light_state::SetSpotCutoff(GLfloat val)
+{
+	Assert(Light_num >= 0 && Light_num < GL_max_lights);
+
+	if ( fl_equal(SpotCutoff, val) ) {
+		return;
+	}
+
+	SpotCutoff = val;
+
+	glLightf(GL_LIGHT0 + Light_num, GL_SPOT_CUTOFF, val);
 }
 
 void gr_opengl_clear_states()

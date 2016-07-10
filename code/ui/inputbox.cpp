@@ -16,7 +16,7 @@
 #include "io/timer.h"
 #include "ui/ui.h"
 #include "ui/uidefs.h"
-
+#include "render/render.h"
 
 
 #define INPUTBOX_PASSWD_CHAR        '*'   // the password protected char
@@ -217,7 +217,8 @@ void UI_INPUTBOX::draw()
 		// draw the entire text box region
 		ui_draw_sunken_border( x-2, y-2, x+w+1, y+h+1 );
 		gr_set_color_fast( &CBLACK );
-		gr_rect( 0, 0, w, h, GR_RESIZE_MENU );
+		//gr_rect( 0, 0, w, h, GR_RESIZE_MENU );
+		render_colored_rect( 0, 0, w, h, GR_RESIZE_MENU );
 		w1 -= 4;
 		h1 -= 4;
 		gr_set_clip( x + 1, y + 1, w1 + 1, h1 + 1, GR_RESIZE_MENU );
@@ -235,7 +236,8 @@ void UI_INPUTBOX::draw()
 		gr_set_color_fast( &CBLACK );
 
 		// color the background behind the text	
-		gr_rect( 0, 0, tw + 1, th, GR_RESIZE_MENU_NO_OFFSET );
+		//gr_rect( 0, 0, tw + 1, th, GR_RESIZE_MENU_NO_OFFSET );
+		render_colored_rect( 0, 0, tw + 1, th, GR_RESIZE_MENU_NO_OFFSET );
 	}
 
 	if	( (my_wnd->selected_gadget == this) || disabled_flag ) {		
@@ -256,9 +258,11 @@ void UI_INPUTBOX::draw()
 
 	// draw the text
 	if (flags & UI_INPUTBOX_FLAG_PASSWD){
-		gr_string(text_x, text_y, passwd_text, GR_RESIZE_MENU);
+		//gr_string(text_x, text_y, passwd_text, GR_RESIZE_MENU);
+		render_string(text_x, text_y, passwd_text, GR_RESIZE_MENU);
 	} else {
-		gr_string(text_x, text_y, text, GR_RESIZE_MENU);
+		//gr_string(text_x, text_y, text, GR_RESIZE_MENU);
+		render_string(text_x, text_y, text, GR_RESIZE_MENU);
 	}
 
 	// draw the "cursor"
@@ -275,8 +279,9 @@ void UI_INPUTBOX::draw()
 				cursor_current_frame = bm_get_anim_frame(cursor_first_frame, i2fl(timer_get_milliseconds()) / 1000.0f, 0.0f, true);
 
 				// draw current frame
-				gr_set_bitmap(cursor_first_frame + cursor_current_frame);
-				gr_bitmap(text_x + tw + 4, 1, GR_RESIZE_MENU_NO_OFFSET);
+				//gr_set_bitmap(cursor_first_frame + cursor_current_frame);
+				//gr_bitmap(text_x + tw + 4, 1, GR_RESIZE_MENU_NO_OFFSET);
+				render_bitmap(cursor_first_frame + cursor_current_frame, text_x + tw + 4, 1, GR_RESIZE_MENU_NO_OFFSET);
 			}
 		}
 	}

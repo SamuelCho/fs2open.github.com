@@ -24,6 +24,7 @@
 #include "missionui/missionscreencommon.h"
 #include "missionui/redalert.h"
 #include "playerman/player.h"
+#include "render/render.h"
 #include "sound/audiostr.h"
 #include "sound/fsspeech.h"
 #include "ui/uidefs.h"
@@ -702,8 +703,9 @@ void cmd_brief_do_frame(float frametime)
 
 	GR_MAYBE_CLEAR_RES(Cmd_brief_background_bitmap);
 	if (Cmd_brief_background_bitmap >= 0) {
-		gr_set_bitmap(Cmd_brief_background_bitmap);
-		gr_bitmap(0, 0, GR_RESIZE_MENU);
+		//gr_set_bitmap(Cmd_brief_background_bitmap);
+		//gr_bitmap(0, 0, GR_RESIZE_MENU);
+		render_bitmap(Cmd_brief_background_bitmap, 0, 0, GR_RESIZE_MENU);
 	} 
 
 	if(Cur_Anim.num_frames > 0) {
@@ -724,7 +726,8 @@ void cmd_brief_do_frame(float frametime)
 
 	sprintf(buf, XSTR( "Stage %d of %d", 464), Cur_stage + 1, Cur_cmd_brief->num_stages);
 	gr_get_string_size(&w, NULL, buf);
-	gr_string(Cmd_text_wnd_coords[Uses_scroll_buttons][gr_screen.res][CMD_X_COORD] + Cmd_text_wnd_coords[Uses_scroll_buttons][gr_screen.res][CMD_W_COORD] - w, Cmd_stage_y[gr_screen.res], buf, GR_RESIZE_MENU);
+	//gr_string(Cmd_text_wnd_coords[Uses_scroll_buttons][gr_screen.res][CMD_X_COORD] + Cmd_text_wnd_coords[Uses_scroll_buttons][gr_screen.res][CMD_W_COORD] - w, Cmd_stage_y[gr_screen.res], buf, GR_RESIZE_MENU);
+	render_string(Cmd_text_wnd_coords[Uses_scroll_buttons][gr_screen.res][CMD_X_COORD] + Cmd_text_wnd_coords[Uses_scroll_buttons][gr_screen.res][CMD_W_COORD] - w, Cmd_stage_y[gr_screen.res], buf, GR_RESIZE_MENU);
 
 	if (brief_render_text(Top_cmd_brief_text_line, Cmd_text_wnd_coords[Uses_scroll_buttons][gr_screen.res][CMD_X_COORD], Cmd_text_wnd_coords[Uses_scroll_buttons][gr_screen.res][CMD_Y_COORD], Cmd_text_wnd_coords[Uses_scroll_buttons][gr_screen.res][CMD_H_COORD], frametime, 0, 1)){
 		Voice_good_to_go = 1;
@@ -740,9 +743,11 @@ void cmd_brief_do_frame(float frametime)
 
 		gr_get_string_size(&w, &h, XSTR("more", 1469), strlen(XSTR("more", 1469)));
 		gr_set_color_fast(&Color_black);
-		gr_rect(more_txt_x-2, more_txt_y, w+3, h, GR_RESIZE_MENU);
+		//gr_rect(more_txt_x-2, more_txt_y, w+3, h, GR_RESIZE_MENU);
+		render_colored_rect(more_txt_x-2, more_txt_y, w+3, h, GR_RESIZE_MENU);
 		gr_set_color_fast(&Color_more_indicator);
-		gr_string(more_txt_x, more_txt_y, XSTR("more", 1469), GR_RESIZE_MENU);  // base location on the input x and y?
+		//gr_string(more_txt_x, more_txt_y, XSTR("more", 1469), GR_RESIZE_MENU);
+		render_string(more_txt_x, more_txt_y, XSTR("more", 1469), GR_RESIZE_MENU);  // base location on the input x and y?
 	}
 
 	// blit help overlay if active

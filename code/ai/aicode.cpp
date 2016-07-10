@@ -58,6 +58,7 @@
 #include "physics/physics.h"
 #include "playerman/player.h"
 #include "render/3d.h"
+#include "render/render.h"
 #include "ship/afterburner.h"
 #include "ship/awacs.h"
 #include "ship/ship.h"
@@ -6173,10 +6174,12 @@ void render_all_ship_bay_paths(object *objp)
 				gr_set_color(255, 0, 0);
 			}
 
-			g3_draw_sphere( &v, 1.5f);
+			//g3_draw_sphere( &v, 1.5f);
+			render_sphere_fast( &v, 1.5f);
 
-			if ( j > 0 )
+			if ( j > 0 ) {
 				g3_draw_line(&v, &prev_vertex);
+			}
 
 			prev_vertex = v;
 	
@@ -6217,10 +6220,12 @@ void render_all_subsys_paths(object *objp)
 				gr_set_color(255, 0, 0);
 			}
 
-			g3_draw_sphere( &v, 1.5f);
+			//g3_draw_sphere( &v, 1.5f);
+			render_sphere_fast(&v, 1.5f);
 
-			if ( j > 0 )
+			if ( j > 0 ) {
 				g3_draw_line(&v, &prev_vertex);
+			}
 
 			prev_vertex = v;
 		}
@@ -6250,7 +6255,8 @@ void render_path_points(object *objp)
 		model_instance_find_world_point(&global_dock_point, &dock_point, shipp->model_instance_num, 0, &dobjp->orient, &dobjp->pos );
 		g3_rotate_vertex(&v, &global_dock_point);
 		gr_set_color(255, 255, 255);
-		g3_draw_sphere( &v, 1.5f);
+		//g3_draw_sphere( &v, 1.5f);
+		render_sphere_fast(&v, 1.5f);
 	}
 
 	if (aip->path_start != -1) {
@@ -6267,13 +6273,15 @@ void render_path_points(object *objp)
 			g3_rotate_vertex( &v0, &pp->pos );
 
 			gr_set_color(0, 128, 96);
-			if (i != 0)
+			if (i != 0) {
 				g3_draw_line(&v0, &prev_vertex);
+			}
 
 			if (pp-Path_points == aip->path_cur)
 				gr_set_color(255,255,0);
 			
-			g3_draw_sphere( &v0, 4.5f);
+			//g3_draw_sphere( &v0, 4.5f);
+			render_sphere_fast(&v0, 4.5f);
 
 			prev_vertex = v0;
 
@@ -11101,9 +11109,11 @@ void ai_debug_render_stuff()
 		vm_vec_scale_add(&gpos2, &gpos, &gvec, 20.0f);
 		g3_rotate_vertex(&vert2, &gpos2);
 		gr_set_color(0, 0, 255);
-		g3_draw_sphere(&vert1, 2.0f);
+		//g3_draw_sphere(&vert1, 2.0f);
+		render_sphere_fast(&vert1, 2.0f);
 		gr_set_color(255, 0, 255);
-		g3_draw_sphere(&vert2, 2.0f);
+		//g3_draw_sphere(&vert2, 2.0f);
+		render_sphere_fast(&vert2, 2.0f);
 		g3_draw_line(&vert1, &vert2);
 	}
 
@@ -11480,7 +11490,8 @@ void render_wing_phantoms(object *objp)
 			vertex	vert;
 			gr_set_color(255, 0, 128);
 			g3_rotate_vertex(&vert, &goal_point);
-			g3_draw_sphere(&vert, 2.0f);
+			//g3_draw_sphere(&vert, 2.0f);
+			render_sphere_fast(&vert, 2.0f);
 		}
 
 	Debug_render_wing_phantoms = 0;

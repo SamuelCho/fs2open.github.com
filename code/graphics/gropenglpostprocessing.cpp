@@ -351,7 +351,6 @@ void gr_opengl_post_process_end()
 				GL_state.Texture.SetActiveUnit(1);
 				GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 				GL_state.Texture.Enable(Cockpit_depth_texture);
-				GL_state.Color(255, 255, 255, 255);
 				GL_state.Blend(GL_TRUE);
 				GL_state.SetAlphaBlendMode(ALPHA_BLEND_ADDITIVE);
 				
@@ -382,8 +381,6 @@ void gr_opengl_post_process_end()
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
-
-	GL_state.Color(255, 255, 255, 255);
 
 	// set and configure post shader ...
 	int flags = 0;
@@ -941,7 +938,7 @@ static bool opengl_post_init_framebuffer()
 // 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, size, size, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 
 //		vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Post_shadow_texture_id, 0);
-		vglFramebufferTextureEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, Post_shadow_texture_id, 0);
+		vglFramebufferTextureARB(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, Post_shadow_texture_id, 0);
 
 		glGenTextures(1, &Post_shadow_depth_texture_id);
 
@@ -965,7 +962,7 @@ static bool opengl_post_init_framebuffer()
 // 		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, size, size, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 
 //		vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, Post_shadow_depth_texture_id, 0);
-		vglFramebufferTextureEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, Post_shadow_depth_texture_id, 0);
+		vglFramebufferTextureARB(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, Post_shadow_depth_texture_id, 0);
 	}
 
 	vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
@@ -1020,7 +1017,7 @@ void opengl_post_process_init()
 		return;
 	}
 
-	if ( !is_minimum_GLSL_version() || Cmdline_no_fbo || !Is_Extension_Enabled(OGL_EXT_FRAMEBUFFER_OBJECT) ) {
+	if ( !is_minimum_GLSL_version() || Cmdline_no_fbo || !Is_Extension_Enabled(GL_EXTENSION_ARB_FRAMEBUFFER_OBJECT) ) {
 		Cmdline_postprocess = 0;
 		return;
 	}
@@ -1029,7 +1026,7 @@ void opengl_post_process_init()
 	// form or another:
 	//    - the NPOT extension
 	//    - GL version 2.0+ (which should work for non-reporting ATI cards since we don't use mipmaps)
-	if ( !(Is_Extension_Enabled(OGL_ARB_TEXTURE_NON_POWER_OF_TWO) || (GL_version >= 20)) ) {
+	if ( !(Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_NON_POWER_OF_TWO) || (GL_version >= 20)) ) {
 		Cmdline_postprocess = 0;
 		return;
 	}

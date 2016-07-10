@@ -17,7 +17,8 @@
 #include "io/key.h"
 #include "physics/physics.h"		// For Physics_viewer_bank for g3_draw_rotated_bitmap
 #include "render/3dinternal.h"
-
+#include "render/batching.h"
+#include "render/render.h"
 
 //vertex buffers for polygon drawing and clipping
 static vertex **Vbuf0 = NULL;
@@ -90,7 +91,8 @@ int must_clip_line(vertex *p0, vertex *p1, ubyte codes_or, uint flags)
 
 	if (p1->flags&PF_OVERFLOW) goto free_points;
 
-	gr_aaline( p0, p1 );
+	//gr_aaline( p0, p1 );
+	render_aaline(p0, p1);
 
 	ret = 1;
 
@@ -144,7 +146,8 @@ int g3_draw_line(vertex *p0, vertex *p1)
 	if (p1->flags&PF_OVERFLOW)
 		return must_clip_line(p0,p1,codes_or,0);
 
-  	gr_aaline( p0, p1 );
+  	//gr_aaline( p0, p1 );
+	render_aaline(p0, p1);
 
 	return 0;
 }
@@ -1141,10 +1144,6 @@ float g3_draw_rotated_bitmap_area(vertex *pnt,float angle, float rad,uint tmap_f
 
 
 #include "graphics/2d.h"
-typedef struct horz_pt {
-	float x, y;
-	int edge;
-} horz_pt;
 
 //draws a horizon. takes eax=sky_color, edx=ground_color
 void g3_draw_horizon_line()
@@ -1235,7 +1234,6 @@ void g3_draw_horizon_line()
 
 	// draw from left to right.
 	gr_line( fl2i(horz_pts[0].x),fl2i(horz_pts[0].y),fl2i(horz_pts[1].x),fl2i(horz_pts[1].y), GR_RESIZE_NONE );
-	
 }
 
 // Draws a polygon always facing the viewer.
@@ -2162,14 +2160,13 @@ void flash_ball::render(float rad, float intinsity, float life){
 }
 
 void flash_ball::render(int texture, float rad, float intinsity, float life){
-	flash_ball::batcher.allocate(n_rays);
-	for(int i = 0; i<n_rays; i++){
+	for(int i = 0; i < n_rays; i++){
 		vec3d end;
 		vm_vec_interp_constant(&end, &ray[i].start.world, &ray[i].end.world, life);
 		vm_vec_scale(&end, rad);
 		vm_vec_add2(&end, &center);
 
-		batch_add_beam(texture, TMAP_FLAG_TEXTURED | TMAP_FLAG_XPARENT | TMAP_HTL_3D_UNLIT | TMAP_FLAG_RGB | TMAP_FLAG_GOURAUD | TMAP_FLAG_CORRECT, &center, &end, ray[i].width*rad, intinsity);
+		batching_add_beam(texture, &center, &end, ray[i].width*rad, intinsity);
 	}
 }
 

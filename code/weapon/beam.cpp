@@ -38,6 +38,8 @@
 #include "ship/shiphit.h"
 #include "weapon/beam.h"
 #include "weapon/weapon.h"
+#include "globalincs/globals.h"
+#include "render/render.h"
 
 // ------------------------------------------------------------------------------------------------
 // BEAM WEAPON DEFINES/VARS
@@ -1172,7 +1174,7 @@ void beam_render(beam *b, float u_offset)
 	vm_vec_normalize_quick(&fvec);		
 
 	// turn off backface culling
-	int cull = gr_set_cull(0);
+	//int cull = gr_set_cull(0);
 
 	length = vm_vec_dist(&b->last_start, &b->last_shot);					// beam tileing -Bobboau
 
@@ -1244,15 +1246,13 @@ void beam_render(beam *b, float u_offset)
 			framenum = bm_get_anim_frame(bwsi->texture.first_frame, b->beam_section_frame[s_idx], bwsi->texture.total_time, true);
 		}
 
-		gr_set_bitmap(bwsi->texture.first_frame + framenum, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, 0.9999f);
-
-		// added TMAP_FLAG_TILED flag for beam texture tileing -Bobboau			
-		// added TMAP_FLAG_RGB and TMAP_FLAG_GOURAUD so the beam would apear to fade along it's length-Bobboau
-		g3_draw_poly( 4, verts, TMAP_FLAG_TEXTURED | TMAP_FLAG_RGB | TMAP_FLAG_GOURAUD | TMAP_FLAG_TILED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT | TMAP_FLAG_EMISSIVE ); 
+		material material_params;
+		render_set_unlit_material(&material_params, bwsi->texture.first_frame + framenum, 0.9999f, true, true);
+		render_primitives_colored_textured(&material_params, h1, 4, PRIM_TYPE_TRIFAN, false);
 	}		
 	
 	// turn backface culling back on
-	gr_set_cull(cull);
+	//gr_set_cull(cull);
 }
 
 // generate particles for the muzzle glow
@@ -1458,16 +1458,20 @@ void beam_render_muzzle_glow(beam *b)
 
 		int framenum = 0;
 
-		if (bwi->beam_glow.num_frames > 1) {
+		if ( bwi->beam_glow.num_frames > 1 ) {
 			b->beam_glow_frame += flFrametime;
 
 			framenum = bm_get_anim_frame(bwi->beam_glow.first_frame, b->beam_glow_frame, bwi->beam_glow.total_time, true);
 		}
 
-		gr_set_bitmap(bwi->beam_glow.first_frame + framenum, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, alpha * pct);
+		//gr_set_bitmap(bwi->beam_glow.first_frame + framenum, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, alpha * pct);
 
 		// draw a poly
-		g3_draw_poly(4, verts, TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT);
+		//g3_draw_poly(4, verts, TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT);
+
+		material material_info;
+		render_set_unlit_material(&material_info, bwi->beam_glow.first_frame + framenum, alpha * pct, true, true);
+		render_primitives_textured(&material_info, h1, 4, PRIM_TYPE_TRIFAN, false);
 
 		gr_set_cull(cull);
 
@@ -1476,30 +1480,116 @@ void beam_render_muzzle_glow(beam *b)
 		// draw the bitmap
 		g3_transfer_vertex(&pt, &b->last_start);
 
-
 		int framenum = 0;
 
-		if (bwi->beam_glow.num_frames > 1) {
+		if ( bwi->beam_glow.num_frames > 1 ) {
 			b->beam_glow_frame += flFrametime;
 
 			framenum = bm_get_anim_frame(bwi->beam_glow.first_frame, b->beam_glow_frame, bwi->beam_glow.total_time, true);
 		}
 
-		gr_set_bitmap(bwi->beam_glow.first_frame + framenum, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, alpha * pct);
+		//gr_set_bitmap(bwi->beam_glow.first_frame + framenum, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, alpha * pct);
 
 		// draw 1 bitmap
-		g3_draw_bitmap(&pt, 0, rad, tmap_flags);
+		//g3_draw_bitmap(&pt, 0, rad, tmap_flags);
+		render_oriented_bitmap(bwi->beam_glow.first_frame + framenum, alpha * pct, &pt, 0, rad, 0.0f);
 
 		// maybe draw more
-		if (pct > 0.3f)
-			g3_draw_bitmap(&pt, 0, rad * 0.75f, tmap_flags, rad * 0.25f);
+		if ( pct > 0.3f ) {
+			//g3_draw_bitmap(&pt, 0, rad * 0.75f, tmap_flags, rad * 0.25f);
+			render_oriented_bitmap(bwi->beam_glow.first_frame + framenum, alpha * pct, &pt, 0, rad * 0.75f, rad * 0.25f);
+		}
 
-		if (pct > 0.5f)
-			g3_draw_bitmap(&pt, 0, rad * 0.45f, tmap_flags, rad * 0.55f);
+		if ( pct > 0.5f ) {
+			//g3_draw_bitmap(&pt, 0, rad * 0.45f, tmap_flags, rad * 0.55f);
+			render_oriented_bitmap(bwi->beam_glow.first_frame + framenum, alpha * pct, &pt, 0, rad * 0.45f, rad * 0.55f);
+		}
 
-		if (pct > 0.7f)
-			g3_draw_bitmap(&pt, 0, rad * 0.25f, tmap_flags, rad * 0.75f);
+		if ( pct > 0.7f ) {
+			//g3_draw_bitmap(&pt, 0, rad * 0.25f, tmap_flags, rad * 0.75f);
+			render_oriented_bitmap(bwi->beam_glow.first_frame + framenum, alpha * pct, &pt, 0, rad * 0.25f, rad * 0.75f);
+		}
 	}
+}
+
+void beam_render_muzzle_glow_new(beam *b)
+{
+	vertex pt;
+	weapon_info *wip = &Weapon_info[b->weapon_info_index];
+	beam_weapon_info *bwi = &Weapon_info[b->weapon_info_index].b_info;
+	float rad, pct, rand_val;
+	pt.flags = 0;    // avoid potential read of uninit var
+
+	// if we don't have a glow bitmap
+	if (bwi->beam_glow.first_frame < 0)
+		return;
+
+	// if the beam is warming up, scale the glow
+	if (b->warmup_stamp != -1) {		
+		// get warmup pct
+		pct = BEAM_WARMUP_PCT(b);
+		rand_val = 1.0f;
+	} else
+	// if the beam is warming down
+	if (b->warmdown_stamp != -1) {
+		// get warmup pct
+		pct = 1.0f - BEAM_WARMDOWN_PCT(b);
+		rand_val = 1.0f;
+	} 
+	// otherwise the beam is really firing
+	else {
+		pct = 1.0f;
+		rand_val = frand_range(0.90f, 1.0f);
+	}
+
+	rad = wip->b_info.beam_muzzle_radius * pct * rand_val;
+
+	// don't bother trying to draw if there is no radius
+	if (rad <= 0.0f)
+		return;
+
+	float alpha = get_current_alpha(&b->last_start);
+
+	if (alpha <= 0.0f)
+		return;
+
+	// draw the bitmap
+	g3_transfer_vertex(&pt, &b->last_start);
+
+	int framenum = 0;
+
+	if (bwi->beam_glow.num_frames > 1) {
+		b->beam_glow_frame += flFrametime;
+
+		// Sanity checks
+		if (b->beam_glow_frame < 0.0f)
+			b->beam_glow_frame = 0.0f;
+		else if (b->beam_glow_frame > 100.0f)
+			b->beam_glow_frame = 0.0f;
+
+		while (b->beam_glow_frame > bwi->beam_glow.total_time)
+			b->beam_glow_frame -= bwi->beam_glow.total_time;
+
+		framenum = fl2i( (b->beam_glow_frame * bwi->beam_glow.num_frames) / bwi->beam_glow.total_time );
+
+		CLAMP(framenum, 0, bwi->beam_glow.num_frames-1);
+	}
+
+	int bitmap_id = bwi->beam_glow.first_frame + framenum;
+	float intensity = alpha * pct;
+
+	// draw 1 bitmap
+	render_oriented_bitmap(bitmap_id, intensity, &pt, 0, rad, 0.0f);
+	
+	// maybe draw more
+	if (pct > 0.3f)
+		render_oriented_bitmap(bitmap_id, intensity, &pt, 0, rad * 0.75f, rad * 0.25f);
+
+	if (pct > 0.5f)
+		render_oriented_bitmap(bitmap_id, intensity, &pt, 0, rad * 0.45f, rad * 0.55f);
+
+	if (pct > 0.7f)
+		render_oriented_bitmap(bitmap_id, intensity, &pt, 0, rad * 0.25f, rad * 0.75f);
 }
 
 // render all beam weapons
@@ -1534,7 +1624,7 @@ void beam_render_all()
 		}
 
 		// render the muzzle glow
-		beam_render_muzzle_glow(moveup);		
+		beam_render_muzzle_glow_new(moveup);		
 
 		// maybe generate some muzzle particles
 		beam_generate_muzzle_particles(moveup);
