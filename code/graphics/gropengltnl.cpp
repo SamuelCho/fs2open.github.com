@@ -860,6 +860,249 @@ static void opengl_init_arrays(indexed_vertex_source *vert_src, vertex_buffer *b
 	opengl_bind_vertex_layout(bufferp->layout, vert_offset, ptr);
 }
 
+void opengl_render_model_program(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer* bufferp, buffer_data *datap)
+{
+	GL_state.Texture.SetShaderMode(GL_TRUE);
+
+	opengl_tnl_set_model_material(material_info);
+
+	GLubyte *ibuffer = NULL;
+
+	int start = 0;
+	int end = (datap->n_verts - 1);
+	int count = (end - (start * 3) + 1);
+
+	GLenum element_type = (datap->flags & VB_FLAG_LARGE_INDEX) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
+
+	Assert(vert_source);
+
+	// basic setup of all data
+	opengl_init_arrays(vert_source, bufferp);
+
+	if ( vert_source->Ibuffer_handle >= 0 ) {
+		opengl_bind_buffer_object(vert_source->Ibuffer_handle);
+	} else {
+		ibuffer = (GLubyte*)vert_source->Index_list;
+	}
+
+	if ( Rendering_to_shadow_map ) {
+		vglDrawElementsInstancedBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), 4, (GLint)bufferp->vertex_num_offset);
+	} else {
+		if ( Is_Extension_Enabled(GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+			if ( Cmdline_drawelements ) {
+				vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
+			} else {
+				vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
+			}
+		} else {
+			if ( Cmdline_drawelements ) {
+				glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start));
+			} else {
+				vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+			}
+		}
+	}
+
+	GL_state.Texture.SetShaderMode(GL_FALSE);
+}
+
+void opengl_render_model_fixed(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer *bufferp, buffer_data *datap)
+{
+	float u_scale, v_scale;
+	int render_pass = 0;
+	GLubyte *ibuffer = NULL;
+	GLubyte *vbuffer = NULL;
+
+	bool textured = false;
+	bool rendered_env = false;
+	bool using_glow = false;
+	bool using_spec = false;
+
+	int start = 0;
+	int end = (datap->n_verts - 1);
+	int count = (end + 1);
+
+	GLenum element_type = (datap->flags & VB_FLAG_LARGE_INDEX) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
+
+	opengl_vertex_buffer *vbp = g_vbp;
+	Assert(vbp);
+
+	if ( material_info->is_textured() ) {
+		textured = true;
+
+		if ( Cmdline_glow && (material_info->get_texture_map(TM_GLOW_TYPE) > 0) ) {
+			using_glow = true;
+		}
+
+		if ( material_info->is_lit() ) {
+			GL_state.Normalize(GL_TRUE);
+
+			if ( !material_info->is_fogged() && (material_info->get_texture_map(TM_SPECULAR_TYPE) > 0) ) {
+				using_spec = true;
+			}
+		}
+	}
+
+	render_pass = 0;
+
+	opengl_tnl_set_material(material_info, false);
+
+	if ( GL_state.CullFace() ) {
+		GL_state.FrontFaceValue(GL_CW);
+	}
+
+	opengl_default_light_settings(!material_info->get_center_alpha(), material_info->get_light_factor() > 0.25f, (using_spec) ? 0 : 1);
+	gr_opengl_set_center_alpha(material_info->get_center_alpha());
+
+	// basic setup of all data
+	opengl_init_arrays(vert_source, bufferp);
+
+	if ( vbp->ib_handle >= 0 ) {
+		opengl_bind_buffer_object(vert_source->Ibuffer_handle);
+	} else {
+		ibuffer = (GLubyte*)vert_source->Index_list;
+	}
+
+	if ( vert_source->Vbuffer_handle < 0 ) {
+		vbuffer = (GLubyte*)vert_source->Vertex_list;
+	}
+
+	// if we're not doing an alpha pass, turn on the alpha mask
+
+	if ( material_info->get_depth_mode() == ZBUFFER_TYPE_FULL ) {
+		gr_alpha_mask_set(1, 0.95f);
+	}
+
+#define BUFFER_OFFSET(off) (vbuffer+bufferp->vertex_offset+(off))
+
+	// -------- Begin 1st PASS (base texture, glow) ---------------------------------- //
+	if ( textured ) {
+		render_pass = 0;
+
+		// base texture
+		if ( material_info->get_texture_map(TM_BASE_TYPE) > 0 ) {
+			GL_state.Array.SetActiveClientUnit(render_pass);
+			GL_state.Array.EnableClientTexture();
+			GL_state.Array.TexPointer(2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0));
+
+			gr_opengl_tcache_set(material_info->get_texture_map(TM_BASE_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
+
+			// increment texture count for this pass
+			render_pass++; // bump!
+		}
+
+		// glowmaps!
+		if ( using_glow ) {
+			GL_state.Array.SetActiveClientUnit(render_pass);
+			GL_state.Array.EnableClientTexture();
+			GL_state.Array.TexPointer(2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0));
+
+			// set glowmap on relevant ARB
+			gr_opengl_tcache_set(material_info->get_texture_map(TM_GLOW_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
+
+			opengl_set_additive_tex_env();
+
+			render_pass++; // bump!
+		}
+	}
+
+	// DRAW IT!!
+	if ( Cmdline_drawelements ) {
+		glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start));
+	} else {
+		vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+	}
+
+	// -------- End 2nd PASS --------------------------------------------------------- //
+
+
+	// -------- Begin 4th PASS (specular/shine map) ---------------------------------- //
+	if ( using_spec ) {
+		// turn all previously used arbs off before the specular pass
+		// this fixes the glowmap multitexture rendering problem - taylor
+		GL_state.Texture.DisableAll();
+		GL_state.Array.SetActiveClientUnit(1);
+		GL_state.Array.DisableClientTexture();
+
+		render_pass = 0;
+
+		GL_state.Array.SetActiveClientUnit(0);
+		GL_state.Array.EnableClientTexture();
+		GL_state.Array.TexPointer(2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0));
+
+		gr_opengl_tcache_set(material_info->get_texture_map(TM_SPECULAR_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
+
+		// render with spec lighting only
+		opengl_default_light_settings(0, 0, 1);
+
+		GL_state.Texture.SetEnvCombineMode(GL_COMBINE_RGB, GL_MODULATE);
+		glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
+		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
+		glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);
+		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
+
+		GL_state.Texture.SetRGBScale((rendered_env) ? 2.0f : 4.0f);
+
+		GL_state.SetAlphaBlendMode(ALPHA_BLEND_ADDITIVE);
+
+		GL_state.DepthMask(GL_TRUE);
+		GL_state.DepthFunc(GL_LEQUAL);
+
+		// DRAW IT!!
+		if ( Cmdline_drawelements ) {
+			glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start));
+		} else {
+			vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+		}
+
+		opengl_default_light_settings();
+
+		GL_state.Texture.SetRGBScale(1.0f);
+	}
+	// -------- End 4th PASS --------------------------------------------------------- //
+
+	// make sure everthing gets turned back off
+	gr_alpha_mask_set(0, 1.0f);
+	GL_state.Texture.DisableAll();
+	GL_state.Normalize(GL_FALSE);
+	GL_state.Array.SetActiveClientUnit(1);
+	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
+	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);
+	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
+	GL_state.Array.DisableClientTexture();
+	GL_state.Array.SetActiveClientUnit(0);
+	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
+	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);
+	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
+	GL_state.Array.DisableClientTexture();
+	GL_state.Array.DisableClientVertex();
+	GL_state.Array.DisableClientNormal();
+}
+
+void gr_opengl_render_model(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer* bufferp, int texi)
+{
+	Assert(GL_htl_projection_matrix_set);
+	Assert(GL_htl_view_matrix_set);
+
+	Verify(bufferp != NULL);
+
+	GL_CHECK_FOR_ERRORS("start of render_buffer()");
+
+	Assert(texi >= 0);
+
+	buffer_data *datap = &bufferp->tex_buf[texi];
+
+	if ( is_minimum_GLSL_version() ) {
+		opengl_render_model_program(material_info, vert_source, bufferp, datap);
+	} else {
+		opengl_render_model_fixed(material_info, vert_source, bufferp, datap);
+	}
+
+	GL_CHECK_FOR_ERRORS("end of render_buffer()");
+}
+
 #define DO_RENDER()	\
 	if (Cmdline_drawelements) \
 		glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); \
@@ -1394,249 +1637,6 @@ void gr_opengl_render_buffer(int start, vertex_buffer *bufferp, int texi, int fl
 	}
 
 	GL_CHECK_FOR_ERRORS("end of render_buffer()");
-}
-
-void gr_opengl_render_model(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer* bufferp, int texi)
-{
-	Assert( GL_htl_projection_matrix_set );
-	Assert( GL_htl_view_matrix_set );
-
-	Verify( bufferp != NULL );
-
-	GL_CHECK_FOR_ERRORS("start of render_buffer()");
-
-	Assert( texi >= 0 );
-
-	buffer_data *datap = &bufferp->tex_buf[texi];
-
-	if ( is_minimum_GLSL_version() ) {
-		opengl_render_model_program(material_info, vert_source, bufferp, datap);
-	} else {
-		opengl_render_model_fixed(material_info, vert_source, bufferp, datap);
-	}
-
-	GL_CHECK_FOR_ERRORS("end of render_buffer()");
-}
-
-void opengl_render_model_program(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer* bufferp, buffer_data *datap)
-{
-	GL_state.Texture.SetShaderMode(GL_TRUE);
-
-	opengl_tnl_set_model_material(material_info);
-
-	GLubyte *ibuffer = NULL;
-
-	int start = 0;
-	int end = (datap->n_verts - 1);
-	int count = (end - (start * 3) + 1);
-
-	GLenum element_type = (datap->flags & VB_FLAG_LARGE_INDEX) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
-
-	Assert(vert_source);
-
-	// basic setup of all data
-	opengl_init_arrays(vert_source, bufferp);
-
-	if ( vert_source->Ibuffer_handle >= 0 ) {
-		opengl_bind_buffer_object(vert_source->Ibuffer_handle);
-	} else {
-		ibuffer = (GLubyte*)vert_source->Index_list;
-	}
-
-	if ( Rendering_to_shadow_map ) {
-		vglDrawElementsInstancedBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), 4, (GLint)bufferp->vertex_num_offset);
-	} else {
-		if ( Is_Extension_Enabled(GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
-			if ( Cmdline_drawelements ) {
-				vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
-			} else {
-				vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
-			}
-		} else {
-			if ( Cmdline_drawelements ) {
-				glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start));
-			} else {
-				vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
-			}
-		}
-	}
-
-	GL_state.Texture.SetShaderMode(GL_FALSE);
-}
-
-void opengl_render_model_fixed(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer *bufferp, buffer_data *datap)
-{
-	float u_scale, v_scale;
-	int render_pass = 0;
-	GLubyte *ibuffer = NULL;
-	GLubyte *vbuffer = NULL;
-
-	bool textured = false;
-	bool rendered_env = false;
-	bool using_glow = false;
-	bool using_spec = false;
-
-	int start = 0;
-	int end = (datap->n_verts - 1);
-	int count = (end + 1);
-
-	GLenum element_type = (datap->flags & VB_FLAG_LARGE_INDEX) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
-
-	opengl_vertex_buffer *vbp = g_vbp;
-	Assert( vbp );
-
-	if ( material_info->is_textured() ) {
-		textured = true;
-
-		if ( Cmdline_glow && (material_info->get_texture_map(TM_GLOW_TYPE) > 0) ) {
-			using_glow = true;
-		}
-
-		if ( material_info->is_lit() ) {
-			GL_state.Normalize(GL_TRUE);
-
-			if ( !material_info->is_fogged() && (material_info->get_texture_map(TM_SPECULAR_TYPE) > 0) ) {
-				using_spec = true;
-			}
-		}
-	}
-
-	render_pass = 0;
-
-	opengl_tnl_set_material(material_info, false);
-
-	if ( GL_state.CullFace() ) {
-		GL_state.FrontFaceValue(GL_CW);
-	}
-
-	opengl_default_light_settings(!material_info->get_center_alpha(), material_info->get_light_factor() > 0.25f, (using_spec) ? 0 : 1);
-	gr_opengl_set_center_alpha(material_info->get_center_alpha());
-
-	// basic setup of all data
-	opengl_init_arrays(vert_source, bufferp);
-
-	if ( vbp->ib_handle >= 0 ) {
-		opengl_bind_buffer_object(vert_source->Ibuffer_handle);
-	} else {
-		ibuffer = (GLubyte*)vert_source->Index_list;
-	}
-
-	if ( vert_source->Vbuffer_handle < 0 ) {
-		vbuffer = (GLubyte*)vert_source->Vertex_list;
-	}
-
-	// if we're not doing an alpha pass, turn on the alpha mask
-	
-	if ( material_info->get_depth_mode() == ZBUFFER_TYPE_FULL ) {
-		gr_alpha_mask_set(1, 0.95f);
-	}
-
-	#define BUFFER_OFFSET(off) (vbuffer+bufferp->vertex_offset+(off))
-
-// -------- Begin 1st PASS (base texture, glow) ---------------------------------- //
-	if (textured) {
-		render_pass = 0;
-
-		// base texture
-		if ( material_info->get_texture_map(TM_BASE_TYPE) > 0 ) {
-			GL_state.Array.SetActiveClientUnit(render_pass);
-			GL_state.Array.EnableClientTexture();
-			GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
-
-			gr_opengl_tcache_set(material_info->get_texture_map(TM_BASE_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
-
-			// increment texture count for this pass
-			render_pass++; // bump!
-		}
-
-		// glowmaps!
-		if (using_glow) {
-			GL_state.Array.SetActiveClientUnit(render_pass);
-			GL_state.Array.EnableClientTexture();
-			GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
-
-			// set glowmap on relevant ARB
-			gr_opengl_tcache_set(material_info->get_texture_map(TM_GLOW_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
-
-			opengl_set_additive_tex_env();
-
-			render_pass++; // bump!
-		}
-	}
-
-	// DRAW IT!!
-	if (Cmdline_drawelements) {
-		glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
-	} else {
-		vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
-	}
-
-// -------- End 2nd PASS --------------------------------------------------------- //
-
-
-// -------- Begin 4th PASS (specular/shine map) ---------------------------------- //
-	if (using_spec) {
-		// turn all previously used arbs off before the specular pass
-		// this fixes the glowmap multitexture rendering problem - taylor
-		GL_state.Texture.DisableAll();
-		GL_state.Array.SetActiveClientUnit(1);
-		GL_state.Array.DisableClientTexture();
-
-		render_pass = 0;
-
-		GL_state.Array.SetActiveClientUnit(0);
-		GL_state.Array.EnableClientTexture();
-		GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
-
-		gr_opengl_tcache_set(material_info->get_texture_map(TM_SPECULAR_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
-
-		// render with spec lighting only
-		opengl_default_light_settings(0, 0, 1);
-
-		GL_state.Texture.SetEnvCombineMode(GL_COMBINE_RGB, GL_MODULATE);
-		glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
-		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
-		glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);
-		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
-
-		GL_state.Texture.SetRGBScale( (rendered_env) ? 2.0f : 4.0f );
-
-		GL_state.SetAlphaBlendMode(ALPHA_BLEND_ADDITIVE);
-
-		GL_state.DepthMask(GL_TRUE);
-		GL_state.DepthFunc(GL_LEQUAL);
-
-		// DRAW IT!!
-		if (Cmdline_drawelements) {
-			glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
-		} else {
-			vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
-		}
-
-		opengl_default_light_settings();
-
-		GL_state.Texture.SetRGBScale(1.0f);
-	}
-// -------- End 4th PASS --------------------------------------------------------- //
-
-	// make sure everthing gets turned back off
-	gr_alpha_mask_set(0, 1.0f);
-	GL_state.Texture.DisableAll();
-	GL_state.Normalize(GL_FALSE);
-	GL_state.Array.SetActiveClientUnit(1);
-	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
-	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
-	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);
-	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
-	GL_state.Array.DisableClientTexture();
-	GL_state.Array.SetActiveClientUnit(0);
-	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
-	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
-	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);
-	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
-	GL_state.Array.DisableClientTexture();
-	GL_state.Array.DisableClientVertex();
-	GL_state.Array.DisableClientNormal();
 }
 
 extern GLuint Scene_depth_texture;
