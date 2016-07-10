@@ -570,6 +570,7 @@
     <ClCompile Include="..\..\code\graphics\gropenglstate.cpp" />
     <ClCompile Include="..\..\code\graphics\gropengltexture.cpp" />
     <ClCompile Include="..\..\code\graphics\gropengltnl.cpp" />
+    <ClCompile Include="..\..\code\graphics\material.cpp" />
     <ClCompile Include="..\..\code\graphics\shadows.cpp" />
     <ClCompile Include="..\..\code\hud\hud.cpp" />
     <ClCompile Include="..\..\code\hud\hudartillery.cpp" />
@@ -694,6 +695,8 @@
     <ClCompile Include="..\..\code\render\3dlaser.cpp" />
     <ClCompile Include="..\..\code\render\3dmath.cpp" />
     <ClCompile Include="..\..\code\render\3dsetup.cpp" />
+    <ClCompile Include="..\..\code\render\batching.cpp" />
+    <ClCompile Include="..\..\code\render\render.cpp" />
     <ClCompile Include="..\..\code\ship\afterburner.cpp" />
     <ClCompile Include="..\..\code\ship\awacs.cpp" />
     <ClCompile Include="..\..\code\ship\shield.cpp" />
@@ -844,6 +847,7 @@
     <ClInclude Include="..\..\code\Graphics\2d.h" />
     <ClInclude Include="..\..\code\graphics\grbatch.h" />
     <ClInclude Include="..\..\code\graphics\grinternal.h" />
+    <ClInclude Include="..\..\code\graphics\material.h" />
     <ClInclude Include="..\..\code\graphics\shadows.h" />
     <ClInclude Include="..\..\code\graphics\tmapper.h" />
     <ClInclude Include="..\..\code\Graphics\font.h" />
@@ -971,6 +975,8 @@
     <ClInclude Include="..\..\code\radar\radarsetup.h" />
     <ClInclude Include="..\..\code\render\3d.h" />
     <ClInclude Include="..\..\code\render\3dinternal.h" />
+    <ClInclude Include="..\..\code\render\batching.h" />
+    <ClInclude Include="..\..\code\render\render.h" />
     <ClInclude Include="..\..\code\ship\afterburner.h" />
     <ClInclude Include="..\..\code\ship\awacs.h" />
     <ClInclude Include="..\..\code\ship\ship.h" />

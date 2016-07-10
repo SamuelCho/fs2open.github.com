@@ -1416,8 +1416,6 @@ void beam_render_muzzle_glow(beam *b)
 		vm_vec_copy_scale(&sub2, &fvec, bwi->glow_length);
 		vm_vec_add(&end, &start, &sub2);
 
-		int cull = gr_set_cull(0);
-
 		beam_calc_facing_pts(&top1, &bottom1, &fvec, &start, rad, 1.0f);
 		beam_calc_facing_pts(&top2, &bottom2, &fvec, &end, rad, 1.0f);
 
@@ -1472,8 +1470,6 @@ void beam_render_muzzle_glow(beam *b)
 		material material_info;
 		render_set_unlit_material(&material_info, bwi->beam_glow.first_frame + framenum, alpha * pct, true, true);
 		render_primitives_textured(&material_info, h1, 4, PRIM_TYPE_TRIFAN, false);
-
-		gr_set_cull(cull);
 
 	} else {
 

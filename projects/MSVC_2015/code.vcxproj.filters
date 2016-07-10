@@ -1062,6 +1062,15 @@
     <ClCompile Include="..\..\code\model\modelrender.cpp">
       <Filter>Model</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\code\render\batching.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\render\render.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\graphics\material.cpp">
+      <Filter>Graphics</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\code\ai\ai.h">
@@ -1864,6 +1873,15 @@
     </ClInclude>
     <ClInclude Include="..\..\code\model\modelrender.h">
       <Filter>Model</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\render\batching.h">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\render\render.h">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\graphics\material.h">
+      <Filter>Graphics</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
