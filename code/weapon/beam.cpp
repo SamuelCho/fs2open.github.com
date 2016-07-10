@@ -1512,86 +1512,6 @@ void beam_render_muzzle_glow(beam *b)
 	}
 }
 
-void beam_render_muzzle_glow_new(beam *b)
-{
-	vertex pt;
-	weapon_info *wip = &Weapon_info[b->weapon_info_index];
-	beam_weapon_info *bwi = &Weapon_info[b->weapon_info_index].b_info;
-	float rad, pct, rand_val;
-	pt.flags = 0;    // avoid potential read of uninit var
-
-	// if we don't have a glow bitmap
-	if (bwi->beam_glow.first_frame < 0)
-		return;
-
-	// if the beam is warming up, scale the glow
-	if (b->warmup_stamp != -1) {		
-		// get warmup pct
-		pct = BEAM_WARMUP_PCT(b);
-		rand_val = 1.0f;
-	} else
-	// if the beam is warming down
-	if (b->warmdown_stamp != -1) {
-		// get warmup pct
-		pct = 1.0f - BEAM_WARMDOWN_PCT(b);
-		rand_val = 1.0f;
-	} 
-	// otherwise the beam is really firing
-	else {
-		pct = 1.0f;
-		rand_val = frand_range(0.90f, 1.0f);
-	}
-
-	rad = wip->b_info.beam_muzzle_radius * pct * rand_val;
-
-	// don't bother trying to draw if there is no radius
-	if (rad <= 0.0f)
-		return;
-
-	float alpha = get_current_alpha(&b->last_start);
-
-	if (alpha <= 0.0f)
-		return;
-
-	// draw the bitmap
-	g3_transfer_vertex(&pt, &b->last_start);
-
-	int framenum = 0;
-
-	if (bwi->beam_glow.num_frames > 1) {
-		b->beam_glow_frame += flFrametime;
-
-		// Sanity checks
-		if (b->beam_glow_frame < 0.0f)
-			b->beam_glow_frame = 0.0f;
-		else if (b->beam_glow_frame > 100.0f)
-			b->beam_glow_frame = 0.0f;
-
-		while (b->beam_glow_frame > bwi->beam_glow.total_time)
-			b->beam_glow_frame -= bwi->beam_glow.total_time;
-
-		framenum = fl2i( (b->beam_glow_frame * bwi->beam_glow.num_frames) / bwi->beam_glow.total_time );
-
-		CLAMP(framenum, 0, bwi->beam_glow.num_frames-1);
-	}
-
-	int bitmap_id = bwi->beam_glow.first_frame + framenum;
-	float intensity = alpha * pct;
-
-	// draw 1 bitmap
-	render_oriented_bitmap(bitmap_id, intensity, &pt, 0, rad, 0.0f);
-	
-	// maybe draw more
-	if (pct > 0.3f)
-		render_oriented_bitmap(bitmap_id, intensity, &pt, 0, rad * 0.75f, rad * 0.25f);
-
-	if (pct > 0.5f)
-		render_oriented_bitmap(bitmap_id, intensity, &pt, 0, rad * 0.45f, rad * 0.55f);
-
-	if (pct > 0.7f)
-		render_oriented_bitmap(bitmap_id, intensity, &pt, 0, rad * 0.25f, rad * 0.75f);
-}
-
 // render all beam weapons
 void beam_render_all()
 {
@@ -1624,7 +1544,7 @@ void beam_render_all()
 		}
 
 		// render the muzzle glow
-		beam_render_muzzle_glow_new(moveup);		
+		beam_render_muzzle_glow(moveup);		
 
 		// maybe generate some muzzle particles
 		beam_generate_muzzle_particles(moveup);
