@@ -296,7 +296,7 @@ color& material::get_color()
 
 model_material::model_material(): 
 material(), 
-Animated_effect(0), 
+Animated_effect(-1), 
 Animated_timer(0.0f), 
 Thrust_scale(-1.0f), 
 lighting(false), 
@@ -499,7 +499,7 @@ uint model_material::get_shader_flags()
 		Shader_flags |= SDR_FLAG_MODEL_FOG;
 	}
 
-	if ( Animated_effect > 0 ) {
+	if ( Animated_effect >= 0 ) {
 		Shader_flags |= SDR_FLAG_MODEL_ANIMATED;
 	}
 

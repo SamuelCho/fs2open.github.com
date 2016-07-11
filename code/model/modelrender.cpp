@@ -2650,7 +2650,7 @@ void model_render_queue(model_render_params *interp, draw_list *scene, int model
 		rendering_material.set_desaturation(true);
 	}
 
-	if ( interp->get_animated_effect_num() > 0 ) {
+	if ( interp->get_animated_effect_num() >= 0 ) {
 		rendering_material.set_animated_effect(interp->get_animated_effect_num(), interp->get_animated_effect_timer());
 	}
 
