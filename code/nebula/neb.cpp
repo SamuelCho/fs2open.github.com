@@ -9,22 +9,21 @@
 
 
 
-#include "nebula/neb.h"
-#include "render/3d.h"
 #include "bmpman/bmpman.h"
-#include "object/object.h"
+#include "cmdline/cmdline.h"
+#include "ddsutils/ddsutils.h"
+#include "debugconsole/console.h"
 #include "freespace2/freespace.h"
-#include "starfield/starfield.h"
+#include "jpgutils/jpgutils.h"
+#include "mission/missionparse.h"
+#include "nebula/neb.h"
+#include "object/object.h"
 #include "parse/parselo.h"
 #include "pcxutils/pcxutils.h"
-#include "tgautils/tgautils.h"
-#include "jpgutils/jpgutils.h"
-#include "pngutils/pngutils.h"
-#include "ddsutils/ddsutils.h"
-#include "mission/missionparse.h"
+#include "render/3d.h"
 #include "ship/ship.h"
-#include "cmdline/cmdline.h"
-#include "debugconsole/console.h"
+#include "starfield/starfield.h"
+#include "tgautils/tgautils.h"
 
 
 // --------------------------------------------------------------------------------------------------------
@@ -230,10 +229,10 @@ float neb2_get_alpha_offscreen(float sx, float sy, float incoming_alpha);
 void neb2_pre_render(camid cid);
 
 // fill in the position of the eye for this frame
-void neb2_get_eye_pos(vec3d *eye);
+void neb2_get_eye_pos(vec3d *eye_vector);
 
 // fill in the eye orient for this frame
-void neb2_get_eye_orient(matrix *eye);
+void neb2_get_eye_orient(matrix *eye_matrix);
 
 // get a (semi) random bitmap to use for a poof
 int neb2_get_bitmap();
@@ -352,7 +351,7 @@ void neb2_post_level_init()
 		return;
 	}
 
-	if ( (Cmdline_nohtl) && (The_mission.flags & MISSION_FLAG_FULLNEB) ) {
+	if (The_mission.flags & MISSION_FLAG_FULLNEB) {
 		// by default we'll use pof rendering
 		Neb2_render_mode = NEB2_RENDER_POF;
 		stars_set_background_model(BACKGROUND_MODEL_FILENAME, Neb2_texture_name);
@@ -1083,11 +1082,10 @@ void neb2_render_player()
 				// set the bitmap and render
 				gr_set_bitmap(Neb2_cubes[idx1][idx2][idx3].bmap, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, (alpha + Neb2_cubes[idx1][idx2][idx3].flash));
 
-				if (!Cmdline_nohtl) gr_set_lighting(false, false); {
-					gr_fog_set(GR_FOGMODE_NONE, 0, 0, 0);
-					g3_draw_rotated_bitmap(&p, fl_radians(Neb2_cubes[idx1][idx2][idx3].rot), Nd->prad, TMAP_FLAG_TEXTURED);
-				}
-			}
+				gr_set_lighting(false, false);
+				gr_fog_set(GR_FOGMODE_NONE, 0, 0, 0);
+				g3_draw_rotated_bitmap(&p, fl_radians(Neb2_cubes[idx1][idx2][idx3].rot), Nd->prad, TMAP_FLAG_TEXTURED);
+			} 
 		}
 	}
 
@@ -1413,15 +1411,15 @@ void neb2_set_backg_color(int r, int g, int b)
 }
 
 // fill in the position of the eye for this frame
-void neb2_get_eye_pos(vec3d *eye)
+void neb2_get_eye_pos(vec3d *eye_vector)
 {
-	*eye = Eye_position;
+	*eye_vector = Eye_position;
 }
 
 // fill in the eye orient for this frame
-void neb2_get_eye_orient(matrix *eye)
+void neb2_get_eye_orient(matrix *eye_matrix)
 {
-	*eye = Eye_matrix;
+	*eye_matrix = Eye_matrix;
 }
 
 // get a (semi) random bitmap to use for a poof
@@ -1591,9 +1589,7 @@ DCF(neb2_mode, "Switches nebula render modes")
 		break;
 
 		case NEB2_RENDER_HTL:
-			if (!Cmdline_nohtl) {
-				Neb2_render_mode = NEB2_RENDER_HTL;
-			}
+			Neb2_render_mode = NEB2_RENDER_HTL;
 		break;
 	}
 }

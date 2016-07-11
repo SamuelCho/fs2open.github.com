@@ -1,17 +1,15 @@
 #include "camera/camera.h"
-#include "math/vecmat.h"
-#include "graphics/2d.h"
 #include "globalincs/alphacolors.h"
-#include "parse/parselo.h"
-#include "physics/physics.h" //apply_physics
+#include "globalincs/linklist.h"
 #include "globalincs/systemvars.h" //VM_FREECAMERA etc
+#include "graphics/font.h"
 #include "hud/hud.h" //hud_get_draw
+#include "math/vecmat.h"
+#include "mod_table/mod_table.h"
 #include "model/model.h" //polymodel, model_get
+#include "parse/parselo.h"
 #include "playerman/player.h" //player_get_padlock_orient
 #include "ship/ship.h" //compute_slew_matrix
-#include "graphics/font.h"
-#include "mod_table/mod_table.h"
-#include "globalincs/linklist.h"
 
 //*************************IMPORTANT GLOBALS*************************
 float VIEWER_ZOOM_DEFAULT = 0.75f;			//	Default viewer zoom, 0.625 as per multi-lateral agreement on 3/24/97
@@ -82,7 +80,7 @@ void camera::reset()
 
 void camera::set_name(char *in_name)
 {
-	if(name != NULL)
+	if(in_name != NULL)
 		strncpy(name, in_name, NAME_LENGTH-1);
 }
 
@@ -332,8 +330,10 @@ void camera::get_info(vec3d *position, matrix *orientation)
 				eyep = get_submodel_eye(pm, object_host_submodel);
 				if(eyep)
 				{
+					Assertion(objp->type == OBJ_SHIP, "This part of the code expects the object to be a ship");
+
 					vec3d c_pos_in;
-					find_submodel_instance_point_normal( &c_pos_in, &host_normal, objp, eyep->parent, &eyep->pnt, &eyep->norm);
+					find_submodel_instance_point_normal(&c_pos_in, &host_normal, Ships[objp->instance].model_instance_num, eyep->parent, &eyep->pnt, &eyep->norm);
 					vm_vec_unrotate(&c_pos, &c_pos_in, &objp->orient);
 					vm_vec_add2(&c_pos, &objp->pos);
 				}
@@ -515,8 +515,8 @@ void warp_camera::do_frame(float in_frametime)
 
 		float tmp_angle = frand()*PI2;
 	
-		tmp.xyz.x = 22.0f * (float)sin(tmp_angle);
-		tmp.xyz.y = -22.0f * (float)cos(tmp_angle);
+		tmp.xyz.x = 22.0f * sinf(tmp_angle);
+		tmp.xyz.y = -22.0f * cosf(tmp_angle);
 
 		this->set_velocity( &tmp, 0 );
 	}
@@ -540,8 +540,15 @@ void warp_camera::get_info(vec3d *position, matrix *orientation)
 //*************************subtitle*************************
 
 #define MAX_SUBTITLE_LINES		64
-subtitle::subtitle(int in_x_pos, int in_y_pos, const char* in_text, const char* in_imageanim, float in_display_time, float in_fade_time, const color *in_text_color, int in_text_fontnum, bool center_x, bool center_y, int in_width, int in_height, bool in_post_shaded)
+subtitle::subtitle(int in_x_pos, int in_y_pos, const char* in_text, const char* in_imageanim, float in_display_time,
+	float in_fade_time, const color *in_text_color, int in_text_fontnum, bool center_x, bool center_y, int in_width,
+	int in_height, bool in_post_shaded)
+	:display_time(-1.0f), fade_time(-1.0f), text_fontnum(-1), time_displayed(-1.0f), time_displayed_end(-1.0f),
+	post_shaded(false)
 {
+	// Initialize color
+	gr_init_color(&text_color, 0, 0, 0);
+	
 	SCP_string text_buf;
 
 	// basic init, this always has to be done
@@ -646,20 +653,20 @@ subtitle::subtitle(int in_x_pos, int in_y_pos, const char* in_text, const char* 
 
 		//Center it?
 		if(center_x)
-			image_pos.x = (gr_screen.max_w - tw)/2;
+			image_pos.x = (gr_screen.center_w - tw)/2 + gr_screen.center_offset_x;
 		if(center_y)
-			image_pos.y = (gr_screen.max_h - th)/2;
+			image_pos.y = (gr_screen.center_h - th)/2 + gr_screen.center_offset_y;
 	}
 
 	if(in_x_pos < 0 && !center_x)
-		image_pos.x += gr_screen.max_w + in_x_pos;
+		image_pos.x += gr_screen.center_offset_x + gr_screen.center_w + in_x_pos;
 	else if(!center_x)
-		image_pos.x += in_x_pos;
+		image_pos.x += gr_screen.center_offset_x + in_x_pos;
 
 	if(in_y_pos < 0 && !center_y)
-		image_pos.y += gr_screen.max_h + in_y_pos;
+		image_pos.y += gr_screen.center_offset_y + gr_screen.center_h + in_y_pos;
 	else if(!center_y)
-		image_pos.y += in_y_pos;
+		image_pos.y += gr_screen.center_offset_y + in_y_pos;
 
 	image_pos.w = in_width;
 	image_pos.h = in_height;
@@ -866,6 +873,9 @@ void cam_close()
 {
 	//Set Current_camera to nothing
 	Current_camera = camid();
+	for (auto ii = Cameras.begin(); ii != Cameras.end(); ++ii) {
+		delete * ii;
+	}
 	Cameras.clear();
 }
 

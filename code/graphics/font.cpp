@@ -18,16 +18,16 @@
 #include <stdarg.h>
 #include <limits.h>
 
-#include "graphics/2d.h"
-#include "cfile/cfile.h"
-#include "graphics/font.h"
-#include "palman/palman.h"
-#include "io/key.h"
 #include "bmpman/bmpman.h"
-#include "localization/localize.h"
-#include "parse/parselo.h"
-#include "globalincs/systemvars.h"
+#include "cfile/cfile.h"
 #include "globalincs/def_files.h"
+#include "globalincs/systemvars.h"
+#include "graphics/2d.h"
+#include "graphics/font.h"
+#include "io/key.h"
+#include "localization/localize.h"
+#include "palman/palman.h"
+#include "parse/parselo.h"
 
 
 
@@ -43,9 +43,9 @@ font *Current_font = NULL;
  * @param str		string to crop.  Modifies this string directly
  * @param max_str	max characters allowed in str
  * @param max_width number of pixels to limit string to (less than or equal to).
- * @return			Returns same pointer passed in for str.
+ * @return			Returns the width of the string as given by gr_get_string_size().
  */
-char *gr_force_fit_string(char *str, int max_str, int max_width)
+int gr_force_fit_string(char *str, int max_str, int max_width)
 {
 	int w;
 
@@ -65,7 +65,7 @@ char *gr_force_fit_string(char *str, int max_str, int max_width)
 		}
 	}
 
-	return str;
+	return w;
 }
 
 /**
@@ -551,7 +551,7 @@ int gr_get_current_fontnum()
 	}
 }
 
-int gr_get_fontnum(char *filename)
+int gr_get_fontnum(const char *filename)
 {
 	int i;
 	for(i = 0; i < Num_fonts; i++)

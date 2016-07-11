@@ -11,6 +11,9 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <SDL_timer.h>
+#include <sys/time.h>
 #endif
 
 #include <limits.h>
@@ -24,19 +27,19 @@
 #include "osapi/osapi.h"	// for multi-thread macros
 
 
-
-#ifndef NDEBUG
-	#define USE_TIMING
-#endif
-
 #ifdef _WIN32
 static longlong Timer_last_value = 0, Timer_base = 0, Timer_freq = 0;
 static const int precision = 1;
 #endif
 
+static longlong Timer_perf_counter_base = 0;	// perf counter start time
+static longlong Timer_perf_counter_freq = 0;	// perf counter frequency - number of ticks per second
+
 static int Timer_inited = 0;
 
 static CRITICAL_SECTION Timer_lock;
+
+#define MICROSECONDS_PER_SECOND 1000000
 
 void timer_close()
 {
@@ -57,6 +60,26 @@ void timer_init()
 #ifdef _WIN32
 		timeBeginPeriod(precision);
 		Timer_base = Timer_last_value = timeGetTime();
+
+		// get the performance counter start time
+		LARGE_INTEGER perf_start_time;
+		QueryPerformanceCounter(&perf_start_time);
+		Timer_perf_counter_base = perf_start_time.QuadPart;
+
+		// get the performance counter's ticks per second frequency
+		LARGE_INTEGER perf_frequency;
+		QueryPerformanceFrequency(&perf_frequency);
+		Timer_perf_counter_freq = perf_frequency.QuadPart;
+#else
+		timeval time_value;
+
+		// get the performance counter start time
+		gettimeofday(&time_value, NULL);
+
+		Timer_perf_counter_base = time_value.tv_sec * MICROSECONDS_PER_SECOND + time_value.tv_usec;
+
+		// get the performance counter's ticks per second frequency
+		Timer_perf_counter_freq = 1;
 #endif
 
 		Timer_inited = 1;
@@ -89,7 +112,6 @@ static uint timer_get()
 	return SDL_GetTicks();
 #endif
 }
-
 
 fix timer_get_fixed_seconds()
 {
@@ -145,6 +167,32 @@ int timer_get_microseconds()
 	return timer_get() * 1000;
 }
 
+uint timer_get_high_res_microseconds()
+{
+	if ( !Timer_inited ) {
+		Int3();
+		return 0;
+	}
+
+#ifdef _WIN32
+	ENTER_CRITICAL_SECTION( Timer_lock);
+
+	LARGE_INTEGER time;
+	QueryPerformanceCounter(&time);
+	longlong elapsed = time.QuadPart;// - Timer_perf_counter_base;
+
+	LEAVE_CRITICAL_SECTION( Timer_lock);
+
+	return (uint)(elapsed * MICROSECONDS_PER_SECOND / Timer_perf_counter_freq);
+#else
+	timeval time_value;
+
+	gettimeofday(&time_value, NULL);
+
+	return time_value.tv_sec * MICROSECONDS_PER_SECOND + time_value.tv_usec;// - Timer_perf_counter_base);
+#endif
+}
+
 // 0 means invalid,
 // 1 means always return true
 // 2 and above actually check the time
@@ -161,9 +209,9 @@ void timestamp_reset()
 // something like 1 minute (6000).
 #define MAX_TIME (INT_MAX/2)
 
-void timestamp_inc(float frametime)
+void timestamp_inc(int frametime_ms)
 {
-	timestamp_ticker += (int)(frametime*TIMESTAMP_FREQUENCY);
+	timestamp_ticker += frametime_ms;
 
 	if ( timestamp_ticker > MAX_TIME )	{
 		timestamp_ticker = 2;		// Roll!
@@ -235,219 +283,3 @@ int timestamp_has_time_elapsed(int stamp, int time)
 	return 0;
 }
 
-// timing functions -------------------------------------------------------------------------------
-
-#define MAX_TIMING_EVENTS		15
-
-// timing struct
-#ifdef USE_TIMING
-
-typedef struct timing {
-	char name[64];
-	int microseconds_total;
-	int start;
-	int ref_count;
-} timing;
-
-timing Timing_frame;
-timing Timing_events[MAX_TIMING_EVENTS];
-int Timing_event_count = 0;
-
-#endif
-
-// lookup a timing event
-int timing_event_lookup(char *event_name)
-{
-#ifndef USE_TIMING
-	return -1;
-#else
-	int idx;
-
-	// sanity
-	if(event_name == NULL){
-		return -1;
-	}
-
-	// look through all events
-	for(idx=0; idx<MAX_TIMING_EVENTS; idx++){
-		if(!stricmp(Timing_events[idx].name, event_name)){
-			return idx;
-		}
-	}
-
-	return -1;
-#endif
-}
-
-// start timing frame stuff
-void timing_frame_start()
-{
-#ifndef USE_TIMING
-	return;
-#else
-	int idx;
-
-	// restart the frame
-	Timing_event_count = 0;
-	Timing_frame.start = timer_get_microseconds();
-	for(idx=0; idx<MAX_TIMING_EVENTS; idx++){
-		Timing_events[idx].microseconds_total = 0;
-		strcpy_s(Timing_events[idx].name, "");
-		Timing_events[idx].ref_count = 0;
-	}
-#endif
-}
-
-// done timing the frame
-void timing_frame_stop()
-{
-#ifndef USE_TIMING
-	return;
-#else	
-	int stop_time;
-
-	// stop time
-	stop_time = timer_get_microseconds();
-
-	// calc times
-	Timing_frame.microseconds_total = stop_time - Timing_frame.start;	
-#endif
-}
-
-// get the total frame time in microseconds
-int timing_frame_total()
-{
-#ifndef USE_TIMING
-	return 0;
-#else
-	return Timing_frame.microseconds_total;
-#endif
-}
-
-// time an individual event
-void timing_event_start(char *event_name)
-{
-#ifndef USE_TIMING
-	return;
-#else
-	int event;
-
-	// sanity
-	if(event_name == NULL){
-		return;
-	}
-
-	// try and find the event
-	event = timing_event_lookup(event_name);
-
-	// if we already have one
-	if(event != -1){
-		Assert(Timing_events[event].ref_count == 0);
-		Timing_events[event].start = timer_get_microseconds();
-		Timing_events[event].ref_count++;
-	}
-	// if we need to add a new one
-	else {
-		if(Timing_event_count < MAX_TIMING_EVENTS){
-			strcpy_s(Timing_events[Timing_event_count].name, event_name);
-			Timing_events[Timing_event_count].start = timer_get_microseconds();
-			Timing_events[Timing_event_count++].ref_count++;
-		}
-	}
-#endif
-}
-
-// stop timing an event
-void timing_event_stop(char *event_name)
-{
-#ifndef USE_TIMING
-	return;
-#else
-	int event;
-
-	// sanity
-	if(event_name == NULL){
-		return;
-	}
-
-	// try and find the event
-	event = timing_event_lookup(event_name);
-
-	// if we already have one
-	if(event != -1){
-		Assert(Timing_events[event].ref_count == 1);
-		Timing_events[event].microseconds_total += timer_get_microseconds() - Timing_events[event].start;
-		Timing_events[event].ref_count--;
-	}
-#endif
-}
-
-// get the total time for an event in microseconds
-int timing_event_total(char *event_name)
-{
-#ifndef USE_TIMING
-	return -1;
-#else
-	int event;
-
-	// sanity
-	if(event_name == NULL){
-		return -1;
-	}
-
-	// try and find the event
-	event = timing_event_lookup(event_name);
-	if(event == -1){
-		return -1;
-	}
-	
-	return Timing_events[event].microseconds_total;
-#endif
-}
-
-// get the percentage of total frametime for the event (0.0 to 1.0)
-float timing_event_pct(char *event_name)
-{
-#ifndef USE_TIMING
-	return 0.0f;
-#else
-	int event;
-
-	// sanity
-	if(event_name == NULL){
-		return -1.0f;
-	}
-
-	// try and find the event
-	event = timing_event_lookup(event_name);
-	if(event == -1){
-		return -1.0f;
-	}
-
-	return (float)((double)Timing_events[event].microseconds_total / (double)Timing_frame.microseconds_total);
-#endif
-}
-
-// display timing 
-void timing_display(int x, int y)
-{
-#ifndef USE_TIMING
-	return;
-#else
-	int idx;
-
-	int line_height = gr_get_font_height() + 1;
-
-	gr_set_color_fast(&Color_bright_blue);
-
-	// total time
-	gr_printf_no_resize(x, y, "Total time %f\n", (float)timing_frame_total() / 1000000.0f);
-	y += line_height;
-
-	// each event percentage
-	for(idx=0; idx<Timing_event_count; idx++){
-		gr_printf_no_resize(x, y, "%s: %f\n", Timing_events[idx].name, timing_event_pct(Timing_events[idx].name));
-		y += line_height;
-	}
-#endif
-}

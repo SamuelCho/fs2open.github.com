@@ -64,7 +64,7 @@ extern const char* multi_random_chat_start();
 
 extern int multi_ship_class_lookup(const char* ship_name);
 extern ushort netmisc_calc_checksum( void * vptr, int len );
-extern void fill_net_addr(net_addr* addr, ubyte* address, ubyte* net_id, ushort port);
+extern void fill_net_addr(net_addr* addr, ubyte* address, ushort port);
 extern char* get_text_address( char * text, ubyte * address );
 
 extern object *multi_get_network_object( ushort net_signature );		// find a network object
@@ -80,7 +80,7 @@ void multi_unpack_orient_matrix(ubyte *data,matrix *m);
 // catchall to do any necessary client-side simulation processing or master side process for menu pauses, etc.
 void multi_do_client_warp(float frame_time);
 
-void multi_assign_player_ship( int net_player, object *objp, int ship_class );
+void multi_assign_player_ship( int net_player_num, object *objp, int ship_class );
 
 // -------------------------------------------------------------------
 // ship status change functions (used both client and server side)

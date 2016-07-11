@@ -7,13 +7,13 @@
 
 
 
-#include "globalincs/pstypes.h"
-#include "globalincs/def_files.h"
 #include "ai/ai_profiles.h"
-#include "parse/parselo.h"
+#include "globalincs/def_files.h"
+#include "globalincs/pstypes.h"
 #include "localization/localize.h"
-#include "weapon/weapon.h"
+#include "parse/parselo.h"
 #include "ship/ship.h"
+#include "weapon/weapon.h"
 
 
 // global stuff
@@ -461,6 +461,19 @@ void parse_ai_profiles_tbl(const char *filename)
 				set_flag(profile, "$fix ai path order bug:", AIPF2_FIX_AI_PATH_ORDER_BUG, AIP_FLAG2);
 
 				set_flag(profile, "$strict turret-tagged-only targeting:", AIPF2_STRICT_TURRET_TAGGED_ONLY_TARGETING, AIP_FLAG2);
+
+				set_flag(profile, "$aspect bomb invulnerability fix:", AIPF2_ASPECT_INVULNERABILITY_FIX, AIP_FLAG2);
+
+				set_flag(profile, "$glide decay requires thrust:", AIPF2_GLIDE_DECAY_REQUIRES_THRUST, AIP_FLAG2);
+
+				profile->bay_arrive_speed_mult = 1.0f;
+				profile->bay_depart_speed_mult = 1.0f;
+				if (optional_string("$bay arrive speed multiplier:")) {
+					stuff_float(&profile->bay_arrive_speed_mult);
+				}
+				if (optional_string("$bay depart speed multiplier:")) {
+					stuff_float(&profile->bay_depart_speed_mult);
+				}
 
 				// ----------
 

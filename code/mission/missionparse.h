@@ -11,14 +11,15 @@
 #define _PARSE_H
 
 #include <setjmp.h>
+
 #include "ai/ai.h"
 #include "ai/ai_profiles.h"
+#include "graphics/2d.h"
+#include "io/keycontrol.h"
 #include "model/model.h"
 #include "object/object.h"
-#include "graphics/2d.h"
-#include "sound/sound.h"
 #include "parse/sexp.h"
-#include "io/keycontrol.h"
+#include "sound/sound.h"
 
 //WMC - This should be here
 #define FS_MISSION_FILE_EXT				NOX(".fs2")
@@ -424,6 +425,8 @@ public:
 	float ship_max_hull_strength;			// Needed to deal with special hitpoints
 	float ship_max_shield_strength;
 
+	float max_shield_recharge;
+
 	// Goober5000
 	SCP_vector<texture_replace> replacement_textures;
 
@@ -480,7 +483,7 @@ public:
 // same caveat: This list of bitfield indicators MUST correspond EXACTLY
 // (i.e., order and position must be the same) to its counterpart in MissionParse.cpp!!!!
 
-#define MAX_PARSE_OBJECT_FLAGS_2	24
+#define MAX_PARSE_OBJECT_FLAGS_2	25
 
 #define P2_SF2_PRIMITIVE_SENSORS			(1<<0)
 #define P2_SF2_NO_SUBSPACE_DRIVE			(1<<1)
@@ -506,6 +509,7 @@ public:
 #define P2_SF2_WEAPONS_LOCKED				(1<<21)
 #define P2_SF2_SCRAMBLE_MESSAGES			(1<<22)
 #define P2_OF_NO_COLLIDE					(1<<23) // This actually changes the OF_COLLIDES object flag
+#define P2_SF2_NO_DISABLED_SELF_DESTRUCT	(1<<24)
 
 // and again: these flags do not appear in the array
 //#define blah							(1<<28)

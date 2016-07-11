@@ -169,14 +169,14 @@
     <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
     <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
     <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">fs2_open_3_7_3-DEBUG</TargetName>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug SSE|Win32'">fs2_open_3_7_3_SSE-DEBUG</TargetName>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug SSE2|Win32'">fs2_open_3_7_3_SSE2-DEBUG</TargetName>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug AVX|Win32'">fs2_open_3_7_3_AVX-DEBUG</TargetName>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">fs2_open_3_7_3</TargetName>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release SSE|Win32'">fs2_open_3_7_3_SSE</TargetName>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release SSE2|Win32'">fs2_open_3_7_3_SSE2</TargetName>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release AVX|Win32'">fs2_open_3_7_3_AVX</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">fs2_open_3_7_5-DEBUG</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug SSE|Win32'">fs2_open_3_7_5_SSE-DEBUG</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug SSE2|Win32'">fs2_open_3_7_5_SSE2-DEBUG</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug AVX|Win32'">fs2_open_3_7_5_AVX-DEBUG</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">fs2_open_3_7_5</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release SSE|Win32'">fs2_open_3_7_5_SSE</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release SSE2|Win32'">fs2_open_3_7_5_SSE2</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release AVX|Win32'">fs2_open_3_7_5_AVX</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <CustomBuildStep />
@@ -212,6 +212,7 @@
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;_VC08;FS2_VOICER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0409</Culture>
+      <AdditionalIncludeDirectories>$(Configuration)\code\voicer\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -285,6 +286,7 @@ copy /y "$(OutputPath)$(TargetName).pdb" "$(FS2PATH)\$(TargetName).pdb"</Command
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;_VC08;FS2_VOICER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0409</Culture>
+      <AdditionalIncludeDirectories>$(Configuration)\code\voicer\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -358,6 +360,7 @@ copy /y "$(OutputPath)$(TargetName).pdb" "$(FS2PATH)\$(TargetName).pdb"</Command
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;_VC08;_SSE2;FS2_VOICER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0409</Culture>
+      <AdditionalIncludeDirectories>$(Configuration)\code\voicer\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -431,6 +434,7 @@ copy /y "$(OutputPath)$(TargetName).pdb" "$(FS2PATH)\$(TargetName).pdb"</Command
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;_VC08;_SSE2;FS2_VOICER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0409</Culture>
+      <AdditionalIncludeDirectories>$(Configuration)\code\voicer\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -510,6 +514,7 @@ copy /y "$(OutputPath)$(TargetName).pdb" "$(FS2PATH)\$(TargetName).pdb"</Command
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;_VC08;FS2_VOICER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0409</Culture>
+      <AdditionalIncludeDirectories>$(Configuration)\code\voicer\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;wsock32.lib;winmm.lib;vfw32.lib;msacm32.lib;comctl32.lib;openal32.lib;ogg_static.lib;vorbis_static.lib;vorbisfile_static.lib;theora_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -586,6 +591,7 @@ copy /y "$(OutputPath)$(TargetName).pdb" "$(FS2PATH)\$(TargetName).pdb"</Command
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;_VC08;FS2_VOICER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0409</Culture>
+      <AdditionalIncludeDirectories>$(Configuration)\code\voicer\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;wsock32.lib;winmm.lib;vfw32.lib;msacm32.lib;comctl32.lib;openal32.lib;ogg_static.lib;vorbis_static.lib;vorbisfile_static.lib;theora_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -662,6 +668,7 @@ copy /y "$(OutputPath)$(TargetName).pdb" "$(FS2PATH)\$(TargetName).pdb"</Command
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;_VC08;_SSE2;FS2_VOICER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0409</Culture>
+      <AdditionalIncludeDirectories>$(Configuration)\code\voicer\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;wsock32.lib;winmm.lib;vfw32.lib;msacm32.lib;comctl32.lib;openal32.lib;ogg_static.lib;vorbis_static.lib;vorbisfile_static.lib;theora_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -741,6 +748,7 @@ copy /y "$(OutputPath)$(TargetName).pdb" "$(FS2PATH)\$(TargetName).pdb"</Command
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;_VC08;_SSE2;FS2_VOICER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0409</Culture>
+      <AdditionalIncludeDirectories>$(Configuration)\code\voicer\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;wsock32.lib;winmm.lib;vfw32.lib;msacm32.lib;comctl32.lib;openal32.lib;ogg_static.lib;vorbis_static.lib;vorbisfile_static.lib;theora_static.lib;%(AdditionalDependencies)</AdditionalDependencies>

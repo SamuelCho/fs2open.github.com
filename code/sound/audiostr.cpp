@@ -10,15 +10,15 @@
 
 #define NEED_STRHDL		// for STRHTL struct in audiostr.h
 
+#include "cfile/cfile.h"
 #include "globalincs/pstypes.h"
-#include "sound/openal.h"
+#include "io/timer.h"
+#include "sound/acm.h"
 #include "sound/audiostr.h"
 #include "sound/ds.h"
-#include "sound/acm.h"
-#include "cfile/cfile.h"
-#include "sound/sound.h"
 #include "sound/ogg/ogg.h"
-#include "io/timer.h"
+#include "sound/openal.h"
+#include "sound/sound.h"
 
 #define THREADED
 #include "osapi/osapi.h"
@@ -466,11 +466,10 @@ bool WaveFile::Open(char *pszFilename, bool keep_ext)
 	// ... otherwise we just find the best match
 	else {
 		rc = cf_find_file_location_ext(filename, NUM_AUDIO_EXT, audio_ext_list, CF_TYPE_ANY, sizeof(fullpath) - 1, fullpath, &FileSize, &FileOffset);
-	}
 
-	if (rc < 0) {
-		goto OPEN_ERROR;
-	} else {
+		if (rc < 0)
+			goto OPEN_ERROR;
+
 		// set proper filename for later use (assumes that it doesn't already have an extension)
 		strcat_s( filename, audio_ext_list[rc] );
 	}
@@ -1711,7 +1710,7 @@ void audiostream_close()
 //	
 // returns:	success => handle to identify streaming sound
 //				failure => -1
-int audiostream_open( char *filename, int type )
+int audiostream_open( const char *filename, int type )
 {
 	int i, rc;
 	char fname[MAX_FILENAME_LEN];

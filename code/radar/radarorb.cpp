@@ -10,35 +10,29 @@
 
 
 
-#include "radar/radarorb.h"
-#include "graphics/font.h"
 #include "bmpman/bmpman.h"
-#include "object/object.h"
-#include "ship/ship.h"
-#include "playerman/player.h"
-#include "weapon/weapon.h"
-#include "io/timer.h"
-#include "hud/hud.h"
-#include "hud/hudconfig.h"
-#include "ship/subsysdamage.h"
+#include "freespace2/freespace.h"
 #include "gamesnd/gamesnd.h"
 #include "globalincs/linklist.h"
-#include "network/multi.h"
-#include "weapon/emp.h"
-#include "freespace2/freespace.h"
-#include "localization/localize.h"
-#include "ship/awacs.h"
-#include "radar/radarsetup.h"
-#include "render/3d.h"
+#include "graphics/font.h"
 #include "iff_defs/iff_defs.h"
+#include "io/timer.h"
 #include "jumpnode/jumpnode.h"
+#include "localization/localize.h"
+#include "network/multi.h"
+#include "object/object.h"
+#include "playerman/player.h"
 #include "radar/radarorb.h"
+#include "render/3d.h"
+#include "ship/awacs.h"
+#include "ship/ship.h"
+#include "ship/subsysdamage.h"
+#include "weapon/emp.h"
+#include "weapon/weapon.h"
 
 extern rcol Radar_color_rgb[MAX_RADAR_COLORS][MAX_RADAR_LEVELS];
 
 extern int radar_target_id_flags;
-
-extern int Cmdline_nohtl;
 
 vec3d orb_ring_yz[NUM_ORB_RING_SLICES];
 vec3d orb_ring_xy[NUM_ORB_RING_SLICES];
@@ -63,8 +57,8 @@ HudGaugeRadar(HUD_OBJECT_RADAR_ORB, 255, 255, 255)
 	
     for (i=0; i < NUM_ORB_RING_SLICES; i++)
     {
-        s=(float)sin(float(i*PI2)/NUM_ORB_RING_SLICES);
-        c=(float)cos(float(i*PI2)/NUM_ORB_RING_SLICES);
+        s=sinf(float(i*PI2)/NUM_ORB_RING_SLICES);
+        c=cosf(float(i*PI2)/NUM_ORB_RING_SLICES);
 
         orb_ring_xy[i].xyz.x = c;
         orb_ring_xy[i].xyz.y = s;
@@ -194,14 +188,7 @@ void HudGaugeRadarOrb::blipDrawDistorted(blip *b, vec3d *pos)
 	vm_vec_random_cone(&out,pos,distortion_angle);
 	vm_vec_scale(&out,dist);
 
-    if (Cmdline_nohtl)
-    {
-	    drawContact(&out,b->rad);
-    }
-    else
-    {
-        drawContactHtl(&out,b->rad);
-    }
+    drawContactHtl(&out,b->rad);
 }
 
 // blip is for a target immune to sensors, so cause to flicker in/out with mild distortion
@@ -240,14 +227,7 @@ void HudGaugeRadarOrb::blipDrawFlicker(blip *b, vec3d *pos)
 	vm_vec_random_cone(&out,pos,distortion_angle);
 	vm_vec_scale(&out,dist);
 
-	if (Cmdline_nohtl)
-    {
-	    drawContact(&out,b->rad);
-    }
-    else
-    {
-        drawContactHtl(&out,b->rad);
-    }
+    drawContactHtl(&out,b->rad);
 }
 
 // Draw all the active radar blips
@@ -299,11 +279,7 @@ void HudGaugeRadarOrb::drawBlips(int blip_type, int bright, int distort)
 		}
 		else
 		{
-            if (Cmdline_nohtl)
-            {
-               drawContact(&pos,b->rad);
-            }
-            else if (b->radar_image_2d >= 0 || b->radar_color_image_2d >= 0)
+            if (b->radar_image_2d >= 0 || b->radar_color_image_2d >= 0)
 			{
 				drawContactImage(&pos, b->rad, b->radar_image_2d, b->radar_color_image_2d, b->radar_projection_size);
 			}
@@ -415,8 +391,8 @@ int HudGaugeRadarOrb::calcAlpha(vec3d* pt)
     vm_vec_unrotate(&new_pt, pt, &Player_obj->orient);
     vm_vec_normalize(&new_pt);
 
-    float dot = vm_vec_dotprod(&fvec, &new_pt);
-    float angle = fabs(acos(dot));
+    float dot = vm_vec_dot(&fvec, &new_pt);
+    float angle = fabs(acosf(dot));
     int alpha = int(angle*192.0f/PI);
     
     return alpha;
@@ -501,17 +477,8 @@ void HudGaugeRadarOrb::render(float frametime)
 	blitGauge();
 	drawRange();
 
-    if (Cmdline_nohtl)
-    {
-        setupView();
-        drawOutlines();
-    }
-    else
-    {
-        setupViewHtl();
-        drawOutlinesHtl();
-    }
-	
+    setupViewHtl();
+    drawOutlinesHtl();
 
 	if ( timestamp_elapsed(Radar_static_next) ) {
 		Radar_static_playing ^= 1;
@@ -543,14 +510,7 @@ void HudGaugeRadarOrb::render(float frametime)
 		}
 	}
 	
-    if (Cmdline_nohtl)
-    {
-	    doneDrawing();
-    }
-    else
-    {
-        doneDrawingHtl();
-    }
+    doneDrawingHtl();
 
 	if(g3_yourself)
 		g3_end_frame();

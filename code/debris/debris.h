@@ -16,6 +16,7 @@
 
 class object;
 struct CFILE;
+class draw_list;
 
 #define MAX_DEBRIS_ARCS 8		// Must be less than MAX_ARC_EFFECTS in model.h
 
@@ -24,6 +25,7 @@ typedef struct debris {
 	int		flags;					// See DEBRIS_??? defines
 	int		source_objnum;		// What object this came from
 	int		source_sig;			// Signature of the source object
+	int		damage_type_idx;	// Damage type of this debris
 	int		ship_info_index;	// Ship info index of the ship type debris came from
 	int		team;					// Team of the ship where the debris came from
 	int		objnum;				// What object this is linked to
@@ -61,7 +63,8 @@ extern int Num_debris_pieces;
 struct collision_info_struct;
 
 void debris_init();
-void debris_render( object * obj );
+void debris_render_DEPRECATED( object * obj );
+void debris_render(object * obj, draw_list *scene);
 void debris_delete( object * obj );
 void debris_process_post( object * obj, float frame_time);
 object *debris_create( object * source_obj, int model_num, int submodel_num, vec3d *pos, vec3d *exp_center, int hull_flag, float exp_force );

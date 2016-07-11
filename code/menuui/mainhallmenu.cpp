@@ -10,34 +10,34 @@
 #include <stdlib.h>
 #include <limits.h>
 
-#include "menuui/mainhallmenu.h"
-#include "palman/palman.h"
-#include "gamesequence/gamesequence.h"
 #include "anim/animplay.h"
 #include "anim/packunpack.h"
-#include "io/key.h"
-#include "io/timer.h"
-#include "menuui/snazzyui.h"
-#include "playerman/player.h"
-#include "sound/audiostr.h"
-#include "gamesnd/gamesnd.h"
-#include "gamesnd/eventmusic.h"
-#include "io/mouse.h"
-#include "gamehelp/contexthelp.h"
 #include "cmdline/cmdline.h"
-#include "popup/popup.h"
-#include "menuui/playermenu.h"
 #include "freespace2/freespace.h"
+#include "gamehelp/contexthelp.h"
+#include "gamesequence/gamesequence.h"
+#include "gamesnd/eventmusic.h"
+#include "gamesnd/gamesnd.h"
 #include "globalincs/alphacolors.h"
 #include "graphics/generic.h"
+#include "io/key.h"
+#include "io/mouse.h"
+#include "io/timer.h"
 #include "menuui/fishtank.h"
+#include "menuui/mainhallmenu.h"
+#include "menuui/playermenu.h"
+#include "menuui/snazzyui.h"
 #include "mission/missioncampaign.h"
-#include "parse/parselo.h"
-#include "parse/scripting.h"
+#include "network/multi.h"
+#include "network/multi_voice.h"
 #include "network/multiui.h"
 #include "network/multiutil.h"
-#include "network/multi_voice.h"
-#include "network/multi.h"
+#include "palman/palman.h"
+#include "parse/parselo.h"
+#include "parse/scripting.h"
+#include "playerman/player.h"
+#include "popup/popup.h"
+#include "sound/audiostr.h"
 
 #ifndef NDEBUG
 #include "cutscene/movie.h"
@@ -319,9 +319,6 @@ void main_hall_do_multi_ready()
 	case NETWORK_ERROR_NO_PROTOCOL:
 		if (Multi_options_g.protocol == NET_TCP) {
 			popup( PF_USE_AFFIRMATIVE_ICON | PF_NO_NETWORKING, 1, POPUP_OK, XSTR( "TCP/IP protocol not found.  This protocol is required for multiplayer FreeSpace.", 1602));
-		} else {
-			Assert(Multi_options_g.protocol == NET_IPX);
-			popup( PF_USE_AFFIRMATIVE_ICON | PF_NO_NETWORKING, 1, POPUP_OK, XSTR( "IPX protocol not found.  This protocol is required for multiplayer FreeSpace.", 1603));
 		}
 		break;
 	case NETWORK_ERROR_CONNECT_TO_ISP:
@@ -343,11 +340,6 @@ void main_hall_do_multi_ready()
 		} else {
 			popup( PF_USE_AFFIRMATIVE_ICON | PF_NO_NETWORKING, 1, POPUP_OK, XSTR( "You have selected TCP/IP for multiplayer FreeSpace, but the TCP/IP protocol was not detected on your machine.", 362));
 		}
-		return;
-	}
-
-	if ((Multi_options_g.protocol == NET_IPX) && !Ipx_active) {
-		popup( PF_USE_AFFIRMATIVE_ICON | PF_NO_NETWORKING, 1, POPUP_OK, XSTR( "You have selected IPX for multiplayer FreeSpace, but the IPX protocol was not detected on your machine.", 1402));
 		return;
 	}
 
@@ -414,7 +406,7 @@ void main_hall_campaign_cheat()
  */
 void main_hall_init(const SCP_string &main_hall_name)
 {
-	ubyte bg_type;
+	BM_TYPE bg_type;
 	if (Main_hall_inited) {
 		return;
 	}
@@ -534,11 +526,7 @@ void main_hall_init(const SCP_string &main_hall_name)
 
 	// get the default value for tooltip padding if necessary
 	if (Main_hall->tooltip_padding == -1) {
-		if (Main_hall_bitmap_w >= GR_1024_THRESHOLD_WIDTH && Main_hall_bitmap_h >= GR_1024_THRESHOLD_HEIGHT) {
-			Main_hall->tooltip_padding = Main_hall_default_tooltip_padding[GR_1024];
-		} else {
-			Main_hall->tooltip_padding = Main_hall_default_tooltip_padding[GR_640];
-		}
+		Main_hall->tooltip_padding = Main_hall_default_tooltip_padding[gr_get_resolution_class(Main_hall_bitmap_w, Main_hall_bitmap_h)];
 	}
 
 	// In case we're re-entering the mainhall
@@ -704,6 +692,8 @@ void main_hall_do(float frametime)
 		for (int c_idx = 0; c_idx < (int) Main_hall->cheat.size(); c_idx++) {
 			cheat_anim_found = false;
 
+			// TODO change way cheat anims are loaded to work with apngs
+			// maybe load both cheat & normal, advance frames in lockstep, display which one you want
 			if(Main_hall_cheat.find(Main_hall->cheat.at(c_idx)) != SCP_string::npos) {
 				cheat_found = true;
 				// switch animations
@@ -1839,11 +1829,11 @@ int main_hall_get_index(const SCP_string &name_to_find)
 int main_hall_get_resolution_index(int main_hall_num)
 {
 	unsigned int i;
-	float aspect_ratio = (float)gr_screen.max_w / (float)gr_screen.max_h;
+	float aspect_ratio = (float)gr_screen.center_w / (float)gr_screen.center_h;
 
 	for (i = Main_hall_defines.at(main_hall_num).size() - 1; i >= 1; i--) {
 		main_hall_defines* m = &Main_hall_defines.at(main_hall_num).at(i);
-		if (gr_screen.max_w >= m->min_width && gr_screen.max_h >= m->min_height && aspect_ratio >= m->min_aspect_ratio) {
+		if (gr_screen.center_w >= m->min_width && gr_screen.center_h >= m->min_height && aspect_ratio >= m->min_aspect_ratio) {
 			return i;
 		}
 	}
@@ -2125,7 +2115,7 @@ void parse_main_hall_table(const char* filename)
 						}
 					}
 					else {
-						snprintf(temp_string, MAX_FILENAME_LEN, "%d", count);
+						snprintf(temp_string, MAX_FILENAME_LEN, "%u", count);
 						m->name = temp_string;
 					}
 				}
@@ -2154,7 +2144,7 @@ void parse_main_hall_table(const char* filename)
 					if (temp_scp_string.size() > MAIN_HALL_MAX_CHEAT_LEN) {
 						// Since the value is longer than the cheat buffer it will never match.
 
-						Warning(LOCATION, "The value '%s' for '+Cheat String:' is too long! It can be at most %d characters long.", temp_scp_string.size(), MAIN_HALL_MAX_CHEAT_LEN);
+						Warning(LOCATION, "The value '%s' for '+Cheat String:' is too long! It can be at most %d characters long.", temp_scp_string.c_str(), MAIN_HALL_MAX_CHEAT_LEN);
 					}
 
 					required_string("+Anim To Change:");

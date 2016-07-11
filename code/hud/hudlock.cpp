@@ -10,29 +10,31 @@
 
 
 
-#include "hud/hud.h"
-#include "hud/hudlock.h"
-#include "playerman/player.h"
-#include "ship/ship.h"
-#include "weapon/weapon.h"
-#include "io/timer.h"
-#include "gamesnd/gamesnd.h"
 #include "ai/ai.h"
-#include "render/3d.h"
-#include "globalincs/linklist.h"
-#include "weapon/emp.h"
-#include "graphics/2d.h"
-#include "object/object.h"
-#include "mission/missionparse.h"
-#include "iff_defs/iff_defs.h"
-#include "network/multi.h"
 #include "debugconsole/console.h"
+#include "gamesnd/gamesnd.h"
+#include "globalincs/linklist.h"
+#include "hud/hudlock.h"
+#include "iff_defs/iff_defs.h"
+#include "io/timer.h"
+#include "mission/missionparse.h"
+#include "network/multi.h"
+#include "object/object.h"
+#include "playerman/player.h"
+#include "render/3d.h"
+#include "ship/ship.h"
+#include "weapon/emp.h"
+#include "weapon/weapon.h"
+
+
+// Used for aspect locks. -MageKing17
+#define VIRTUAL_FRAME_HALF_WIDTH	320.0f
+#define VIRTUAL_FRAME_HALF_HEIGHT	240.0f
 
 
 vec3d lock_world_pos;
 
 static float Lock_start_dist;
-static int Rotate_time_id = 1;	// timer id for controlling how often to rotate triangles around lock indicator
 
 int Missile_track_loop = -1;
 int Missile_lock_loop = -1;
@@ -65,9 +67,6 @@ int Lock_gauge_half_h[GR_NUM_RESOLUTIONS] = {
 	25
 };
 
-int Lock_gauge_loaded = 0;
-int Lock_gauge_draw = 0;
-int Lock_gauge_draw_stamp = -1;
 #define LOCK_GAUGE_BLINK_RATE			5			// blinks/sec
 
 int Lockspin_half_w[NUM_HUD_RETICLE_STYLES][GR_NUM_RESOLUTIONS] = {
@@ -104,43 +103,6 @@ void hud_init_missile_lock()
 	Player_ai->current_target_is_locked = 0;
 
 	Player_ai->last_secondary_index = -1;
-
-	Rotate_time_id = 1;
-
-	// Load in the frames need for the lead indicator
-	//if (!Lock_gauge_loaded) {
-	//Commented out due to changes in HUD loading behaviour. These checks are no longer needed at this point.
-
-		Lock_gauge_loaded = 1;
-		
-		Lock_gauge_draw_stamp = -1;
-		Lock_gauge_draw = 0;
-	//}
-}
-
-void hud_draw_diamond(int x, int y, int width, int height)
-{
-	Assert(height>0);
-	Assert(width>0);
-
-	int x1,x2,x3,x4,y1,y2,y3,y4;
-
-	x1=x;
-	y1=y-height/2;
-
-	x2=x+width/2;
-	y2=y;
-
-	x3=x;
-	y3=y+height/2;
-
-	x4=x-width/2;
-	y4=y;
-
-	gr_line(x1,y1,x2,y2);
-	gr_line(x2,y2,x3,y3);
-	gr_line(x3,y3,x4,y4);
-	gr_line(x4,y4,x1,y1);
 }
 
 HudGaugeLock::HudGaugeLock():
@@ -195,6 +157,10 @@ void HudGaugeLock::initialize()
 	Lock_gauge_draw_stamp = -1;
 	Lock_gauge_draw = 0;
 	Rotate_time_id = 1;
+	Last_lock_status = false;
+
+	Lock_anim.time_elapsed = 0.0f;
+	Lock_gauge.time_elapsed = 0.0f;
 
 	HudGauge::initialize();
 }
@@ -208,6 +174,15 @@ void HudGaugeLock::renderOld(float frametime)
 	int			target_objnum, sx, sy;
 	object		*targetp;
 	vertex lock_point;
+
+	bool locked = Player_ai->current_target_is_locked ? true : false;
+	bool reset_timers = false;
+
+	if ( locked != Last_lock_status ) {
+		// check if player lock status has changed since the last frame.
+		reset_timers = true;
+		Last_lock_status = locked;
+	}
 
 	if (Player_ai->target_objnum == -1) {
 		return;
@@ -262,25 +237,27 @@ void HudGaugeLock::renderOld(float frametime)
 
 		// show the rotating triangles if target is locked
 		renderLockTriangles(sx, sy, frametime);
+
+		if ( reset_timers ) {
+			Lock_gauge.time_elapsed = 0.0f;
+		}
 	} else {
-		sx = fl2i(lock_point.screen.xyw.x) - (Player->current_target_sx - Players[Player_num].lock_indicator_x); 
-		sy = fl2i(lock_point.screen.xyw.y) - (Player->current_target_sy - Players[Player_num].lock_indicator_y);
+		const float scaling_factor = (gr_screen.clip_center_x < gr_screen.clip_center_y) ? (gr_screen.clip_center_x / VIRTUAL_FRAME_HALF_WIDTH) : (gr_screen.clip_center_y / VIRTUAL_FRAME_HALF_HEIGHT);
+		sx = fl2i(lock_point.screen.xyw.x) - fl2i(i2fl(Player->current_target_sx - Players[Player_num].lock_indicator_x) * scaling_factor);
+		sy = fl2i(lock_point.screen.xyw.y) - fl2i(i2fl(Player->current_target_sy - Players[Player_num].lock_indicator_y) * scaling_factor);
 		gr_unsize_screen_pos(&sx, &sy);
+
+		if ( reset_timers ) {
+			Lock_gauge_draw_stamp = -1;
+			Lock_gauge_draw = 0;
+			Lock_anim.time_elapsed = 0.0f;
+		}
 	}
 
 	// show locked indicator
-	/*
-	if ( Lock_gauge.first_frame >= 0 ) {
-		gr_set_bitmap(Lock_gauge.first_frame);
-		gr_aabitmap(sx - Lock_gauge_half_w[gr_screen.res], sy - Lock_gauge_half_h[gr_screen.res]);
-	} else {
-		hud_draw_diamond(sx, sy, Lock_target_box_width[gr_screen.res], Lock_target_box_height[gr_screen.res]);
-	}
-	*/
 	Lock_gauge.sx = sx - Lock_gauge_half_w;
 	Lock_gauge.sy = sy - Lock_gauge_half_h;
-	if(Player_ai->current_target_is_locked){
-		Lock_gauge.time_elapsed = 0.0f;	
+	if (Player_ai->current_target_is_locked) {
 		hud_anim_render(&Lock_gauge, 0.0f, 1);
 	} else {
 		hud_anim_render(&Lock_gauge, frametime, 1);
@@ -400,12 +377,6 @@ void hud_lock_reset(float lock_time_scale)
 	Player->locking_subsys_parent=-1;
 	hud_stop_looped_locking_sounds();
 
-	Lock_gauge_draw_stamp = -1;
-	Lock_gauge_draw = 0;
-
-	// reset the lock anim time elapsed
-//	Lock_anim.time_elapsed = 0.0f;
-
 	for ( size_t i = 0; i < Player_ship->missile_locks.size(); ++i ) {
 		ship_clear_lock(&Player_ship->missile_locks[i]);
 	}
@@ -508,6 +479,10 @@ int hud_abort_lock()
 		return 1;
 	}
 
+	if ( Player_ship->flags2 & SF2_NO_SECONDARY_LOCKON ) {
+		return 1;
+	}
+
 	swp = &Player_ship->weapons;
 	wip = &Weapon_info[swp->secondary_bank_weapons[swp->current_secondary_bank]];
 
@@ -563,10 +538,10 @@ int hud_lock_on_subsys_ok()
 // Determine if locking point is in the locking cone
 void hud_lock_check_if_target_in_lock_cone()
 {
-	float		dist, dot;
+	float	dot;
 	vec3d	vec_to_target;
 
-	dist = vm_vec_normalized_dir(&vec_to_target, &lock_world_pos, &Player_obj->pos);
+	vm_vec_normalized_dir(&vec_to_target, &lock_world_pos, &Player_obj->pos);
 	dot = vm_vec_dot(&Player_obj->orient.vec.fvec, &vec_to_target);
 
 	if ( dot > 0.85) {
@@ -1662,16 +1637,16 @@ void HudGaugeLock::renderLockTrianglesOld(int center_x, int center_y, int radius
 		// draw the orbiting triangles
 
 		//ang = atan2(target_point.y,target_point.x);
-		xpos = center_x + (float)cos(ang)*(radius + Lock_triangle_height + 2);
-		ypos = center_y - (float)sin(ang)*(radius + Lock_triangle_height + 2);
-			
-		x3 = xpos - Lock_triangle_base * (float)sin(-ang);
-		y3 = ypos + Lock_triangle_base * (float)cos(-ang);
-		x4 = xpos + Lock_triangle_base * (float)sin(-ang);
-		y4 = ypos - Lock_triangle_base * (float)cos(-ang);
+		xpos = center_x + cosf(ang)*(radius + Lock_triangle_height + 2);
+		ypos = center_y - sinf(ang)*(radius + Lock_triangle_height + 2);
 
-		xpos = xpos - Lock_triangle_base * (float)cos(ang);
-		ypos = ypos + Lock_triangle_base * (float)sin(ang);
+		x3 = xpos + Lock_triangle_base * sinf(ang);
+		y3 = ypos + Lock_triangle_base * cosf(ang);
+		x4 = xpos - Lock_triangle_base * sinf(ang);
+		y4 = ypos - Lock_triangle_base * cosf(ang);
+
+		xpos = xpos - Lock_triangle_base * cosf(ang);
+		ypos = ypos + Lock_triangle_base * sinf(ang);
 
 		hud_tri(x3, y3, xpos, ypos, x4, y4);
 	} // end for
@@ -1745,7 +1720,11 @@ void HudGaugeLock::renderLockTrianglesNew(int center_x, int center_y, int start_
 			// maybe draw the anim
 			Lock_gauge.time_elapsed = 0.0f;			
 			if(Lock_gauge_draw){
-				hud_anim_render(&Lock_anim, 0.0f, 1, 0, 1);
+				if ( loop_locked_anim ) {
+					hud_anim_render(&Lock_anim, 0.0f, 1, 1, 0);
+				} else {
+					hud_anim_render(&Lock_anim, 0.0f, 1, 0, 1);
+				}
 			}
 		}
 	}
@@ -2181,8 +2160,9 @@ void hud_lock_determine_lock_point(vec3d *lock_world_pos_out)
 	if ( lock_local_pos.xyz.z > 0.0f ) {
 		// Get the location of our target in the "virtual frame" where the locking computation will be done
 		float w = 1.0f / lock_local_pos.xyz.z;
-		float sx = ((gr_screen.clip_center_x*2.0f) + (lock_local_pos.xyz.x*(gr_screen.clip_center_x*2.0f)*w))*0.5f;
-		float sy = ((gr_screen.clip_center_y*2.0f) - (lock_local_pos.xyz.y*(gr_screen.clip_center_y*2.0f)*w))*0.5f;
+		// Let's force our "virtual frame" to be 640x480. -MageKing17
+		float sx = gr_screen.clip_center_x + (lock_local_pos.xyz.x * VIRTUAL_FRAME_HALF_WIDTH * w);
+		float sy = gr_screen.clip_center_y - (lock_local_pos.xyz.y * VIRTUAL_FRAME_HALF_HEIGHT * w);
 
 		Player->current_target_sx = (int)sx;
 		Player->current_target_sy = (int)sy;

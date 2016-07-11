@@ -924,7 +924,7 @@ void process_join_packet(ubyte* data, header* hinfo)
 	PACKET_SET_SIZE();	
 
 	// fill in the address information of where this came from
-	fill_net_addr(&addr, hinfo->addr, hinfo->net_id, hinfo->port);
+	fill_net_addr(&addr, hinfo->addr, hinfo->port);
 
 	// determine if we should accept this guy, or return a reason we should reject him
 	// see the DENY_* codes in multi.h
@@ -1104,8 +1104,6 @@ void process_new_player_packet(ubyte* data, header* hinfo)
 		}
 
 		// create the player
-		memcpy(new_addr.net_id, Psnet_my_addr.net_id, 4);
-
 		if(new_flags & NETINFO_FLAG_OBSERVER){
 			multi_obs_create_player(new_player_num,new_player_name,&new_addr,&Players[player_num]);
 			Net_players[new_player_num].flags |= new_flags;
@@ -1349,7 +1347,7 @@ void process_accept_player_data( ubyte *data, header *hinfo )
 
 			// also - always set the server address to be where this data came from, NOT from 
 			// the data in the packet		
-			fill_net_addr(&Net_players[player_num].p_info.addr, hinfo->addr, hinfo->net_id, hinfo->port);
+			fill_net_addr(&Net_players[player_num].p_info.addr, hinfo->addr, hinfo->port);
 		}
 
 		// set the host pointer
@@ -1591,7 +1589,7 @@ void process_accept_packet(ubyte* data, header* hinfo)
 	}
 
 	// fill in the netgame server address
-	fill_net_addr( &Netgame.server_addr, hinfo->addr, hinfo->net_id, hinfo->port );	
+	fill_net_addr( &Netgame.server_addr, hinfo->addr, hinfo->port );	
 
 	// get the skill level setting
 	GET_INT(Game_skill_level);
@@ -1941,7 +1939,7 @@ void process_game_active_packet(ubyte* data, header* hinfo)
 	active_game ag;
 	int modes_compatible = 1;
 	
-	fill_net_addr(&ag.server_addr, hinfo->addr, hinfo->net_id, hinfo->port);
+	fill_net_addr(&ag.server_addr, hinfo->addr, hinfo->port);
 
 	// read this game into a temporary structure
 	offset = HEADER_LENGTH;
@@ -2199,7 +2197,7 @@ void process_netgame_descript_packet( ubyte *data, header *hinfo )
 	char mission_desc[MISSION_DESC_LENGTH+2];
 	net_addr addr;
 
-	fill_net_addr(&addr, hinfo->addr, hinfo->net_id, hinfo->port);
+	fill_net_addr(&addr, hinfo->addr, hinfo->port);
 
 	// read this game into a temporary structure
 	offset = HEADER_LENGTH;
@@ -2232,7 +2230,7 @@ void process_netgame_descript_packet( ubyte *data, header *hinfo )
 	PACKET_SET_SIZE();	
 }
 
-// broadcast a query for active games. IPX will use net broadcast and TCP will either request from the MT or from the specified list
+// broadcast a query for active games. TCP will either request from the MT or from the specified list
 void broadcast_game_query()
 {
 	int packet_size;
@@ -2256,7 +2254,7 @@ void broadcast_game_query()
 		} while(s_moveup != Game_server_head);		
 	}	
 
-	fill_net_addr(&addr, Psnet_my_addr.addr, Psnet_my_addr.net_id, DEFAULT_GAME_PORT);
+	fill_net_addr(&addr, Psnet_my_addr.addr, DEFAULT_GAME_PORT);
 
 	// send out a broadcast if our options allow us
 	if(Net_player->p_info.options.flags & MLO_FLAG_LOCAL_BROADCAST){
@@ -2286,7 +2284,7 @@ void process_game_query(ubyte* data, header* hinfo)
 	PACKET_SET_SIZE();
 
 	// check to be sure that we don't capture our own broadcast message
-	fill_net_addr(&addr, hinfo->addr, hinfo->net_id, hinfo->port);
+	fill_net_addr(&addr, hinfo->addr, hinfo->port);
 	if ( psnet_same( &addr, &Psnet_my_addr) ){
 		return;
 	}
@@ -2751,7 +2749,7 @@ void process_wing_create_packet( ubyte *data, header *hinfo )
 
 	// do a sanity check on the wing to be sure that we are actually working on a valid wing
 	if ( (index < 0) || (index >= Num_wings) || (Wings[index].num_waves == -1) ) {
-		nprintf(("Network", "invalid index %d for wing create packet\n"));
+		nprintf(("Network", "Invalid index %d for wing create packet\n", index));
 		return;
 	}
 	if ( (num_to_create <= 0) || (num_to_create > Wings[index].wave_count) ) {
@@ -3474,7 +3472,7 @@ void process_ping_packet(ubyte *data, header *hinfo)
 	PACKET_SET_SIZE();
 
 	// get the address to return the pong to
-	fill_net_addr(&addr, hinfo->addr, hinfo->net_id, hinfo->port);	
+	fill_net_addr(&addr, hinfo->addr, hinfo->port);	
 	            
 	// send the pong
 	send_pong(&addr);	
@@ -3490,7 +3488,7 @@ void process_pong_packet(ubyte *data, header *hinfo)
 	
 	offset = HEADER_LENGTH;
 
-	fill_net_addr(&addr, hinfo->addr, hinfo->net_id, hinfo->port);
+	fill_net_addr(&addr, hinfo->addr, hinfo->port);
 		
 	PACKET_SET_SIZE();	
 		
@@ -3504,7 +3502,7 @@ void process_pong_packet(ubyte *data, header *hinfo)
 		p = &Net_players[lookup]; 
 
 		// evaluate the ping
-		multi_ping_eval_pong(&Net_players[lookup].s_info.ping);
+		multi_ping_eval_pong(&Net_players[lookup].s_info.ping, timer_get_fixed_seconds());
 			
 		// put in calls to any functions which may want to know about the ping times from 
 		// this guy
@@ -6035,7 +6033,10 @@ void process_post_sync_data_packet(ubyte *data, header *hinfo)
 		objp = multi_get_network_object(net_sig);
 
 		// make sure we found a ship
-		Assert((objp != NULL) && (objp->type == OBJ_SHIP));
+		Assertion(objp != NULL, "idx: %d, ship_count: %d, sinfo_index: %u, ts_index: %u, net_sig: %u",
+			idx, ship_count, sinfo_index, ts_index, net_sig);
+		Assertion(objp->type == OBJ_SHIP, "type: %d, idx: %d, ship_count: %d, sinfo_index: %u, ts_index: %u, net_sig: %u",
+			objp->type, idx, ship_count, sinfo_index, ts_index, net_sig);
 
 		// set the ship to be the right class
 		change_ship_type(objp->instance,(int)sinfo_index);
@@ -7330,7 +7331,7 @@ void send_homing_weapon_info( int weapon_num )
 	// homing signature.
 	homing_signature = 0;
 	homing_object = wp->homing_object;
-	if ( homing_object != NULL ) {
+	if ( homing_object != &obj_used_list ) {
 		homing_signature = homing_object->net_signature;
 
 		// get the subsystem index.
@@ -7993,7 +7994,7 @@ void process_beam_fired_packet(ubyte *data, header *hinfo)
 		shipp->beam_sys_info.model_num = Ship_info[shipp->ship_info_index].model_num;
 		shipp->beam_sys_info.turret_gun_sobj = pm->detail[0];
 		shipp->beam_sys_info.turret_num_firing_points = 1;
-		shipp->beam_sys_info.turret_fov = (float)cos((field_of_fire != 0.0f) ? field_of_fire : 180);
+		shipp->beam_sys_info.turret_fov = cosf((field_of_fire != 0.0f) ? field_of_fire : 180);
 		shipp->beam_sys_info.pnt = fire_info.targeting_laser_offset;
 		shipp->beam_sys_info.turret_firing_point[0] = fire_info.targeting_laser_offset;
 
@@ -8393,7 +8394,7 @@ void process_flak_fired_packet(ubyte *data, header *hinfo)
 #define GET_NORM_VEC(d) do { char vnorm[3]; memcpy(vnorm, data+offset, 3); d.x = (float)vnorm[0] / 127.0f; d.y = (float)vnorm[1] / 127.0f; d.z = (float)vnorm[2] / 127.0f; } while(0);
 
 // player pain packet
-void send_player_pain_packet(net_player *pl, int weapon_info_index, float damage, vec3d *force, vec3d *hitpos)
+void send_player_pain_packet(net_player *pl, int weapon_info_index, float damage, vec3d *force, vec3d *hitpos, int quadrant_num)
 {
 	ubyte data[MAX_PACKET_SIZE];
 	short windex;
@@ -8417,6 +8418,7 @@ void send_player_pain_packet(net_player *pl, int weapon_info_index, float damage
 	ADD_USHORT(udamage);
 	ADD_VECTOR((*force));
 	ADD_VECTOR((*hitpos));
+	ADD_INT(quadrant_num);
 
 	// send to the player
 	multi_io_send(pl, data, packet_size);
@@ -8432,6 +8434,7 @@ void process_player_pain_packet(ubyte *data, header *hinfo)
 	vec3d force;
 	vec3d local_hit_pos;
 	weapon_info *wip;
+	int quadrant_num;
 
 	// get the data for the pain packet
 	offset = HEADER_LENGTH;		
@@ -8439,6 +8442,7 @@ void process_player_pain_packet(ubyte *data, header *hinfo)
 	GET_USHORT(udamage);
 	GET_VECTOR(force);
 	GET_VECTOR(local_hit_pos);
+	GET_INT(quadrant_num);
 	PACKET_SET_SIZE();
 
 	// mprintf(("PAIN!\n"));
@@ -8460,14 +8464,14 @@ void process_player_pain_packet(ubyte *data, header *hinfo)
 	weapon_hit_do_sound(Player_obj, wip, &Player_obj->pos, true);
 
 	// we need to do 3 things here. player pain (game flash), weapon hit sound, ship_apply_whack()
-	ship_hit_pain((float)udamage);
+	ship_hit_pain((float)udamage, quadrant_num);
 
 	// apply the whack	
 	ship_apply_whack(&force, &local_hit_pos, Player_obj);	
 }
 
 // lightning packet
-void send_lightning_packet(int bolt_type, vec3d *start, vec3d *strike)
+void send_lightning_packet(int bolt_type_internal, vec3d *start, vec3d *strike)
 {
 	ubyte data[MAX_PACKET_SIZE];
 	char val;
@@ -8475,7 +8479,7 @@ void send_lightning_packet(int bolt_type, vec3d *start, vec3d *strike)
 
 	// build the header and add the data
 	BUILD_HEADER(LIGHTNING_PACKET);
-	val = (char)bolt_type;
+	val = (char)bolt_type_internal;
 	ADD_DATA(val);
 	ADD_VECTOR((*start));
 	ADD_VECTOR((*strike));
@@ -8487,23 +8491,23 @@ void send_lightning_packet(int bolt_type, vec3d *start, vec3d *strike)
 void process_lightning_packet(ubyte *data, header *hinfo)
 {
 	int offset;
-	char bolt_type;
+	char bolt_type_internal;
 	vec3d start, strike;
 
 	// read the data
 	offset = HEADER_LENGTH;
-	GET_DATA(bolt_type);
+	GET_DATA(bolt_type_internal);
 	GET_VECTOR(start);
 	GET_VECTOR(strike);
 	PACKET_SET_SIZE();
 
 	// invalid bolt?
-	if(bolt_type < 0){
+	if(bolt_type_internal < 0){
 		return;
 	}
 
 	// fire it up
-	nebl_bolt(bolt_type, &start, &strike);
+	nebl_bolt(bolt_type_internal, &start, &strike);
 }
 
 void send_bytes_recvd_packet(net_player *pl)

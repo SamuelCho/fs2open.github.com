@@ -15,7 +15,6 @@
 #include "FREDDoc.h"
 #include "FREDView.h"
 #include "FredRender.h"
-#include "ai/ailocal.h"
 #include "ai/aigoals.h"
 #include "ship/ship.h"
 #include "globalincs/linklist.h"
@@ -136,6 +135,7 @@ int query_ship_name_duplicate(int ship);
 char *reg_read_string( char *section, char *name, char *default_value );
 
 extern int Nmodel_num;
+extern int Nmodel_instance_num;
 extern matrix Nmodel_orient;
 extern int Nmodel_bitmap;
 
@@ -332,26 +332,6 @@ bool fred_init()
 	//HWND hwndApp = window->GetSafeHwnd();
 	//os_set_window((uint) hwndApp);
 
-	/*
-	int result = MessageBox(NULL, 
-		"Welcome to OGL Fred2_open. Do you want to run in htl? "
-		"Its faster on any system and runs in full detail but is still buggy.", 
-		"Question", MB_ICONQUESTION | MB_YESNOCANCEL);
-
-	if(result == IDCANCEL) return false;
-
-	Cmdline_nohtl = result != IDYES;
-	*/
-
-	/* - HTL is now on by default so the warning is redundant - Karajorma
-	if (Cmdline_nohtl)
-	{
-		MessageBox(NULL, "You are not running in HTL mode for FRED.  Although HTL mode isn't required, there may be some crashes"
-						 " when trying to render the new high polygon models.  To enable HTL mode, create a shortcut to FRED, right-click into properties"
-						 " and add \"-fredhtl\" to the end of the string in the \"target\" box.", "FRED2", MB_ICONWARNING | MB_OK);
-	}
-	*/
-
 	snd_init();
 
 	// Not ready for this yet
@@ -410,6 +390,7 @@ bool fred_init()
 	armor_init();
 	weapon_init();
 	parse_medal_tbl();			// get medal names for sexpression usage
+	glowpoint_init();
 	ship_init();
 	parse_init();
 	techroom_intel_init();
@@ -443,9 +424,9 @@ bool fred_init()
 	// Get the default player ship
 	Default_player_model = cur_model_index = get_default_player_ship_index();
 
-	Id_select_type_start = Num_ship_classes + 2;
-	Id_select_type_jump_node = Num_ship_classes + 1;
-	Id_select_type_waypoint = Num_ship_classes;
+	Id_select_type_start = Ship_info.size() + 2;
+	Id_select_type_jump_node = Ship_info.size() + 1;
+	Id_select_type_waypoint = Ship_info.size();
 	Fred_main_wnd -> init_tools();	
 	return true;
 }
@@ -718,9 +699,9 @@ int create_object(vec3d *pos, int waypoint_instance)
 			obj = create_player(Player_starts, pos, NULL, Default_player_model);
 
 	} else if (cur_model_index == Id_select_type_jump_node) {
-		CJumpNode* jnp = new CJumpNode(pos);
-		obj = jnp->GetSCPObjectNumber();
-		Jump_nodes.push_back(*jnp);
+		CJumpNode jnp(pos);
+		obj = jnp.GetSCPObjectNumber();
+		Jump_nodes.push_back(std::move(jnp));
 	} else if(Ship_info[cur_model_index].flags & SIF_NO_FRED){		
 		obj = -1;
 	} else {  // creating a ship
@@ -885,7 +866,7 @@ void clear_mission()
 	// of ships for all teams
 	for (i=0; i<MAX_TVT_TEAMS; i++) {
 		count = 0;
-		for ( j = 0; j < MAX_SHIP_CLASSES; j++ ) {
+		for ( j = 0; j < static_cast<int>(Ship_info.size()); j++ ) {
 			if (Ship_info[j].flags & SIF_DEFAULT_PLAYER_SHIP) {
 				Team_data[i].ship_list[count] = j;
 				strcpy_s(Team_data[i].ship_list_variables[count], "");
@@ -955,6 +936,7 @@ void clear_mission()
 
 	Nmodel_flags = DEFAULT_NMODEL_FLAGS;
 	Nmodel_num = -1;
+	Nmodel_instance_num = -1;
 	vm_set_identity(&Nmodel_orient);
 	Nmodel_bitmap = -1;
 

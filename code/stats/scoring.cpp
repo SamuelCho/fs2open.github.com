@@ -10,28 +10,28 @@
 
 
 
-#include "stats/scoring.h"
+#include "ai/ai_profiles.h"
+#include "debugconsole/console.h"
 #include "freespace2/freespace.h"
-#include "object/object.h"
-#include "ship/ship.h"
-#include "playerman/player.h"
-#include "parse/parselo.h"
-#include "stats/medals.h"
-#include "localization/localize.h"
-#include "mission/missionparse.h"
 #include "hud/hud.h"
 #include "hud/hudmessage.h"
-#include "weapon/weapon.h"
 #include "iff_defs/iff_defs.h"
+#include "localization/localize.h"
+#include "mission/missionparse.h"
 #include "network/multi.h"
-#include "network/multiutil.h"
-#include "network/multimsgs.h"
-#include "network/multi_team.h"
 #include "network/multi_dogfight.h"
 #include "network/multi_pmsg.h"
-#include "ai/ai_profiles.h"
+#include "network/multi_team.h"
+#include "network/multimsgs.h"
+#include "network/multiutil.h"
+#include "object/object.h"
+#include "parse/parselo.h"
 #include "pilotfile/pilotfile.h"
-#include "debugconsole/console.h"
+#include "playerman/player.h"
+#include "ship/ship.h"
+#include "stats/medals.h"
+#include "stats/scoring.h"
+#include "weapon/weapon.h"
 
 /*
 // uncomment to get extra debug messages when a player scores
@@ -295,13 +295,14 @@ void scoring_eval_rank( scoring_struct *sc )
 // which medal is awarded.
 void scoring_eval_badges(scoring_struct *sc)
 {
-	int i, total_kills;
+	int total_kills;
 
 	// to determine badges, we count kills based on fighter/bomber types.  We must count kills in
 	// all time stats + current mission stats.  And, only for enemy fighters/bombers
 	total_kills = 0;
-	for (i = 0; i < MAX_SHIP_CLASSES; i++ ) {
-		if ( (Ship_info[i].flags & SIF_FIGHTER) || (Ship_info[i].flags & SIF_BOMBER) ) {
+	for (auto it = Ship_info.cbegin(); it != Ship_info.cend(); ++it ) {
+		if ( (it->flags & SIF_FIGHTER) || (it->flags & SIF_BOMBER) ) {
+			auto i = std::distance(Ship_info.cbegin(), it);
 			total_kills += sc->m_okKills[i];
 			total_kills += sc->kills[i];
 		}
@@ -310,7 +311,7 @@ void scoring_eval_badges(scoring_struct *sc)
 	// total_kills should now reflect the number of kills on hostile fighters/bombers.  Check this number
 	// against badge kill numbers, and award the appropriate badges as neccessary.
 	int last_badge_kills = 0;
-	for (i = 0; i < Num_medals; i++ ) {
+	for (auto i = 0; i < Num_medals; i++ ) {
 		if ( total_kills >= Medals[i].kills_needed
 			&& Medals[i].kills_needed > last_badge_kills
 			&& Medals[i].kills_needed > 0 )

@@ -14,15 +14,17 @@
 #include <windows.h>
 #endif
 
+#include <algorithm>
+
+#include "cmdline/cmdline.h"
 #include "globalincs/pstypes.h"
-#include "graphics/gropengl.h"
+#include <globalincs/systemvars.h>
+#include "graphics/2d.h"
 #include "graphics/gropenglextension.h"
 #include "graphics/gropengllight.h"
 #include "graphics/gropenglstate.h"
-#include "graphics/2d.h"
-#include "render/3d.h"
-#include "cmdline/cmdline.h"
 #include "lighting/lighting.h"
+#include "render/3d.h"
 
 
 
@@ -31,6 +33,7 @@ opengl_light *opengl_lights = NULL;
 bool lighting_is_enabled = true;
 int Num_active_gl_lights = 0;
 int GL_center_alpha = 0;
+float GL_light_factor = 1.0f;
 
 extern float static_point_factor;
 extern float static_light_factor;
@@ -115,7 +118,7 @@ void FSLight2GLLight(light *FSLight, opengl_light *GLLight)
 			GLLight->Position[2] = FSLight->vec2.xyz.z;
 			GLLight->Position[3] = 1.0f;
 
-			if ( Use_GLSL > 1 ) {
+			if ( is_minimum_GLSL_version() ) {
 				// Valathil: When using shaders pass the beam direction (not normalized IMPORTANT for calculation of tube)
 				vec3d a;
 				vm_vec_sub(&a, &FSLight->vec2, &FSLight->vec);
@@ -144,6 +147,9 @@ void FSLight2GLLight(light *FSLight, opengl_light *GLLight)
 
 			break;
 		}
+		
+		case LT_CONE:
+			break;
 
 		default:
 			Int3();
@@ -151,7 +157,6 @@ void FSLight2GLLight(light *FSLight, opengl_light *GLLight)
 	}
 }
 
-extern float Interp_light;
 void opengl_set_light(int light_num, opengl_light *ltp)
 {
 	Assert(light_num < GL_max_lights);
@@ -159,10 +164,11 @@ void opengl_set_light(int light_num, opengl_light *ltp)
 	GLfloat diffuse[4];
 	memcpy(diffuse, ltp->Diffuse, sizeof(GLfloat) * 4);
 
-	if ( (ltp->type == LT_DIRECTIONAL) && (Interp_light < 1.0f) ) {
-		diffuse[0] *= Interp_light;
-		diffuse[1] *= Interp_light;
-		diffuse[2] *= Interp_light;
+	if ( !is_minimum_GLSL_version() && (ltp->type == LT_DIRECTIONAL) && (GL_light_factor < 1.0f) ) {
+		// if we're not using shaders, manually adjust the diffuse light factor.
+		diffuse[0] *= GL_light_factor;
+		diffuse[1] *= GL_light_factor;
+		diffuse[2] *= GL_light_factor;
 	}
 
 	glLightfv(GL_LIGHT0+light_num, GL_POSITION, ltp->Position);
@@ -177,51 +183,45 @@ void opengl_set_light(int light_num, opengl_light *ltp)
 	glLightf(GL_LIGHT0+light_num, GL_SPOT_CUTOFF, ltp->SpotCutOff);
 }
 
-#include <globalincs/systemvars.h>
-int opengl_sort_active_lights(const void *a, const void *b)
+bool opengl_sort_active_lights(const opengl_light &la, const opengl_light &lb)
 {
-	opengl_light *la, *lb;
-
-	la = (opengl_light *) a;
-	lb = (opengl_light *) b;
-
 	// directional lights always go first
-	if ( (la->type != LT_DIRECTIONAL) && (lb->type == LT_DIRECTIONAL) )
-		return 1;
-	else if ( (la->type == LT_DIRECTIONAL) && (lb->type != LT_DIRECTIONAL) )
-		return -1;
+	if ( (la.type != LT_DIRECTIONAL) && (lb.type == LT_DIRECTIONAL) )
+		return false;
+	else if ( (la.type == LT_DIRECTIONAL) && (lb.type != LT_DIRECTIONAL) )
+		return true;
 
 	// tube lights go next, they are generally large and intense
-	if ( (la->type != LT_TUBE) && (lb->type == LT_TUBE) )
-		return 1;
-	else if ( (la->type == LT_TUBE) && (lb->type != LT_TUBE) )
-		return -1;
+	if ( (la.type != LT_TUBE) && (lb.type == LT_TUBE) )
+		return false;
+	else if ( (la.type == LT_TUBE) && (lb.type != LT_TUBE) )
+		return true;
 
 	// everything else is sorted by linear atten (light size)
 	// NOTE: smaller atten is larger light radius!
-	if ( la->LinearAtten > lb->LinearAtten )
-		return 1;
-	else if ( la->LinearAtten < lb->LinearAtten )
-		return -1;
+	if ( la.LinearAtten > lb.LinearAtten )
+		return false;
+	else if ( la.LinearAtten < lb.LinearAtten )
+		return true;
 
 	// as one extra check, if we're still here, go with overall brightness of light
 
-	float la_value = la->Diffuse[0] + la->Diffuse[1] + la->Diffuse[2];
-	float lb_value = lb->Diffuse[0] + lb->Diffuse[1] + lb->Diffuse[2];
+	float la_value = la.Diffuse[0] + la.Diffuse[1] + la.Diffuse[2];
+	float lb_value = lb.Diffuse[0] + lb.Diffuse[1] + lb.Diffuse[2];
 
 	if ( la_value < lb_value )
-		return 1;
+		return false;
 	else if ( la_value > lb_value )
-		return -1;
+		return true;
 
 	// the two are equal
-	return 0;
+	return false;
 }
 
 void opengl_pre_render_init_lights()
 {
 	// sort the lights to try and get the most visible lights on the first pass
-	qsort(opengl_lights, Num_active_gl_lights, sizeof(opengl_light), opengl_sort_active_lights);
+	std::sort(opengl_lights, opengl_lights + Num_active_gl_lights, opengl_sort_active_lights);
 }
 
 static GLdouble eyex, eyey, eyez;
@@ -311,7 +311,9 @@ void opengl_change_active_lights(int pos, int d_offset)
 	glScalef(1.0f, 1.0f, -1.0f);
 	
 	//Valathil: Sort lights by priority
-	opengl_pre_render_init_lights();
+	extern bool Deferred_lighting;
+	if(!Deferred_lighting)
+		opengl_pre_render_init_lights();
 
 	for (i = 0; i < GL_max_lights; i++) {
 		if ( (offset + i) >= Num_active_gl_lights ) {
@@ -352,9 +354,6 @@ void gr_opengl_destroy_light(int idx)
 
 void gr_opengl_set_light(light *fs_light)
 {
-	if (Cmdline_nohtl)
-		return;
-
 	if (Num_active_gl_lights >= MAX_LIGHTS)
 		return;
 
@@ -381,7 +380,7 @@ void gr_opengl_center_alpha(int type)
 
 void gr_opengl_set_center_alpha(int type)
 {
-	if (!type || Cmdline_nohtl)
+	if (!type)
 		return;
 
 	if(Num_active_gl_lights == MAX_LIGHTS)
@@ -449,17 +448,20 @@ void gr_opengl_set_center_alpha(int type)
 	GL_center_alpha = 0;
 }
 
+void gr_opengl_set_light_factor(float factor)
+{
+	GL_light_factor = factor;
+}
+
 void gr_opengl_reset_lighting()
 {
 	int i;
-
-	if (Cmdline_nohtl)
-		return;
 
 //	memset( opengl_lights, 0, sizeof(opengl_light) * MAX_LIGHTS );
 
 	for (i = 0; i < GL_max_lights; i++) {
 		GL_state.Light(i, GL_FALSE);
+		opengl_lights[i].occupied = false;
 	}
 
 	Num_active_gl_lights = 0;
@@ -575,10 +577,6 @@ void opengl_default_light_settings(int ambient, int emission, int specular)
 
 void gr_opengl_set_lighting(bool set, bool state)
 {
-	if (Cmdline_nohtl) {
-		return;
-	}
-
 	lighting_is_enabled = set;
 
 	opengl_default_light_settings();

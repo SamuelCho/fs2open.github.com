@@ -11,26 +11,26 @@
 #include <string.h>
 #include <setjmp.h>
 
+#include "controlconfig/controlsconfig.h"
+#include "debugconsole/console.h"
 #include "gamehelp/contexthelp.h"
 #include "gamesequence/gamesequence.h"
-#include "menuui/mainhallmenu.h"
-#include "missionui/missionbrief.h"
-#include "missionui/missionshipchoice.h"
-#include "missionui/missionweaponchoice.h"
-#include "menuui/barracks.h"
-#include "controlconfig/controlsconfig.h"
-#include "missionui/missiondebrief.h"
-#include "network/multiui.h"
-#include "mission/missionhotkey.h"
-#include "menuui/readyroom.h"
-#include "menuui/techmenu.h"
-#include "missionui/missioncmdbrief.h"
-#include "graphics/2d.h"
-#include "parse/parselo.h"
-#include "localization/localize.h"
 #include "globalincs/alphacolors.h"
 #include "globalincs/systemvars.h"
-#include "debugconsole/console.h"
+#include "graphics/2d.h"
+#include "localization/localize.h"
+#include "menuui/barracks.h"
+#include "menuui/mainhallmenu.h"
+#include "menuui/readyroom.h"
+#include "menuui/techmenu.h"
+#include "mission/missionhotkey.h"
+#include "missionui/missionbrief.h"
+#include "missionui/missioncmdbrief.h"
+#include "missionui/missiondebrief.h"
+#include "missionui/missionshipchoice.h"
+#include "missionui/missionweaponchoice.h"
+#include "network/multiui.h"
+#include "parse/parselo.h"
 
 
 
@@ -349,7 +349,7 @@ void parse_helptbl(const char *filename)
 
 			if (overlay_id < 0) {
 				if (num_help_overlays >= MAX_HELP_OVERLAYS) {
-					Warning(LOCATION, "Could not load help overlay after '%s' as maximum number of help overlays was reached (Max is %d)", help_overlaylist[overlay_id - 1].name, MAX_HELP_OVERLAYS);
+					Warning(LOCATION, "Could not load help overlay '%s' as maximum number of help overlays was reached (Max is %d)", name, MAX_HELP_OVERLAYS);
 
 					if (!skip_to_string("$end")) {
 						Error(LOCATION, "Couldn't find $end. Help.tbl or -hlp.tbm is invalid.\n");
@@ -388,10 +388,10 @@ void parse_helptbl(const char *filename)
 			}
 
 			if (optional_string("+font")) {
-				int font;
+				int font_index;
 				for (i = 0; i < help_overlaylist[overlay_id].num_resolutions; i++) {
-					stuff_int(&font);
-					help_overlaylist[overlay_id].fontlist.push_back(font);
+					stuff_int(&font_index);
+					help_overlaylist[overlay_id].fontlist.push_back(font_index);
 				}
 			}
 			else {

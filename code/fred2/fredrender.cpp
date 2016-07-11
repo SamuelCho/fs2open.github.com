@@ -34,7 +34,6 @@
 #include "model/model.h"
 #include "palman/palman.h"
 #include "editor.h"
-#include "ai/ailocal.h"
 #include "ship/ship.h"
 #include "cfile/cfile.h"
 #include "mission/missionparse.h"
@@ -141,8 +140,7 @@ color colour_yellow;
 
 void fred_enable_htl()
 {
-	if (!Briefing_dialog) gr_set_proj_matrix( (4.0f/9.0f) * PI * FRED_DEFAULT_HTL_FOV,  gr_screen.aspect*(float)gr_screen.clip_width/(float)gr_screen.clip_height, 1.0f, FRED_DEAFULT_HTL_DRAW_DIST);
-	if (Briefing_dialog) gr_set_proj_matrix( Briefing_window_FOV,  gr_screen.aspect*(float)gr_screen.clip_width/(float)gr_screen.clip_height, 1.0f, FRED_DEAFULT_HTL_DRAW_DIST);
+	gr_set_proj_matrix((4.0f/9.0f) * PI * (Briefing_dialog ? Briefing_window_FOV : FRED_DEFAULT_HTL_FOV),  gr_screen.aspect*(float)gr_screen.clip_width/(float)gr_screen.clip_height, 1.0f, FRED_DEAFULT_HTL_DRAW_DIST);
 	gr_set_view_matrix(&Eye_position, &Eye_matrix);
 }
 
@@ -614,30 +612,7 @@ void display_active_ship_subsystem()
 				// get subsys name
 				strcpy_s(buf, Render_subsys.cur_subsys->system_info->subobj_name);
 	
-				if (Cmdline_nohtl)
-				{
-					// get bounding box
-					if ( get_subsys_bounding_rect(objp, Render_subsys.cur_subsys, &x1, &x2, &y1, &y2) )
-					{
-	
-						// set color
-						gr_set_color(255, 32, 32);
-	
-						// draw box
-						gr_line(x1, y1, x1, y2);  gr_line(x1-1, y1, x1-1, y2);
-						gr_line(x1, y2, x2, y2);  gr_line(x1, y2+1, x2, y2+1);
-						gr_line(x2, y2, x2, y1);  gr_line(x2+1, y2, x2+1, y1);
-						gr_line(x2, y1, x1, y1);  gr_line(x2, y1-1, x1, y1-1);
-
-						// draw text
-						gr_set_color_fast(&colour_white);
-						gr_string_win( (x1+x2)/2,  y2 + 10, buf);
-					}
-				}
-				else
-				{		
-					fredhtl_render_subsystem_bounding_box(&Render_subsys);
-				}
+				fredhtl_render_subsystem_bounding_box(&Render_subsys);
 			}
 			else
 			{
@@ -662,19 +637,11 @@ void render_models(void)
 	}
 
 	bool f=false;
-	if (Cmdline_nohtl)
-	{
-		obj_render_all(render_one_model_nohtl,&f);
-	}
-	else
-	{
-		fred_enable_htl();
+	fred_enable_htl();
 		
-		obj_render_all(render_one_model_htl,&f);
+	obj_render_all(render_one_model_htl,&f);
 
-		fred_disable_htl();
-
-	}
+	fred_disable_htl();
 
 	if (Briefing_dialog)
 	{
@@ -702,6 +669,7 @@ void render_one_model_briefing_screen(object *objp)
 void render_one_model_nohtl(object *objp)
 {
 	int j, z;
+	uint debug_flags = 0;
 	object *o2;
 
 	Assert(objp->type != OBJ_NONE);
@@ -755,11 +723,11 @@ void render_one_model_nohtl(object *objp)
 		}
 		
 		if(Show_dock_points){
-			j |= MR_BAY_PATHS;	
+			debug_flags |= MR_DEBUG_BAY_PATHS;	
 		}
 
 		if(Show_paths_fred){
-			j |= MR_SHOW_PATHS;
+			debug_flags |= MR_DEBUG_PATHS;
 		}
 
 		z = objp->instance;
@@ -768,12 +736,19 @@ void render_one_model_nohtl(object *objp)
 
 //		if (!viewpoint || OBJ_INDEX(objp) != cur_object_index)
 		{
+			model_render_params render_info;
+
 			if (Fred_outline)	{
-				model_set_outline_color(Fred_outline >> 16, (Fred_outline >> 8) & 0xff, Fred_outline & 0xff);
-				model_render(Ship_info[Ships[z].ship_info_index].model_num, &objp->orient, &objp->pos, j | MR_SHOW_OUTLINE, -1, -1, Ships[z].ship_replacement_textures);
+				render_info.set_flags(j | MR_SHOW_OUTLINE | MR_NO_TEXTURING | MR_NO_LIGHTING);
+				render_info.set_color(Fred_outline >> 16, (Fred_outline >> 8) & 0xff, Fred_outline & 0xff);
 			} else {
-				model_render(Ship_info[Ships[z].ship_info_index].model_num, &objp->orient, &objp->pos, j, -1, -1, Ships[z].ship_replacement_textures);
+				render_info.set_flags(j);
 			}
+
+			render_info.set_debug_flags(debug_flags);
+			render_info.set_replacement_textures(Ships[z].ship_replacement_textures);
+
+			model_render_immediate(&render_info, Ship_info[Ships[z].ship_info_index].model_num, &objp->orient, &objp->pos);
 		}
 	
 	} else {
@@ -831,6 +806,7 @@ void render_one_model_nohtl(object *objp)
 void render_one_model_htl(object *objp)
 {
 	int j, z;
+	uint debug_flags = 0;
 	object *o2;
 
 	Assert(objp->type != OBJ_NONE);
@@ -878,18 +854,15 @@ void render_one_model_htl(object *objp)
 	// build flags
 	if ((Show_ship_models || Show_outlines) && ((objp->type == OBJ_SHIP) || (objp->type == OBJ_START))){
 		g3_start_instance_matrix(&Eye_position, &Eye_matrix, 0);
-		if (Show_ship_models){
-			j = MR_NORMAL;
-		} else {
-			j = MR_NO_POLYS;
-		}
+		
+		j = MR_NORMAL;
 		
 		if(Show_dock_points){
-			j |= MR_BAY_PATHS;	
+			debug_flags |= MR_DEBUG_BAY_PATHS;	
 		}
 
 		if(Show_paths_fred){
-			j |= MR_SHOW_PATHS;
+			debug_flags |= MR_DEBUG_PATHS;
 		}
 
 		z = objp->instance;
@@ -905,13 +878,23 @@ void render_one_model_htl(object *objp)
 			j |= MR_FULL_DETAIL;
 		}
 
+		model_render_params render_info;
+
+		render_info.set_debug_flags(debug_flags);
+		render_info.set_replacement_textures(Ships[z].ship_replacement_textures);
+
 		if (Fred_outline)	{
-			model_set_outline_color(Fred_outline >> 16, (Fred_outline >> 8) & 0xff, Fred_outline & 0xff);
-			j |= MR_SHOW_OUTLINE_HTL;
+			render_info.set_color(Fred_outline >> 16, (Fred_outline >> 8) & 0xff, Fred_outline & 0xff);
+			render_info.set_flags(j | MR_SHOW_OUTLINE_HTL | MR_NO_LIGHTING | MR_NO_POLYS | MR_NO_TEXTURING);
+			model_render_immediate(&render_info, Ship_info[Ships[z].ship_info_index].model_num, &objp->orient, &objp->pos);
 		}
 
 		g3_done_instance(0);
-	  	model_render(Ship_info[Ships[z].ship_info_index].model_num, &objp->orient, &objp->pos, j, -1, -1, Ships[z].ship_replacement_textures);
+
+		if ( Show_ship_models ) {
+			render_info.set_flags(j);
+			model_render_immediate(&render_info, Ship_info[Ships[z].ship_info_index].model_num, &objp->orient, &objp->pos);
+		}
 	} else {
 		int r = 0, g = 0, b = 0;
 
@@ -1126,7 +1109,7 @@ void draw_orient_sphere(object *obj, int r, int g, int b)
 
 	if ((obj->type != OBJ_WAYPOINT) && (obj->type != OBJ_POINT))
 	{
-		flag = (vm_vec_dotprod(&eye_orient.vec.fvec, &obj->orient.vec.fvec) < 0.0f);
+		flag = (vm_vec_dot(&eye_orient.vec.fvec, &obj->orient.vec.fvec) < 0.0f);
 		v1 = v2 = obj->pos;
 		vm_vec_scale_add2(&v1, &obj->orient.vec.fvec, size);
 		vm_vec_scale_add2(&v2, &obj->orient.vec.fvec, size * 1.5f);
@@ -1162,7 +1145,7 @@ void draw_orient_sphere2(int col, object *obj, int r, int g, int b)
 
 	if ((obj->type != OBJ_WAYPOINT) && (obj->type != OBJ_POINT))
 	{
-		flag = (vm_vec_dotprod(&eye_orient.vec.fvec, &obj->orient.vec.fvec) < 0.0f);
+		flag = (vm_vec_dot(&eye_orient.vec.fvec, &obj->orient.vec.fvec) < 0.0f);
 
 		v1 = v2 = obj->pos;
 		vm_vec_scale_add2(&v1, &obj->orient.vec.fvec, size);
@@ -1359,11 +1342,11 @@ void process_controls(vec3d *pos, matrix *orient, float frametime, int key, int 
 
 		vm_angles_2_matrix(&rotmat, &rotangs);
 		if (rotangs.h && Universal_heading)
-			vm_transpose_matrix(orient);
+			vm_transpose(orient);
 		vm_matrix_x_matrix(&newmat, orient, &rotmat);
 		*orient = newmat;
 		if (rotangs.h && Universal_heading)
-			vm_transpose_matrix(orient);
+			vm_transpose(orient);
 	}
 }
 
@@ -1375,11 +1358,8 @@ void fred_render_grid(grid *gridp)
 {
 	int	i, ncols, nrows;
 
-	if (!Cmdline_nohtl)
-	{
-		fred_enable_htl();
-		gr_zbuffer_set(0);
-	}	
+	fred_enable_htl();
+	gr_zbuffer_set(0);
 	
 	if ( !Fred_grid_colors_inited )	{
 		Fred_grid_colors_inited = 1;
@@ -1405,14 +1385,12 @@ void fred_render_grid(grid *gridp)
 	//	Draw the column lines.
 	for (i=0; i<=ncols; i++)
 	{
-		if (Cmdline_nohtl) rpd_line(&gridp->gpoints1[i], &gridp->gpoints2[i]);
-		else g3_draw_htl_line(&gridp->gpoints1[i], &gridp->gpoints2[i]);
+		g3_draw_htl_line(&gridp->gpoints1[i], &gridp->gpoints2[i]);
 	}
 	//	Draw the row lines.
 	for (i=0; i<=nrows; i++)
 	{
-		if (Cmdline_nohtl) rpd_line(&gridp->gpoints3[i], &gridp->gpoints4[i]);
-		else g3_draw_htl_line(&gridp->gpoints3[i], &gridp->gpoints4[i]);
+		g3_draw_htl_line(&gridp->gpoints3[i], &gridp->gpoints4[i]);
 	}
 
 	ncols = gridp->ncols / 2;
@@ -1426,21 +1404,16 @@ void fred_render_grid(grid *gridp)
 	
 	for (i=0; i<=ncols; i++)
 	{
-		if (Cmdline_nohtl) rpd_line(&gridp->gpoints5[i], &gridp->gpoints6[i]);
-		else g3_draw_htl_line(&gridp->gpoints5[i], &gridp->gpoints6[i]);
+		g3_draw_htl_line(&gridp->gpoints5[i], &gridp->gpoints6[i]);
 	}
 
 	for (i=0; i<=nrows; i++)
 	{
-		if (Cmdline_nohtl) rpd_line(&gridp->gpoints7[i], &gridp->gpoints8[i]);
-		else g3_draw_htl_line(&gridp->gpoints7[i], &gridp->gpoints8[i]);
+		g3_draw_htl_line(&gridp->gpoints7[i], &gridp->gpoints8[i]);
 	}
 
-	if (!Cmdline_nohtl)
-	{
-		fred_disable_htl();
-		gr_zbuffer_set(1);
-	}
+	fred_disable_htl();
+	gr_zbuffer_set(1);
 }
 
 void render_frame()
@@ -1489,11 +1462,7 @@ void render_frame()
 	gr_set_font(FONT1);
 	light_reset();
 
-	if (Briefing_dialog) {
-		g3_set_view_matrix(&eye_pos, &eye_orient, Briefing_window_FOV);
-	} else {
-		g3_set_view_matrix(&eye_pos, &eye_orient, 0.5f);
-	}
+	g3_set_view_matrix(&eye_pos, &eye_orient, (Briefing_dialog ? Briefing_window_FOV : FRED_DEFAULT_HTL_FOV));
 	Viewer_pos = eye_pos;  // for starfield code
 	
 	fred_enable_htl();
@@ -1598,11 +1567,7 @@ void render_frame()
 		gr_set_clip(0, 0, True_rw, True_rh);
 
 	g3_start_frame(0);	 // ** Accounted for
-	if (Briefing_dialog) {
-		g3_set_view_matrix(&eye_pos, &eye_orient, Briefing_window_FOV);
-	} else {
-		g3_set_view_matrix(&eye_pos, &eye_orient, 0.5f);
-	}
+	g3_set_view_matrix(&eye_pos, &eye_orient, (Briefing_dialog ? Briefing_window_FOV : FRED_DEFAULT_HTL_FOV));
 }
 
 void game_do_frame()
@@ -1653,7 +1618,7 @@ void game_do_frame()
 					leader = &Objects[cur_object_index];
 					leader_old_pos = leader->pos;  // save original position
 					leader_orient = leader->orient;			// save original orientation
-					vm_copy_transpose_matrix(&leader_transpose, &leader_orient);
+					vm_copy_transpose(&leader_transpose, &leader_orient);
 
 					process_controls(&leader->pos, &leader->orient, f2fl(Frametime), key);
 					vm_vec_sub(&delta_pos, &leader->pos, &leader_old_pos);  // get position change
@@ -1670,7 +1635,7 @@ void game_do_frame()
 
 								// change rotation matrix to rotate in opposite direction.  This rotation
 								// matrix is what the leader ship has rotated by.
-								vm_copy_transpose_matrix(&rot_trans, &view_physics.last_rotmat);
+								vm_copy_transpose(&rot_trans, &view_physics.last_rotmat);
 
 								// get point relative to our point of rotation (make POR the origin).  Since
 								// only the leader has been moved yet, and not the objects, we have to use
@@ -2021,7 +1986,7 @@ void render_compass(void)
 
 	v.xyz.x = 1.0f;
 	v.xyz.y = v.xyz.z = 0.0f;
-	if (vm_vec_dotprod(&eye, &v) < 0.0f)
+	if (vm_vec_dot(&eye, &v) < 0.0f)
 		gr_set_color(159, 20, 20);
 	else
 		gr_set_color(255, 32, 32);
@@ -2029,7 +1994,7 @@ void render_compass(void)
 
 	v.xyz.y = 1.0f;
 	v.xyz.x = v.xyz.z = 0.0f;
-	if (vm_vec_dotprod(&eye, &v) < 0.0f)
+	if (vm_vec_dot(&eye, &v) < 0.0f)
 		gr_set_color(20, 159, 20);
 	else
 		gr_set_color(32, 255, 32);
@@ -2037,7 +2002,7 @@ void render_compass(void)
 
 	v.xyz.z = 1.0f;
 	v.xyz.x = v.xyz.y = 0.0f;
-	if (vm_vec_dotprod(&eye, &v) < 0.0f)
+	if (vm_vec_dot(&eye, &v) < 0.0f)
 		gr_set_color(20, 20, 159);
 	else
 		gr_set_color(32, 32, 255);

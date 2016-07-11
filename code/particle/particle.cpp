@@ -9,15 +9,16 @@
 
 
 
+#include "bmpman/bmpman.h"
+#include "cmdline/cmdline.h"
+#include "debugconsole/console.h"
 #include "globalincs/systemvars.h"
 #include "graphics/2d.h"
-#include "render/3d.h" 
-#include "bmpman/bmpman.h"
-#include "particle/particle.h"
-#include "object/object.h"
-#include "cmdline/cmdline.h"
 #include "graphics/grbatch.h"
-#include "debugconsole/console.h"
+#include "graphics/gropenglextension.h"
+#include "object/object.h"
+#include "particle/particle.h"
+#include "render/3d.h" 
 
 #ifndef NDEBUG
 #include "io/timer.h"
@@ -40,6 +41,7 @@ static int Particles_enabled = 1;
 uint lastSignature = 0; // 0 is an invalid signature!
 
 int Particle_buffer_object = -1;
+int Geometry_shader_buffer_object = -1;
 
 // Reset everything between levels
 void particle_init()
@@ -54,22 +56,26 @@ void particle_init()
 
 	// FIRE!!!
 	if ( Anim_bitmap_id_fire == -1 )	{
-		Anim_bitmap_id_fire = bm_load_animation( "particleexp01", &Anim_num_frames_fire, &fps, NULL, 0 );
+		Anim_bitmap_id_fire = bm_load_animation( "particleexp01", &Anim_num_frames_fire, &fps );
 	}
 
 	// Cough, cough
 	if ( Anim_bitmap_id_smoke == -1 )	{
-		Anim_bitmap_id_smoke = bm_load_animation( "particlesmoke01", &Anim_num_frames_smoke, &fps, NULL, 0 );
+		Anim_bitmap_id_smoke = bm_load_animation( "particlesmoke01", &Anim_num_frames_smoke, &fps );
 	}
 
 	// wheeze
 	if ( Anim_bitmap_id_smoke2 == -1 )	{
-		Anim_bitmap_id_smoke2 = bm_load_animation( "particlesmoke02", &Anim_num_frames_smoke2, &fps, NULL, 0 );
+		Anim_bitmap_id_smoke2 = bm_load_animation( "particlesmoke02", &Anim_num_frames_smoke2, &fps );
 	}
 
 	// grab a vertex buffer object
 	if ( Particle_buffer_object < 0 ) {
 		Particle_buffer_object = gr_create_stream_buffer();
+	}
+
+	if ( Geometry_shader_buffer_object < 0 && !Cmdline_no_geo_sdr_effects && Is_Extension_Enabled(OGL_EXT_GEOMETRY_SHADER4) ) {
+		Geometry_shader_buffer_object = gr_create_stream_buffer();
 	}
 }
 
@@ -340,7 +346,6 @@ static float get_current_alpha(vec3d *pos)
 void particle_render_all()
 {
 	ubyte flags;
-	float pct_complete;
 	float alpha;
 	vertex pos;
 	vec3d ts, te, temp;
@@ -403,18 +408,12 @@ void particle_render_all()
 				continue;
 			}
 
-			if (!Cmdline_nohtl)
-				g3_transfer_vertex(&pos, &p_pos);
+			g3_transfer_vertex(&pos, &p_pos);
 		}
-
-		// pct complete for the particle
-		pct_complete = part->age / part->max_life;
 
 		// figure out which frame we should be using
 		if (part->nframes > 1) {
-			framenum = fl2i(pct_complete * part->nframes + 0.5);
-			CLAMP(framenum, 0, part->nframes-1);
-
+			framenum = bm_get_anim_frame(part->optional_data, part->age, part->max_life);
 			cur_frame = part->reverse ? (part->nframes - framenum - 1) : framenum;
 		} else {
 			cur_frame = 0;
@@ -434,7 +433,7 @@ void particle_render_all()
 			}
 			// draw as a regular bitmap
 			else {
-				batch_add_bitmap( framenum + cur_frame, tmap_flags, &pos, part->particle_index % 8, part->radius, alpha );
+				batch_add_bitmap( framenum + cur_frame, tmap_flags | TMAP_FLAG_VERTEX_GEN, &pos, part->particle_index % 8, part->radius, alpha );
 			}
 
 			render_batch = true;
@@ -443,6 +442,7 @@ void particle_render_all()
 
 	profile_begin("Batch Render");
 	if (render_batch) {
+		geometry_batch_render(Geometry_shader_buffer_object);
 		batch_render_all(Particle_buffer_object);
 	}
 	profile_end("Batch Render");
@@ -537,4 +537,3 @@ void particle_emit( particle_emitter *pe, int type, int optional_data, float ran
 		particle_create( &pe->pos, &tmp_vel, life, radius, type, optional_data );
 	}
 }
-

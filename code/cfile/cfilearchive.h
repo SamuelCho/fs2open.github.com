@@ -39,11 +39,13 @@ typedef struct Cfile_block {
 	int		size;				// for packed files
 
 	size_t	max_read_len;	// max read offset, for special error handling
+	
+	const char* source_file;
+	int line_num;
 } Cfile_block;
 
 #define MAX_CFILE_BLOCKS	64
 extern Cfile_block Cfile_block_list[MAX_CFILE_BLOCKS];
-extern CFILE Cfile_list[MAX_CFILE_BLOCKS];
 
 // Called once to setup the low-level reading code.
 void cf_init_lowlevel_read_code( CFILE * cfile, int lib_offset, int size, int pos );

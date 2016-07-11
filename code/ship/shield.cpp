@@ -15,14 +15,14 @@
 //		3		Shrink-wrapped texture.  Lasts half-time.
 //		4		Shrink-wrapped texture.  Lasts full-time.
 
-#include "render/3d.h"
-#include "model/model.h"
 #include "freespace2/freespace.h"
 #include "mission/missionparse.h"
+#include "model/model.h"
 #include "network/multi.h"
 #include "object/objectshield.h"
-#include "species_defs/species_defs.h"
+#include "render/3d.h"
 #include "ship/ship.h"
+#include "species_defs/species_defs.h"
 
 int	Show_shield_mesh = 0;
 
@@ -100,7 +100,7 @@ void load_shield_hit_bitmap()
     {
         if (Species_info[i].shield_anim.filename[0] != '\0')
         {
-		    Species_info[i].shield_anim.first_frame = bm_load_animation(Species_info[i].shield_anim.filename, &Species_info[i].shield_anim.num_frames, NULL, NULL, 1);
+		    Species_info[i].shield_anim.first_frame = bm_load_animation(Species_info[i].shield_anim.filename, &Species_info[i].shield_anim.num_frames, nullptr, nullptr, nullptr, true);
 		    Assertion((Species_info[i].shield_anim.first_frame >= 0), "Error while loading shield hit ani: %s for species: %s\n", Species_info[i].shield_anim.filename, Species_info[i].species_name);
         }
 	}
@@ -251,8 +251,6 @@ void free_global_tri_records(int shnum)
 	}
 }
 
-extern int Cmdline_nohtl;
-
 void render_low_detail_shield_bitmap(gshield_tri *trip, matrix *orient, vec3d *pos, ubyte r, ubyte g, ubyte b)
 {
 	int		j;
@@ -267,8 +265,7 @@ void render_low_detail_shield_bitmap(gshield_tri *trip, matrix *orient, vec3d *p
 		vm_vec_add2(&pnt, pos);
 
 		// Pnt is now the x,y,z world coordinates of this vert.
-		if(!Cmdline_nohtl) g3_transfer_vertex(&verts[j], &pnt);
-		else g3_rotate_vertex(&verts[j], &pnt);
+		g3_transfer_vertex(&verts[j], &pnt);
 		verts[j].texture_position.u = trip->verts[j].u;
 		verts[j].texture_position.v = trip->verts[j].v;
 	}	
@@ -335,8 +332,7 @@ void render_shield_triangle(gshield_tri *trip, matrix *orient, vec3d *pos, ubyte
 		// Pnt is now the x,y,z world coordinates of this vert.
 		// For this example, I am just drawing a sphere at that point.
 
-	 	if (!Cmdline_nohtl) g3_transfer_vertex(&points[j],&pnt);
-	 	else g3_rotate_vertex(&points[j], &pnt);
+	 	g3_transfer_vertex(&points[j],&pnt);
 			
 		points[j].texture_position.u = trip->verts[j].u;
 		points[j].texture_position.v = trip->verts[j].v;
@@ -359,8 +355,7 @@ void render_shield_triangle(gshield_tri *trip, matrix *orient, vec3d *pos, ubyte
 	Poly_count++;
 	vm_vec_perp(&norm,&verts[0]->world,&verts[1]->world,&verts[2]->world);
 
-	int flags=TMAP_FLAG_TEXTURED | TMAP_FLAG_RGB | TMAP_FLAG_GOURAUD;
-	if (!Cmdline_nohtl) flags |= TMAP_HTL_3D_UNLIT;
+	int flags = TMAP_FLAG_TEXTURED | TMAP_FLAG_RGB | TMAP_FLAG_GOURAUD | TMAP_HTL_3D_UNLIT | TMAP_FLAG_EMISSIVE;
 
 	if ( vm_vec_dot(&norm,&verts[1]->world ) >= 0.0 )	{
 		vertex	*vertlist[3];
@@ -447,13 +442,7 @@ void render_shield(int shield_num)
 	// don't try to draw if we don't have an ani
 	if ( sa->first_frame >= 0 )
 	{
-		frame_num = fl2i( f2fl(Missiontime - Shield_hits[shield_num].start_time) * sa->num_frames );
-		if ( frame_num >= sa->num_frames )	{
-			frame_num = sa->num_frames - 1;
-		} else if ( frame_num < 0 )	{
-			mprintf(( "HEY! Missiontime went backwards! (Shield.cpp)\n" ));
-			frame_num = 0;
-		}
+		frame_num = bm_get_anim_frame(sa->first_frame, f2fl(Missiontime - Shield_hits[shield_num].start_time), f2fl(SHIELD_HIT_DURATION));
 		bitmap_id = sa->first_frame + frame_num;
 
 		float alpha = 0.9999f;
@@ -626,7 +615,7 @@ void copy_shield_to_globals( int objnum, shield_info *shieldp )
 	Shield_hits[shnum].rgb[0] = 255;
 	Shield_hits[shnum].rgb[1] = 255;
 	Shield_hits[shnum].rgb[2] = 255;
-	if((objnum >= 0) && (objnum < MAX_OBJECTS) && (Objects[objnum].type == OBJ_SHIP) && (Objects[objnum].instance >= 0) && (Objects[objnum].instance < MAX_SHIPS) && (Ships[Objects[objnum].instance].ship_info_index >= 0) && (Ships[Objects[objnum].instance].ship_info_index < Num_ship_classes)){
+	if((objnum >= 0) && (objnum < MAX_OBJECTS) && (Objects[objnum].type == OBJ_SHIP) && (Objects[objnum].instance >= 0) && (Objects[objnum].instance < MAX_SHIPS) && (Ships[Objects[objnum].instance].ship_info_index >= 0) && (Ships[Objects[objnum].instance].ship_info_index < static_cast<int>(Ship_info.size()))){
 		ship_info *sip = &Ship_info[Ships[Objects[objnum].instance].ship_info_index];
 		
 		Shield_hits[shnum].rgb[0] = sip->shield_color[0];
@@ -699,7 +688,7 @@ void create_shield_low_detail(int objnum, int model_num, matrix *orient, vec3d *
 	Shield_hits[shnum].rgb[0] = 255;
 	Shield_hits[shnum].rgb[1] = 255;
 	Shield_hits[shnum].rgb[2] = 255;
-	if((objnum >= 0) && (objnum < MAX_OBJECTS) && (Objects[objnum].type == OBJ_SHIP) && (Objects[objnum].instance >= 0) && (Objects[objnum].instance < MAX_SHIPS) && (Ships[Objects[objnum].instance].ship_info_index >= 0) && (Ships[Objects[objnum].instance].ship_info_index < Num_ship_classes)){
+	if((objnum >= 0) && (objnum < MAX_OBJECTS) && (Objects[objnum].type == OBJ_SHIP) && (Objects[objnum].instance >= 0) && (Objects[objnum].instance < MAX_SHIPS) && (Ships[Objects[objnum].instance].ship_info_index >= 0) && (Ships[Objects[objnum].instance].ship_info_index < static_cast<int>(Ship_info.size()))){
 		ship_info *sip = &Ship_info[Ships[Objects[objnum].instance].ship_info_index];
 		
 		Shield_hits[shnum].rgb[0] = sip->shield_color[0];

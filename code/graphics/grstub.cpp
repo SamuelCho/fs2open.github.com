@@ -1,17 +1,17 @@
 
 
-#include "graphics/2d.h"
-#include "graphics/grinternal.h"
-#include "bmpman/bmpman.h"
-#include "ddsutils/ddsutils.h"
-#include "tgautils/tgautils.h"
-#include "pngutils/pngutils.h"
-#include "jpgutils/jpgutils.h"
-#include "pcxutils/pcxutils.h"
-#include "globalincs/systemvars.h"
 #include "anim/animplay.h"
 #include "anim/packunpack.h"
+#include "bmpman/bmpman.h"
+#include "ddsutils/ddsutils.h"
+#include "globalincs/systemvars.h"
+#include "graphics/2d.h"
+#include "graphics/grinternal.h"
+#include "jpgutils/jpgutils.h"
 #include "model/model.h"
+#include "pcxutils/pcxutils.h"
+#include "pngutils/pngutils.h"
+#include "tgautils/tgautils.h"
 
 #define BMPMAN_INTERNAL
 #include "bmpman/bm_internal.h"
@@ -35,7 +35,7 @@ bool gr_stub_pack_buffer(const int buffer_id, vertex_buffer *vb)
 }
 
 // NOTE: should return a failure
-bool gr_stub_config_buffer(const int buffer_id, vertex_buffer *vb)
+bool gr_stub_config_buffer(const int buffer_id, vertex_buffer *vb, bool update_ibuffer_only)
 {
 	return false;
 }
@@ -102,6 +102,10 @@ void gr_stub_center_alpha( int type)
 {
 }
 
+void gr_stub_set_thrust_scale(float scale)
+{
+}
+
 void gr_stub_circle( int xc, int yc, int d, int resize_mode )
 {
 }
@@ -134,18 +138,6 @@ void gr_stub_destroy_light(int idx)
 {
 }
 
-void gr_stub_dump_frame()
-{
-}
-
-void gr_stub_dump_frame_start(int first_frame, int frames_between_dumps)
-{
-}
-
-void gr_stub_dump_frame_stop()
-{
-}
-
 void gr_stub_end_clip_plane()
 {
 }
@@ -159,14 +151,6 @@ void gr_stub_end_projection_matrix()
 }
 
 void gr_stub_end_view_matrix()
-{
-}
-
-void gr_stub_fade_in(int instantaneous)
-{
-}
-
-void gr_stub_fade_out(int instantaneous)
 {
 }
 
@@ -192,7 +176,6 @@ void gr_stub_free_screen(int id)
 
 void gr_stub_get_region(int front, int w, int h, ubyte *data)
 {
-	data = NULL;
 }
 
 void gr_stub_gradient(int x1,int y1,int x2,int y2, int resize_mode)
@@ -227,7 +210,7 @@ void gr_stub_print_screen(const char *filename)
 {
 }
 
-void gr_stub_push_scale_matrix(vec3d *scale_factor)
+void gr_stub_push_scale_matrix(const vec3d *scale_factor)
 {
 }
 
@@ -271,24 +254,27 @@ void gr_stub_set_buffer(int idx)
 {
 }
 
+void gr_stub_update_buffer_object(int handle, uint size, void* data)
+{
+
+}
+
+void gr_stub_update_transform_buffer(void* data, uint size)
+{
+
+}
+
+void gr_stub_set_transform_buffer_offset(int offset)
+{
+
+}
+
 int gr_stub_create_stream_buffer()
 {
 	return -1;
 }
 
-void gr_stub_update_stream_buffer(int buffer, effect_vertex *buffer_data, uint size)
-{
-}
-
-void gr_stub_render_stream_buffer(int offset, int n_verts, int flags)
-{
-}
-
-void gr_stub_render_stream_buffer_start(int buffer_id)
-{
-}
-
-void gr_stub_render_stream_buffer_end()
+void gr_stub_render_stream_buffer(int buffer_handle, int offset, int n_verts, int flags)
 {
 }
 
@@ -318,11 +304,11 @@ void gr_stub_set_lighting(bool set, bool state)
 {
 }
 
-void gr_stub_set_light(light *light)
+void gr_stub_set_light_factor(float factor)
 {
 }
 
-void gr_stub_set_palette(ubyte *new_palette, int is_alphacolor)
+void gr_stub_set_light(light *light)
 {
 }
 
@@ -338,7 +324,7 @@ void gr_stub_set_texture_addressing(int mode)
 {
 }
 
-void gr_stub_set_view_matrix(vec3d *pos, matrix* orient)
+void gr_stub_set_view_matrix(const vec3d *pos, const matrix* orient)
 {
 }
 
@@ -346,15 +332,15 @@ void gr_stub_start_clip_plane()
 {
 }
 
-void gr_stub_start_instance_angles(vec3d *pos, angles* rotation)
+void gr_stub_start_instance_angles(const vec3d *pos, const angles *rotation)
 {
 }
 
-void gr_stub_start_instance_matrix(vec3d *offset, matrix* rotation)
+void gr_stub_start_instance_matrix(const vec3d *offset, const matrix *rotation)
 {
 }
 
-void gr_stub_string( int sx, int sy, const char *s, int resize_mode = GR_RESIZE_NONE)
+void gr_stub_string(int sx, int sy, const char *s, int resize_mode = GR_RESIZE_NONE)
 {
 }
 
@@ -378,7 +364,7 @@ void gr_stub_render_effect( int nverts, vertex *verts, float *radius_list, uint 
 {
 }
 
-void gr_stub_translate_texture_matrix(int unit, vec3d *shift)
+void gr_stub_translate_texture_matrix(int unit, const vec3d *shift)
 {
 }
 
@@ -420,6 +406,10 @@ void gr_stub_post_process_save_zbuffer()
 {
 }
 
+void gr_stub_post_process_blur_shadow_map()
+{
+}
+
 void gr_stub_post_process_begin()
 {
 }
@@ -436,6 +426,22 @@ void gr_stub_scene_texture_end()
 {
 }
 
+void gr_stub_copy_effect_texture()
+{
+}
+
+void gr_stub_deferred_lighting_begin()
+{
+}
+
+void gr_stub_deferred_lighting_end()
+{
+}
+
+void gr_stub_deferred_lighting_finish()
+{
+}
+
 void gr_stub_set_ambient_light(int red, int green, int blue)
 {
 }
@@ -444,29 +450,11 @@ void gr_stub_set_texture_panning(float u, float v, bool enable)
 {
 }
 
-void gr_stub_setup_background_fog(bool set)
-{
-}
-
-void gr_stub_start_state_block()
-{
-	gr_screen.recording_state_block = false;
-}
-
-int gr_stub_end_state_block()
-{
-	return -1;
-}
-
-void gr_stub_set_state_block(int handle)
-{
-}
-
 void gr_stub_set_line_width(float width)
 {
 }
 
-void gr_stub_draw_htl_line(vec3d *start, vec3d* end)
+void gr_stub_draw_htl_line(const vec3d *start, const vec3d *end)
 {
 }
 
@@ -474,203 +462,23 @@ void gr_stub_draw_htl_sphere(float rad)
 {
 }
 
-void gr_stub_draw_line_list(colored_vector *lines, int num)
+void gr_stub_draw_line_list(const colored_vector *lines, int num)
 {
 }
 
-void gr_stub_flush_data_states()
+void gr_stub_clear_states()
 {
 }
 
-void gr_stub_update_texture(int bitmap_handle, int bpp, ubyte* data, int width, int height)
+void gr_stub_update_texture(int bitmap_handle, int bpp, const ubyte *data, int width, int height)
 {
 }
 
-// bitmap functions
-int gr_stub_bm_load(ubyte type, int n, const char *filename, CFILE *img_cfp, int *w, int *h, int *bpp, ubyte *c_type, int *mm_lvl, int *size)
+void gr_stub_get_bitmap_from_texture(void* data_out, int bitmap_num)
 {
-	int dds_ct;
 
-	if (type == BM_TYPE_DDS) {
-		int dds_error = dds_read_header( filename, img_cfp, w, h, bpp, &dds_ct, mm_lvl, size );
-		if (dds_error != DDS_ERROR_NONE) {
-			mprintf(("DDS ERROR: Couldn't open '%s' -- %s\n", filename, dds_error_string(dds_error)));
-			return -1;
-		}
-
-		switch (dds_ct) {
-			case DDS_DXT1:
-				*c_type = BM_TYPE_DXT1;
-				break;
-
-			case DDS_DXT3:
-				*c_type = BM_TYPE_DXT3;
-				break;
-
-			case DDS_DXT5:
-				*c_type = BM_TYPE_DXT5;
-				break;
-
-			case DDS_UNCOMPRESSED:
-				*c_type = BM_TYPE_DDS;
-				break;
-
-			case DDS_CUBEMAP_DXT1:
-				*c_type = BM_TYPE_CUBEMAP_DXT1;
-				break;
-
-			case DDS_CUBEMAP_DXT3:
-				*c_type = BM_TYPE_CUBEMAP_DXT3;
-				break;
-
-			case DDS_CUBEMAP_DXT5:
-				*c_type = BM_TYPE_CUBEMAP_DXT5;
-				break;
-
-			case DDS_CUBEMAP_UNCOMPRESSED:
-				*c_type = BM_TYPE_CUBEMAP_DDS;
-				break;
-
-			default:
-				Error(LOCATION, "bad DDS file compression.  Not using DXT1,3,5 %s", filename);
-				return -1;
-		}
-	}
-	// if its a tga file
-	else if (type == BM_TYPE_TGA) {
-		int tga_error = targa_read_header( filename, img_cfp, w, h, bpp, NULL );
-		if ( tga_error != TARGA_ERROR_NONE )	{
-			mprintf(( "tga: Couldn't open '%s'\n", filename ));
-			return -1;
-		}
-	}
- 	// if its a png file
- 	else if (type == BM_TYPE_PNG) {
- 		int png_error=png_read_header( filename, img_cfp, w, h, bpp, NULL );
- 		if ( png_error != PNG_ERROR_NONE ) {
- 			mprintf(( "png: Couldn't open '%s'\n", filename ));
- 			return -1;
- 		}
- 	}
-	// if its a jpg file
-	else if (type == BM_TYPE_JPG) {
-		int jpg_error=jpeg_read_header( filename, img_cfp, w, h, bpp, NULL );
-		if ( jpg_error != JPEG_ERROR_NONE ) {
-			mprintf(( "jpg: Couldn't open '%s'\n", filename ));
-			return -1;
-		}
-	}
-	// if its a pcx file
-	else if (type == BM_TYPE_PCX) {
-		int pcx_error = pcx_read_header( filename, img_cfp, w, h, bpp, NULL );
-		if ( pcx_error != PCX_ERROR_NONE )	{
-			mprintf(( "pcx: Couldn't open '%s'\n", filename ));
-			return -1;
-		}
-	} else {
-		Assert( 0 );
-
-		return -1;
-	}
-
-	return 0;
 }
 
-int gr_stub_bm_lock(const char *filename, int handle, int bitmapnum, ubyte bpp, ubyte flags, bool nodebug)
-{
-	ubyte c_type = BM_TYPE_NONE;
-	ubyte true_bpp;
-
-	bitmap_entry *be = &bm_bitmaps[bitmapnum];
-	bitmap *bmp = &be->bm;
-
-	true_bpp = 8;
-
-	// don't do a bpp check here since it could be different in OGL - taylor
-	if ( bmp->data == 0 ) {
-		Assert(be->ref_count == 1);
-
-		if ( be->type != BM_TYPE_USER ) {
-			if ( bmp->data == 0 ) {
-				nprintf (("BmpMan","Loading %s for the first time.\n", be->filename));
-			}
-		}
-
-		if ( !Bm_paging )	{
-			if ( be->type != BM_TYPE_USER ) {							
-				nprintf(( "Paging", "Loading %s (%dx%dx%d)\n", be->filename, bmp->w, bmp->h, true_bpp ));
-			}
-		}
-
-		// select proper format
-		if(flags & BMP_AABITMAP){
-			BM_SELECT_ALPHA_TEX_FORMAT();
-		} else if(flags & BMP_TEX_ANY){
-			BM_SELECT_TEX_FORMAT();					
-		} else {
-			BM_SELECT_SCREEN_FORMAT();
-		}
-
-		// make sure we use the real graphic type for EFFs
-		if ( be->type == BM_TYPE_EFF ) {
-			c_type = be->info.ani.eff.type;
-		} else {
-			c_type = be->type;
-		}
-
-		switch ( c_type ) {
-			case BM_TYPE_PCX:
-				bm_lock_pcx( handle, bitmapnum, be, bmp, true_bpp, flags );
-				break;
-
-			case BM_TYPE_ANI:
-				bm_lock_ani( handle, bitmapnum, be, bmp, true_bpp, flags );
-				break;
-
-			case BM_TYPE_TGA:
-				bm_lock_tga( handle, bitmapnum, be, bmp, true_bpp, flags );
-				break;
-
- 			case BM_TYPE_PNG:
- 				bm_lock_png( handle, bitmapnum, be, bmp, bmp->true_bpp, flags );
- 				break;
-
-			case BM_TYPE_JPG:
-				bm_lock_jpg( handle, bitmapnum, be, bmp, bmp->true_bpp, flags );
-				break;
-
-			case BM_TYPE_DDS:
-			case BM_TYPE_DXT1:
-			case BM_TYPE_DXT3:
-			case BM_TYPE_DXT5:
-			case BM_TYPE_CUBEMAP_DDS:
-			case BM_TYPE_CUBEMAP_DXT1:
-			case BM_TYPE_CUBEMAP_DXT3:
-			case BM_TYPE_CUBEMAP_DXT5:
-				bm_lock_dds( handle, bitmapnum, be, bmp, true_bpp, flags );
-				break;
-
-			case BM_TYPE_USER:	
-				bm_lock_user( handle, bitmapnum, be, bmp, true_bpp, flags );
-				break;
-
-			default:
-				Warning(LOCATION, "Unsupported type in bm_lock -- %d\n", c_type );
-				return -1;
-		}		
-
-		// always go back to screen format
-		BM_SELECT_SCREEN_FORMAT();
-	}
-
-	// make sure we actually did something
-	if ( !(bmp->data) ) {
-		// crap, bail...
-		return -1;
-	}
-
-	return 0;
-}
 int gr_stub_bm_make_render_target(int n, int *width, int *height, ubyte *bpp, int *mm_lvl, int flags)
 {
 	return 0;
@@ -697,17 +505,29 @@ void gr_stub_bm_page_in_start()
 {
 }
 
-int gr_stub_maybe_create_shader(int flags) {
+bool gr_stub_bm_data(int n, bitmap* bm)
+{
+	return true;
+}
+
+int gr_stub_maybe_create_shader(shader_type shader_t, unsigned int flags) {
 	return -1;
 }
 
-void gr_stub_set_team_color(const SCP_string &team, const SCP_string &secondaryteam, fix timestamp, int fadetime) {
+void gr_stub_set_animated_effect(int effect, float timer)
+{
+
 }
 
-void gr_stub_enable_team_color() {
+void gr_stub_set_team_color(const team_color *colors) {
 }
 
-void gr_stub_disable_team_color() {
+void gr_stub_shadow_map_start(const matrix4 *shadow_view_matrix, const matrix* light_matrix)
+{
+}
+
+void gr_stub_shadow_map_end()
+{
 }
 
 bool gr_stub_init() 
@@ -764,11 +584,8 @@ bool gr_stub_init()
 
 	gr_screen.gf_gradient			= gr_stub_gradient;
 
-	gr_screen.gf_set_palette		= gr_stub_set_palette;
 	gr_screen.gf_print_screen		= gr_stub_print_screen;
 
-	gr_screen.gf_fade_in			= gr_stub_fade_in;
-	gr_screen.gf_fade_out			= gr_stub_fade_out;
 	gr_screen.gf_flash				= gr_stub_flash;
 	gr_screen.gf_flash_alpha		= gr_stub_flash_alpha;
 	
@@ -785,10 +602,6 @@ bool gr_stub_init()
 	gr_screen.gf_restore_screen		= gr_stub_restore_screen;
 	gr_screen.gf_free_screen		= gr_stub_free_screen;
 	
-	gr_screen.gf_dump_frame_start	= gr_stub_dump_frame_start;
-	gr_screen.gf_dump_frame_stop	= gr_stub_dump_frame_stop;
-	gr_screen.gf_dump_frame			= gr_stub_dump_frame;
-	
 	gr_screen.gf_set_gamma			= gr_stub_set_gamma;
 
 	gr_screen.gf_fog_set			= gr_stub_fog_set;	
@@ -800,9 +613,8 @@ bool gr_stub_init()
 	gr_screen.gf_bm_free_data			= gr_stub_bm_free_data;
 	gr_screen.gf_bm_create				= gr_stub_bm_create;
 	gr_screen.gf_bm_init				= gr_stub_bm_init;
-	gr_screen.gf_bm_load				= gr_stub_bm_load;
 	gr_screen.gf_bm_page_in_start		= gr_stub_bm_page_in_start;
-	gr_screen.gf_bm_lock				= gr_stub_bm_lock;
+	gr_screen.gf_bm_data				= gr_stub_bm_data;
 	gr_screen.gf_bm_make_render_target	= gr_stub_bm_make_render_target;
 	gr_screen.gf_bm_set_render_target	= gr_stub_bm_set_render_target;
 
@@ -833,11 +645,12 @@ bool gr_stub_init()
 	gr_screen.gf_render_buffer		= gr_stub_render_buffer;
 	gr_screen.gf_set_buffer			= gr_stub_set_buffer;
 
+	gr_screen.gf_update_transform_buffer	= gr_stub_update_transform_buffer;
+	gr_screen.gf_update_buffer_object		= gr_stub_update_buffer_object;
+	gr_screen.gf_set_transform_buffer_offset	= gr_stub_set_transform_buffer_offset;
+
 	gr_screen.gf_create_stream_buffer		= gr_stub_create_stream_buffer;
-	gr_screen.gf_update_stream_buffer		= gr_stub_update_stream_buffer;
 	gr_screen.gf_render_stream_buffer		= gr_stub_render_stream_buffer;
-	gr_screen.gf_render_stream_buffer_start	= gr_stub_render_stream_buffer_start;
-	gr_screen.gf_render_stream_buffer_end	= gr_stub_render_stream_buffer_end;
 
 	gr_screen.gf_start_instance_matrix			= gr_stub_start_instance_matrix;
 	gr_screen.gf_end_instance_matrix			= gr_stub_end_instance_matrix;
@@ -859,11 +672,17 @@ bool gr_stub_init()
 
 	gr_screen.gf_scene_texture_begin = gr_stub_scene_texture_begin;
 	gr_screen.gf_scene_texture_end = gr_stub_scene_texture_end;
+	gr_screen.gf_copy_effect_texture = gr_stub_copy_effect_texture;
+
+	gr_screen.gf_deferred_lighting_begin = gr_stub_deferred_lighting_begin;
+	gr_screen.gf_deferred_lighting_end = gr_stub_deferred_lighting_end;
+	gr_screen.gf_deferred_lighting_finish = gr_stub_deferred_lighting_finish;
 
 	gr_screen.gf_start_clip_plane	= gr_stub_start_clip_plane;
 	gr_screen.gf_end_clip_plane		= gr_stub_end_clip_plane;
 
 	gr_screen.gf_lighting			= gr_stub_set_lighting;
+	gr_screen.gf_set_light_factor	= gr_stub_set_light_factor;
 
 	gr_screen.gf_set_proj_matrix	= gr_stub_set_projection_matrix;
 	gr_screen.gf_end_proj_matrix	= gr_stub_end_projection_matrix;
@@ -874,13 +693,8 @@ bool gr_stub_init()
 	gr_screen.gf_push_scale_matrix	= gr_stub_push_scale_matrix;
 	gr_screen.gf_pop_scale_matrix	= gr_stub_pop_scale_matrix;
 	gr_screen.gf_center_alpha		= gr_stub_center_alpha;
-
-	gr_screen.gf_setup_background_fog	= gr_stub_setup_background_fog;
-
-	gr_screen.gf_start_state_block	= gr_stub_start_state_block;
-	gr_screen.gf_end_state_block	= gr_stub_end_state_block;
-	gr_screen.gf_set_state_block	= gr_stub_set_state_block;
-
+	gr_screen.gf_set_thrust_scale	= gr_stub_set_thrust_scale;
+	
 	gr_screen.gf_draw_line_list		= gr_stub_draw_line_list;
 
 	gr_screen.gf_set_line_width		= gr_stub_set_line_width;
@@ -888,14 +702,18 @@ bool gr_stub_init()
 	gr_screen.gf_line_htl			= gr_stub_draw_htl_line;
 	gr_screen.gf_sphere_htl			= gr_stub_draw_htl_sphere;
 
+	gr_screen.gf_shadow_map_start	= gr_stub_shadow_map_start;
+	gr_screen.gf_shadow_map_end		= gr_stub_shadow_map_end;
+
 	gr_screen.gf_maybe_create_shader = gr_stub_maybe_create_shader;
 
-	gr_screen.gf_flush_data_states	= gr_stub_flush_data_states;
+	gr_screen.gf_set_animated_effect = gr_stub_set_animated_effect;
+
+	gr_screen.gf_clear_states	= gr_stub_clear_states;
 
 	gr_screen.gf_set_team_color		= gr_stub_set_team_color;
-	gr_screen.gf_enable_team_color  = gr_stub_enable_team_color;
-	gr_screen.gf_disable_team_color = gr_stub_disable_team_color;
 
 	gr_screen.gf_update_texture = gr_stub_update_texture;
+	gr_screen.gf_get_bitmap_from_texture = gr_stub_get_bitmap_from_texture;
 	return true;
 }

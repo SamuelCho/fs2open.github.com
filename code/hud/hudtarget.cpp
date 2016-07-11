@@ -10,42 +10,40 @@
 
 
 
-#include "hud/hud.h"
-#include "hud/hudparse.h"
+#include "asteroid/asteroid.h"
+#include "cmdline/cmdline.h"
+#include "debris/debris.h"
+#include "freespace2/freespace.h"	// for flFrametime
+#include "gamesnd/gamesnd.h"
+#include "globalincs/alphacolors.h"
+#include "globalincs/linklist.h"
 #include "hud/hudartillery.h"
+#include "hud/hudbrackets.h"
 #include "hud/hudlock.h"
 #include "hud/hudmessage.h"
-#include "hud/hudtarget.h"
+#include "hud/hudparse.h"
 #include "hud/hudreticle.h"
-#include "hud/hudbrackets.h"
-#include "object/object.h"
-#include "ship/ship.h"
-#include "render/3dinternal.h"
-#include "globalincs/linklist.h"
-#include "weapon/weapon.h"
-#include "playerman/player.h"
-#include "freespace2/freespace.h"	// for flFrametime
-#include "io/timer.h"
-#include "gamesnd/gamesnd.h"
-#include "debris/debris.h"
-#include "mission/missionmessage.h"
-#include "hud/hudtargetbox.h"
-#include "ship/subsysdamage.h"
 #include "hud/hudshield.h"
-#include "mission/missionhotkey.h"
-#include "asteroid/asteroid.h"
-#include "jumpnode/jumpnode.h"
-#include "weapon/emp.h"
-#include "globalincs/alphacolors.h"
-#include "localization/localize.h"
-#include "ship/awacs.h"
-#include "parse/parselo.h"
-#include "cmdline/cmdline.h"
+#include "hud/hudtarget.h"
+#include "hud/hudtargetbox.h"
 #include "iff_defs/iff_defs.h"
-#include "network/multi.h"
-#include "graphics/font.h"
-#include "network/multiutil.h"
+#include "io/timer.h"
+#include "jumpnode/jumpnode.h"
+#include "localization/localize.h"
+#include "mission/missionhotkey.h"
+#include "mission/missionmessage.h"
 #include "model/model.h"
+#include "network/multi.h"
+#include "network/multiutil.h"
+#include "object/object.h"
+#include "parse/parselo.h"
+#include "playerman/player.h"
+#include "render/3dinternal.h"
+#include "ship/awacs.h"
+#include "ship/ship.h"
+#include "ship/subsysdamage.h"
+#include "weapon/emp.h"
+#include "weapon/weapon.h"
 
 // If any of these bits in the ship->flags are set, ignore this ship when targeting
 int TARGET_SHIP_IGNORE_FLAGS = (SF_EXPLODED|SF_DEPART_WARP|SF_DYING|SF_ARRIVING_STAGE_1|SF_HIDDEN_FROM_SENSORS);
@@ -1095,7 +1093,7 @@ void hud_target_subobject_common(int next_flag)
 	target_shipp = &Ships[Objects[Player_ai->target_objnum].instance];
 
 	if (!Player_ai->targeted_subsys) {
-		start = GET_FIRST(&target_shipp->subsys_list);
+		start = END_OF_LIST(&target_shipp->subsys_list);
 	} else {
 		start = Player_ai->targeted_subsys;
 	}
@@ -1392,7 +1390,7 @@ static object* select_next_target_by_distance( const bool targeting_from_closest
 			if ( diff > 0.0f ) {
 				if ( diff < ( current_distance - nearest_distance ) ) {
 					nearest_distance = new_distance;
-					nearest_object_ptr = const_cast<object *>(prospective_victim_ptr);
+					nearest_object_ptr = prospective_victim_ptr;
 				}
 			}
 		}
@@ -1794,7 +1792,7 @@ void hud_target_live_turret(int next_flag, int auto_advance, int only_player_tar
 					
 					if (!auto_advance && get_closest_turret && !only_player_target) {
 						// if within 3 degrees and not previous subsys, use subsys in front
-						dot = vm_vec_dotprod(&vec_to_subsys, &Player_obj->orient.vec.fvec);
+						dot = vm_vec_dot(&vec_to_subsys, &Player_obj->orient.vec.fvec);
 						if ((dot > 0.9986) && facing) {
 							use_straight_ahead_turret = TRUE;
 							break;
@@ -2762,9 +2760,9 @@ void HudGaugeOrientationTee::renderOrientation(object *from_objp, object *to_obj
 	// 0 - vectors are perpendicular
 	// 1 - vectors are collinear and in the same direction (target is facing player)
 	// -1 - vectors are collinear and in the opposite direction (target is facing away from player)
-	dot_product = vm_vec_dotprod(&from_orientp->vec.fvec, &target_to_obj);
+	dot_product = vm_vec_dot(&from_orientp->vec.fvec, &target_to_obj);
 
-	if (vm_vec_dotprod(&from_orientp->vec.rvec, &target_to_obj) >= 0) {
+	if (vm_vec_dot(&from_orientp->vec.rvec, &target_to_obj) >= 0) {
 		if (dot_product >= 0){
 			dot_product = -PI_2*dot_product + PI;
 		} else {
@@ -2774,8 +2772,8 @@ void HudGaugeOrientationTee::renderOrientation(object *from_objp, object *to_obj
 		dot_product *= PI_2; //(range is now -PI/2 => PI/2)
 	}
 
-	y1 = (float)sin(dot_product) * (Radius - T_OFFSET_FROM_CIRCLE);
-	x1 = (float)cos(dot_product) * (Radius - T_OFFSET_FROM_CIRCLE);
+	y1 = sinf(dot_product) * (Radius - T_OFFSET_FROM_CIRCLE);
+	x1 = cosf(dot_product) * (Radius - T_OFFSET_FROM_CIRCLE);
 
 	y1 += position[1];
 	x1 += position[0];
@@ -2783,8 +2781,8 @@ void HudGaugeOrientationTee::renderOrientation(object *from_objp, object *to_obj
 	x1 += HUD_offset_x;
 	y1 += HUD_offset_y;
 
-	y2 = (float)sin(dot_product) * (Radius - T_OFFSET_FROM_CIRCLE - T_LENGTH);
-	x2 = (float)cos(dot_product) * (Radius - T_OFFSET_FROM_CIRCLE - T_LENGTH);
+	y2 = sinf(dot_product) * (Radius - T_OFFSET_FROM_CIRCLE - T_LENGTH);
+	x2 = cosf(dot_product) * (Radius - T_OFFSET_FROM_CIRCLE - T_LENGTH);
 
 	y2 += position[1];
 	x2 += position[0];
@@ -2792,10 +2790,10 @@ void HudGaugeOrientationTee::renderOrientation(object *from_objp, object *to_obj
 	x2 += HUD_offset_x;
 	y2 += HUD_offset_y;
 
-	x3 = x1 - T_BASE_LENGTH * (float)sin(dot_product);
-	y3 = y1 + T_BASE_LENGTH * (float)cos(dot_product);
-	x4 = x1 + T_BASE_LENGTH * (float)sin(dot_product);
-	y4 = y1 - T_BASE_LENGTH * (float)cos(dot_product);
+	x3 = x1 - T_BASE_LENGTH * sinf(dot_product);
+	y3 = y1 + T_BASE_LENGTH * cosf(dot_product);
+	x4 = x1 + T_BASE_LENGTH * sinf(dot_product);
+	y4 = y1 - T_BASE_LENGTH * cosf(dot_product);
 
 	// HACK! Should be antialiased!
 	renderLine(fl2i(x3),fl2i(y3),fl2i(x4),fl2i(y4));	// bottom of T
@@ -2937,8 +2935,8 @@ void HudGaugeReticleTriangle::renderTriangleMissileTail(float ang, float xpos, f
 
 	float max_tail_len=20.0f;
 
-	sin_ang=(float)sin(ang);
-	cos_ang=(float)cos(ang);
+	sin_ang=sinf(ang);
+	cos_ang=cosf(ang);
 
 	if ( cur_dist < Min_warning_missile_dist ) {
 		tail_len = 0.0f;
@@ -3042,8 +3040,8 @@ void HudGaugeReticleTriangle::renderTriangle(vec3d *hostile_pos, int aspect_flag
 	unsize( &hostile_vertex.world.xyz.x, &hostile_vertex.world.xyz.y );
 
 	ang = atan2_safe(hostile_vertex.world.xyz.y,hostile_vertex.world.xyz.x);
-	sin_ang=(float)sin(ang);
-	cos_ang=(float)cos(ang);
+	sin_ang=sinf(ang);
+	cos_ang=cosf(ang);
 	
 	if ( draw_inside ) {
 		xpos = position[0] + cos_ang*(Radius-7);
@@ -7124,45 +7122,46 @@ void HudGaugeHardpoints::render(float frametime)
 		g3_start_frame(1);
 	hud_save_restore_camera_data(1);
 	setClip(sx, sy, _size[0], _size[1]);
-	model_set_detail_level(1);
 
 	g3_set_view_matrix( &sip->closeup_pos, &vmd_identity_matrix, sip->closeup_zoom*1.5f);
 
-	if (!Cmdline_nohtl) {
-		gr_set_proj_matrix(Proj_fov, gr_screen.clip_aspect, Min_draw_distance, Max_draw_distance);
-		gr_set_view_matrix(&Eye_position, &Eye_matrix);
-	}
+	gr_set_proj_matrix(Proj_fov, gr_screen.clip_aspect, Min_draw_distance, Max_draw_distance);
+	gr_set_view_matrix(&Eye_position, &Eye_matrix);
 
 	setGaugeColor();
 
 	//We're ready to show stuff
+	model_render_params render_info;
 	
+	int detail_level_lock = 1;
 	int cull = gr_set_cull(0);
 	gr_stencil_clear();
 	gr_stencil_set(GR_STENCIL_WRITE);
 	int zbuffer = gr_zbuffer_set(GR_ZBUFF_NONE);
 	gr_set_color_buffer(0);
 
-	ship_model_start(objp);
-	model_render( sip->model_num, &object_orient, &vmd_zero_vector, MR_NO_LIGHTING | MR_LOCK_DETAIL | MR_AUTOCENTER | MR_NO_FOGGING | MR_NO_TEXTURING | MR_NO_CULL);
+	render_info.set_color(gauge_color);
+	render_info.set_detail_level_lock(detail_level_lock);
+	render_info.set_flags(MR_NO_LIGHTING | MR_AUTOCENTER | MR_NO_FOGGING | MR_NO_TEXTURING | MR_NO_CULL);
+	render_info.set_object_number(OBJ_INDEX(objp));
+
+	model_render_immediate( &render_info, sip->model_num, &object_orient, &vmd_zero_vector);
 
 	gr_set_color_buffer(1);
 	gr_stencil_set(GR_STENCIL_READ);
 	gr_set_cull(cull);
 	gr_set_line_width(_line_width*2.0f);
 
-	model_set_alpha( gr_screen.current_color.alpha / 255.0f );
-	model_set_forced_texture(0);
+	//model_set_alpha( gr_screen.current_color.alpha / 255.0f );
+	//model_set_forced_texture(0);
+	render_info.set_flags(MR_NO_LIGHTING | MR_AUTOCENTER | MR_NO_FOGGING | MR_NO_TEXTURING | MR_SHOW_OUTLINE_HTL | MR_NO_POLYS | MR_NO_ZBUFFER | MR_NO_CULL);
 
-	model_set_outline_color_fast(&gauge_color);
-
-	model_render( 
+	model_render_immediate( 
+		&render_info,
 		sip->model_num, 
 		&object_orient, 
-		&vmd_zero_vector, 
-		MR_NO_LIGHTING | MR_LOCK_DETAIL | MR_AUTOCENTER | MR_NO_FOGGING | MR_NO_TEXTURING | MR_SHOW_OUTLINE_HTL | MR_NO_POLYS | MR_NO_ZBUFFER | MR_NO_CULL | MR_ALL_XPARENT
+		&vmd_zero_vector
 	);
-	ship_model_stop( objp );
 
 	gr_stencil_set(GR_STENCIL_NONE);
 	gr_zbuffer_set(zbuffer);
@@ -7175,10 +7174,10 @@ void HudGaugeHardpoints::render(float frametime)
 	vec3d subobj_pos;
 	g3_start_instance_matrix(&vmd_zero_vector, &object_orient, true);
 
-	int render_flags = MR_NO_LIGHTING | MR_LOCK_DETAIL | MR_AUTOCENTER | MR_NO_FOGGING | MR_NO_TEXTURING | MR_NO_ZBUFFER;
+	int render_flags = MR_NO_LIGHTING | MR_AUTOCENTER | MR_NO_FOGGING | MR_NO_TEXTURING | MR_NO_ZBUFFER;
 
 	setGaugeColor();
-	model_set_alpha( gr_screen.current_color.alpha / 255.0f );
+	float alpha = gr_screen.current_color.alpha / 255.0f;
 
 	//secondary weapons
 	int num_secondaries_rendered = 0;
@@ -7194,7 +7193,12 @@ void HudGaugeHardpoints::render(float frametime)
 
 			if (Weapon_info[swp->secondary_bank_weapons[i]].wi_flags2 & WIF2_EXTERNAL_WEAPON_LNCH) {
 				for(k = 0; k < bank->num_slots; k++) {
-					model_render(Weapon_info[swp->secondary_bank_weapons[i]].external_model_num, &vmd_identity_matrix, &bank->pnt[k], render_flags);
+					model_render_params weapon_render_info;
+
+					weapon_render_info.set_detail_level_lock(detail_level_lock);
+					weapon_render_info.set_flags(render_flags);
+
+					model_render_immediate(&weapon_render_info, Weapon_info[swp->secondary_bank_weapons[i]].external_model_num, &vmd_identity_matrix, &bank->pnt[k]);
 				}
 			} else {
 				num_secondaries_rendered = 0;
@@ -7205,29 +7209,32 @@ void HudGaugeHardpoints::render(float frametime)
 
 					if (num_secondaries_rendered >= sp->weapons.secondary_bank_ammo[i])
 						break;
-
+					 
 					if(sp->secondary_point_reload_pct[i][k] <= 0.0)
 						continue;
 
+					model_render_params weapon_render_info;
+
 					if ( swp->current_secondary_bank == i && ( swp->secondary_next_slot[i] == k || ( swp->secondary_next_slot[i]+1 == k && sp->flags & SF_SECONDARY_DUAL_FIRE ) ) ) {
-						gr_set_color_fast(&Color_bright_blue);
+						weapon_render_info.set_color(Color_bright_blue);
 					} else {
-						gr_set_color_fast(&Color_bright_white);
-						
+						weapon_render_info.set_color(Color_bright_white);
 					}
 
 					num_secondaries_rendered++;
 
 					vm_vec_scale_add2(&secondary_weapon_pos, &vmd_z_vector, -(1.0f-sp->secondary_point_reload_pct[i][k]) * model_get(Weapon_info[swp->secondary_bank_weapons[i]].external_model_num)->rad);
 
-					model_render(Weapon_info[swp->secondary_bank_weapons[i]].external_model_num, &vmd_identity_matrix, &secondary_weapon_pos, render_flags);
+					weapon_render_info.set_detail_level_lock(detail_level_lock);
+					weapon_render_info.set_flags(render_flags);
+
+					model_render_immediate(&weapon_render_info, Weapon_info[swp->secondary_bank_weapons[i]].external_model_num, &vmd_identity_matrix, &secondary_weapon_pos);
 				}
 			}
 		}
 	}
 	g3_done_instance(true);
 	resetClip();
-	model_set_forced_texture(0);
 
 	setGaugeColor(HUD_C_BRIGHT);
 
@@ -7254,8 +7261,15 @@ void HudGaugeHardpoints::render(float frametime)
 					//renderCircle(xc, yc, 25);
 				} else {
 					polymodel* pm = model_get(Weapon_info[swp->primary_bank_weapons[i]].external_model_num);
+					
+
+					model_render_params weapon_render_info;
+					weapon_render_info.set_detail_level_lock(detail_level_lock);
+					weapon_render_info.set_flags(render_flags);
+					weapon_render_info.set_alpha(alpha);
+
 					pm->gun_submodel_rotation = sp->primary_rotate_ang[i];
-					model_render(Weapon_info[swp->primary_bank_weapons[i]].external_model_num, &vmd_identity_matrix, &bank->pnt[k], render_flags);
+					model_render_immediate(&weapon_render_info, Weapon_info[swp->primary_bank_weapons[i]].external_model_num, &vmd_identity_matrix, &bank->pnt[k]);
 					pm->gun_submodel_rotation = 0.0f;
 				}
 			}
@@ -7263,11 +7277,8 @@ void HudGaugeHardpoints::render(float frametime)
 	}
 	
 	//We're done
-	if(!Cmdline_nohtl)
-	{
-		gr_end_view_matrix();
-		gr_end_proj_matrix();
-	}
+	gr_end_view_matrix();
+	gr_end_proj_matrix();
 	if(g3_yourself)
 		g3_end_frame();
 

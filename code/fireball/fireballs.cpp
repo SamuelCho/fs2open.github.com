@@ -9,18 +9,17 @@
 
 
 
+#include "asteroid/asteroid.h"
+#include "cmdline/cmdline.h"
 #include "fireball/fireballs.h"
+#include "gamesnd/gamesnd.h"
 #include "graphics/tmapper.h"
-#include "render/3d.h"
+#include "localization/localize.h"
 #include "model/model.h"
 #include "object/object.h"
-#include "ship/ship.h"
-#include "gamesnd/gamesnd.h"
-#include "localization/localize.h"
-#include "cmdline/cmdline.h"
 #include "parse/parselo.h"
-#include "globalincs/pstypes.h"
-#include "asteroid/asteroid.h"
+#include "render/3d.h"
+#include "ship/ship.h"
 
 #include <stdlib.h>
 
@@ -76,7 +75,7 @@ void fireball_play_warphole_open_sound(int ship_class, fireball *fb)
 
 	if(fb->warp_open_sound_index > -1) {
 		sound_index = fb->warp_open_sound_index;
-	} else if((ship_class >= 0) && (ship_class < Num_ship_classes)){
+	} else if ((ship_class >= 0) && (ship_class < static_cast<int>(Ship_info.size()))) {
 		if ( Ship_info[ship_class].flags & SIF_HUGE_SHIP ) {
 			sound_index = SND_CAPITAL_WARP_IN;
 			fb->flags |= FBF_WARP_CAPITAL_SIZE;
@@ -324,7 +323,7 @@ void fireball_load_data()
 			if ( (i == FIREBALL_WARP) && (idx > MAX_WARP_LOD) )
 				continue;
 
-			fd->lod[idx].bitmap_id	= bm_load_animation( fd->lod[idx].filename, &fd->lod[idx].num_frames, &fd->lod[idx].fps, NULL, 1 );
+			fd->lod[idx].bitmap_id	= bm_load_animation( fd->lod[idx].filename, &fd->lod[idx].num_frames, &fd->lod[idx].fps, nullptr, nullptr, true );
 			if ( fd->lod[idx].bitmap_id < 0 ) {
 				Error(LOCATION, "Could not load %s anim file\n", fd->lod[idx].filename);
 			}
@@ -375,7 +374,7 @@ void fireball_init()
 
 MONITOR( NumFireballsRend )
 
-void fireball_render(object * obj)
+void fireball_render_DEPRECATED(object * obj)
 {
 	int		num;
 	vertex	p;
@@ -396,11 +395,7 @@ void fireball_render(object * obj)
 		gr_fog_set(GR_FOGMODE_NONE, 0, 0, 0);
 	}
 
-	if(Cmdline_nohtl) {
-		g3_rotate_vertex(&p, &obj->pos );
-	}else{
-		g3_transfer_vertex(&p, &obj->pos);
-	}
+	g3_transfer_vertex(&p, &obj->pos);
 
 	switch( fb->fireball_render_type )	{
 
@@ -508,13 +503,7 @@ void fireball_set_framenum(int num)
 	}
 
 	if ( fb->fireball_render_type == FIREBALL_WARP_EFFECT )	{
-		float total_time = i2fl(fl->num_frames) / fl->fps;	// in seconds
-
-		framenum = fl2i(fb->time_elapsed * fl->num_frames / total_time + 0.5);
-
-		if ( framenum < 0 ) framenum = 0;
-
-		framenum = framenum % fl->num_frames;
+		framenum = bm_get_anim_frame(fl->bitmap_id, fb->time_elapsed, 0.0f, true);
 
 		if ( fb->orient )	{
 			// warp out effect plays backwards
@@ -524,16 +513,8 @@ void fireball_set_framenum(int num)
 			fb->current_bitmap = fl->bitmap_id + framenum;
 		}
 	} else {
-
-		framenum = fl2i(fb->time_elapsed / fb->total_time * fl->num_frames + 0.5);
-
-		// ensure we don't go past the number of frames of animation
-		if ( framenum > (fl->num_frames-1) ) {
-			framenum = (fl->num_frames-1);
-			Objects[fb->objnum].flags |= OF_SHOULD_BE_DEAD;
-		}
-
-		if ( framenum < 0 ) framenum = 0;
+		// ignore setting of OF_SHOULD_BE_DEAD, see fireball_process_post
+		framenum = bm_get_anim_frame(fl->bitmap_id, fb->time_elapsed, fb->total_time);
 		fb->current_bitmap = fl->bitmap_id + framenum;
 	}
 }
@@ -1052,3 +1033,70 @@ float fireball_wormhole_intensity( object *obj )
 	}
 	return rad;
 } 
+
+void fireball_render(object* obj, draw_list *scene)
+{
+	int		num;
+	vertex	p;
+	fireball	*fb;
+
+	MONITOR_INC( NumFireballsRend, 1 );	
+
+	num = obj->instance;
+	fb = &Fireballs[num];
+
+	if ( Fireballs[num].current_bitmap < 0 )
+		return;
+	
+	g3_transfer_vertex(&p, &obj->pos);
+
+	switch ( fb->fireball_render_type )	{
+
+		case FIREBALL_MEDIUM_EXPLOSION: {
+			batch_add_bitmap (
+				Fireballs[num].current_bitmap, 
+				TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT | TMAP_FLAG_SOFT_QUAD | TMAP_FLAG_EMISSIVE, 
+				&p, 
+				fb->orient, 
+				obj->radius
+				);
+		}
+		break;
+
+		case FIREBALL_LARGE_EXPLOSION: {
+			// Make the big explosions rotate with the viewer.
+			batch_add_bitmap_rotated ( 
+				Fireballs[num].current_bitmap, 
+				TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT | TMAP_FLAG_SOFT_QUAD | TMAP_FLAG_EMISSIVE, 
+				&p, 
+				(i2fl(fb->orient)*PI)/180.0f,
+				obj->radius
+				);
+		}
+		break;
+
+		case FIREBALL_WARP_EFFECT: {
+			float percent_life = fb->time_elapsed / fb->total_time;
+
+			float rad;
+
+			// Code to make effect grow/shrink. 
+			float t = fb->time_elapsed;
+
+			if ( t < WARPHOLE_GROW_TIME )	{
+				rad = (float)pow(t/WARPHOLE_GROW_TIME,0.4f)*obj->radius;
+			} else if ( t < fb->total_time - WARPHOLE_GROW_TIME )	{
+				rad = obj->radius;
+			} else {
+				rad = (float)pow((fb->total_time - t)/WARPHOLE_GROW_TIME,0.4f)*obj->radius;
+			}
+
+			warpin_queue_render(scene, obj, &obj->orient, &obj->pos, Fireballs[num].current_bitmap, rad, percent_life, obj->radius, (Fireballs[num].flags & FBF_WARP_3D) );
+		}
+		break;
+
+
+		default:
+			Int3();
+	}
+}

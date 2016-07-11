@@ -10,43 +10,43 @@
 
 
 
+#include "asteroid/asteroid.h"
+#include "cmdline/cmdline.h"
 #include "freespace2/freespace.h"
+#include "gamehelp/contexthelp.h"
+#include "gamesequence/gamesequence.h"
+#include "gamesnd/eventmusic.h"
+#include "gamesnd/gamesnd.h"
+#include "globalincs/alphacolors.h"
+#include "globalincs/linklist.h"
+#include "graphics/font.h"
+#include "hud/hud.h"
+#include "io/key.h"
+#include "io/mouse.h"
+#include "io/timer.h"
+#include "lighting/lighting.h"
+#include "menuui/snazzyui.h"
+#include "mission/missionbriefcommon.h"
+#include "mission/missioncampaign.h"
+#include "mission/missiongoals.h"
+#include "mission/missionmessage.h"
+#include "missionui/chatbox.h"
+#include "missionui/missionbrief.h"
 #include "missionui/missionscreencommon.h"
 #include "missionui/missionshipchoice.h"
-#include "mission/missiongoals.h"
-#include "gamesequence/gamesequence.h"
-#include "ship/ship.h"
-#include "io/key.h"
-#include "render/3d.h"
 #include "model/model.h"
-#include "io/timer.h"
-#include "globalincs/linklist.h"
-#include "io/mouse.h"
-#include "hud/hud.h"
-#include "sound/audiostr.h"
-#include "gamesnd/gamesnd.h"
-#include "gamesnd/eventmusic.h"
-#include "mission/missioncampaign.h"
-#include "menuui/snazzyui.h"
-#include "missionui/missionbrief.h"
-#include "mission/missionbriefcommon.h"
-#include "cmdline/cmdline.h"
-#include "gamehelp/contexthelp.h"
-#include "asteroid/asteroid.h"
-#include "popup/popup.h"
-#include "parse/sexp.h"
-#include "globalincs/alphacolors.h"
-#include "graphics/font.h"
-#include "mission/missionmessage.h"
-#include "playerman/player.h"
-#include "sound/fsspeech.h"
-#include "parse/parselo.h"
 #include "network/multi.h"
 #include "network/multimsgs.h"
 #include "network/multiteamselect.h"
 #include "network/multiui.h"
-#include "missionui/chatbox.h"
-#include "lighting/lighting.h"
+#include "parse/parselo.h"
+#include "parse/sexp.h"
+#include "playerman/player.h"
+#include "popup/popup.h"
+#include "render/3d.h"
+#include "ship/ship.h"
+#include "sound/audiostr.h"
+#include "sound/fsspeech.h"
 
 
 static int Brief_goals_coords[GR_NUM_RESOLUTIONS][4] = {
@@ -299,11 +299,6 @@ static int Title_coords_multi[GR_NUM_RESOLUTIONS][3] = {
 int Brief_max_line_width[GR_NUM_RESOLUTIONS] = {
 	MAX_BRIEF_LINE_W_640, MAX_BRIEF_LINE_W_1024
 };
-
-//stuff for ht&l. vars and such
-extern int Cmdline_nohtl;
-extern bool Cmdline_brief_lighting;
-
 
 // --------------------------------------------------------------------------------------
 // Forward declarations
@@ -739,11 +734,7 @@ void brief_load_bitmaps()
 //
 void brief_ui_init()
 {
-	if(Game_mode & GM_MULTIPLAYER) {
-		Brief_background_bitmap = bm_load(Brief_multi_filename[gr_screen.res]);
-	} else {
-		Brief_background_bitmap = bm_load(Brief_filename[gr_screen.res]);	
-	}
+	Brief_background_bitmap = mission_ui_background_load(Briefing->background[gr_screen.res], Brief_filename[gr_screen.res], Brief_multi_filename[gr_screen.res]);
 
 	if ( Num_brief_stages <= 0 ){
 		return;
@@ -1052,25 +1043,20 @@ void brief_render_closeup(int ship_class, float frametime)
 	g3_set_view_matrix(&Closeup_cam_pos, &view_orient, Closeup_zoom);
 
 
-	if (!Cmdline_nohtl) {
-		gr_set_proj_matrix(Proj_fov, gr_screen.clip_aspect, Min_draw_distance, Max_draw_distance);
-		gr_set_view_matrix(&Eye_position, &Eye_matrix);
-	}
+	gr_set_proj_matrix(Proj_fov, gr_screen.clip_aspect, Min_draw_distance, Max_draw_distance);
+	gr_set_view_matrix(&Eye_position, &Eye_matrix);
 	
-	if (Cmdline_brief_lighting) {
-		// the following is copied from menuui/techmenu.cpp ... it works heehee :D  - delt.
-		// lighting for techroom
-		light_reset();
-		vec3d light_dir = vmd_zero_vector;
-		light_dir.xyz.y = 1.0f;
-		light_add_directional(&light_dir, 0.85f, 1.0f, 1.0f, 1.0f);
-		light_rotate_all();
-		// lighting for techroom
-		Glowpoint_use_depth_buffer = false;
-	}
+	// the following is copied from menuui/techmenu.cpp ... it works heehee :D  - delt.
+	// lighting for techroom
+	light_reset();
+	vec3d light_dir = vmd_zero_vector;
+	light_dir.xyz.y = 1.0f;
+	light_add_directional(&light_dir, 0.85f, 1.0f, 1.0f, 1.0f);
+	light_rotate_all();
+	// lighting for techroom
+	Glowpoint_use_depth_buffer = false;
 
 	model_clear_instance( Closeup_icon->modelnum );
-	model_set_detail_level(0);
 
 	int is_neb = The_mission.flags & MISSION_FLAG_FULLNEB;
 
@@ -1079,27 +1065,24 @@ void brief_render_closeup(int ship_class, float frametime)
 		The_mission.flags &= ~MISSION_FLAG_FULLNEB;
 	}
 
-	int model_render_flags_local;
+	model_render_params render_info;
+	render_info.set_detail_level_lock(0);
+
 	if ( Closeup_icon->type == ICON_JUMP_NODE) {
-		model_set_outline_color(HUD_color_red, HUD_color_green, HUD_color_blue);		
-		model_render_flags_local = MR_NO_LIGHTING | MR_LOCK_DETAIL | MR_AUTOCENTER | MR_NO_POLYS | MR_SHOW_OUTLINE;
-	} else if (Cmdline_brief_lighting) {
-		model_render_flags_local = MR_LOCK_DETAIL | MR_AUTOCENTER;
+		render_info.set_color(HUD_color_red, HUD_color_green, HUD_color_blue);
+		render_info.set_flags(MR_NO_LIGHTING | MR_AUTOCENTER | MR_NO_POLYS | MR_SHOW_OUTLINE_HTL | MR_NO_TEXTURING);
 	} else {
-		model_render_flags_local = MR_NO_LIGHTING | MR_LOCK_DETAIL | MR_AUTOCENTER;
+		render_info.set_flags(MR_AUTOCENTER);
 	}
 
-	model_render( Closeup_icon->modelnum, &Closeup_orient, &Closeup_pos, model_render_flags_local );
+	model_render_immediate( &render_info, Closeup_icon->modelnum, &Closeup_orient, &Closeup_pos );
 
 	if (is_neb) {
 		The_mission.flags |= MISSION_FLAG_FULLNEB;
 	}
 
-	if (!Cmdline_nohtl)
-	{
-		gr_end_view_matrix();
-		gr_end_proj_matrix();
-	}
+	gr_end_view_matrix();
+	gr_end_proj_matrix();
 
 	g3_end_frame();
 
@@ -1532,7 +1515,7 @@ void brief_do_frame(float frametime)
 			}
 
 			case KEY_CTRLED | KEY_PAGEDOWN: {
-				if ( Closeup_icon && (Closeup_icon->ship_class < Num_ship_classes - 1) ) {
+				if ( Closeup_icon && (Closeup_icon->ship_class < static_cast<int>(Ship_info.size()) - 1) ) {
 					Closeup_icon->ship_class++;
 
 					ship_info *sip = &Ship_info[Closeup_icon->ship_class];

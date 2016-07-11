@@ -10,23 +10,22 @@
 
 
 
-#include "ui/ui.h"
-#include "io/key.h"
-#include "graphics/font.h"
+#include "cfile/cfile.h"
 #include "gamesnd/gamesnd.h"
-#include "playerman/player.h"
-#include "network/multi.h"
-#include "network/multi_voice.h"
-#include "sound/rtvoice.h"
+#include "globalincs/alphacolors.h"
+#include "graphics/font.h"
+#include "io/key.h"
+#include "io/timer.h"
 #include "menuui/optionsmenu.h"
 #include "menuui/optionsmenumulti.h"
-#include "popup/popup.h"
+#include "network/multi.h"
+#include "network/multi_voice.h"
 #include "osapi/osregistry.h"
-#include "globalincs/alphacolors.h"
-#include "io/timer.h"
-#include "cfile/cfile.h"
 #include "parse/parselo.h"
+#include "playerman/player.h"
+#include "popup/popup.h"
 #include "sound/ds.h"
+#include "sound/rtvoice.h"
 
 
 
@@ -715,10 +714,6 @@ void options_multi_load_protocol_controls()
 	Om_ip_input.hide();
 	Om_ip_input.disable();
 	
-	// disable IPX button in demo
-	Om_pro_buttons[gr_screen.res][OM_PRO_IPX].button.disable();
-	Om_pro_buttons[gr_screen.res][OM_PRO_IPX].button.hide();
-
 	// bogus control
 	Om_pro_bogus.base_create(Om_window, UI_KIND_ICON, 0, 0, 0, 0);
 }
@@ -888,11 +883,7 @@ void options_multi_protocol_do(int key)
 	}
 
 	// force draw the proper protocol
-	if (Om_protocol == NET_IPX) {
-		Om_pro_buttons[gr_screen.res][OM_PRO_IPX].button.draw_forced(2);
-	} else {
-		Om_pro_buttons[gr_screen.res][OM_PRO_TCP].button.draw_forced(2);
-	}
+	Om_pro_buttons[gr_screen.res][OM_PRO_TCP].button.draw_forced(2);
 
 	// force draw the proper tab button
 	switch (Om_mode) {
@@ -1119,10 +1110,10 @@ void options_multi_protocol_button_pressed(int n)
 		gamesnd_play_iface(SND_USER_SELECT);
 		break;
 
-	// ipx mode
+	// ipx mode, no longer supported
 	case OM_PRO_IPX:
-		Om_protocol = NET_IPX;
-		gamesnd_play_iface(SND_USER_SELECT);
+		gamesnd_play_iface(SND_GENERAL_FAIL);
+		popup(PF_USE_AFFIRMATIVE_ICON, 1, POPUP_OK, "The old IPX protocol is no longer supported.");
 		break;
 	}
 }

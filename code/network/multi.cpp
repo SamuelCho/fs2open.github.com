@@ -49,6 +49,7 @@
 #include "fs2netd/fs2netd_client.h"
 #include "pilotfile/pilotfile.h"
 #include "debugconsole/console.h"
+#include "network/psnet2.h"
 
 
 
@@ -100,8 +101,8 @@ int Multi_button_info_ok = 0;										// flag saying it is ok to apply critical
 int Multi_button_info_id = 0;										// identifier of the stored button info to be applying
 
 // low level networking vars
-int ADDRESS_LENGTH;													// will be 6 for IPX, 4 for IP
-int PORT_LENGTH;														// will be 2 for IPX, 2 for IP
+int ADDRESS_LENGTH;
+int PORT_LENGTH;
 int HEADER_LENGTH;													// 1 byte (packet type)
 
 // misc data
@@ -337,9 +338,11 @@ void multi_check_listen()
 		}
 
 		// the connection was accepted in check_for_listen.  Find the netplayer whose address we connected
-		// with and assign the socket descriptor
+		// with and assign the socket descriptor.
+		// Updated to utilize psnet_same() for address comparison so the port is also taken into account.
+		// This allows multiple players using NAT to access a remote server simultneously.
 		for (i = 0; i < MAX_PLAYERS; i++ ) {
-			if ( (Net_players[i].flags & NETINFO_FLAG_CONNECTED) && (!memcmp(&(addr.addr), &(Net_players[i].p_info.addr.addr), 6)) ) {
+			if ( (Net_players[i].flags & NETINFO_FLAG_CONNECTED) && (psnet_same(&addr, &(Net_players[i].p_info.addr))) ) {
 				// mark this flag so we know he's "fully" connected
 				Net_players[i].flags |= NETINFO_FLAG_RELIABLE_CONNECTED;
 				Net_players[i].reliable_socket = sock;
@@ -949,7 +952,6 @@ void multi_process_bigdata(ubyte *data, int len, net_addr *from_addr, int reliab
 	// store fields that were passed along in the message
 	// store header information that was captured from the network-layer header
 	memcpy(header_info.addr, from_addr->addr, 6);
-	memcpy(header_info.net_id, from_addr->net_id, 4);
 	header_info.port = from_addr->port;	
 	if(player_num >= 0){
 		header_info.id = Net_players[player_num].player_id;
@@ -1436,14 +1438,11 @@ void standalone_main_init()
 	// multi_options_read_config();   
 #ifdef _WIN32
 	// if we failed to startup on our desired protocol, fail
-	if((Multi_options_g.protocol == NET_IPX) && !Ipx_active){
-		MessageBox((HWND)os_get_window(), XSTR( "You have selected IPX for multiplayer FreeSpace, but the IPX protocol was not detected on your machine.", 1402), "Error", MB_OK);
-		exit(1);
-	}
-	if((Multi_options_g.protocol == NET_TCP) && !Tcp_active){
+	if ((Multi_options_g.protocol == NET_TCP) && !Tcp_active){
 		if (Tcp_failure_code == WSAEADDRINUSE) {
 			MessageBox((HWND)os_get_window(), XSTR("You have selected TCP/IP for multiplayer FreeSpace, but the TCP socket is already in use.  Check for another instance and/or use the \"-port <port_num>\" command line option to select an available port.", 1620), "Error", MB_OK);
-		} else {
+		}
+		else {
 			MessageBox((HWND)os_get_window(), XSTR("You have selected TCP/IP for multiplayer FreeSpace, but the TCP/IP protocol was not detected on your machine.", 362), "Error", MB_OK);
 		}
 
@@ -1451,17 +1450,13 @@ void standalone_main_init()
 	}
 #endif // ifdef _WIN32
 
+
 	// set the protocol
 	psnet_use_protocol(Multi_options_g.protocol);
 	switch (Multi_options_g.protocol) {
-	case NET_IPX:
-		ADDRESS_LENGTH = IPX_ADDRESS_LENGTH;
-		PORT_LENGTH = IPX_PORT_LENGTH;
-		break;
-
 	case NET_TCP:
-		ADDRESS_LENGTH = IP_ADDRESS_LENGTH;		
-		PORT_LENGTH = IP_PORT_LENGTH;			
+		ADDRESS_LENGTH = IP_ADDRESS_LENGTH;
+		PORT_LENGTH = IP_PORT_LENGTH;
 		break;
 
 	default:
@@ -1791,8 +1786,8 @@ DCF(netd, "change netgame debug flags (Mulitplayer)")
 // display any multiplayer/networking information here
 void multi_display_netinfo()
 {
-	int sx = gr_screen.max_w - 200;
-	int sy = 20;
+	int sx = gr_screen.center_offset_x + gr_screen.center_w - 200;
+	int sy = gr_screen.center_offset_y + 20;
 	int dy = gr_get_font_height() + 1;
 	int idx;
 

@@ -1,28 +1,28 @@
 
 
-#include "globalincs/systemvars.h"
-#include "ship/ship.h"
-#include "weapon/weapon.h"
-#include "freespace2/freespace.h"
+#include "ai/aibig.h"
+#include "ai/aiinternal.h"
 #include "asteroid/asteroid.h"
-#include "globalincs/linklist.h"
-#include "weapon/beam.h"
-#include "weapon/swarm.h"
-#include "io/timer.h"
-#include "render/3d.h"
+#include "debugconsole/console.h"
+#include "freespace2/freespace.h"
 #include "gamesnd/gamesnd.h"
-#include "ship/shipfx.h"
-#include "network/multimsgs.h"
-#include "weapon/flak.h"
+#include "globalincs/linklist.h"
+#include "globalincs/systemvars.h"
+#include "iff_defs/iff_defs.h"
+#include "io/timer.h"
 #include "math/staticrand.h"
 #include "network/multi.h"
-#include "ai/aibig.h"
+#include "network/multimsgs.h"
 #include "object/objectdock.h"
-#include "ai/aiinternal.h"	//Included last, so less includes are needed
-#include "iff_defs/iff_defs.h"
-#include "weapon/muzzleflash.h"
 #include "parse/scripting.h"
-#include "debugconsole/console.h"
+#include "render/3d.h"
+#include "ship/ship.h"
+#include "ship/shipfx.h"
+#include "weapon/beam.h"
+#include "weapon/flak.h"
+#include "weapon/muzzleflash.h"
+#include "weapon/swarm.h"
+#include "weapon/weapon.h"
 
 #include <limits.h>
 
@@ -1308,6 +1308,8 @@ void ship_get_global_turret_info(object *objp, model_subsystem *tp, vec3d *gpos,
 	vm_vec_unrotate(gvec, &tp->turret_norm, &objp->orient);	
 }
 
+void turret_ai_update_aim(ai_info *aip, object *En_Objp, ship_subsys *ss);
+
 /**
  * Given an object and a turret on that object, return the actual firing point of the gun and its normal.
  *
@@ -1332,11 +1334,59 @@ void ship_get_global_turret_gun_info(object *objp, ship_subsys *ssp, vec3d *gpos
 	gun_pos = &tp->turret_firing_point[ssp->turret_next_fire_pos % tp->turret_num_firing_points];
 
 	//model_find_world_point(gpos, gun_pos, tp->model_num, tp->turret_gun_sobj, &objp->orient, &objp->pos );
-	model_instance_find_world_point(gpos, gun_pos, tp->model_num, Ships[objp->instance].model_instance_num, tp->turret_gun_sobj, &objp->orient, &objp->pos);
+	model_instance_find_world_point(gpos, gun_pos, Ships[objp->instance].model_instance_num, tp->turret_gun_sobj, &objp->orient, &objp->pos);
 
-	if (use_angles)
-		model_instance_find_world_dir(gvec, &tp->turret_norm, tp->model_num, Ships[objp->instance].model_instance_num, tp->turret_gun_sobj, &objp->orient, &objp->pos );
-	else {
+	if (use_angles) {
+		model_instance_find_world_dir(gvec, &tp->turret_norm, Ships[objp->instance].model_instance_num, tp->turret_gun_sobj, &objp->orient);
+	} else if (tp->flags2 & MSS_FLAG2_SHARE_FIRE_DIRECTION) {
+		vec3d avg, tmp_pos, tmp_target, enemy_point, turret_norm;
+		vm_vec_avg_n(&avg, tp->turret_num_firing_points, tp->turret_firing_point);
+
+		model_instance_find_world_point(&tmp_pos, &avg, Ships[objp->instance].model_instance_num, tp->turret_gun_sobj, &objp->orient, &objp->pos);
+
+		if (targetp == nullptr) {
+            Assertion(ssp->turret_enemy_objnum >= 0, "The turret enemy object number %d for %s on ship number %d is invalid.", ssp->turret_enemy_objnum, ssp->sub_name, ssp->parent_objnum);
+            object *lep = &Objects[ssp->turret_enemy_objnum];
+
+			int best_weapon_tidx = turret_select_best_weapon(ssp, lep);
+
+			//This turret doesn't have any good weapons
+			if (best_weapon_tidx < 0)
+				return;
+
+			weapon_info *wip = get_turret_weapon_wip(&ssp->weapons, best_weapon_tidx);
+
+			float weapon_system_strength = ship_get_subsystem_strength(&Ships[ssp->parent_objnum], SUBSYSTEM_WEAPONS);
+
+            turret_ai_update_aim(&Ai_info[Ships[ssp->parent_objnum].ai_index], &Objects[ssp->turret_enemy_objnum], ssp);
+
+			if ((ssp->targeted_subsys != nullptr) && !(ssp->flags & SSF_NO_SS_TARGETING)) {
+				vm_vec_unrotate(&enemy_point, &ssp->targeted_subsys->system_info->pnt, &Objects[ssp->turret_enemy_objnum].orient);
+				vm_vec_add2(&enemy_point, &ssp->last_aim_enemy_pos);
+			} else {
+				if ((lep->type == OBJ_SHIP) && (Ship_info[Ships[lep->instance].ship_info_index].flags & (SIF_BIG_SHIP | SIF_HUGE_SHIP))) {
+                    vm_vec_unrotate(&turret_norm, &tp->turret_norm, &objp->orient);
+					ai_big_pick_attack_point_turret(lep, ssp, &tmp_pos, &turret_norm, &enemy_point, MIN(wip->max_speed * wip->lifetime, wip->weapon_range), tp->turret_fov);
+				}
+				else {
+					enemy_point = ssp->last_aim_enemy_pos;
+				}
+			}
+
+			vec3d target_moving_direction = ssp->last_aim_enemy_vel;
+
+			//Try to guess where the enemy will be, and store that spot in predicted_enemy_pos
+			if (The_mission.ai_profile->flags & AIPF_USE_ADDITIVE_WEAPON_VELOCITY) {
+				vm_vec_scale_sub2(&target_moving_direction, &objp->phys_info.vel, wip->vel_inherit_amount);
+			}
+
+			set_predicted_enemy_pos_turret(&tmp_target, &tmp_pos, objp, &enemy_point, &target_moving_direction, wip->max_speed, ssp->turret_time_enemy_in_range * (weapon_system_strength + 1.0f) / 2.0f);
+		} else {
+			tmp_target = *targetp;
+		}
+
+		vm_vec_normalized_dir(gvec, &tmp_target, &tmp_pos);
+	} else {
 		//vector	gun_pos2;
 		//vm_vec_add(&gun_pos2, gpos, gun_pos);
 		vm_vec_normalized_dir(gvec, targetp, gpos);
@@ -1377,7 +1427,7 @@ void turret_ai_update_aim(ai_info *aip, object *En_Objp, ship_subsys *ss)
  */
 int aifft_rotate_turret(ship *shipp, int parent_objnum, ship_subsys *ss, object *objp, object *lep, vec3d *predicted_enemy_pos, vec3d *gvec)
 {
-	int ret_val __attribute__((__unused__)) = 0; // to be used in future, see comment @ end of function
+	int ret_val __UNUSED = 0; // to be used in future, see comment @ end of function
 
 	if (ss->turret_enemy_objnum != -1) {
 		model_subsystem *tp = ss->system_info;
@@ -1870,21 +1920,129 @@ bool turret_fire_weapon(int weapon_num, ship_subsys *turret, int parent_objnum, 
 			fire_info.turret = turret;
 
 			// fire a beam weapon
-			beam_fire(&fire_info);
+			weapon_objnum = beam_fire(&fire_info);
+
+			if (weapon_objnum != -1) {
+				objp = &Objects[weapon_objnum];
+
+				parent_ship->last_fired_turret = turret;
+				turret->last_fired_weapon_info_index = turret_weapon_class;
+
+				Script_system.SetHookObjects(4, "Ship", &Objects[parent_objnum], "Weapon", nullptr, "Beam", objp, "Target", &Objects[turret->turret_enemy_objnum]);
+				Script_system.RunCondition(CHA_ONTURRETFIRED, 0, NULL, &Objects[parent_objnum]);
+				Script_system.RemHookVars(4, "Ship", "Weapon", "Beam", "Target");
+			}
 
 			turret->flags |= SSF_HAS_FIRED; //set fired flag for scripting -nike
 			return true;
 		}
 		// don't fire swam, but set up swarm info instead
 		else if ((wip->wi_flags & WIF_SWARM) || (wip->wi_flags & WIF_CORKSCREW)) {
-			turret_swarm_set_up_info(parent_objnum, turret, wip, turret->turret_next_fire_pos);
+			ship_weapon *swp = &turret->weapons;
+			if (swp->current_secondary_bank < 0) {
+				swp->current_secondary_bank = 0;
+			}
+			int bank_to_fire = swp->current_secondary_bank;
+			if ((turret->system_info->flags2 & MSS_FLAG2_TURRET_USE_AMMO) && (swp->secondary_bank_ammo[bank_to_fire] < 0)) {
+				if (!(turret->system_info->flags & MSS_FLAG_USE_MULTIPLE_GUNS)) {
+					swp->current_secondary_bank++;
+					if (swp->current_secondary_bank >= swp->num_secondary_banks) {
+						swp->current_secondary_bank = 0;
+					}
+					return false;
+				} else {
+					return false;
+				}
+			} else {
+				turret_swarm_set_up_info(parent_objnum, turret, wip, turret->turret_next_fire_pos);
 
-			turret->flags |= SSF_HAS_FIRED;	//set fired flag for scripting -nike
-			return true;
+				turret->flags |= SSF_HAS_FIRED;	//set fired flag for scripting -nike
+				return true;
+			}
 		}
 		// now do anything else
 		else {
 			for (int i = 0; i < wip->shots; i++) {
+				if (turret->system_info->flags2 & MSS_FLAG2_TURRET_USE_AMMO) {
+					ship_weapon *swp;
+					swp = &turret->weapons;
+					int bank_to_fire, num_slots = turret->system_info->turret_num_firing_points;
+					if (wip->subtype == WP_LASER) {
+						int points;
+						if (swp->num_primary_banks <= 0) {
+							return false;
+						}
+
+						if (swp->current_primary_bank < 0){
+							swp->current_primary_bank = 0;
+							return false;
+						}
+
+						int	num_primary_banks = swp->num_primary_banks;
+
+						Assert(num_primary_banks > 0);
+						if (num_primary_banks < 1){
+							return false;
+						}
+
+						bank_to_fire = swp->current_primary_bank;
+
+						if (turret->system_info->flags & MSS_FLAG_TURRET_SALVO) {
+							points = num_slots;
+						} else {
+							points = 1;
+						}
+
+						if (swp->primary_bank_ammo[bank_to_fire] >= 0) {
+							swp->primary_bank_ammo[bank_to_fire] -= points;
+						} else if (!(turret->system_info->flags & MSS_FLAG_USE_MULTIPLE_GUNS) && (swp->primary_bank_ammo[bank_to_fire] < 0)) {
+							swp->current_primary_bank++;
+							if (swp->current_primary_bank >= swp->num_primary_banks) {
+								swp->current_primary_bank = 0;
+							}
+							return false;
+						} else {
+							return false;
+						}
+					}
+					else if (wip->subtype == WP_MISSILE) {
+						if (swp->num_secondary_banks <= 0) {
+							return false;
+						}
+
+						if (swp->current_secondary_bank < 0){
+							swp->current_secondary_bank = 0;
+							return false;
+						}
+
+						bank_to_fire = swp->current_secondary_bank;
+
+						int start_slot, end_slot;
+
+						start_slot = swp->secondary_next_slot[bank_to_fire];
+						end_slot = start_slot;
+
+						for (int j = start_slot; j <= end_slot; j++) {
+							swp->secondary_next_slot[bank_to_fire]++;
+
+							if (swp->secondary_next_slot[bank_to_fire] > (num_slots - 1)){
+								swp->secondary_next_slot[bank_to_fire] = 0;
+							}
+
+							if (swp->secondary_bank_ammo[bank_to_fire] >= 0) {
+								swp->secondary_bank_ammo[bank_to_fire]--;
+							} else if (!(turret->system_info->flags & MSS_FLAG_USE_MULTIPLE_GUNS) && (swp->secondary_bank_ammo[bank_to_fire] < 0)) {
+								swp->current_secondary_bank++;
+								if (swp->current_secondary_bank >= swp->num_secondary_banks) {
+									swp->current_secondary_bank = 0;
+								}
+								return false;
+							} else {
+								return false;
+							}
+						}
+					}
+				}
 				// zookeeper - Firepoints should cycle normally between shots, 
 				// so we need to get the position info separately for each shot
 				ship_get_global_turret_gun_info(&Objects[parent_objnum], turret, turret_pos, turret_fvec, 1, NULL);
@@ -1905,8 +2063,9 @@ bool turret_fire_weapon(int weapon_num, ship_subsys *turret, int parent_objnum, 
 					// AL 1-6-97: Store pointer to turret subsystem
 					wp->turret_subsys = turret;	
 
-					Script_system.SetHookObjects(3, "Ship", &Objects[parent_objnum], "Weapon", objp, "Target", &Objects[turret->turret_enemy_objnum]);
+					Script_system.SetHookObjects(4, "Ship", &Objects[parent_objnum], "Weapon", objp, "Beam", nullptr, "Target", &Objects[turret->turret_enemy_objnum]);
 					Script_system.RunCondition(CHA_ONTURRETFIRED, 0, NULL, &Objects[parent_objnum]);
+					Script_system.RemHookVars(4, "Ship", "Weapon", "Beam", "Target");
 
 					// if the gun is a flak gun
 					if (wip->wi_flags & WIF_FLAK) {			
@@ -2017,6 +2176,13 @@ void turret_swarm_fire_from_turret(turret_swarm_info *tsi)
 	if (weapon_objnum > -1) {
 		Weapons[Objects[weapon_objnum].instance].turret_subsys = tsi->turret;
 		Weapons[Objects[weapon_objnum].instance].target_num = tsi->turret->turret_enemy_objnum;
+
+		Ships[Objects[tsi->parent_objnum].instance].last_fired_turret = tsi->turret;
+		tsi->turret->last_fired_weapon_info_index = tsi->weapon_class;
+
+		Script_system.SetHookObjects(4, "Ship", &Objects[tsi->parent_objnum], "Weapon", &Objects[weapon_objnum], "Beam", nullptr, "Target", &Objects[tsi->turret->turret_enemy_objnum]);
+		Script_system.RunCondition(CHA_ONTURRETFIRED, 0, NULL, &Objects[tsi->parent_objnum]);
+		Script_system.RemHookVars(4, "Ship", "Weapon", "Beam", "Target");
 
 		// muzzle flash?
 		if (Weapon_info[tsi->weapon_class].muzzle_flash >= 0) {
@@ -2463,7 +2629,7 @@ void ai_fire_from_turret(ship *shipp, ship_subsys *ss, int parent_objnum)
 				ss->turret_next_fire_pos = ffp_pos;
 			}
 
-			ship_get_global_turret_gun_info(&Objects[parent_objnum], ss, &gpos, &gvec, use_angles, &predicted_enemy_pos);
+            ship_get_global_turret_gun_info(&Objects[parent_objnum], ss, &gpos, &gvec, use_angles, &predicted_enemy_pos);
 
 			// Fire in the direction the turret is facing, not right at the target regardless of turret dir.
 			vm_vec_sub(&v2e, &predicted_enemy_pos, &gpos);

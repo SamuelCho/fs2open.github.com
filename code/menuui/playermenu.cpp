@@ -12,26 +12,26 @@
 #include <ctype.h>
 
 
-#include "menuui/playermenu.h"
-#include "ui/ui.h"
-#include "gamesnd/gamesnd.h"
-#include "playerman/player.h"
-#include "io/key.h"
-#include "playerman/managepilot.h"
-#include "pilotfile/pilotfile.h"
+#include "cfile/cfile.h"
+#include "cmdline/cmdline.h"
+#include "debugconsole/console.h"
 #include "freespace2/freespace.h"
 #include "gamesequence/gamesequence.h"
-#include "cmdline/cmdline.h"
-#include "osapi/osregistry.h"
-#include "menuui/mainhallmenu.h"
-#include "popup/popup.h"
+#include "gamesnd/gamesnd.h"
 #include "globalincs/alphacolors.h"
+#include "io/key.h"
 #include "localization/localize.h"
+#include "menuui/mainhallmenu.h"
+#include "menuui/playermenu.h"
 #include "mission/missioncampaign.h"
-#include "parse/parselo.h"
-#include "cfile/cfile.h"
 #include "network/multi.h"
-#include "debugconsole/console.h"
+#include "osapi/osregistry.h"
+#include "parse/parselo.h"
+#include "pilotfile/pilotfile.h"
+#include "playerman/managepilot.h"
+#include "playerman/player.h"
+#include "popup/popup.h"
+#include "ui/ui.h"
 
 
 // --------------------------------------------------------------------------------------------------------
@@ -335,7 +335,8 @@ void player_select_init()
 		player_select_init_player_stuff(PLAYER_SELECT_MODE_SINGLE);
 	}
 
-	if ( (Player_select_num_pilots == 1) && Player_select_input_mode ) {
+	if (Cmdline_benchmark_mode || ((Player_select_num_pilots == 1) && Player_select_input_mode)) {
+		// When benchmarking, just accept automatically
 		Player_select_autoaccept = 1;
 	}
 }
