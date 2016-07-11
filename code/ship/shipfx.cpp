@@ -72,6 +72,8 @@ void shipfx_remove_submodel_ship_sparks(ship *shipp, int submodel_num)
 	}
 }
 
+void model_get_rotating_submodel_axis(vec3d *model_axis, vec3d *world_axis, int model_instance_num, int submodel_num, matrix *objorient);
+
 /**
  * Check if subsystem has live debris and create
  *
@@ -103,17 +105,16 @@ void shipfx_subsystem_maybe_create_live_debris(object *ship_objp, ship *ship_p, 
 	vec3d model_axis, world_axis, rotvel, world_axis_pt;
 	matrix m_rot;	// rotation for debris orient about axis
 
-	if(pm->submodel[submodel_num].movement_type == MOVEMENT_TYPE_ROT) {
+	if (pm->submodel[submodel_num].movement_type == MOVEMENT_TYPE_ROT || pm->submodel[submodel_num].movement_type == MOVEMENT_TYPE_INTRINSIC_ROTATE) {
 		if ( !sii->axis_set ) {
 			model_init_submodel_axis_pt(sii, pm->id, submodel_num);
 		}
 
 		// get the rotvel
-		void model_get_rotating_submodel_axis(vec3d *model_axis, vec3d *world_axis, int modelnum, int submodel_num, object *obj);
-		model_get_rotating_submodel_axis(&model_axis, &world_axis, pm->id, submodel_num, ship_objp);
+		model_get_rotating_submodel_axis(&model_axis, &world_axis, shipp->model_instance_num, submodel_num, &ship_objp->orient);
 		vm_vec_copy_scale(&rotvel, &world_axis, sii->cur_turn_rate);
 
-		model_instance_find_world_point(&world_axis_pt, &sii->pt_on_axis, pm->id, shipp->model_instance_num, submodel_num, &ship_objp->orient, &ship_objp->pos);
+		model_instance_find_world_point(&world_axis_pt, &sii->pt_on_axis, shipp->model_instance_num, submodel_num, &ship_objp->orient, &ship_objp->pos);
 
 		vm_quaternion_rotate(&m_rot, vm_vec_mag((vec3d*)&sii->angs), &model_axis);
 	} else {
@@ -130,17 +131,17 @@ void shipfx_subsystem_maybe_create_live_debris(object *ship_objp, ship *ship_p, 
 
 		// get start world pos
 		vm_vec_zero(&start_world_pos);
-		model_instance_find_world_point(&start_world_pos, &pm->submodel[live_debris_submodel].offset, pm->id, shipp->model_instance_num, live_debris_submodel, &ship_objp->orient, &ship_objp->pos );
+		model_instance_find_world_point(&start_world_pos, &pm->submodel[live_debris_submodel].offset, shipp->model_instance_num, live_debris_submodel, &ship_objp->orient, &ship_objp->pos );
 
 		// convert to model coord of underlying submodel
 		// set angle to zero
 		pm->submodel[submodel_num].angs = zero_angs;
-		world_find_model_instance_point(&start_model_pos, &start_world_pos, pm, pmi, submodel_num, &ship_objp->orient, &ship_objp->pos);
+		world_find_model_instance_point(&start_model_pos, &start_world_pos, pmi, submodel_num, &ship_objp->orient, &ship_objp->pos);
 
 		// rotate from submodel coord to world coords
 		// reset angle to current angle
 		pm->submodel[submodel_num].angs = copy_angs;
-		model_instance_find_world_point(&end_world_pos, &start_model_pos, pm->id, shipp->model_instance_num, submodel_num, &ship_objp->orient, &ship_objp->pos);
+		model_instance_find_world_point(&end_world_pos, &start_model_pos, shipp->model_instance_num, submodel_num, &ship_objp->orient, &ship_objp->pos);
 
 		int fireball_type = fireball_ship_explosion_type(&Ship_info[ship_p->ship_info_index]);
 		if(fireball_type < 0) {
@@ -276,7 +277,7 @@ void shipfx_maybe_create_live_debris_at_ship_death( object *ship_objp )
 				if (pss != NULL) {
 					if (pss->system_info != NULL) {
 						vec3d exp_center, tmp = ZERO_VECTOR;
-						model_instance_find_world_point(&exp_center, &tmp, pm->id, shipp->model_instance_num, parent, &ship_objp->orient, &ship_objp->pos );
+						model_instance_find_world_point(&exp_center, &tmp, shipp->model_instance_num, parent, &ship_objp->orient, &ship_objp->pos );
 
 						// if not blown off, blow it off
 						shipfx_subsystem_maybe_create_live_debris(ship_objp, shipp, pss, &exp_center, 3.0f);
@@ -1448,7 +1449,6 @@ void shipfx_emit_spark( int n, int sn )
 	float spark_num_scale   = 1.0f + spark_scale_factor * (Particle_number - 1.0f);
 
 	obj = &Objects[shipp->objnum];
-	ship_info* si = &Ship_info[shipp->ship_info_index];
 
 	float hull_percent = get_hull_pct(obj);
 	if (hull_percent < 0.001) {
@@ -1473,7 +1473,7 @@ void shipfx_emit_spark( int n, int sn )
 
 	// get spark position
 	if (shipp->sparks[spark_num].submodel_num != -1) {
-		model_instance_find_world_point(&outpnt, &shipp->sparks[spark_num].pos, sip->model_num, shipp->model_instance_num, shipp->sparks[spark_num].submodel_num, &obj->orient, &obj->pos);
+		model_instance_find_world_point(&outpnt, &shipp->sparks[spark_num].pos, shipp->model_instance_num, shipp->sparks[spark_num].submodel_num, &obj->orient, &obj->pos);
 	} else {
 		// rotate sparks correctly with current ship orient
 		vm_vec_unrotate(&outpnt, &shipp->sparks[spark_num].pos, &obj->orient);
@@ -1558,7 +1558,7 @@ void shipfx_emit_spark( int n, int sn )
 		// first time through - set up end time and make heavier initially
 		if ( sn > -1 )	{
 			// Sparks for first time at this spot
-			if (si->flags & SIF_FIGHTER) {
+			if (sip->flags & SIF_FIGHTER) {
 				if (hull_percent > 0.6f) {
 					// sparks only once when hull > 60%
 					float spark_duration = (float)pow(2.0f, -5.0f*(hull_percent-1.3f)) * (1.0f + 0.6f*(frand()-0.5f));	// +- 30%
@@ -2999,7 +2999,7 @@ void engine_wash_ship_process(ship *shipp)
 
 					// Gets the final offset and normal in the ship's frame of reference
 					temp = loc_pos;
-					find_submodel_instance_point_normal(&loc_pos, &loc_norm, wash_objp, bank->submodel_num, &temp, &loc_norm);
+					find_submodel_instance_point_normal(&loc_pos, &loc_norm, wash_shipp->model_instance_num, bank->submodel_num, &temp, &loc_norm);
 				}
 
 				// get world pos of thruster
@@ -3041,7 +3041,7 @@ void engine_wash_ship_process(ship *shipp)
 							vm_vec_normalize(&apex_to_ship);
 
 							// check if inside cone angle
-							if (vm_vec_dot(&apex_to_ship, &world_thruster_norm) > cos(half_angle)) {
+							if (vm_vec_dot(&apex_to_ship, &world_thruster_norm) > cosf(half_angle)) {
 								vm_vec_cross(&temp, &world_thruster_norm, &thruster_to_ship);
 								vm_vec_scale_add2(&shipp->wash_rot_axis, &temp, dot_to_ship / dist_sqr);
 								ship_intensity += (1.0f - dist_sqr / (max_wash_dist*max_wash_dist));
@@ -3834,7 +3834,7 @@ WE_BSG::WE_BSG(object *n_objp, int n_direction)
 	if(strlen(tmp_name))
 	{
 		//Load anim
-		anim = bm_load_either(tmp_name, &anim_nframes, &anim_fps, NULL, 1);
+		anim = bm_load_either(tmp_name, &anim_nframes, &anim_fps, NULL, true);
 		if(anim > -1)
 		{
 			anim_total_time = fl2i(((float)anim_nframes / (float)anim_fps) * 1000.0f);
@@ -3844,7 +3844,7 @@ WE_BSG::WE_BSG(object *n_objp, int n_direction)
 		strncat(tmp_name, "-shockwave", MAX_FILENAME_LEN-1);
 
 		//Load shockwave
-		shockwave = bm_load_either(tmp_name, &shockwave_nframes, &shockwave_fps, NULL, 1);
+		shockwave = bm_load_either(tmp_name, &shockwave_nframes, &shockwave_fps, NULL, true);
 		if(shockwave > -1)
 		{
 			shockwave_total_time = fl2i(((float)shockwave_nframes / (float)shockwave_fps) * 1000.0f);
@@ -4116,7 +4116,7 @@ int WE_BSG::warpShipRender()
 			vm_vec_scale_add(&end, &pos, &objp->orient.vec.fvec, z_offset_max);
 
 			//Render the warpout effect
-			batch_add_beam(anim + anim_frame, TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT, &start, &end, tube_radius*2.0f, 1.0f);
+			batch_add_beam(anim + anim_frame, TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT | TMAP_FLAG_EMISSIVE, &start, &end, tube_radius*2.0f, 1.0f);
 		}
 	}
 
@@ -4127,17 +4127,12 @@ int WE_BSG::warpShipRender()
 		if(shockwave_frame < shockwave_nframes)
 		{
 			vertex p;
-			extern int Cmdline_nohtl;
             
             memset(&p, 0, sizeof(p));
             
-			if(Cmdline_nohtl) {
-				g3_rotate_vertex(&p, &pos );
-			}else{
-				g3_transfer_vertex(&p, &pos);
-			}
+			g3_transfer_vertex(&p, &pos);
 
-			batch_add_bitmap(shockwave + shockwave_frame, TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT | TMAP_FLAG_SOFT_QUAD, &p, 0, shockwave_radius, 1.0f);
+			batch_add_bitmap(shockwave + shockwave_frame, TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT | TMAP_FLAG_SOFT_QUAD | TMAP_FLAG_EMISSIVE, &p, 0, shockwave_radius, 1.0f);
 		}
 	}
 
@@ -4210,9 +4205,9 @@ WE_Homeworld::WE_Homeworld(object *n_objp, int n_direction)
 
 	//Anim
 	if(direction == WD_WARP_IN)
-		anim = bm_load_either(sip->warpin_anim, &anim_nframes, &anim_fps, NULL, 1);
+		anim = bm_load_either(sip->warpin_anim, &anim_nframes, &anim_fps, NULL, true);
 	else if(direction == WD_WARP_OUT)
-		anim = bm_load_either(sip->warpout_anim, &anim_nframes, &anim_fps, NULL, 1);
+		anim = bm_load_either(sip->warpout_anim, &anim_nframes, &anim_fps, NULL, true);
 	else
 		anim = -1;
 
@@ -4415,7 +4410,7 @@ int WE_Homeworld::warpShipRender()
 	//Set the correct frame
 // 	gr_set_bitmap(anim + frame, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, 1.0f);	
 // 	g3_draw_polygon(&pos, &objp->orient, width, height, TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT);
-	batch_add_polygon(anim + frame, TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT, &pos, &objp->orient, width, height);
+	batch_add_polygon(anim + frame, TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT | TMAP_FLAG_EMISSIVE, &pos, &objp->orient, width, height);
 
 	return 1;
 }

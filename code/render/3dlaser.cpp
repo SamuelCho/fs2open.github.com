@@ -119,7 +119,7 @@ float g3_draw_laser(const vec3d *headp, float head_width, const vec3d *tailp, fl
 		return 0.0f;
 	}
 
-	if ( !Cmdline_nohtl && (tmap_flags & TMAP_HTL_3D_UNLIT) ) {
+	if (tmap_flags & TMAP_HTL_3D_UNLIT) {
 		return g3_draw_laser_htl(headp, head_width, tailp, tail_width, 255,255,255, tmap_flags | TMAP_HTL_3D_UNLIT);
 	}
 
@@ -215,8 +215,8 @@ float g3_draw_laser(const vec3d *headp, float head_width, const vec3d *tailp, fl
 
 	float sa, ca;
 
-	sa = (float)sin(a);
-	ca = (float)cos(a);
+	sa = sinf(a);
+	ca = cosf(a);
 
 	vertex v[4];
 	vertex *vertlist[4] = { &v[3], &v[2], &v[1], &v[0] };
@@ -269,7 +269,7 @@ float g3_draw_laser_rgb(const vec3d *headp, float head_width, const vec3d *tailp
 	if (!Lasers){
 		return 0.0f;
 	}
-	if((!Cmdline_nohtl)  && tmap_flags & TMAP_HTL_3D_UNLIT){
+	if(tmap_flags & TMAP_HTL_3D_UNLIT) {
 		return g3_draw_laser_htl(headp, head_width, tailp, tail_width, r, g, b, tmap_flags | TMAP_HTL_3D_UNLIT);
 	}
 	float headx, heady, headr, tailx, taily, tailr;
@@ -364,8 +364,8 @@ float g3_draw_laser_rgb(const vec3d *headp, float head_width, const vec3d *tailp
 
 	float sa, ca;
 
-	sa = (float)sin(a);
-	ca = (float)cos(a);
+	sa = sinf(a);
+	ca = cosf(a);
 
 	vertex v[4];
 	vertex *vertlist[4] = { &v[3], &v[2], &v[1], &v[0] };

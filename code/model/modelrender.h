@@ -254,12 +254,15 @@ struct queued_buffer_draw
 	{
 		depth_mode = GR_ZBUFF_FULL;
 
-		texture_maps[TM_BASE_TYPE]		= -1;
-		texture_maps[TM_GLOW_TYPE]		= -1;
-		texture_maps[TM_HEIGHT_TYPE]	= -1;
-		texture_maps[TM_MISC_TYPE]		= -1;
-		texture_maps[TM_NORMAL_TYPE]	= -1;
-		texture_maps[TM_SPECULAR_TYPE]	= -1;
+		texture_maps[TM_BASE_TYPE]			= -1;
+		texture_maps[TM_UNLIT_TYPE]			= -1;
+		texture_maps[TM_GLOW_TYPE]			= -1;
+		texture_maps[TM_HEIGHT_TYPE]		= -1;
+		texture_maps[TM_MISC_TYPE]			= -1;
+		texture_maps[TM_NORMAL_TYPE]		= -1;
+		texture_maps[TM_SPECULAR_TYPE]		= -1;
+		texture_maps[TM_SPEC_GLOSS_TYPE]	= -1;
+		texture_maps[TM_AMBIENT_TYPE]		= -1;
 	}
 };
 
@@ -392,14 +395,10 @@ public:
 	static int sortDrawPair(const void* a, const void* b);
 };
 
-//void model_immediate_render(int model_num, matrix *orient, vec3d * pos, uint flags = MR_NORMAL, int objnum = -1, int lighting_skip = -1, int *replacement_textures = NULL);
 void model_render_immediate(model_render_params *render_info, int model_num, matrix *orient, vec3d * pos, int render = MODEL_RENDER_ALL, bool sort = true);
 void model_render_queue(model_render_params *render_info, draw_list* scene, int model_num, matrix *orient, vec3d *pos);
-//void model_queue_render(DrawList* scene, int model_num, int model_instance_num, matrix *orient, vec3d *pos, uint flags, int objnum, int *replacement_textures, const bool is_skybox = false);
-//void submodel_immediate_render(int model_num, int submodel_num, matrix *orient, vec3d * pos, uint flags = MR_NORMAL, int objnum = -1, int *replacement_textures = NULL);
 void submodel_render_immediate(model_render_params *render_info, int model_num, int submodel_num, matrix *orient, vec3d * pos);
 void submodel_render_queue(model_render_params *render_info, draw_list *scene, int model_num, int submodel_num, matrix *orient, vec3d * pos);
-//void submodel_queue_render(model_render_params *interp, DrawList *scene, int model_num, int submodel_num, matrix *orient, vec3d * pos, uint flags, int objnum = -1);
 void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_buffer *buffer, polymodel *pm, int mn, int detail_level, uint tmap_flags);
 void model_render_set_thrust(model_render_params *interp, int model_num, mst_info *mst);
 void model_render_set_clip_plane(model_render_params *interp, vec3d *pos = NULL, vec3d *normal = NULL);

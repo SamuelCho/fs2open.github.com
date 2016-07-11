@@ -23,8 +23,6 @@
 #include "render/3d.h"
 #include "weapon/emp.h"
 
-extern int Cmdline_nohtl;
-
 // ------------------------------------------------------------------------------------------------------
 // NEBULA LIGHTNING DEFINES/VARS
 //
@@ -889,7 +887,7 @@ void nebl_render_section(bolt_type *bi, l_section *a, l_section *b)
 
 		// draw
 		gr_set_bitmap(bi->texture, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, Nebl_alpha);
-		g3_draw_poly(4, verts, TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT);		
+		g3_draw_poly(4, verts, TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT | TMAP_FLAG_EMISSIVE);		
 	}
 
 	// draw
@@ -906,7 +904,7 @@ void nebl_render_section(bolt_type *bi, l_section *a, l_section *b)
 	v[3].texture_position.u = 0.0f; v[3].texture_position.v = 1.0f;
 
 	gr_set_bitmap(bi->texture, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, Nebl_alpha);
-	g3_draw_poly(4, verts, TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT);	
+	g3_draw_poly(4, verts, TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT | TMAP_FLAG_EMISSIVE);	
 
 	// draw the glow beam	
 	verts[0] = &a->glow_vex[0];
@@ -922,7 +920,7 @@ void nebl_render_section(bolt_type *bi, l_section *a, l_section *b)
 	verts[3]->texture_position.v = 0.0f; verts[3]->texture_position.u = 1.0f;
 
 	gr_set_bitmap(bi->glow, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, Nebl_glow_alpha);
-	g3_draw_poly(4, verts, TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT);	
+	g3_draw_poly(4, verts, TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT | TMAP_FLAG_EMISSIVE);	
 }
 
 // generate a section
@@ -970,20 +968,11 @@ void nebl_generate_section(bolt_type *bi, float width, l_node *a, l_node *b, l_s
 			Nebl_flash_y += tempv.screen.xyw.y;
 			Nebl_flash_count++;
 		}
-
-		if (Cmdline_nohtl) {
-			memcpy(&c->vex[idx], &tempv, sizeof(vertex));
-		}
 	}
 	// calculate the glow points		
 	nebl_calc_facing_pts_smart(&glow_a, &glow_b, &dir_normal, &a->pos, pinch_a ? 0.5f : width * 6.0f, Nebl_type->b_add);
-	if (Cmdline_nohtl) {
-		g3_rotate_vertex(&c->glow_vex[0], &glow_a);
-		g3_rotate_vertex(&c->glow_vex[1], &glow_b);
-	} else {
-		g3_transfer_vertex(&c->glow_vex[0], &glow_a);
-		g3_transfer_vertex(&c->glow_vex[1], &glow_b);
-	}
+	g3_transfer_vertex(&c->glow_vex[0], &glow_a);
+	g3_transfer_vertex(&c->glow_vex[1], &glow_b);
 
 	// maybe do a cap
 	if(cap != NULL){		
@@ -1008,21 +997,12 @@ void nebl_generate_section(bolt_type *bi, float width, l_node *a, l_node *b, l_s
 				Nebl_flash_y += tempv.screen.xyw.y;
 				Nebl_flash_count++;
 			}
-
-			if (Cmdline_nohtl) {
-				memcpy(&cap->vex[idx], &tempv, sizeof(vertex));
-			}
 		}
 		
 		// calculate the glow points		
 		nebl_calc_facing_pts_smart(&glow_a, &glow_b, &dir_normal, &b->pos, pinch_b ? 0.5f : width * 6.0f, bi->b_add);
-		if (Cmdline_nohtl) {
-			g3_rotate_vertex(&cap->glow_vex[0], &glow_a);
-			g3_rotate_vertex(&cap->glow_vex[1], &glow_b);
-		} else {
-			g3_transfer_vertex(&cap->glow_vex[0], &glow_a);
-			g3_transfer_vertex(&cap->glow_vex[1], &glow_b);
-		}
+		g3_transfer_vertex(&cap->glow_vex[0], &glow_a);
+		g3_transfer_vertex(&cap->glow_vex[1], &glow_b);
 	}
 }
 

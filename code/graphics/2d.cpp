@@ -702,14 +702,10 @@ void gr_set_palette_internal( const char *name, ubyte * palette, int restrict_fo
 	}
 
 	if ( Gr_inited ) {
-		if (gr_screen.gf_set_palette) {
-			(*gr_screen.gf_set_palette)(Gr_current_palette, restrict_font_to_128 );
-
-			// Since the palette set code might shuffle the palette,
-			// reload it into the source palette
-			if ( palette ) {
-				memmove( palette, Gr_current_palette, 768 );
-			}
+		// Since the palette set code might shuffle the palette,		
+		// reload it into the source palette		
+		if (palette) {
+			memmove(palette, Gr_current_palette, 768);
 		}
 
 		// Update Palette Manager tables
@@ -849,7 +845,6 @@ static bool gr_init_sub(int mode, int width, int height, int depth, float center
 	gr_screen.bits_per_pixel = depth;
 	gr_screen.bytes_per_pixel= depth / 8;
 	gr_screen.rendering_to_texture = -1;
-	gr_screen.recording_state_block = false;
 	gr_screen.envmap_render_target = -1;
 	gr_screen.mode = mode;
 	gr_screen.res = res;
@@ -2142,6 +2137,7 @@ uint gr_determine_model_shader_flags(
 	int glow_map, 
 	int normal_map, 
 	int height_map,
+	int ambient_map,
 	int env_map,
 	int misc_map
 ) {
@@ -2201,6 +2197,10 @@ uint gr_determine_model_shader_flags(
 				shader_flags |= SDR_FLAG_MODEL_HEIGHT_MAP;
 			}
 
+			if ( ambient_map > 0 ) {
+				shader_flags |= SDR_FLAG_MODEL_AMBIENT_MAP;
+			}
+
 			if ( Cmdline_shadow_quality && !in_shadow_map && !Shadow_override) {
 				shader_flags |= SDR_FLAG_MODEL_SHADOWS;
 			}
@@ -2221,6 +2221,10 @@ uint gr_determine_model_shader_flags(
 
 	if ( thruster_scale ) {
 		shader_flags |= SDR_FLAG_MODEL_THRUSTER;
+	}
+
+	if ( High_dynamic_range ) {
+		shader_flags |= SDR_FLAG_MODEL_HDR;
 	}
 
 	return shader_flags;

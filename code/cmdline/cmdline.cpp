@@ -146,7 +146,6 @@ Flag exe_params[] =
 	{ "-fb_explosions",		"Enable Framebuffer Shockwaves",			true,	EASY_ALL_ON,		EASY_DEFAULT,		"Graphics",		"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-fb_explosions", },
 	{ "-no_deferred",		"Disable Deferred Lighting",				true,	EASY_DEFAULT_MEM,	EASY_DEFAULT,		"Graphics",		"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-no_deferred"},
 	{ "-enable_shadows",	"Enable Shadows",							true,	EASY_MEM_ALL_ON,	EASY_DEFAULT,		"Graphics",		"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-no_shadows"},
-	{ "-img2dds",			"Compress non-compressed images",			true,	0,					EASY_DEFAULT,		"Game Speed",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-img2dds", },
 	{ "-no_vsync",			"Disable vertical sync",					true,	0,					EASY_DEFAULT,		"Game Speed",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-no_vsync", },
 	{ "-cache_bitmaps",		"Cache bitmaps between missions",			true,	0,					EASY_DEFAULT_MEM,	"Game Speed",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-cache_bitmaps", },
 
@@ -176,7 +175,6 @@ Flag exe_params[] =
 	{ "-clientdamage",		"",											false,	0,					EASY_DEFAULT,		"Multiplayer",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-clientdamage", },
 	{ "-mpnoreturn",		"Disable flight deck option",				true,	0,					EASY_DEFAULT,		"Multiplayer",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-mpnoreturn", },
 
-	{ "-nohtl",				"Software mode (very slow)",				true,	0,					EASY_DEFAULT,		"Troubleshoot",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-nohtl", },
 	{ "-no_set_gamma",		"Disable setting of gamma",					true,	0,					EASY_DEFAULT,		"Troubleshoot",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-no_set_gamma", },
 	{ "-nomovies",			"Disable video playback",					true,	0,					EASY_DEFAULT,		"Troubleshoot",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-nomovies", },
 	{ "-noparseerrors",		"Disable parsing errors",					true,	0,					EASY_DEFAULT,		"Troubleshoot",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-noparseerrors", },
@@ -188,7 +186,6 @@ Flag exe_params[] =
 	{ "-no_glsl",			"Disable GLSL (shader) support",			true,	0,					EASY_DEFAULT,		"Troubleshoot",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-no_glsl", },
 	{ "-ati_swap",			"Fix colour issues on some ATI cards",		true,	0,					EASY_DEFAULT,		"Troubleshoot",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-ati_swap", },
 	{ "-no_3d_sound",		"Use only 2D/stereo for sound effects",		true,	0,					EASY_DEFAULT,		"Troubleshoot",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-no_3d_sound", },
-	{ "-disable_glsl_model","Don't use shaders for model rendering",	true,	0,					EASY_DEFAULT,		"Troubleshoot",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-disable_glsl_model", },
 	{ "-mipmap",			"Enable mipmapping",						true,	0,					EASY_DEFAULT_MEM,	"Troubleshoot",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-mipmap", },
  #ifndef SCP_UNIX
 	{ "-disable_di_mouse",	"Don't use DirectInput for mouse control",	true,	0,					EASY_DEFAULT,		"Troubleshoot",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-disable_di_mouse", },
@@ -199,10 +196,12 @@ Flag exe_params[] =
 	{ "-no_batching",		"Disable batched model rendering",			true,	0,					EASY_DEFAULT,		"Troubleshoot", "", },
 	{ "-no_geo_effects",	"Disable geometry shader for effects",		true,	0,					EASY_DEFAULT,		"Troubleshoot", "", },
 	{ "-set_cpu_affinity",	"Sets processor affinity to config value",	true,	0,					EASY_DEFAULT,		"Troubleshoot", "", },
+#ifdef WIN32
+	{ "-fix_registry",	"Use a different registry path",			true,		0,					EASY_DEFAULT,		"Troubleshoot", "", },
+#endif
 
 	{ "-ingame_join",		"Allow in-game joining",					true,	0,					EASY_DEFAULT,		"Experimental",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-ingame_join", },
 	{ "-voicer",			"Enable voice recognition",					true,	0,					EASY_DEFAULT,		"Experimental",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-voicer", },
-	{ "-brief_lighting",	"Enable lighting on briefing models",		true,	0,					EASY_DEFAULT,		"Experimental",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-brief_lighting", },
 
 	{ "-fps",				"Show frames per second on HUD",			false,	0,					EASY_DEFAULT,		"Dev Tool",		"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-fps", },
 	{ "-pos",				"Show position of camera",					false,	0,					EASY_DEFAULT,		"Dev Tool",		"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-pos", },
@@ -309,7 +308,6 @@ cmdline_parm fxaa_arg("-fxaa", NULL, AT_NONE);
 cmdline_parm fxaa_preset_arg("-fxaa_preset", "FXAA quality (0-9), requires -post_process and -fxaa", AT_INT);
 cmdline_parm fb_explosions_arg("-fb_explosions", NULL, AT_NONE);
 cmdline_parm flightshaftsoff_arg("-nolightshafts", NULL, AT_NONE);
-cmdline_parm brieflighting_arg("-brief_lighting", NULL, AT_NONE);
 cmdline_parm no_batching("-no_batching", NULL, AT_NONE);
 cmdline_parm shadow_quality_arg("-shadow_quality", NULL, AT_INT);
 cmdline_parm enable_shadows_arg("-enable_shadows", NULL, AT_NONE);
@@ -339,18 +337,15 @@ extern int Fxaa_preset_last_frame;
 bool Cmdline_fb_explosions = 0;
 bool Cmdline_no_batching = false;
 extern bool ls_force_off;
-bool Cmdline_brief_lighting = 0;
 int Cmdline_shadow_quality = 0;
 int Cmdline_no_deferred_lighting = 0;
 
 // Game Speed related
 cmdline_parm cache_bitmaps_arg("-cache_bitmaps", NULL, AT_NONE);	// Cmdline_cache_bitmaps
-cmdline_parm img2dds_arg("-img2dds", NULL, AT_NONE);			// Cmdline_img2dds
 cmdline_parm no_fpscap("-no_fps_capping", "Don't limit frames-per-second", AT_NONE);	// Cmdline_NoFPSCap
 cmdline_parm no_vsync_arg("-no_vsync", NULL, AT_NONE);		// Cmdline_no_vsync
 
 int Cmdline_cache_bitmaps = 0;	// caching of bitmaps between missions (faster loads, can hit swap on reload with <512 Meg RAM though) - taylor
-int Cmdline_img2dds = 0;
 int Cmdline_NoFPSCap = 0; // Disable FPS capping - kazan
 int Cmdline_no_vsync = 0;
 
@@ -414,7 +409,6 @@ int Cmdline_objupd = 3;		// client object updates on LAN by default
 
 // Troubleshooting
 cmdline_parm loadallweapons_arg("-loadallweps", NULL, AT_NONE);	// Cmdline_load_all_weapons
-cmdline_parm htl_arg("-nohtl", NULL, AT_NONE);				// Cmdline_nohtl  -- don't use HT&L
 cmdline_parm nomovies_arg("-nomovies", NULL, AT_NONE);		// Cmdline_nomovies  -- Allows video streaming
 cmdline_parm no_set_gamma_arg("-no_set_gamma", NULL, AT_NONE);	// Cmdline_no_set_gamma
 cmdline_parm no_vbo_arg("-novbo", NULL, AT_NONE);			// Cmdline_novbo
@@ -431,9 +425,11 @@ cmdline_parm old_collision_system("-old_collision", NULL, AT_NONE); // Cmdline_o
 cmdline_parm gl_finish ("-gl_finish", NULL, AT_NONE);
 cmdline_parm no_geo_sdr_effects("-no_geo_effects", NULL, AT_NONE);
 cmdline_parm set_cpu_affinity("-set_cpu_affinity", NULL, AT_NONE);
+#ifdef WIN32
+cmdline_parm fix_registry("-fix_registry", NULL, AT_NONE);
+#endif
 
 int Cmdline_load_all_weapons = 0;
-int Cmdline_nohtl = 0;
 int Cmdline_nomovies = 0;
 int Cmdline_no_set_gamma = 0;
 int Cmdline_novbo = 0; // turn off OGL VBO support, troubleshooting
@@ -448,6 +444,9 @@ char* Cmdline_keyboard_layout = NULL;
 bool Cmdline_gl_finish = false;
 bool Cmdline_no_geo_sdr_effects = false;
 bool Cmdline_set_cpu_affinity = false;
+#ifdef WIN32
+bool Cmdline_alternate_registry_path = false;
+#endif
 
 // Developer/Testing related
 cmdline_parm start_mission_arg("-start_mission", "Skip mainhall and run this mission", AT_STRING);	// Cmdline_start_mission
@@ -520,6 +519,8 @@ cmdline_parm deprecated_normal_arg("-normal", "Deprecated", AT_NONE);
 cmdline_parm deprecated_env_arg("-env", "Deprecated", AT_NONE);
 cmdline_parm deprecated_tbp_arg("-tbp", "Deprecated", AT_NONE);
 cmdline_parm deprecated_jpgtga_arg("-jpgtga", "Deprecated", AT_NONE);
+cmdline_parm deprecated_htl_arg("-nohtl", "Deprecated", AT_NONE);
+cmdline_parm deprecated_brieflighting_arg("-brief_lighting", "Deprecated", AT_NONE);
 
 int Cmdline_deprecated_spec = 0;
 int Cmdline_deprecated_glow = 0;
@@ -527,6 +528,8 @@ int Cmdline_deprecated_normal = 0;
 int Cmdline_deprecated_env = 0;
 int Cmdline_deprecated_tbp = 0;
 int Cmdline_deprecated_jpgtga = 0;
+int Cmdline_deprecated_nohtl = 0;
+bool Cmdline_deprecated_brief_lighting = 0;
 
 #ifndef NDEBUG
 // NOTE: this assumes that os_init() has already been called but isn't a fatal error if it hasn't
@@ -581,6 +584,16 @@ void cmdline_debug_print_cmdline()
 	if(Cmdline_deprecated_jpgtga == 1)
 	{
 		mprintf(("Deprecated flag '-jpgtga' found. Please remove from your cmdline.\n"));
+	}
+
+	if(Cmdline_deprecated_nohtl == 1)
+	{
+		mprintf(("Deprecated flag '-nohtl' found. Please remove from your cmdline.\n"));
+	}
+
+	if(Cmdline_deprecated_brief_lighting == 1)
+	{
+		mprintf(("Deprecated flag '-brief_lighting' found. Please remove from your cmdline.\n"));
 	}
 }
 #endif
@@ -1506,11 +1519,6 @@ bool SetCmdlineParams()
 		Cmdline_spec = 0;
 	}
 
-	if ( htl_arg.found() ) 
-	{
-		Cmdline_nohtl = 1;
-	}
-
 	if( no_set_gamma_arg.found() )
 	{
 		Cmdline_no_set_gamma = 1;
@@ -1554,9 +1562,6 @@ bool SetCmdlineParams()
 		Cmdline_no_di_mouse = 1;
 	}
 
-	if ( img2dds_arg.found() )
-		Cmdline_img2dds = 1;
-
 	if ( glow_arg.found() )
 		Cmdline_glow = 0;
 
@@ -1566,8 +1571,8 @@ bool SetCmdlineParams()
 	if ( ship_choice_3d_arg.found() )
 		Cmdline_ship_choice_3d = 1;
 
-    if ( weapon_choice_3d_arg.found() )
-        Cmdline_weapon_choice_3d = 1;
+	if ( weapon_choice_3d_arg.found() )
+		Cmdline_weapon_choice_3d = 1;
 
 	if ( show_mem_usage_arg.found() )
 		Cmdline_show_mem_usage = 1;
@@ -1623,6 +1628,12 @@ bool SetCmdlineParams()
 	{
 		Cmdline_set_cpu_affinity = true;
 	}
+
+#ifdef WIN32
+	if (fix_registry.found()) {
+		Cmdline_alternate_registry_path = true;
+	}
+#endif
 
 	if ( snd_preload_arg.found() )
 	{
@@ -1705,11 +1716,6 @@ bool SetCmdlineParams()
 	if ( no_batching.found() ) 
 	{
 		Cmdline_no_batching = true;
-	}
-
-	if ( brieflighting_arg.found() )
-	{
-		Cmdline_brief_lighting = 1;
 	}
 
 	if ( postprocess_arg.found() )
@@ -1796,6 +1802,16 @@ bool SetCmdlineParams()
 	if( deprecated_jpgtga_arg.found() )
 	{
 		Cmdline_deprecated_jpgtga = 1;
+	}
+
+	if ( deprecated_htl_arg.found() ) 
+	{
+		Cmdline_deprecated_nohtl = 1;
+	}
+
+	if ( deprecated_brieflighting_arg.found() )
+	{
+		Cmdline_deprecated_brief_lighting = 1;
 	}
 
 	return true; 

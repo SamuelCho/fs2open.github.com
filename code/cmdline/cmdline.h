@@ -83,7 +83,6 @@ extern int Cmdline_no_deferred_lighting;
 
 // Game Speed related
 extern int Cmdline_cache_bitmaps;
-extern int Cmdline_img2dds;
 extern int Cmdline_NoFPSCap;
 extern int Cmdline_no_vsync;
 
@@ -120,7 +119,6 @@ extern int Cmdline_objupd;
 
 // Troubleshooting
 extern int Cmdline_load_all_weapons;
-extern int Cmdline_nohtl;
 extern int Cmdline_nomovies;	// WMC Toggles movie playing support
 extern int Cmdline_no_set_gamma;
 extern int Cmdline_novbo;
@@ -136,6 +134,9 @@ extern char* Cmdline_keyboard_layout;
 extern bool Cmdline_gl_finish;
 extern bool Cmdline_no_geo_sdr_effects;
 extern bool Cmdline_set_cpu_affinity;
+#ifdef WIN32
+extern bool Cmdline_alternate_registry_path;
+#endif
 
 // Developer/Testing related
 extern char *Cmdline_start_mission;

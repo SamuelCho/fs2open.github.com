@@ -1565,9 +1565,7 @@ void draw_model_icon(int model_id, int flags, float closeup_zoom, int x, int y, 
 	{
 		g3_set_view_matrix( &sip->closeup_pos, &vmd_identity_matrix, zoom);
 
-		if (!Cmdline_nohtl) {
-			gr_set_proj_matrix(0.5f*Proj_fov, gr_screen.clip_aspect, Min_draw_distance, Max_draw_distance);
-		}
+		gr_set_proj_matrix(0.5f*Proj_fov, gr_screen.clip_aspect, Min_draw_distance, Max_draw_distance);
 	}
 	else
 	{
@@ -1608,17 +1606,13 @@ void draw_model_icon(int model_id, int flags, float closeup_zoom, int x, int y, 
 		}
 		g3_set_view_matrix( &weap_closeup, &vmd_identity_matrix, tm_zoom);
 
-		if (!Cmdline_nohtl) {
-			gr_set_proj_matrix(0.5f*Proj_fov, gr_screen.clip_aspect, 0.05f, 1000.0f);
-		}
+		gr_set_proj_matrix(0.5f*Proj_fov, gr_screen.clip_aspect, 0.05f, 1000.0f);
 	}
 
 	model_render_params render_info;
 	render_info.set_detail_level_lock(0);
 
-	if (!Cmdline_nohtl)	{
-		gr_set_view_matrix(&Eye_position, &Eye_matrix);
-	}
+	gr_set_view_matrix(&Eye_position, &Eye_matrix);
 
 	if(!(flags & MR_NO_LIGHTING))
 	{
@@ -1638,12 +1632,8 @@ void draw_model_icon(int model_id, int flags, float closeup_zoom, int x, int y, 
 	model_render_immediate(&render_info, model_id, &object_orient, &vmd_zero_vector);
 	Glowpoint_override = false;
 
-	if (!Cmdline_nohtl) 
-	{
-		gr_end_view_matrix();
-		gr_end_proj_matrix();
-	}
-
+	gr_end_view_matrix();
+	gr_end_proj_matrix();
 
 	g3_end_frame();
 	gr_reset_clip();
@@ -1726,8 +1716,6 @@ void draw_model_rotating(model_render_params *render_info, int model_id, int x1,
 		float size = pm->rad*0.7f;
 		float start_scale = MIN(time,0.5f)*2.5f;
 		float offset = size*0.5f*MIN(MAX(time-3.0f,0.0f),0.6f)*1.66667f;
-		if ( (time < 1.5f) && (time >= 0.5f) )  // Clip the grid if were in phase 1
-			render_info->set_clip_plane(plane_point,wire_normal);
 
 		g3_start_instance_angles(&vmd_zero_vector,&view_angles);
 
@@ -1754,6 +1742,10 @@ void draw_model_rotating(model_render_params *render_info, int model_id, int x1,
 			gr_set_color(0,200,0);
 			g3_start_instance_angles(&vmd_zero_vector,&view_angles);
 
+			if (time < 1.5f) {
+				stop.xyz.z = -clip;
+			}
+
 			for (i = -3; i < 4; i++) {
 				start.xyz.x = stop.xyz.x = size*0.333f*i;
 				g3_draw_htl_line(&start,&stop);
@@ -1762,8 +1754,10 @@ void draw_model_rotating(model_render_params *render_info, int model_id, int x1,
 			start.xyz.x = size;
 			stop.xyz.x = -size;
 
-			for (i = -3; i < 4; i++) {
+			for (i = 3; i > -4; i--) {
 				start.xyz.z = stop.xyz.z = size*0.333f*i+offset*0.5f;
+				if ((time < 1.5f) && (start.xyz.z <= -clip))
+					break;
 				g3_draw_htl_line(&start,&stop);
 			}
 

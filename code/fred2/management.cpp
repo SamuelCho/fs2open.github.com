@@ -135,6 +135,7 @@ int query_ship_name_duplicate(int ship);
 char *reg_read_string( char *section, char *name, char *default_value );
 
 extern int Nmodel_num;
+extern int Nmodel_instance_num;
 extern matrix Nmodel_orient;
 extern int Nmodel_bitmap;
 
@@ -330,26 +331,6 @@ bool fred_init()
 	//CFREDView *window = CFREDView::GetView();
 	//HWND hwndApp = window->GetSafeHwnd();
 	//os_set_window((uint) hwndApp);
-
-	/*
-	int result = MessageBox(NULL, 
-		"Welcome to OGL Fred2_open. Do you want to run in htl? "
-		"Its faster on any system and runs in full detail but is still buggy.", 
-		"Question", MB_ICONQUESTION | MB_YESNOCANCEL);
-
-	if(result == IDCANCEL) return false;
-
-	Cmdline_nohtl = result != IDYES;
-	*/
-
-	/* - HTL is now on by default so the warning is redundant - Karajorma
-	if (Cmdline_nohtl)
-	{
-		MessageBox(NULL, "You are not running in HTL mode for FRED.  Although HTL mode isn't required, there may be some crashes"
-						 " when trying to render the new high polygon models.  To enable HTL mode, create a shortcut to FRED, right-click into properties"
-						 " and add \"-fredhtl\" to the end of the string in the \"target\" box.", "FRED2", MB_ICONWARNING | MB_OK);
-	}
-	*/
 
 	snd_init();
 
@@ -955,6 +936,7 @@ void clear_mission()
 
 	Nmodel_flags = DEFAULT_NMODEL_FLAGS;
 	Nmodel_num = -1;
+	Nmodel_instance_num = -1;
 	vm_set_identity(&Nmodel_orient);
 	Nmodel_bitmap = -1;
 

@@ -164,6 +164,7 @@ int stars_debris_loaded = 0;	// 0 = not loaded, 1 = normal vclips, 2 = nebula vc
 // background data
 int Stars_background_inited = 0;			// if we're inited
 int Nmodel_num = -1;							// model num
+int Nmodel_instance_num = -1;					// model instance num
 matrix Nmodel_orient = IDENTITY_MATRIX;			// model orientation
 int Nmodel_flags = DEFAULT_NMODEL_FLAGS;		// model flags
 int Nmodel_bitmap = -1;						// model texture
@@ -199,7 +200,7 @@ void stars_load_debris_vclips(debris_vclip *vclips)
 	}
 
 	for (i = 0; i < MAX_DEBRIS_VCLIPS; i++) {
-		vclips[i].bm = bm_load_animation( vclips[i].name, &vclips[i].nframes, NULL, NULL, 1 );
+		vclips[i].bm = bm_load_animation( vclips[i].name, &vclips[i].nframes, nullptr, nullptr, nullptr, true );
 
 		if ( vclips[i].bm < 0 ) {
 			// try loading it as a single bitmap
@@ -613,7 +614,7 @@ void stars_load_all_bitmaps()
 
 			// maybe didn't load a static image so try for an animated one
 			if (sb->bitmap_id < 0) {
-				sb->bitmap_id = bm_load_animation(sb->filename, &sb->n_frames, &sb->fps, NULL, 1);
+				sb->bitmap_id = bm_load_animation(sb->filename, &sb->n_frames, &sb->fps, nullptr, nullptr, true);
 
 				if (sb->bitmap_id < 0) {
 					mprintf(("Unable to load starfield bitmap: '%s'!\n", sb->filename));
@@ -635,7 +636,7 @@ void stars_load_all_bitmaps()
 
 			// maybe didn't load a static image so try for an animated one
 			if (sb->bitmap_id < 0) {
-				sb->bitmap_id = bm_load_animation(sb->filename, &sb->n_frames, &sb->fps, NULL, 1);
+				sb->bitmap_id = bm_load_animation(sb->filename, &sb->n_frames, &sb->fps, nullptr, nullptr, true);
 
 				if (sb->bitmap_id < 0) {
 					Warning(LOCATION, "Unable to load sun bitmap: '%s'!\n", sb->filename);
@@ -649,7 +650,7 @@ void stars_load_all_bitmaps()
 
 			// maybe didn't load a static image so try for an animated one
 			if (sb->glow_bitmap < 0) {
-				sb->glow_bitmap = bm_load_animation(sb->glow_filename, &sb->glow_n_frames, &sb->glow_fps, NULL, 1);
+				sb->glow_bitmap = bm_load_animation(sb->glow_filename, &sb->glow_n_frames, &sb->glow_fps, nullptr, nullptr, true);
 
 				if (sb->glow_bitmap < 0) {
 					Warning(LOCATION, "Unable to load sun glow bitmap: '%s'!\n", sb->glow_filename);
@@ -1235,9 +1236,7 @@ void stars_draw_bitmaps(int show_bitmaps)
 	if ( !Detail.planets_suns )
 		return;
 
-	if ( !Cmdline_nohtl ) {
-		gr_start_instance_matrix(&Eye_position, &vmd_identity_matrix);
-	}
+	gr_start_instance_matrix(&Eye_position, &vmd_identity_matrix);
 
 	// turn off culling
 	int cull = gr_set_cull(0);
@@ -1288,8 +1287,7 @@ void stars_draw_bitmaps(int show_bitmaps)
 	// restore zbuffer
 	gr_zbuffer_set(saved_zbuffer_mode);
 
-	if ( !Cmdline_nohtl )
-		gr_end_instance_matrix();
+	gr_end_instance_matrix();
 }
 
 extern int Interp_subspace;
@@ -1434,13 +1432,11 @@ void subspace_render()
 	render_info.set_alpha(1.0f);
 	render_info.set_flags(render_flags);
 
-	if (!Cmdline_nohtl)
-		gr_set_texture_panning(Interp_subspace_offset_v, Interp_subspace_offset_u, true);
+	gr_set_texture_panning(Interp_subspace_offset_v, Interp_subspace_offset_u, true);
 
 	model_render_immediate( &render_info, Subspace_model_outer, &tmp, &Eye_position);	//MR_NO_CORRECT|MR_SHOW_OUTLINE
 
-	if (!Cmdline_nohtl)
-		gr_set_texture_panning(0, 0, false);
+	gr_set_texture_panning(0, 0, false);
 
 	Interp_subspace = 1;
 	Interp_subspace_offset_u = 1.0f - subspace_offset_u_inner;
@@ -1454,13 +1450,11 @@ void subspace_render()
 	render_info.set_alpha(1.0f);
 	render_info.set_flags(render_flags);
 
-	if (!Cmdline_nohtl)
-		gr_set_texture_panning(Interp_subspace_offset_v, Interp_subspace_offset_u, true);
+	gr_set_texture_panning(Interp_subspace_offset_v, Interp_subspace_offset_u, true);
 
 	model_render_immediate( &render_info, Subspace_model_inner, &tmp, &Eye_position );	//MR_NO_CORRECT|MR_SHOW_OUTLINE
 
-	if (!Cmdline_nohtl)
-		gr_set_texture_panning(0, 0, false);
+	gr_set_texture_panning(0, 0, false);
 
 	//Render subspace glows here and not as thrusters - Valathil 
 	vec3d glow_pos;
@@ -1961,7 +1955,7 @@ void stars_page_in()
 
 				// maybe didn't load a static image so try for an animated one
 				if (sb->bitmap_id < 0) {
-					sb->bitmap_id = bm_load_animation(sb->filename, &sb->n_frames, &sb->fps, NULL, 1);
+					sb->bitmap_id = bm_load_animation(sb->filename, &sb->n_frames, &sb->fps, nullptr, nullptr, true);
 
 					if (sb->bitmap_id < 0) {
 						Warning(LOCATION, "Unable to load starfield bitmap: '%s'!\n", sb->filename);
@@ -1993,7 +1987,7 @@ void stars_page_in()
 
 				// maybe didn't load a static image so try for an animated one
 				if (sb->bitmap_id < 0) {
-					sb->bitmap_id = bm_load_animation(sb->filename, &sb->n_frames, &sb->fps, NULL, 1);
+					sb->bitmap_id = bm_load_animation(sb->filename, &sb->n_frames, &sb->fps, nullptr, nullptr, true);
 
 					if (sb->bitmap_id < 0) {
 						Warning(LOCATION, "Unable to load sun bitmap: '%s'!\n", sb->filename);
@@ -2007,7 +2001,7 @@ void stars_page_in()
 
 				// maybe didn't load a static image so try for an animated one
 				if (sb->glow_bitmap < 0) {
-					sb->glow_bitmap = bm_load_animation(sb->glow_filename, &sb->glow_n_frames, &sb->glow_fps, NULL, 1);
+					sb->glow_bitmap = bm_load_animation(sb->glow_filename, &sb->glow_n_frames, &sb->glow_fps, nullptr, nullptr, true);
 
 					if (sb->glow_bitmap < 0) {
 						Warning(LOCATION, "Unable to load sun glow bitmap: '%s'!\n", sb->glow_filename);
@@ -2057,7 +2051,7 @@ void stars_page_in()
 
 			// maybe didn't load a static image so try for an animated one
 			if (sb->bitmap_id < 0) {
-				sb->bitmap_id = bm_load_animation(sb->filename, &sb->n_frames, &sb->fps, NULL, 1);
+				sb->bitmap_id = bm_load_animation(sb->filename, &sb->n_frames, &sb->fps, nullptr, nullptr, true);
 
 				if (sb->bitmap_id < 0) {
 					Warning(LOCATION, "Unable to load starfield bitmap: '%s'!\n", sb->filename);
@@ -2093,7 +2087,7 @@ void stars_page_in()
 
 			// maybe didn't load a static image so try for an animated one
 			if (sb->bitmap_id < 0) {
-				sb->bitmap_id = bm_load_animation(sb->filename, &sb->n_frames, &sb->fps, NULL, 1);
+				sb->bitmap_id = bm_load_animation(sb->filename, &sb->n_frames, &sb->fps, nullptr, nullptr, true);
 
 				if (sb->bitmap_id < 0) {
 					Warning(LOCATION, "Unable to load sun bitmap: '%s'!\n", sb->filename);
@@ -2107,7 +2101,7 @@ void stars_page_in()
 
 			// maybe didn't load a static image so try for an animated one
 			if (sb->glow_bitmap < 0) {
-				sb->glow_bitmap = bm_load_animation(sb->glow_filename, &sb->glow_n_frames, &sb->glow_fps, NULL, 1);
+				sb->glow_bitmap = bm_load_animation(sb->glow_filename, &sb->glow_n_frames, &sb->glow_fps, nullptr, nullptr, true);
 
 				if (sb->glow_bitmap < 0) {
 					Warning(LOCATION, "Unable to load sun glow bitmap: '%s'!\n", sb->glow_filename);
@@ -2180,6 +2174,11 @@ void stars_set_background_model(char *model_name, char *texture_name, int flags)
 		Nmodel_num = -1;
 	}
 
+	if (Nmodel_instance_num >= 0) {
+		model_delete_instance(Nmodel_instance_num);
+		Nmodel_instance_num = -1;
+	}
+
 	Nmodel_flags = flags;
 
 	if ( (model_name == NULL) || (*model_name == '\0') )
@@ -2188,8 +2187,13 @@ void stars_set_background_model(char *model_name, char *texture_name, int flags)
 	Nmodel_num = model_load(model_name, 0, NULL, -1);
 	Nmodel_bitmap = bm_load(texture_name);
 
-	if (Nmodel_num >= 0)
+	if (Nmodel_num >= 0) {
 		model_page_in_textures(Nmodel_num);
+
+		if (model_get(Nmodel_num)->flags & PM_FLAG_HAS_INTRINSIC_ROTATE) {
+			Nmodel_instance_num = model_create_instance(false, Nmodel_num);
+		}
+	}
 }
 
 // call this to set a specific orientation for the background
@@ -2274,7 +2278,7 @@ int stars_add_sun_entry(starfield_list_entry *sun_ptr)
 
 			// maybe didn't load a static image so try for an animated one
 		if (Sun_bitmaps[idx].bitmap_id < 0) {
-			Sun_bitmaps[idx].bitmap_id = bm_load_animation(Sun_bitmaps[idx].filename, &Sun_bitmaps[idx].n_frames, &Sun_bitmaps[idx].fps, NULL, 1);
+			Sun_bitmaps[idx].bitmap_id = bm_load_animation(Sun_bitmaps[idx].filename, &Sun_bitmaps[idx].n_frames, &Sun_bitmaps[idx].fps, nullptr, nullptr, true);
 
 			if (Sun_bitmaps[idx].bitmap_id < 0) {
 				// failed
@@ -2288,7 +2292,7 @@ int stars_add_sun_entry(starfield_list_entry *sun_ptr)
 
 			// maybe didn't load a static image so try for an animated one
 			if (Sun_bitmaps[idx].glow_bitmap < 0) {
-				Sun_bitmaps[idx].glow_bitmap = bm_load_animation(Sun_bitmaps[idx].glow_filename, &Sun_bitmaps[idx].glow_n_frames, &Sun_bitmaps[idx].glow_fps, NULL, 1);
+				Sun_bitmaps[idx].glow_bitmap = bm_load_animation(Sun_bitmaps[idx].glow_filename, &Sun_bitmaps[idx].glow_n_frames, &Sun_bitmaps[idx].glow_fps, nullptr, nullptr, true);
 
 				if (Sun_bitmaps[idx].glow_bitmap < 0) {
 					Warning(LOCATION, "Unable to load sun glow bitmap: '%s'!\n", Sun_bitmaps[idx].glow_filename);
@@ -2364,7 +2368,7 @@ int stars_add_bitmap_entry(starfield_list_entry *sle)
 
 		// maybe didn't load a static image so try for an animated one
 		if (Starfield_bitmaps[idx].bitmap_id < 0) {
-			Starfield_bitmaps[idx].bitmap_id = bm_load_animation(Starfield_bitmaps[idx].filename, &Starfield_bitmaps[idx].n_frames, &Starfield_bitmaps[idx].fps, NULL, 1);
+			Starfield_bitmaps[idx].bitmap_id = bm_load_animation(Starfield_bitmaps[idx].filename, &Starfield_bitmaps[idx].n_frames, &Starfield_bitmaps[idx].fps, nullptr, nullptr, true);
 
 			if (Starfield_bitmaps[idx].bitmap_id < 0) {
 				// failed
@@ -2507,7 +2511,7 @@ void stars_set_nebula(bool activate)
 		The_mission.flags |= MISSION_FLAG_FULLNEB;
 		Toggle_text_alpha = TOGGLE_TEXT_NEBULA_ALPHA;
 		HUD_contrast = 1;
-		if(Cmdline_nohtl || Fred_running) {
+		if(Fred_running) {
 			Neb2_render_mode = NEB2_RENDER_POF;
 			stars_set_background_model(BACKGROUND_MODEL_FILENAME, Neb2_texture_name);
 			stars_set_background_orientation();

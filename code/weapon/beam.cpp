@@ -39,7 +39,6 @@
 #include "weapon/beam.h"
 #include "weapon/weapon.h"
 
-extern int Cmdline_nohtl;
 // ------------------------------------------------------------------------------------------------
 // BEAM WEAPON DEFINES/VARS
 //
@@ -1191,17 +1190,10 @@ void beam_render(beam *b, float u_offset)
 		beam_calc_facing_pts(&top1, &bottom1, &fvec, &b->last_start, bwsi->width * scale * b->shrink, bwsi->z_add);	
 		beam_calc_facing_pts(&top2, &bottom2, &fvec, &b->last_shot, bwsi->width * scale * scale * b->shrink, bwsi->z_add);
 
-		if (Cmdline_nohtl) {
-			g3_rotate_vertex(verts[0], &bottom1); 
-			g3_rotate_vertex(verts[1], &bottom2);	
-			g3_rotate_vertex(verts[2], &top2); 
-			g3_rotate_vertex(verts[3], &top1);
-		} else {
-			g3_transfer_vertex(verts[0], &bottom1); 
-			g3_transfer_vertex(verts[1], &bottom2);	
-			g3_transfer_vertex(verts[2], &top2); 
-			g3_transfer_vertex(verts[3], &top1);
-		}
+		g3_transfer_vertex(verts[0], &bottom1); 
+		g3_transfer_vertex(verts[1], &bottom2);	
+		g3_transfer_vertex(verts[2], &top2); 
+		g3_transfer_vertex(verts[3], &top1);
 
 		P_VERTICES();						
 		STUFF_VERTICES();		// stuff the beam with creamy goodness (texture coords)
@@ -1249,25 +1241,14 @@ void beam_render(beam *b, float u_offset)
 		if (bwsi->texture.num_frames > 1) {
 			b->beam_section_frame[s_idx] += flFrametime;
 
-			// Sanity checks
-			if (b->beam_section_frame[s_idx] < 0.0f)
-				b->beam_section_frame[s_idx] = 0.0f;
-			if (b->beam_section_frame[s_idx] > 100.0f)
-				b->beam_section_frame[s_idx] = 0.0f;
-
-			while (b->beam_section_frame[s_idx] > bwsi->texture.total_time)
-				b->beam_section_frame[s_idx] -= bwsi->texture.total_time;
-
-			framenum = fl2i( (b->beam_section_frame[s_idx] * bwsi->texture.num_frames) / bwsi->texture.total_time );
-
-			CLAMP(framenum, 0, bwsi->texture.num_frames-1);
+			framenum = bm_get_anim_frame(bwsi->texture.first_frame, b->beam_section_frame[s_idx], bwsi->texture.total_time, true);
 		}
 
 		gr_set_bitmap(bwsi->texture.first_frame + framenum, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, 0.9999f);
 
 		// added TMAP_FLAG_TILED flag for beam texture tileing -Bobboau			
 		// added TMAP_FLAG_RGB and TMAP_FLAG_GOURAUD so the beam would apear to fade along it's length-Bobboau
-		g3_draw_poly( 4, verts, TMAP_FLAG_TEXTURED | TMAP_FLAG_RGB | TMAP_FLAG_GOURAUD | TMAP_FLAG_TILED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT ); 
+		g3_draw_poly( 4, verts, TMAP_FLAG_TEXTURED | TMAP_FLAG_RGB | TMAP_FLAG_GOURAUD | TMAP_FLAG_TILED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT | TMAP_FLAG_EMISSIVE ); 
 	}		
 	
 	// turn backface culling back on
@@ -1386,7 +1367,7 @@ void beam_render_muzzle_glow(beam *b)
 	weapon_info *wip = &Weapon_info[b->weapon_info_index];
 	beam_weapon_info *bwi = &wip->b_info;
 	float rad, pct, rand_val;
-	int tmap_flags = TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT;
+	int tmap_flags = TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT | TMAP_FLAG_EMISSIVE;
 	pt.flags = 0;    // avoid potential read of uninit var
 
 	// if we don't have a glow bitmap
@@ -1440,18 +1421,10 @@ void beam_render_muzzle_glow(beam *b)
 		beam_calc_facing_pts(&top1, &bottom1, &fvec, &start, rad, 1.0f);
 		beam_calc_facing_pts(&top2, &bottom2, &fvec, &end, rad, 1.0f);
 
-		if (Cmdline_nohtl) {
-			g3_rotate_vertex(verts[0], &bottom1);
-			g3_rotate_vertex(verts[1], &bottom2);
-			g3_rotate_vertex(verts[2], &top2);
-			g3_rotate_vertex(verts[3], &top1);
-		}
-		else {
-			g3_transfer_vertex(verts[0], &bottom1);
-			g3_transfer_vertex(verts[1], &bottom2);
-			g3_transfer_vertex(verts[2], &top2);
-			g3_transfer_vertex(verts[3], &top1);
-		}
+		g3_transfer_vertex(verts[0], &bottom1);
+		g3_transfer_vertex(verts[1], &bottom2);
+		g3_transfer_vertex(verts[2], &top2);
+		g3_transfer_vertex(verts[3], &top1);
 
 		for (int idx = 0; idx < 4; idx++) {
 			g3_project_vertex(verts[idx]);
@@ -1488,18 +1461,7 @@ void beam_render_muzzle_glow(beam *b)
 		if (bwi->beam_glow.num_frames > 1) {
 			b->beam_glow_frame += flFrametime;
 
-			// Sanity checks
-			if (b->beam_glow_frame < 0.0f)
-				b->beam_glow_frame = 0.0f;
-			else if (b->beam_glow_frame > 100.0f)
-				b->beam_glow_frame = 0.0f;
-
-			while (b->beam_glow_frame > bwi->beam_glow.total_time)
-				b->beam_glow_frame -= bwi->beam_glow.total_time;
-
-			framenum = fl2i((b->beam_glow_frame * bwi->beam_glow.num_frames) / bwi->beam_glow.total_time);
-
-			CLAMP(framenum, 0, bwi->beam_glow.num_frames - 1);
+			framenum = bm_get_anim_frame(bwi->beam_glow.first_frame, b->beam_glow_frame, bwi->beam_glow.total_time, true);
 		}
 
 		gr_set_bitmap(bwi->beam_glow.first_frame + framenum, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, alpha * pct);
@@ -1512,10 +1474,7 @@ void beam_render_muzzle_glow(beam *b)
 	} else {
 
 		// draw the bitmap
-		if (Cmdline_nohtl)
-			g3_rotate_vertex(&pt, &b->last_start);
-		else
-			g3_transfer_vertex(&pt, &b->last_start);
+		g3_transfer_vertex(&pt, &b->last_start);
 
 
 		int framenum = 0;
@@ -1523,18 +1482,7 @@ void beam_render_muzzle_glow(beam *b)
 		if (bwi->beam_glow.num_frames > 1) {
 			b->beam_glow_frame += flFrametime;
 
-			// Sanity checks
-			if (b->beam_glow_frame < 0.0f)
-				b->beam_glow_frame = 0.0f;
-			else if (b->beam_glow_frame > 100.0f)
-				b->beam_glow_frame = 0.0f;
-
-			while (b->beam_glow_frame > bwi->beam_glow.total_time)
-				b->beam_glow_frame -= bwi->beam_glow.total_time;
-
-			framenum = fl2i((b->beam_glow_frame * bwi->beam_glow.num_frames) / bwi->beam_glow.total_time);
-
-			CLAMP(framenum, 0, bwi->beam_glow.num_frames - 1);
+			framenum = bm_get_anim_frame(bwi->beam_glow.first_frame, b->beam_glow_frame, bwi->beam_glow.total_time, true);
 		}
 
 		gr_set_bitmap(bwi->beam_glow.first_frame + framenum, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, alpha * pct);
@@ -3411,7 +3359,7 @@ float beam_get_cone_dot(beam *b)
 	case BEAM_TYPE_D:
 	case BEAM_TYPE_E:
 		// even though these beams don't move, return a _very_ small value
-		return (float)cos(fl_radians(50.5f));
+		return cosf(fl_radians(50.5f));
 		
 	case BEAM_TYPE_B:
 		return vm_vec_dot(&b->binfo.dir_a, &b->binfo.dir_b);

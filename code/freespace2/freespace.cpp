@@ -311,8 +311,6 @@ int last_single_step=0;
 int game_zbuffer = 1;
 static int Game_paused;
 
-int Game_level_seed;
-
 #define EXPIRE_BAD_CHECKSUM			1
 #define EXPIRE_BAD_TIME					2
 
@@ -949,28 +947,18 @@ uint load_post_level_init;
  *
  * @return 0 on failure, 1 on success
  */
-void game_level_init(int seed)
+void game_level_init()
 {
 	game_busy( NOX("** starting game_level_init() **") );
 	load_gl_init = (uint) time(NULL);
-	// seed the random number generator
-	if ( seed == -1 ) {
-		// if no seed was passed, seed the generator either from the time value, or from the
-		// netgame security flags -- ensures that all players in multiplayer game will have the
-		// same randon number sequence (with static rand functions)
-		if ( Game_mode & GM_NORMAL ) {
-			Game_level_seed = (int) time(NULL);
-		} else {
-			Game_level_seed = Netgame.security;
-		}
-	} else {
-		Assert( !(Game_mode & GM_MULTIPLAYER) );
-		Game_level_seed = seed;
-	}
-	srand( Game_level_seed );
 
-	// semirand function needs to get re-initted every time in multiplayer
-	if ( Game_mode & GM_MULTIPLAYER ){
+	// seed the random number generator in multiplayer
+	if ( Game_mode & GM_MULTIPLAYER ) {
+		// seed the generator from the netgame security flags -- ensures that all players in
+		// multiplayer will have the same random number sequence (with static rand functions)
+		srand( Netgame.security );
+
+		// semirand function needs to get re-initted every time in multiplayer
 		init_semirand();
 	}
 
@@ -1142,7 +1130,6 @@ static int framenum;
  */
 void game_loading_callback(int count)
 {	
-	int new_framenum;
 	game_do_networking();
 
 	Assert( Game_loading_callback_inited==1 );
@@ -1150,12 +1137,12 @@ void game_loading_callback(int count)
 
 	int do_flip = 0;
 
-	new_framenum = ((Game_loading_ani.num_frames*count) / COUNT_ESTIMATE)+1;
-	if ( new_framenum > Game_loading_ani.num_frames-1 )	{
-		new_framenum = Game_loading_ani.num_frames-1;
-	} else if ( new_framenum < 0 )	{
-		new_framenum = 0;
+	int new_framenum = bm_get_anim_frame(Game_loading_ani.first_frame, static_cast<float>(count), static_cast<float>(COUNT_ESTIMATE));
+	// retail incremented the frame number by one, essentially skipping the 1st frame except for single-frame anims
+	if (Game_loading_ani.num_frames > 1 && new_framenum < Game_loading_ani.num_frames-1) {
+		new_framenum++;
 	}
+
 	//make sure we always run forwards - graphical hack
 	if(new_framenum > framenum)
 		framenum = new_framenum;
@@ -1616,8 +1603,6 @@ DCF(show_cpu,"Toggles showing cpu usage")
 
 #endif
 
-			int Game_init_seed;
-
 DCF(use_joy_mouse,"Makes joystick move mouse cursor")
 {
 	bool process = true;
@@ -1754,8 +1739,8 @@ void game_init()
 	// Moved from rand32, if we're gonna break, break immediately.
 	Assert(RAND_MAX == 0x7fff || RAND_MAX >= 0x7ffffffd);
 	// seed the random number generator
-	Game_init_seed = (int) time(NULL);
-	srand( Game_init_seed );
+	int game_init_seed = (int) time(NULL);
+	srand( game_init_seed );
 
 	Framerate_delay = 0;
 
@@ -3207,10 +3192,6 @@ void setup_environment_mapping(camid cid)
 	float old_zoom = View_zoom, new_zoom = 1.0f;//0.925f;
 	int i = 0;
 
-
-	if (Cmdline_nohtl)
-		return;
-
 	if(!cid.isValid())
 		return;
 
@@ -3316,7 +3297,7 @@ void setup_environment_mapping(camid cid)
 void game_environment_map_gen()
 {
 	const int size = 512;
-	int gen_flags = (BMP_FLAG_RENDER_TARGET_STATIC | BMP_FLAG_CUBEMAP);
+	int gen_flags = (BMP_FLAG_RENDER_TARGET_STATIC | BMP_FLAG_CUBEMAP | BMP_FLAG_RENDER_TARGET_MIPMAP);
 
 	if ( !Cmdline_env ) {
 		return;
@@ -3745,10 +3726,8 @@ void game_render_frame( camid cid )
 	neb2_render_setup(cid);
 
 #ifndef DYN_CLIP_DIST
-	if (!Cmdline_nohtl) {
-		gr_set_proj_matrix(Proj_fov, gr_screen.clip_aspect, Min_draw_distance, Max_draw_distance);
-		gr_set_view_matrix(&Eye_position, &Eye_matrix);
-	}
+	gr_set_proj_matrix(Proj_fov, gr_screen.clip_aspect, Min_draw_distance, Max_draw_distance);
+	gr_set_view_matrix(&Eye_position, &Eye_matrix);
 #endif
 
 	if ( Game_subspace_effect )	{
@@ -3766,13 +3745,10 @@ void game_render_frame( camid cid )
 	PROFILE("Particles", particle_render_all());					// render particles after everything else.	
 	
 #ifdef DYN_CLIP_DIST
-	if(!Cmdline_nohtl)
-	{
-		gr_end_proj_matrix();
-		gr_end_view_matrix();
-		gr_set_proj_matrix(Proj_fov, gr_screen.clip_aspect, Min_draw_distance, Max_draw_distance);
-		gr_set_view_matrix(&Eye_position, &Eye_matrix);
-	}
+	gr_end_proj_matrix();
+	gr_end_view_matrix();
+	gr_set_proj_matrix(Proj_fov, gr_screen.clip_aspect, Min_draw_distance, Max_draw_distance);
+	gr_set_view_matrix(&Eye_position, &Eye_matrix);
 #endif
 
 	beam_render_all();						// render all beam weapons
@@ -3814,11 +3790,8 @@ void game_render_frame( camid cid )
 	snd_spew_debug_info();
 #endif
 
-	if(!Cmdline_nohtl)
-	{
-		gr_end_proj_matrix();
-		gr_end_view_matrix();
-	}
+	gr_end_proj_matrix();
+	gr_end_view_matrix();
 
 	//Draw viewer cockpit
 	if(Viewer_obj != NULL && Viewer_mode != VM_TOPDOWN && Ship_info[Ships[Viewer_obj->instance].ship_info_index].cockpit_model_num > 0)
@@ -3827,16 +3800,15 @@ void game_render_frame( camid cid )
 		ship_render_cockpit(Viewer_obj);
 	}
 
-	if (!Cmdline_nohtl) {
-		gr_set_proj_matrix(Proj_fov, gr_screen.clip_aspect, Min_draw_distance, Max_draw_distance);
-		gr_set_view_matrix(&Eye_position, &Eye_matrix);
+	gr_set_proj_matrix(Proj_fov, gr_screen.clip_aspect, Min_draw_distance, Max_draw_distance);
+	gr_set_view_matrix(&Eye_position, &Eye_matrix);
 
-		// Do the sunspot
-		game_sunspot_process(flFrametime);
+	// Do the sunspot
+	game_sunspot_process(flFrametime);
 
-		gr_end_proj_matrix();
-		gr_end_view_matrix();
-	}
+	gr_end_proj_matrix();
+	gr_end_view_matrix();
+
 	Shadow_override = false;
 	//================ END OF 3D RENDERING STUFF ====================
 
@@ -3894,97 +3866,6 @@ void john_debug_stuff(vec3d *eye_pos, matrix *eye_orient)
 		}
 
 	}
-}
-#endif
-
-// following function for dumping frames for purposes of building trailers.
-#ifndef NDEBUG
-
-// function to toggle state of dumping every frame into PCX when playing the game
-DCF(dump_frames, "Toggles On/off frame dumping at 15 hz")
-{
-	if ( Debug_dump_frames == 0 )	{
-		// Turn it on
-		Debug_dump_frames = 15;
-		Debug_dump_trigger = 0;
-		gr_dump_frame_start( Debug_dump_frame_num, DUMP_BUFFER_NUM_FRAMES );
-		dc_printf( "Frame dumping at 15 hz is now ON\n" );
-	} else {
-		// Turn it off
-		Debug_dump_frames = 0;
-		Debug_dump_trigger = 0;
-		gr_dump_frame_stop();
-		dc_printf( "Frame dumping is now OFF\n" );
-	}
-}
-
-DCF(dump_frames_trigger, "Starts/stop frame dumping at 15 hz")
-{
-	if ( Debug_dump_frames == 0 )	{
-		// Turn it on
-		Debug_dump_frames = 15;
-		Debug_dump_trigger = 1;
-		gr_dump_frame_start( Debug_dump_frame_num, DUMP_BUFFER_NUM_FRAMES );
-		dc_printf( "Frame dumping at 15 hz is now ON\n" );
-	} else {
-		// Turn it off
-		Debug_dump_frames = 0;
-		Debug_dump_trigger = 0;
-		gr_dump_frame_stop();
-		dc_printf( "Frame dumping is now OFF\n" );
-	}
-}
-
-DCF(dump_frames30, "Starts/stop frame dumping at 30 hz")
-{
-	if ( Debug_dump_frames == 0 )	{
-		// Turn it on
-		Debug_dump_frames = 30;
-		Debug_dump_trigger = 0;
-		gr_dump_frame_start( Debug_dump_frame_num, DUMP_BUFFER_NUM_FRAMES );
-		dc_printf( "Frame dumping at 30 hz is now ON\n" );
-	} else {
-		// Turn it off
-		Debug_dump_frames = 0;
-		Debug_dump_trigger = 0;
-		gr_dump_frame_stop();
-		dc_printf( "Frame dumping is now OFF\n" );
-	}
-}
-
-DCF(dump_frames30_trigger, "Starts/stop frame dumping at 30 hz")
-{
-	if ( Debug_dump_frames == 0 )	{
-		// Turn it on
-		Debug_dump_frames = 30;
-		Debug_dump_trigger = 1;
-		gr_dump_frame_start( Debug_dump_frame_num, DUMP_BUFFER_NUM_FRAMES );
-		dc_printf( "Triggered frame dumping at 30 hz is now ON\n" );
-	} else {
-		// Turn it off
-		Debug_dump_frames = 0;
-		Debug_dump_trigger = 0;
-		gr_dump_frame_stop();
-		dc_printf( "Triggered frame dumping is now OFF\n" );
-	}
-}
-
-void game_maybe_dump_frame()
-{
-	if ( !Debug_dump_frames ){
-		return;
-	}
-
-	if( Debug_dump_trigger && !keyd_pressed[KEY_Q] ){
-		return;
-	}
-
-	game_stop_time();
-
-	gr_dump_frame();
-	Debug_dump_frame_num++;
-
-	game_start_time();
 }
 #endif
 
@@ -4448,7 +4329,6 @@ void game_frame(bool paused)
 	}
 #endif
 	// start timing frame
-	timing_frame_start();
 	profile_begin("Main Frame");
 
 	DEBUG_GET_TIME( total_time1 )
@@ -4613,11 +4493,7 @@ void game_frame(bool paused)
 
 			// maybe render and process the dead popup
 			game_maybe_do_dead_popup(flFrametime);
-
-			// start timing frame
-			timing_frame_stop();
-			// timing_display(30, 10);			
-
+			
 			// If a regular popup is active, don't flip (popup code flips)
 			if( !popup_running_state() ){
 				DEBUG_GET_TIME( flip_time1 )
@@ -4625,9 +4501,6 @@ void game_frame(bool paused)
 				DEBUG_GET_TIME( flip_time2 )
 			}
 
-#ifndef NDEBUG
-			game_maybe_dump_frame();			// used to dump pcx files for building trailers
-#endif		
 		} else {
 			game_show_standalone_framerate();
 		}
@@ -4871,7 +4744,9 @@ void game_set_frametime(int state)
 	Last_frame_timestamp = timestamp();
 
 	flFrametime = f2fl(Frametime);
-	timestamp_inc(flFrametime);
+	
+	auto frametime_ms = f2i(fixmul(Frametime, F1_0 * TIMESTAMP_FREQUENCY));
+	timestamp_inc(frametime_ms);
 
 	// wrap overall frametime if needed
 	if ( FrametimeOverall > (INT_MAX - F1_0) )
@@ -7510,7 +7385,7 @@ typedef struct animating_obj
 	int	first_frame;
 	int	num_frames;
 	int	current_frame;
-	float time;
+	float duration;
 	float elapsed_time;
 } animating_obj;
 
@@ -7527,7 +7402,7 @@ void init_animating_pointer()
 	Animating_mouse.first_frame	= -1;
 	Animating_mouse.num_frames		= 0;
 	Animating_mouse.current_frame	= -1;
-	Animating_mouse.time				= 0.0f;
+	Animating_mouse.duration = 0.0f;
 	Animating_mouse.elapsed_time	= 0.0f;
 }
 
@@ -7540,7 +7415,6 @@ void init_animating_pointer()
 // 
 void load_animating_pointer(char *filename)
 {
-	int				fps;
 	animating_obj *am;
 
 	init_animating_pointer();
@@ -7548,11 +7422,10 @@ void load_animating_pointer(char *filename)
 	mprintf(("loading animated cursor \"%s\"\n", filename));
 
 	am = &Animating_mouse;
-	am->first_frame = bm_load_animation(filename, &am->num_frames, &fps);
+	am->first_frame = bm_load_animation(filename, &am->num_frames, nullptr, nullptr, &am->duration);
 	if ( am->first_frame == -1 ) 
 		Error(LOCATION, "Could not load animation %s for the mouse pointer\n", filename);
 	am->current_frame = 0;
-	am->time = am->num_frames / i2fl(fps);
 }
 
 // ----------------------------------------------------------------------------
@@ -7585,19 +7458,14 @@ void unload_animating_pointer()
 // draw the correct frame of the game mouse... called from game_maybe_draw_mouse()
 void game_render_mouse(float frametime)
 {
-	int				mx, my;
 	animating_obj	*am;
 
 	// if animating cursor exists, play the next frame
 	am = &Animating_mouse;
 	if ( am->first_frame != -1 ) {
-		mouse_get_pos(&mx, &my);
 		am->elapsed_time += frametime;
-		am->current_frame = fl2i( ( am->elapsed_time / am->time ) * (am->num_frames-1) );
-		if ( am->current_frame >= am->num_frames ) {
-			am->current_frame = 0;
-			am->elapsed_time = 0.0f;
-		}
+		am->current_frame = bm_get_anim_frame(am->first_frame, am->elapsed_time, 0.0f, true);
+		am->elapsed_time = fmod(am->elapsed_time, am->duration); // avoid loss of precision & overflow issues
 		gr_set_cursor_bitmap(am->first_frame + am->current_frame);
 	}
 }
@@ -8107,9 +7975,6 @@ void get_version_string(char *str, int max_size)
 			strcat_s( str, max_size, " OpenGL" );
 			break;
 	}
-
-	if (Cmdline_nohtl)
-		strcat_s( str, max_size, " non-HT&L" );
 
 	// if a custom identifier exists, put it at the very end
 	#ifdef FS_VERSION_IDENT

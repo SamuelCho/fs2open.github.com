@@ -2,7 +2,7 @@ dnl configure.ac for fs2_open
 dnl
 dnl $Id: configure.ac,v 1.31.2.4 2007-05-28 19:36:12 taylor Exp $
 
-AC_INIT(fs2_open, 3.7.3)
+AC_INIT(fs2_open, 3.7.5)
 AC_CONFIG_SRCDIR(code/freespace2/freespace.cpp)
 
 dnl we need at least version 2.54 of autoconf
@@ -274,7 +274,7 @@ if test "$fs2_debug" = "yes" ; then
 else
 	AC_DEFINE([NDEBUG])
 	D_CFLAGS="$D_CFLAGS -O2 -Wall -funroll-loops"
-	D_CFLAGS="$D_CFLAGS -Wno-write-strings -Wno-unused-variable"
+	D_CFLAGS="$D_CFLAGS -Wno-write-strings -Wno-unused-variable -Wno-unused-function"
 	
 	AC_C_COMPILE_FLAGS([-Wno-unused-but-set-variable])
 	
@@ -470,14 +470,12 @@ D_CFLAGS=$D_CFLAGS" $PNG_CFLAGS"
 FS2_LIBS=$FS2_LIBS" $PNG_LIBS"
 
 dnl LUA
-## Checking for lua.pc and if that fails lua5.1.pc
-PKG_CHECK_MODULES(
-	[LUA],
-	[lua >= 5.1.3 lua < 5.2],
-	[], ## do nothing special
-	[PKG_CHECK_MODULES([LUA], [lua5.1 >= 5.1.3 lua5.1 < 5.2], [], [
-        PKG_CHECK_MODULES([LUA], [lua-5.1 >= 5.1.3 lua-5.1 < 5.2], [])
-    ])])
+## Checking for lua.pc and if that fails other possible names
+PKG_CHECK_MODULES([LUA], [lua >= 5.1.3 lua < 5.2], [], [
+	PKG_CHECK_MODULES([LUA], [lua5.1 >= 5.1.3 lua5.1 < 5.2], [], [
+	PKG_CHECK_MODULES([LUA], [lua-5.1 >= 5.1.3 lua-5.1 < 5.2], [], [
+	PKG_CHECK_MODULES([LUA], [lua51 >= 5.1.3 lua51 < 5.2], [])
+	])])])
 D_CFLAGS=$D_CFLAGS" $LUA_CFLAGS"
 FS2_LIBS=$FS2_LIBS" $LUA_LIBS"
 

@@ -90,6 +90,13 @@ int Multi_common_text_max_display[GR_NUM_RESOLUTIONS] = {
 	12,	// GR_1024
 };
 
+// Cutoff values for determining the color of the ping text in server select window
+// Pings below MULTI_PING_MIN_YELLOW are in green
+const int MULTI_PING_MIN_YELLOW = 100;
+const int MULTI_PING_MIN_ORANGE = 150;
+const int MULTI_PING_MIN_RED = 250;
+const int MULTI_PING_MIN_ONE_SECOND = 1000;
+
 #define MULTI_COMMON_TEXT_META_CHAR				'$'
 #define MULTI_COMMON_TEXT_MAX_LINE_LENGTH		200
 #define MULTI_COMMON_TEXT_MAX_LINES				20
@@ -679,11 +686,6 @@ int Mj_cd_coords[GR_NUM_RESOLUTIONS] = {
 #define IP_CONFIG_FNAME				"tcp.cfg"		// name of the file which contains known TCP addresses
 
 // extents of the entire boundable game info region
-// NOTE : these numbers are completely empirical
-#define MJ_PING_GREEN				160
-#define MJ_PING_YELLOW				300
-#define MJ_PING_RED					700
-#define MJ_PING_ONE_SECOND			1000
 
 int Mj_list_area_coords[GR_NUM_RESOLUTIONS][4] = {
 	{ // GR_640
@@ -824,11 +826,6 @@ void multi_join_game_init()
 	Assert( Net_player != NULL );
 
 	switch (Multi_options_g.protocol) {	
-	case NET_IPX:
-		ADDRESS_LENGTH = IPX_ADDRESS_LENGTH;
-		PORT_LENGTH = IPX_PORT_LENGTH;
-		break;
-
 	case NET_TCP:
 		ADDRESS_LENGTH = IP_ADDRESS_LENGTH;		
 		PORT_LENGTH = IP_PORT_LENGTH;			
@@ -1352,14 +1349,16 @@ void multi_join_display_games()
 
 			// display the ping time
 			if(moveup->ping.ping_avg > 0){
-				if(moveup->ping.ping_avg > MJ_PING_ONE_SECOND){
+				if(moveup->ping.ping_avg > MULTI_PING_MIN_ONE_SECOND){
 					gr_set_color_fast(&Color_bright_red);
 					strcpy_s(str,XSTR("> 1 sec",761));
 				} else {
 					// set the appropriate ping time color indicator
-					if(moveup->ping.ping_avg > MJ_PING_RED){
+					if (moveup->ping.ping_avg > MULTI_PING_MIN_RED){
 						gr_set_color_fast(&Color_bright_red);
-					} else if(moveup->ping.ping_avg > MJ_PING_YELLOW){
+					} else if (moveup->ping.ping_avg > MULTI_PING_MIN_ORANGE){
+						gr_set_color_fast(&Color_orange);
+					} else if(moveup->ping.ping_avg > MULTI_PING_MIN_YELLOW){
 						gr_set_color_fast(&Color_bright_yellow);
 					} else {
 						gr_set_color_fast(&Color_bright_green);
@@ -1571,7 +1570,7 @@ void multi_join_eval_pong(net_addr *addr, fix pong_time)
 	if(moveup != NULL){
 		do {				
 			if(psnet_same(&moveup->server_addr,addr)){
-				multi_ping_eval_pong(&moveup->ping);
+				multi_ping_eval_pong(&moveup->ping, pong_time);
 				
 				break;
 			} else {
@@ -2077,17 +2076,7 @@ int multi_join_warn_pxo()
 void multi_join_blit_protocol()
 {
 	gr_set_color_fast(&Color_bright);
-
-	switch(Socket_type){
-	case NET_TCP:		
-		// straight TCP		
-		gr_string(5, 2, "TCP", GR_RESIZE_MENU);		
-		break;
-
-	case NET_IPX:
-		gr_string(5, 2, "IPX", GR_RESIZE_MENU);
-		break;
-	}
+	gr_string(5, 2, "TCP", GR_RESIZE_MENU);
 }
 
 

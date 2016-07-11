@@ -13,6 +13,7 @@
 
 #include "graphics/2d.h"
 #include "graphics/gropenglstate.h"
+#include "graphics/gropenglshader.h"
 #include "graphics/shadows.h"
 
 void gr_opengl_aabitmap_ex(int x, int y, int w, int h, int sx, int sy, int resize_mode, bool mirror);
@@ -31,8 +32,6 @@ void gr_opengl_cross_fade(int bmap1, int bmap2, int x1, int y1, int x2, int y2, 
 void gr_opengl_shade(int x, int y, int w, int h, int resize_mode);
 void gr_opengl_flash(int r, int g, int b);
 void gr_opengl_flash_alpha(int r, int g, int b, int a);
-void gr_opengl_fade_in(int instantaneous);
-void gr_opengl_fade_out(int instantaneous);
 void gr_opengl_tmapper(int nverts, vertex **verts, uint flags);
 void gr_opengl_render(int nverts, vertex *verts, uint flags);
 void gr_opengl_render_effect(int nverts, vertex *verts, float *radius_list, uint flags);
@@ -133,6 +132,7 @@ inline void opengl_draw_coloured_quad(
 	vert_def.add_vertex_component(vertex_format_data::SCREEN_POS, 0, glVertices);
 
 	opengl_bind_vertex_layout(vert_def);
+	opengl_shader_set_passthrough(false);
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
@@ -153,6 +153,7 @@ inline void opengl_draw_coloured_quad(
 	vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, glVertices);
 
 	opengl_bind_vertex_layout(vert_def);
+	opengl_shader_set_passthrough(false);
 
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 }
@@ -160,6 +161,7 @@ inline void opengl_draw_coloured_quad(
 extern int Scene_texture_initialized;
 
 extern GLuint Scene_color_texture;
+extern GLuint Scene_ldr_texture;
 extern GLuint Scene_luminance_texture;
 extern GLuint Scene_effect_texture;
 
@@ -170,6 +172,7 @@ extern float Scene_texture_u_scale;
 extern float Scene_texture_v_scale;
 
 extern bool Deferred_lighting;
+extern bool High_dynamic_range;
 
 extern bool Use_Shaders_for_effect_rendering;
 

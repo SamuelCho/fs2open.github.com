@@ -319,9 +319,6 @@ void main_hall_do_multi_ready()
 	case NETWORK_ERROR_NO_PROTOCOL:
 		if (Multi_options_g.protocol == NET_TCP) {
 			popup( PF_USE_AFFIRMATIVE_ICON | PF_NO_NETWORKING, 1, POPUP_OK, XSTR( "TCP/IP protocol not found.  This protocol is required for multiplayer FreeSpace.", 1602));
-		} else {
-			Assert(Multi_options_g.protocol == NET_IPX);
-			popup( PF_USE_AFFIRMATIVE_ICON | PF_NO_NETWORKING, 1, POPUP_OK, XSTR( "IPX protocol not found.  This protocol is required for multiplayer FreeSpace.", 1603));
 		}
 		break;
 	case NETWORK_ERROR_CONNECT_TO_ISP:
@@ -343,11 +340,6 @@ void main_hall_do_multi_ready()
 		} else {
 			popup( PF_USE_AFFIRMATIVE_ICON | PF_NO_NETWORKING, 1, POPUP_OK, XSTR( "You have selected TCP/IP for multiplayer FreeSpace, but the TCP/IP protocol was not detected on your machine.", 362));
 		}
-		return;
-	}
-
-	if ((Multi_options_g.protocol == NET_IPX) && !Ipx_active) {
-		popup( PF_USE_AFFIRMATIVE_ICON | PF_NO_NETWORKING, 1, POPUP_OK, XSTR( "You have selected IPX for multiplayer FreeSpace, but the IPX protocol was not detected on your machine.", 1402));
 		return;
 	}
 
@@ -700,6 +692,8 @@ void main_hall_do(float frametime)
 		for (int c_idx = 0; c_idx < (int) Main_hall->cheat.size(); c_idx++) {
 			cheat_anim_found = false;
 
+			// TODO change way cheat anims are loaded to work with apngs
+			// maybe load both cheat & normal, advance frames in lockstep, display which one you want
 			if(Main_hall_cheat.find(Main_hall->cheat.at(c_idx)) != SCP_string::npos) {
 				cheat_found = true;
 				// switch animations

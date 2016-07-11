@@ -32,6 +32,7 @@
 #include "render/3d.h"
 
 GLuint Scene_framebuffer;
+GLuint Scene_ldr_texture;
 GLuint Scene_color_texture;
 GLuint Scene_position_texture;
 GLuint Scene_normal_texture;
@@ -50,6 +51,7 @@ int Scene_texture_initialized;
 bool Scene_framebuffer_in_frame;
 
 bool Deferred_lighting = false;
+bool High_dynamic_range = false;
 
 int Scene_texture_width;
 int Scene_texture_height;
@@ -238,6 +240,8 @@ void opengl_aabitmap_ex_internal(int x, int y, int w, int h, int sx, int sy, int
 	}
 
 	GLboolean cull_face = GL_state.CullFace(GL_FALSE);
+
+	opengl_shader_set_passthrough(true, bm_has_alpha_channel(gr_screen.current_bitmap) ? false : true);
 
 	opengl_draw_textured_quad(x1,y1,u0,v0, x2,y2,u1,v1);
 
@@ -505,6 +509,8 @@ void gr_opengl_string(float sx, float sy, const char *s, int resize_mode)
 	vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(v4), &GL_string_render_buff[0].u);
 
 	opengl_bind_vertex_layout(vert_def);
+	//opengl_shader_set_current();
+	opengl_shader_set_passthrough(true, true);
 
 	// pick out letter coords, draw it, goto next letter and do the same
 	while (*s)	{
@@ -705,6 +711,7 @@ void gr_opengl_line(int x1,int y1,int x2,int y2, int resize_mode)
 		vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, vert);
 
 		opengl_bind_vertex_layout(vert_def);
+		opengl_shader_set_passthrough(false);
 
 		glDrawArrays(GL_POINTS, 0, 1);
 
@@ -743,6 +750,7 @@ void gr_opengl_line(int x1,int y1,int x2,int y2, int resize_mode)
 	vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, line);
 
 	opengl_bind_vertex_layout(vert_def);
+	opengl_shader_set_passthrough(false);
 
 	glDrawArrays(GL_LINES, 0, 2);
 
@@ -753,10 +761,6 @@ void gr_opengl_line(int x1,int y1,int x2,int y2, int resize_mode)
 
 void gr_opengl_line_htl(const vec3d *start, const vec3d *end)
 {
-	if (Cmdline_nohtl) {
-		return;
-	}
-
 	gr_zbuffer_type zbuffer_state = (gr_zbuffering) ? ZBUFFER_TYPE_FULL : ZBUFFER_TYPE_NONE;
 	GL_state.SetTextureSource(TEXTURE_SOURCE_NONE);
 	GL_state.SetZbufferType(zbuffer_state);
@@ -783,6 +787,7 @@ void gr_opengl_line_htl(const vec3d *start, const vec3d *end)
 	vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, line);
 
 	opengl_bind_vertex_layout(vert_def);
+	opengl_shader_set_passthrough(false);
 
 	glDrawArrays(GL_LINES, 0, 2);
 
@@ -828,6 +833,7 @@ void gr_opengl_aaline(vertex *v1, vertex *v2)
 		vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, vert);
 
 		opengl_bind_vertex_layout(vert_def);
+		opengl_shader_set_passthrough(false);
 
 		glDrawArrays(GL_POINTS, 0, 1);
 
@@ -865,6 +871,7 @@ void gr_opengl_aaline(vertex *v1, vertex *v2)
 	vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, line);
 
 	opengl_bind_vertex_layout(vert_def);
+	opengl_shader_set_passthrough(false);
 
 	glDrawArrays(GL_LINES, 0, 2);
 
@@ -935,6 +942,7 @@ void gr_opengl_gradient(int x1, int y1, int x2, int y2, int resize_mode)
 	vert_def.add_vertex_component(vertex_format_data::COLOR4, 0, colour);
 
 	opengl_bind_vertex_layout(vert_def);
+	opengl_shader_set_passthrough(false);
 
 	glDrawArrays(GL_LINES, 0, 2);
 }
@@ -1022,6 +1030,7 @@ void gr_opengl_unfilled_circle(int xc, int yc, int d, int resize_mode)
 	vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, circle);
 
 	opengl_bind_vertex_layout(vert_def);
+	opengl_shader_set_passthrough(false);
 
 	glDrawArrays(GL_QUAD_STRIP, 0, segments * 2);
 
@@ -1050,8 +1059,8 @@ void gr_opengl_arc(int xc, int yc, float r, float angle_start, float angle_end, 
 	float s = sinf(theta);
 	float t;
 
-	float x1 = cosf(ANG_TO_RAD(angle_start));
-	float y1 = sinf(ANG_TO_RAD(angle_start));
+	float x1 = cosf(fl_radians(angle_start));
+	float y1 = sinf(fl_radians(angle_start));
 	float x2 = x1;
 	float y2 = y1;
 
@@ -1125,6 +1134,7 @@ void gr_opengl_arc(int xc, int yc, float r, float angle_start, float angle_end, 
 		vertex_layout vert_def;
 		vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, arc);
 		opengl_bind_vertex_layout(vert_def);
+		opengl_shader_set_passthrough(false);
 
 		glDrawArrays(GL_TRIANGLE_FAN, 0, segments + 1);
 	} else {
@@ -1148,6 +1158,7 @@ void gr_opengl_arc(int xc, int yc, float r, float angle_start, float angle_end, 
 		vertex_layout vert_def;
 		vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, arc);
 		opengl_bind_vertex_layout(vert_def);
+		opengl_shader_set_passthrough(false);
 
 		glDrawArrays(GL_QUAD_STRIP, 0, segments * 2);
 	}
@@ -1381,15 +1392,26 @@ void opengl_draw_primitive(int nv, vertex **verts, uint flags, float u_scale, fl
 
 	vert_def.add_vertex_component(vertex_format_data::POSITION4, sizeof(struct v6), &vertPos[0].x);
 
+	bool textured = false;
+
 	if(flags & TMAP_FLAG_TEXTURED) {
 		vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(struct v6), &vertPos[0].u);
 		//vert_def.add_vertex_component(vertex_format_data::TEX_COORD1, sizeof(struct v6), &vertPos[0].u);
+
+		textured = true;
 	}
 
 	if(flags & (TMAP_FLAG_NEBULA | TMAP_FLAG_GOURAUD)) {
 		vert_def.add_vertex_component(vertex_format_data::COLOR4, 0, &vertCol[0].r);
 	}
 
+	float color_scale = 1.0f;
+
+	if ( High_dynamic_range && flags & TMAP_FLAG_EMISSIVE ) {
+		color_scale = 1.5f;
+	}
+
+	opengl_shader_set_passthrough(textured, false, color_scale);
 	opengl_bind_vertex_layout(vert_def);
 
 	glDrawArrays(gl_mode, 0, nv);
@@ -1484,13 +1506,15 @@ void opengl_tmapper_internal3d(int nv, vertex **verts, uint flags)
 
 	opengl_setup_render_states(r, g, b, alpha, tmap_type, flags);
 
+	bool textured = false;
+
 	if (flags & TMAP_FLAG_TEXTURED) {
 		if ( !gr_opengl_tcache_set(gr_screen.current_bitmap, tmap_type, &u_scale, &v_scale) ) {
 			return;
 		}
-	}
 
-	opengl_shader_set_current();
+		textured = true;
+	}
 
 	GLboolean cull_face = GL_state.CullFace(GL_FALSE);
 
@@ -1541,6 +1565,11 @@ void opengl_tmapper_internal3d(int nv, vertex **verts, uint flags)
 		vertvec.push_back(va->world.xyz.z);
 	}
 
+	float color_scale = 1.0f;
+	if ( High_dynamic_range && flags & TMAP_FLAG_EMISSIVE ) {
+		color_scale = 1.5f;
+	}
+
 	GL_state.Array.BindArrayBuffer(0);
 
 	vertex_layout vert_def;
@@ -1553,6 +1582,7 @@ void opengl_tmapper_internal3d(int nv, vertex **verts, uint flags)
 	vert_def.add_vertex_component(vertex_format_data::TEX_COORD, 0, &uvcoords.front());
 
 	opengl_bind_vertex_layout(vert_def);
+	opengl_shader_set_passthrough(textured, false, color_scale);
 
 	glDrawArrays(gl_mode, 0, nv);
 
@@ -1563,7 +1593,7 @@ void opengl_tmapper_internal3d(int nv, vertex **verts, uint flags)
 
 void gr_opengl_tmapper(int nverts, vertex **verts, uint flags)
 {
-	if ( !Cmdline_nohtl && (flags & TMAP_HTL_3D_UNLIT) ) {
+	if ( flags & TMAP_HTL_3D_UNLIT) {
 		opengl_tmapper_internal3d(nverts, verts, flags);
 	} else {
 		opengl_tmapper_internal(nverts, verts, flags);
@@ -1594,11 +1624,14 @@ void opengl_render_internal(int nverts, vertex *verts, uint flags)
 	GL_state.Array.BindArrayBuffer(0);
 
 	vertex_layout vert_def;
+	bool textured = false;
 
 	if (flags & TMAP_FLAG_TEXTURED) {
 		if ( !gr_opengl_tcache_set(gr_screen.current_bitmap, tmap_type, &u_scale, &v_scale) ) {
 			return;
 		}
+
+		textured = true;
 
 		vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &verts[0].texture_position.u);
 
@@ -1639,6 +1672,8 @@ void opengl_render_internal(int nverts, vertex *verts, uint flags)
 
 	gr_opengl_set_2d_matrix();
 
+	opengl_shader_set_passthrough(textured);
+
 	glDrawArrays(gl_mode, 0, nverts);
 
 	gr_opengl_end_2d_matrix();
@@ -1669,12 +1704,14 @@ void opengl_render_internal3d(int nverts, vertex *verts, uint flags)
 	GL_state.Array.BindArrayBuffer(0);
 
 	vertex_layout vert_def;
+	bool textured = false;
 
 	if (flags & TMAP_FLAG_TEXTURED) {
 		if ( !gr_opengl_tcache_set(gr_screen.current_bitmap, tmap_type, &u_scale, &v_scale) ) {
 			return;
 		}
 
+		textured = true;
 		vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &verts[0].texture_position.u);
 	}
 
@@ -1701,9 +1738,15 @@ void opengl_render_internal3d(int nverts, vertex *verts, uint flags)
 		GL_state.Color( (ubyte)r, (ubyte)g, (ubyte)b, (ubyte)alpha );
 	}
 
+	float color_scale = 1.0f;
+	if ( High_dynamic_range && flags & TMAP_FLAG_EMISSIVE ) {
+		color_scale = 1.5f;
+	}
+
 	vert_def.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), &verts[0].world.xyz.x);
 
 	opengl_bind_vertex_layout(vert_def);
+	opengl_shader_set_passthrough(textured, false, color_scale);
 
 	glDrawArrays(gl_mode, 0, nverts);
 
@@ -1749,6 +1792,8 @@ void gr_opengl_render_effect(int nverts, vertex *verts, float *radius_list, uint
 			}
 
 			vert_def.add_vertex_component(vertex_format_data::RADIUS, 0, radius_list);
+		} else {
+			opengl_shader_set_passthrough(true);
 		}
 
 		if ( !gr_opengl_tcache_set(gr_screen.current_bitmap, tmap_type, &u_scale, &v_scale) ) {
@@ -1756,6 +1801,8 @@ void gr_opengl_render_effect(int nverts, vertex *verts, float *radius_list, uint
 		}
 
 		vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(vertex), &verts[0].texture_position.u);
+	} else {
+		opengl_shader_set_passthrough(false);
 	}
 
 	GLboolean cull_face = GL_state.CullFace(GL_FALSE);
@@ -1798,7 +1845,7 @@ void gr_opengl_render_effect(int nverts, vertex *verts, float *radius_list, uint
 
 void gr_opengl_render(int nverts, vertex *verts, uint flags)
 {
-	if ( !Cmdline_nohtl && (flags & TMAP_HTL_3D_UNLIT) ) {
+	if ( flags & TMAP_HTL_3D_UNLIT) {
 		opengl_render_internal3d(nverts, verts, flags);
 	} else {
 		opengl_render_internal(nverts, verts, flags);
@@ -2036,17 +2083,6 @@ void gr_opengl_flash_alpha(int r, int g, int b, int a)
 	opengl_draw_coloured_quad((GLint)x1, (GLint)y1, (GLint)x2, (GLint)y2);
 }
 
-
-void gr_opengl_fade_in(int instantaneous)
-{
-	// Empty - DDOI
-}
-
-void gr_opengl_fade_out(int instantaneous)
-{
-	// Empty - DDOI
-}
-
 void opengl_bitmap_ex_internal(int x, int y, int w, int h, int sx, int sy, int resize_mode)
 {
 	if ( (w < 1) || (h < 1) ) {
@@ -2091,6 +2127,7 @@ void opengl_bitmap_ex_internal(int x, int y, int w, int h, int sx, int sy, int r
 	}
 
 	GL_state.Color(255, 255, 255, (GLubyte)(gr_screen.current_alpha * 255));
+	opengl_shader_set_passthrough();
 
 	opengl_draw_textured_quad(x1, y1, u0, v0, x2, y2, u1, v1);
 }
@@ -2253,10 +2290,6 @@ void gr_opengl_bitmap_ex(int x, int y, int w, int h, int sx, int sy, int resize_
 
 void gr_opengl_sphere_htl(float rad)
 {
-	if (Cmdline_nohtl) {
-		return;
-	}
-
 	GLUquadricObj *quad = NULL;
 
 	// FIXME: before this is used in anything other than FRED2 we need to make this creation/deletion
@@ -2381,10 +2414,6 @@ void gr_opengl_deferred_light_sphere_init(int rings, int segments) // Generate a
 
 void gr_opengl_draw_deferred_light_sphere(vec3d *position, float rad, bool clearStencil = true)
 {
-	if (Cmdline_nohtl) {
-		return;
-	}
-
 	g3_start_instance_matrix(position, &vmd_identity_matrix, true);
 
 	GL_state.Uniform.setUniform3f("scale", rad, rad, rad);
@@ -2513,10 +2542,6 @@ void gr_opengl_deferred_light_cylinder_init(int segments) // Generate a VBO of a
 
 void gr_opengl_draw_deferred_light_cylinder(vec3d *position,matrix *orient, float rad, float length, bool clearStencil = true)
 {
-	if (Cmdline_nohtl) {
-		return;
-	}
-
 	g3_start_instance_matrix(position, orient, true);
 
 	GL_state.Uniform.setUniform3f("scale", rad, rad, length);
@@ -2537,9 +2562,6 @@ void gr_opengl_draw_deferred_light_cylinder(vec3d *position,matrix *orient, floa
 
 void gr_opengl_draw_line_list(const colored_vector *lines, int num)
 {
-	if (Cmdline_nohtl) {
-		return;
-	}
 }
 extern int opengl_check_framebuffer();
 void opengl_setup_scene_textures()
@@ -2551,6 +2573,7 @@ void opengl_setup_scene_textures()
 		Cmdline_softparticles = 0;
 		Cmdline_fb_explosions = 0;
 
+		Scene_ldr_texture = 0;
 		Scene_color_texture = 0;
 		Scene_effect_texture = 0;
 		Scene_depth_texture = 0;
@@ -2565,6 +2588,7 @@ void opengl_setup_scene_textures()
 		Cmdline_postprocess = 0;
 		Cmdline_softparticles = 0;
 
+		Scene_ldr_texture = 0;
 		Scene_color_texture = 0;
 		Scene_effect_texture = 0;
 		Scene_depth_texture = 0;
@@ -2588,6 +2612,8 @@ void opengl_setup_scene_textures()
 	vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Scene_framebuffer);
 
 	// setup main render texture
+
+	// setup high dynamic range color texture
 	glGenTextures(1, &Scene_color_texture);
 
 	GL_state.Texture.SetActiveUnit(0);
@@ -2600,9 +2626,24 @@ void opengl_setup_scene_textures()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, Scene_texture_width, Scene_texture_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F_ARB, Scene_texture_width, Scene_texture_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 
 	vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Scene_color_texture, 0);
+
+	// setup low dynamic range color texture
+	glGenTextures(1, &Scene_ldr_texture);
+
+	GL_state.Texture.SetActiveUnit(0);
+	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+	GL_state.Texture.Enable(Scene_ldr_texture);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, Scene_texture_width, Scene_texture_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 
 	// setup position render texture
 	glGenTextures(1, &Scene_position_texture);
@@ -2656,6 +2697,7 @@ void opengl_setup_scene_textures()
 	vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT3_EXT, GL_TEXTURE_2D, Scene_specular_texture, 0);
 
 	//Set up luminance texture (used as input for FXAA)
+	// also used as a light accumulation buffer during the deferred pass
 	glGenTextures(1, &Scene_luminance_texture);
 
 	GL_state.Texture.SetActiveUnit(0);
@@ -2668,7 +2710,7 @@ void opengl_setup_scene_textures()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, Scene_texture_width, Scene_texture_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F_ARB, Scene_texture_width, Scene_texture_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 
 	// setup effect texture
 
@@ -2684,7 +2726,7 @@ void opengl_setup_scene_textures()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, Scene_texture_width, Scene_texture_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F_ARB, Scene_texture_width, Scene_texture_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 
 	vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT4_EXT, GL_TEXTURE_2D, Scene_effect_texture, 0);
 
@@ -2926,6 +2968,10 @@ void gr_opengl_scene_texture_begin()
 	}
 
 	Scene_framebuffer_in_frame = true;
+
+	if ( Cmdline_postprocess && !PostProcessing_override ) {
+		High_dynamic_range = true;
+	}
 }
 
 float time_buffer = 0.0f;
@@ -2985,6 +3031,7 @@ void gr_opengl_scene_texture_end()
 			vert_def.add_vertex_component(vertex_format_data::TEX_COORD, 0, uvcoords);
 
 			opengl_bind_vertex_layout(vert_def);
+			opengl_shader_set_passthrough();
 
 			glDrawArrays(GL_QUADS, 0, 4);
 		}
@@ -3010,6 +3057,7 @@ void gr_opengl_scene_texture_end()
 			vert_def.add_vertex_component(vertex_format_data::TEX_COORD, 0, uvcoords);
 
 			opengl_bind_vertex_layout(vert_def);
+			opengl_shader_set_passthrough();
 
 			glDrawArrays(GL_QUADS, 0, 4);
 		}
@@ -3031,6 +3079,7 @@ void gr_opengl_scene_texture_end()
 	Scene_texture_v_scale = 1.0f;
 
 	Scene_framebuffer_in_frame = false;
+	High_dynamic_range = false;
 }
 
 void gr_opengl_copy_effect_texture()
@@ -3052,11 +3101,15 @@ void opengl_clear_deferred_buffers()
 	GLboolean blend = GL_state.Blend(GL_FALSE);
 	GLboolean cull = GL_state.CullFace(GL_FALSE);
 
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
 	opengl_shader_set_current( gr_opengl_maybe_create_shader(SDR_TYPE_DEFERRED_CLEAR, 0) );
 
 	opengl_draw_textured_quad(-1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 
 	opengl_shader_set_current();
+
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
 
 	GL_state.DepthTest(depth);
 	GL_state.DepthMask(depth_mask);
@@ -3071,6 +3124,7 @@ void gr_opengl_deferred_lighting_begin()
 		return;
 
 	Deferred_lighting = true;
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
 	GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_COLOR_ATTACHMENT2_EXT, GL_COLOR_ATTACHMENT3_EXT };
 	vglDrawBuffers(4, buffers);
@@ -3082,6 +3136,8 @@ void gr_opengl_deferred_lighting_end()
 		return;
 	Deferred_lighting = false;
 	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_FALSE);
 }
 
 extern light Lights[MAX_LIGHTS];
@@ -3105,6 +3161,12 @@ void gr_opengl_deferred_lighting_finish()
 
 	opengl_shader_set_current( gr_opengl_maybe_create_shader(SDR_TYPE_DEFERRED_LIGHTING, 0) );
 
+	vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_luminance_texture, 0);
+	vglFramebufferRenderbufferEXT(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, Scene_stencil_buffer);
+	vglFramebufferRenderbufferEXT(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, Scene_stencil_buffer);
+
+	GL_state.Texture.SetShaderMode(GL_TRUE);
+
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Scene_color_texture);
@@ -3120,10 +3182,6 @@ void gr_opengl_deferred_lighting_finish()
 	GL_state.Texture.SetActiveUnit(3);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Scene_specular_texture);
-
-	vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_luminance_texture, 0);
-	vglFramebufferRenderbufferEXT(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, Scene_stencil_buffer);
-	vglFramebufferRenderbufferEXT(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, Scene_stencil_buffer);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -3229,7 +3287,13 @@ void gr_opengl_deferred_lighting_finish()
 		0.0f, Scene_texture_v_scale
 	};
 
-	opengl_shader_set_current();
+	if ( High_dynamic_range ) {
+		High_dynamic_range = false;
+		opengl_shader_set_passthrough();
+		High_dynamic_range = true;
+	} else {
+		opengl_shader_set_passthrough();
+	}
 
 	GL_state.Array.BindArrayBuffer(0);
 	GL_state.Array.BindElementBuffer(0);
@@ -3264,6 +3328,7 @@ void gr_opengl_deferred_lighting_finish()
 	GL_state.CullFace(cull);
 
 	GL_state.SetAlphaBlendMode( ALPHA_BLEND_NONE );
+	GL_state.Texture.SetShaderMode(GL_FALSE);
 
 	gr_clear_states();
 }
@@ -3310,12 +3375,12 @@ void gr_opengl_render_shield_impact(vec3d *verts, vec3d *norms, int n_verts, mat
 
 	opengl_shader_set_current(gr_opengl_maybe_create_shader(SDR_TYPE_SHIELD_DECAL, 0));
 
-	
 	GL_state.Uniform.setUniform3f("hitnorm", decal_orient->vec.fvec);
 	GL_state.Uniform.setUniform3f("hitpos", *decal_pos);
 	GL_state.Uniform.setUniformMatrix4f("shield_proj_matrix", ortho_mat);
 	GL_state.Uniform.setUniformMatrix4f("shield_mv_matrix", shield_mv_matrix);
 	GL_state.Uniform.setUniformi("shieldMap", 0);
+	GL_state.Uniform.setUniformi("srgb", High_dynamic_range ? 1 : 0);
 
 	vertex_layout vert_def;
 	vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, verts);
@@ -3369,6 +3434,7 @@ void gr_opengl_update_distortion()
 	vert_def.add_vertex_component(vertex_format_data::TEX_COORD, 0, texcoord);
 
 	opengl_bind_vertex_layout(vert_def);
+	opengl_shader_set_passthrough();
 
 	glDrawArrays(GL_QUADS, 0, 4);
 
@@ -3395,6 +3461,7 @@ void gr_opengl_update_distortion()
 	vert_def.add_vertex_component(vertex_format_data::COLOR4, 0, &colours.front());
 
 	opengl_bind_vertex_layout(vert_def);
+	opengl_shader_set_passthrough(false);
 
 	glDrawArrays(GL_POINTS, 0, 33);
 
