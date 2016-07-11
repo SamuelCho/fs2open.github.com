@@ -1927,6 +1927,7 @@ char *Default_main_fragment_shader =
 "      baseColor.rgb = mix(texture2D(sFramebuffer, screenPos + distort*anim_timer + anim_timer*0.1*lNormal.xy).rgb,baseColor.rgb,clamp(cloak_interp+anim_timer*2.0,0.0,1.0));\n"
 " #endif\n"
 "   }\n"
+"	baseColor.rgb *= baseColor.a;\n"
 "#endif\n"
 "#ifdef FLAG_CLIP\n"
 "	// for some odd reason if we try to discard the pixel early for plane clipping, it screws up glow maps so let's just do it down here.\n"

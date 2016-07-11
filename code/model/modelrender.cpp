@@ -1414,7 +1414,7 @@ void model_render_buffers(draw_list* scene, model_render_params* interp, vertex_
 			// for special shockwave/warp map usage
 			alpha = (interp->get_warp_alpha() != -1.0f) ? interp->get_warp_alpha() : 0.8f;
 			blend_filter = GR_ALPHABLEND_FILTER;
-		} else if ( buffer->flags & VB_FLAG_TRANS ) {
+		} else if ( buffer->flags & VB_FLAG_TRANS || tmap_flags & TMAP_ANIMATED_SHADER ) {
 			blend_filter = GR_ALPHABLEND_FILTER;
 		}
 
