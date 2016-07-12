@@ -432,6 +432,8 @@ void vm_vec_boxscale(vec2d *vec, float scale);
 
 bool vm_inverse_matrix4(const matrix4 *m, matrix4 *invOut);
 
+void vm_orthographic_matrix(matrix4* out, vec3d *max, vec3d *min);
+
 #endif
 
 

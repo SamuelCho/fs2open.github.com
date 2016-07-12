@@ -530,6 +530,11 @@ void gr_stub_shadow_map_end()
 {
 }
 
+void gr_stub_render_shield_impact(vec3d *verts, vec3d *norms, int n_verts, matrix *decal_orient, vec3d* decal_pos, float decal_radius)
+{
+
+}
+
 bool gr_stub_init() 
 {
 	if (gr_screen.res != GR_640) {
@@ -704,6 +709,8 @@ bool gr_stub_init()
 
 	gr_screen.gf_shadow_map_start	= gr_stub_shadow_map_start;
 	gr_screen.gf_shadow_map_end		= gr_stub_shadow_map_end;
+
+	gr_screen.gf_render_shield_impact = gr_stub_render_shield_impact;
 
 	gr_screen.gf_maybe_create_shader = gr_stub_maybe_create_shader;
 

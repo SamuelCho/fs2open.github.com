@@ -85,10 +85,13 @@ static opengl_shader_type_t GL_shader_types[] = {
 		3, { "ytex", "utex", "vtex" }, 0, { NULL }, "Video Playback" },
 
 	{ SDR_TYPE_PASSTHROUGH_RENDER, "passthrough-v.sdr", "passthrough-f.sdr", 0, { 0, 0, 0 },
-		5, { "baseMap", "noTexturing", "alphaTexture", "srgb", "intensity" }, 0, { NULL }, "Passthrough" }
+		5, { "baseMap", "noTexturing", "alphaTexture", "srgb", "intensity" }, 0, { NULL }, "Passthrough" },
+
+	{ SDR_TYPE_SHIELD_DECAL, "shield-impact-v.sdr",	"shield-impact-f.sdr", 0, { 0, 0, 0 },
+		5, { "shieldMap", "shield_mv_matrix", "shield_proj_matrix", "hitnorm", "srgb" }, 0, { NULL }, "Shield Decals" }
 };
 
-/**
+/**, 
  * Static lookup reference for shader variant uniforms
  * When adding a new shader variant for a shader, list all associated uniforms and attributes here
  */
@@ -528,6 +531,8 @@ void opengl_shader_init()
 	gr_opengl_maybe_create_shader(SDR_TYPE_EFFECT_PARTICLE, 0);
 	gr_opengl_maybe_create_shader(SDR_TYPE_EFFECT_PARTICLE, SDR_FLAG_PARTICLE_POINT_GEN);
 	gr_opengl_maybe_create_shader(SDR_TYPE_EFFECT_DISTORTION, 0);
+
+	gr_opengl_maybe_create_shader(SDR_TYPE_SHIELD_DECAL, 0);
 
 	// compile deferred lighting shaders
 	opengl_shader_compile_deferred_light_shader();

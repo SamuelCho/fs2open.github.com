@@ -4657,6 +4657,59 @@ void interp_create_transparency_index_buffer(polymodel *pm, int mn)
 	}
 }
 
+void interp_process_shield_mesh(polymodel * pm)
+{
+	SCP_vector<vec3d> buffer;
+	SCP_vector<vec3d> normals;
+
+	if ( pm->shield.nverts <= 0 ) {
+		return;
+	}
+
+	float dot = 1.0f;
+
+	for ( int i = 0; i < pm->shield.ntris; i++ ) {
+		shield_tri *tri = &pm->shield.tris[i];
+
+		vec3d a = pm->shield.verts[tri->verts[0]].pos;
+		vec3d b = pm->shield.verts[tri->verts[1]].pos;
+		vec3d c = pm->shield.verts[tri->verts[2]].pos;
+
+		// recalculate triangle normals to solve some issues regarding triangle collision
+		vec3d b_a;
+		vec3d c_a;
+
+		vm_vec_sub(&b_a, &b, &a);
+		vm_vec_sub(&c_a, &c, &a);
+		vm_vec_cross(&tri->norm, &b_a, &c_a);
+		vm_vec_normalize_safe(&tri->norm);
+
+		buffer.push_back(a);
+		buffer.push_back(b);
+		buffer.push_back(c);
+
+		normals.push_back(tri->norm);
+		normals.push_back(tri->norm);
+		normals.push_back(tri->norm);
+	}
+
+	if ( buffer.size() > 0 ) {
+		pm->shield_mesh = (vec3d*)vm_malloc(buffer.size() * sizeof(vec3d));
+		memcpy(pm->shield_mesh, &buffer[0], buffer.size() * sizeof(vec3d));
+
+		pm->shield_norms = (vec3d*)vm_malloc(normals.size() * sizeof(vec3d));
+		memcpy(pm->shield_norms, &normals[0], normals.size() * sizeof(vec3d));
+
+		pm->shield_mesh_num_verts = buffer.size();
+		pm->shield_mesh_num_norms = normals.size();
+	} else {
+		pm->shield_mesh = NULL;
+		pm->shield_mesh_num_verts = 0;
+		pm->shield_norms = NULL;
+		pm->shield_mesh_num_norms = 0;
+	}
+}
+
 void model_render_children_buffers_DEPRECATED(polymodel *pm, int mn, int detail_level, int render)
 {
 	int i;

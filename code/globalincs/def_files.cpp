@@ -57,6 +57,8 @@ extern char* Default_deferred_vertex_shader;
 extern char* Default_deferred_fragment_shader;
 extern char* Default_deferred_clear_vertex_shader;
 extern char* Default_deferred_clear_fragment_shader;
+extern char* Default_shield_vertex_shader;
+extern char* Default_shield_fragment_shader;
 extern char *Default_passthrough_vertex_shader;
 extern char* Default_passthrough_fragment_shader;
 //**********
@@ -101,6 +103,8 @@ def_file Default_files[] =
 	{ "deferred-f.sdr",			Default_deferred_fragment_shader},
 	{ "deferred-clear-v.sdr",	Default_deferred_clear_vertex_shader},
 	{ "deferred-clear-f.sdr",	Default_deferred_clear_fragment_shader},
+	{ "shield-impact-v.sdr",	Default_shield_vertex_shader },
+	{ "shield-impact-f.sdr",	Default_shield_fragment_shader },
 	{ "passthrough-v.sdr",		Default_passthrough_vertex_shader },
 	{ "passthrough-f.sdr",		Default_passthrough_fragment_shader }
 };
@@ -3165,3 +3169,36 @@ char *Default_gamma_correction_fragment_shader =
 "{\n"
 "	gl_FragColor = pow(texture2D(framebuffer, gl_TexCoord[0].xy), 1.0 / SRGB_GAMMA);\n"
 "}";
+
+char *Default_shield_vertex_shader =
+"uniform vec3 hitnorm;\n"
+"uniform mat4 shield_mv_matrix;\n"
+"uniform mat4 shield_proj_matrix;\n"
+"varying vec4 shield_impact_uv;\n"
+"varying float dotprod;\n"
+"void main()\n"
+"{\n"
+"	gl_FrontColor = gl_Color;\n"
+"	gl_FrontSecondaryColor = vec4(0.0, 0.0, 0.0, 1.0);\n"
+"	gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * gl_Vertex;\n"
+"	dotprod = dot(hitnorm, gl_Normal);\n"
+"	shield_impact_uv = shield_proj_matrix * shield_mv_matrix * gl_Vertex;\n"
+"	shield_impact_uv += 1.0f;\n"
+"	shield_impact_uv *= 0.5f;\n"
+"}\n";
+
+char *Default_shield_fragment_shader =
+"uniform sampler2D shieldMap;\n"
+"uniform int srgb;\n"
+"varying vec4 shield_impact_uv;\n"
+"varying float dotprod;\n"
+"#define SRGB_GAMMA 2.2\n"
+"#define EMISSIVE_GAIN 1.5\n"
+"void main()\n"
+"{\n"
+"	if(dotprod < 0.0) discard;\n"
+"	if(shield_impact_uv.x < 0.0 || shield_impact_uv.x > 1.0 || shield_impact_uv.y < 0.0 || shield_impact_uv.y > 1.0) discard;\n"
+"	vec4 shieldColor = texture2D(shieldMap, shield_impact_uv.xy);\n"
+"	shieldColor.rgb = (srgb == 1) ? pow(shieldColor.rgb, vec3(SRGB_GAMMA)) * EMISSIVE_GAIN : shieldColor.rgb;\n"
+"	gl_FragColor = shieldColor * gl_Color;\n"
+"}\n";

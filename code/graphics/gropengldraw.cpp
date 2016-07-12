@@ -3333,6 +3333,64 @@ void gr_opengl_deferred_lighting_finish()
 	gr_clear_states();
 }
 
+void gr_opengl_render_shield_impact(vec3d *verts, vec3d *norms, int n_verts, matrix *decal_orient, vec3d *decal_pos, float decal_radius)
+{
+	int alpha, tmap_type, r, g, b;
+	float u_scale = 1.0f, v_scale = 1.0f;
+
+	vec3d min;
+	vec3d max;
+
+	min.xyz.x = min.xyz.y = min.xyz.z = -decal_radius;
+	max.xyz.x = max.xyz.y = max.xyz.z = decal_radius;
+
+	matrix4 ortho_mat;
+	vm_orthographic_matrix(&ortho_mat, &max, &min);
+
+	matrix4 model_matrix;
+	memset(&model_matrix, 0, sizeof(model_matrix));
+
+	model_matrix.a1d[0] = Object_matrix.vec.rvec.xyz.x;   model_matrix.a1d[4] = Object_matrix.vec.uvec.xyz.x;   model_matrix.a1d[8] = Object_matrix.vec.fvec.xyz.x;
+	model_matrix.a1d[1] = Object_matrix.vec.rvec.xyz.y;   model_matrix.a1d[5] = Object_matrix.vec.uvec.xyz.y;   model_matrix.a1d[9] = Object_matrix.vec.fvec.xyz.y;
+	model_matrix.a1d[2] = Object_matrix.vec.rvec.xyz.z;   model_matrix.a1d[6] = Object_matrix.vec.uvec.xyz.z;   model_matrix.a1d[10] = Object_matrix.vec.fvec.xyz.z;
+	model_matrix.a1d[12] = Object_position.xyz.x;
+	model_matrix.a1d[13] = Object_position.xyz.y;
+	model_matrix.a1d[14] = Object_position.xyz.z;
+	model_matrix.a1d[15] = 1.0f;
+
+	matrix4 shield_mv_matrix;
+	memset(&shield_mv_matrix, 0, sizeof(shield_mv_matrix));
+	shield_mv_matrix.a1d[0] = decal_orient->vec.rvec.xyz.x;   shield_mv_matrix.a1d[4] = decal_orient->vec.rvec.xyz.y;   shield_mv_matrix.a1d[8] = decal_orient->vec.rvec.xyz.z;
+	shield_mv_matrix.a1d[1] = decal_orient->vec.uvec.xyz.x;   shield_mv_matrix.a1d[5] = decal_orient->vec.uvec.xyz.y;   shield_mv_matrix.a1d[9] = decal_orient->vec.uvec.xyz.z;
+	shield_mv_matrix.a1d[2] = decal_orient->vec.fvec.xyz.x;   shield_mv_matrix.a1d[6] = decal_orient->vec.fvec.xyz.y;   shield_mv_matrix.a1d[10] = decal_orient->vec.fvec.xyz.z;
+	shield_mv_matrix.a1d[12] = -vm_vec_dot(&decal_orient->vec.rvec, decal_pos);
+	shield_mv_matrix.a1d[13] = -vm_vec_dot(&decal_orient->vec.uvec, decal_pos);
+	shield_mv_matrix.a1d[14] = -vm_vec_dot(&decal_orient->vec.fvec, decal_pos);
+	shield_mv_matrix.a1d[15] = 1.0f;
+
+	opengl_setup_render_states(r, g, b, alpha, tmap_type, TMAP_FLAG_TEXTURED | TMAP_FLAG_BW_TEXTURE);
+
+	gr_opengl_tcache_set(gr_screen.current_bitmap, tmap_type, &u_scale, &v_scale);
+	GL_state.Color((ubyte)r, (ubyte)g, (ubyte)b, (ubyte)alpha);
+
+	opengl_shader_set_current(gr_opengl_maybe_create_shader(SDR_TYPE_SHIELD_DECAL, 0));
+
+	GL_state.Uniform.setUniform3f("hitnorm", decal_orient->vec.fvec);
+	GL_state.Uniform.setUniform3f("hitpos", *decal_pos);
+	GL_state.Uniform.setUniformMatrix4f("shield_proj_matrix", ortho_mat);
+	GL_state.Uniform.setUniformMatrix4f("shield_mv_matrix", shield_mv_matrix);
+	GL_state.Uniform.setUniformi("shieldMap", 0);
+	GL_state.Uniform.setUniformi("srgb", High_dynamic_range ? 1 : 0);
+
+	vertex_layout vert_def;
+	vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, verts);
+	vert_def.add_vertex_component(vertex_format_data::NORMAL, 0, norms);
+
+	opengl_bind_vertex_layout(vert_def);
+
+	glDrawArrays(GL_TRIANGLES, 0, n_verts);
+}
+
 void gr_opengl_update_distortion()
 {
 	GLboolean depth = GL_state.DepthTest(GL_FALSE);

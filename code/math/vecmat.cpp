@@ -2720,3 +2720,23 @@ bool vm_inverse_matrix4(const matrix4 *m, matrix4 *invOut)
 
 	return true;
 }
+
+/**
+* @brief							Creates an orthographic projection matrix
+* @param[out]			out			Pointer to output our results
+* @param[in]		max				The max XYZ values projected
+* @param[in]		min				The min XYZ values projected
+*
+*/
+void vm_orthographic_matrix(matrix4* out, vec3d *max, vec3d *min)
+{
+	memset(out, 0, sizeof(matrix4));
+
+	out->a1d[0] = 2.0f / (max->xyz.x - min->xyz.x);
+	out->a1d[5] = 2.0f / (max->xyz.y - min->xyz.y);
+	out->a1d[10] = -2.0f / (max->xyz.z - min->xyz.z);
+	out->a1d[12] = -(max->xyz.x + min->xyz.x) / (max->xyz.x - min->xyz.x);
+	out->a1d[13] = -(max->xyz.y + min->xyz.y) / (max->xyz.y - min->xyz.y);
+	out->a1d[14] = -(max->xyz.z + min->xyz.z) / (max->xyz.z - min->xyz.z);
+	out->a1d[15] = 1.0f;
+}
