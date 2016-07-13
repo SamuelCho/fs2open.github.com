@@ -1038,6 +1038,11 @@ void model_render_buffers(draw_list* scene, model_material *rendering_material, 
 		if (forced_texture != -2) {
 			texture_maps[TM_BASE_TYPE] = forced_texture;
 			alpha = forced_alpha;
+
+			if (interp->get_warp_bitmap() >= 0) {
+				texture_maps[TM_GLOW_TYPE] = forced_texture;
+			}
+			
 		} else if ( !no_texturing ) {
 			// pick the texture, animating it if necessary
 			if ( (replacement_textures != NULL) && (replacement_textures[rt_begin_index + TM_BASE_TYPE] == REPLACE_WITH_INVISIBLE) ) {
