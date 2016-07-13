@@ -489,6 +489,15 @@ inline void opengl_state::AlphaFunc(GLenum f_val, GLclampf r_val)
 inline void opengl_state::Color(GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha)
 {
 	if ( color_invalid || (red != red_Status) || (green != green_Status) || (blue != blue_Status) || (alpha != alpha_Status) ) {
+		extern bool High_dynamic_range;
+		if ( High_dynamic_range ) {
+			const float SRGB_GAMMA = 2.2f;
+
+			red = fl2i(pow(i2fl(red) / 255.0f, SRGB_GAMMA) * 255.0f);
+			green = fl2i(pow(i2fl(green) / 255.0f, SRGB_GAMMA) * 255.0f);
+			blue = fl2i(pow(i2fl(blue) / 255.0f, SRGB_GAMMA) * 255.0f);
+		}
+
 		glColor4ub(red, green, blue, alpha);
 		red_Status = red;
 		green_Status = green;
