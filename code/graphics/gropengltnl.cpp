@@ -2597,7 +2597,7 @@ void opengl_tnl_set_material(material* material_info, bool set_base_map)
 	if ( shader_handle >= 0 ) {
 		opengl_shader_set_current(shader_handle);
 	} else {
-		opengl_shader_set_passthrough(base_map >= 0, material_info->get_texture_type() == TCACHE_TYPE_AABITMAP, &clr);
+		opengl_shader_set_passthrough(base_map >= 0, material_info->get_texture_type() == TCACHE_TYPE_AABITMAP, &clr, material_info->get_color_scale());
 	}
 
 	GL_state.SetTextureSource(material_info->get_texture_source());

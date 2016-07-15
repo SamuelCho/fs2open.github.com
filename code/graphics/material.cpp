@@ -70,7 +70,8 @@ Depth_bias(0),
 Depth_mode(ZBUFFER_TYPE_NONE),
 Blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA),
 Cull_mode(true),
-Fill_mode(GR_FILL_MODE_SOLID)
+Fill_mode(GR_FILL_MODE_SOLID),
+Clr_scale(1.0f)
 {
 	gr_init_alphacolor(&Clr, 255, 255, 255, 255);
 	
@@ -292,6 +293,16 @@ void material::set_color(color &clr_in)
 color& material::get_color()
 {
 	return Clr;
+}
+
+void material::set_color_scale(float scale)
+{
+	Clr_scale = scale;
+}
+
+float material::get_color_scale()
+{
+	return Clr_scale;
 }
 
 model_material::model_material(): 

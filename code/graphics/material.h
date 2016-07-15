@@ -377,6 +377,7 @@ private:
 	bool Cull_mode;
 	int Fill_mode;
 	color Clr;
+	float Clr_scale;
 	int Depth_bias;
 
 protected:
@@ -430,6 +431,9 @@ public:
 	void set_color(int r, int g, int b, int a);
 	void set_color(color &clr_in);
 	color& get_color();
+
+	void set_color_scale(float scale);
+	float get_color_scale();
 };
 
 class model_material : public material
