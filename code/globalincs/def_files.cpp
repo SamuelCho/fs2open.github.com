@@ -1809,6 +1809,9 @@ char *Default_main_fragment_shader =
 "   vec4 lightSpecular = vec4(0.0, 0.0, 0.0, 1.0);\n"
 "	vec2 texCoord = fragTexCoord.xy;\n"
 "	vec4 baseColor = color;\n"
+"#ifdef FLAG_HDR\n"
+"	baseColor.rgb = pow(baseColor.rgb, vec3(SRGB_GAMMA));\n"
+"#endif\n"
 "	vec4 posData = vec4(fragPosition.xyz,1.0);\n"
 "	vec4 normData = vec4(0.0, 0.0, 0.0, 1.0);\n"
 "	vec4 specData = vec4(0.0, 0.0, 0.0, 1.0);\n"
@@ -2858,7 +2861,7 @@ char* Default_effect_particle_fragment_shader =
 "{\n"
 "	vec4 fragmentColor = tex2D(baseMap, fragTexCoord.xy);\n"
 "	fragmentColor.rgb = mix(fragmentColor.rgb, pow(fragmentColor.rgb, vec3(SRGB_GAMMA)), float(srgb));\n"
-"	fragmentColor *= fragColor;\n"
+"	fragmentColor *= mix(fragColor, vec4(pow(fragColor.rgb, vec3(SRGB_GAMMA)), fragColor.a), float(srgb));\n"
 "	vec2 offset = vec2(fragRadius * abs(0.5 - fragTexCoord.x) * 2.0, fragRadius * abs(0.5 - fragTexCoord.y) * 2.0);\n"
 "	float offset_len = length(offset);\n"
 "	if ( offset_len > fragRadius ) {\n"
@@ -3103,7 +3106,9 @@ char* Default_passthrough_fragment_shader =
 "	vec4 baseColor = texture2D(baseMap, fragTexCoord.xy);\n"
 "	if(alphaThreshold > baseColor.a) discard;\n"
 "	baseColor.rgb = (srgb == 1) ? pow(baseColor.rgb, vec3(SRGB_GAMMA)) : baseColor.rgb;\n"
-"	fragOut0 = mix(mix(baseColor * fragColor, vec4(fragColor.rgb, baseColor.r * fragColor.a), float(alphaTexture)), fragColor, float(noTexturing)) * intensity;\n"
+"	vec4 blendColor = (srgb == 1) ? vec4(pow(fragColor.rgb, vec3(SRGB_GAMMA)), fragColor.a) : fragColor ;\n"
+"	baseColor *= blendColor;\n"
+"	fragOut0 = mix(mix(baseColor * blendColor, vec4(blendColor.rgb, baseColor.r * blendColor.a), float(alphaTexture)), blendColor, float(noTexturing)) * intensity;\n"
 "}";
 
 char *Default_deferred_vertex_shader =
