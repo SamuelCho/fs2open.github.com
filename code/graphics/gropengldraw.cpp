@@ -1801,20 +1801,6 @@ void gr_opengl_render_effect(int nverts, vertex *verts, float *radius_list, uint
 
 	if ( flags & TMAP_FLAG_TEXTURED ) {
 		if ( flags & TMAP_FLAG_SOFT_QUAD ) {
-			if( (flags & TMAP_FLAG_DISTORTION) || (flags & TMAP_FLAG_DISTORTION_THRUSTER) )
-			{
-				glDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);
-
-				opengl_tnl_set_material_distortion(flags);
-
-				zbuff = gr_zbuffer_set(GR_ZBUFF_READ);
-			}
-			else
-			{
-				opengl_tnl_set_material_soft_particle(flags);
-				zbuff = gr_zbuffer_set(GR_ZBUFF_NONE);
-			}
-
 			vert_def.add_vertex_component(vertex_format_data::RADIUS, 0, radius_list);
 		} else {
 			opengl_shader_set_passthrough(true);

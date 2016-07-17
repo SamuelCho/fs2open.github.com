@@ -1191,8 +1191,6 @@ static void opengl_render_pipeline_program(int start, vertex_buffer *bufferp, bu
 	} else {
 		ibuffer = (GLubyte*)vbp->index_list;
 	}
-
-	opengl_tnl_set_material(flags, shader_flags, tmap_type);
 	
 	if(Rendering_to_shadow_map) {
 		vglDrawElementsInstancedBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), 4, (GLint)bufferp->vertex_num_offset);
@@ -1696,31 +1694,6 @@ void gr_opengl_render_stream_buffer(int buffer_handle, int offset, int n_verts, 
 	vertex_layout vert_def;
 
 	if ( flags & TMAP_FLAG_TEXTURED ) {
-		if ( flags & TMAP_FLAG_SOFT_QUAD ) {
-			if( (flags & TMAP_FLAG_DISTORTION) || (flags & TMAP_FLAG_DISTORTION_THRUSTER) ) {
-				opengl_tnl_set_material_distortion(flags);
-
-				glDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);
-
-				if ( radius_offset >= 0 ) {
-					vert_def.add_vertex_component(vertex_format_data::RADIUS, stride, ptr + radius_offset);
-				}
-				gr_zbuffer_set(GR_ZBUFF_READ);
-			} else if ( Cmdline_softparticles ) {
-				opengl_tnl_set_material_soft_particle(flags);
-
-				gr_zbuffer_set(GR_ZBUFF_NONE);
-
-				if ( radius_offset >= 0 ) {
-					vert_def.add_vertex_component(vertex_format_data::RADIUS, stride, ptr + radius_offset);
-				}
-
-				if ( up_offset >= 0 ) {
-					vert_def.add_vertex_component(vertex_format_data::UVEC, stride, ptr + up_offset);
-				}
-			}
-		}
-
 		if ( !gr_opengl_tcache_set(gr_screen.current_bitmap, tmap_type, &u_scale, &v_scale) ) {
 			return;
 		}
