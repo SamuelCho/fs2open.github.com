@@ -3204,5 +3204,7 @@ char *Default_shield_fragment_shader =
 "	if(shield_impact_uv.x < 0.0 || shield_impact_uv.x > 1.0 || shield_impact_uv.y < 0.0 || shield_impact_uv.y > 1.0) discard;\n"
 "	vec4 shieldColor = texture2D(shieldMap, shield_impact_uv.xy);\n"
 "	shieldColor.rgb = (srgb == 1) ? pow(shieldColor.rgb, vec3(SRGB_GAMMA)) * EMISSIVE_GAIN : shieldColor.rgb;\n"
-"	gl_FragColor = shieldColor * gl_Color;\n"
+"	vec4 blendColor = gl_Color;\n"
+"	blendColor.rgb = (srgb == 1) ? pow(blendColor.rgb, vec3(SRGB_GAMMA)) * EMISSIVE_GAIN : blendColor.rgb;\n"
+"	gl_FragColor = shieldColor * blendColor;\n"
 "}\n";
