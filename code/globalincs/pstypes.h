@@ -26,13 +26,21 @@
 
 #include "windows_stub/config.h"
 
+#include "globalincs/scp_defines.h"
+
+#include "SDL.h"
+
 // value to represent an uninitialized state in any int or uint
 #define UNINITIALIZED 0x7f8e6d9c
 
 #define MAX_PLAYERS	12
 
 #define USE_INLINE_ASM 1		// Define this to use inline assembly
-#define STRUCT_CMP(a, b) memcmp((void *) &a, (void *) &b, sizeof(a))
+#define STRUCT_CMP(a, b) memcmp((void *)&a, (void *)&b, sizeof(a))
+
+#ifdef LOCAL
+#undef LOCAL
+#endif
 
 #define LOCAL static			// make module local varilable static.
 
@@ -223,14 +231,7 @@ typedef struct coord2d {
 	int x,y;
 } coord2d;
 
-//This are defined in MainWin.c
-extern void _cdecl WinAssert(char * text,char *filename, int line);
-void _cdecl WinAssert(char * text, char * filename, int linenum, SCP_FORMAT_STRING const char * format, ... ) SCP_FORMAT_STRING_ARGS(4, 5);
-extern void LuaError(struct lua_State *L, SCP_FORMAT_STRING const char *format=NULL, ...) SCP_FORMAT_STRING_ARGS(2, 3);
-extern void _cdecl Error( const char * filename, int line, SCP_FORMAT_STRING const char * format, ... ) SCP_FORMAT_STRING_ARGS(3, 4);
-extern void _cdecl Warning( char * filename, int line, SCP_FORMAT_STRING const char * format, ... ) SCP_FORMAT_STRING_ARGS(3, 4);
-extern void _cdecl WarningEx( char *filename, int line, SCP_FORMAT_STRING const char *format, ... ) SCP_FORMAT_STRING_ARGS(3, 4);
-extern void _cdecl ReleaseWarning(char *filename, int line, SCP_FORMAT_STRING const char *format, ...) SCP_FORMAT_STRING_ARGS(3, 4);
+#include "osapi/dialogs.h"
 
 extern int Global_warning_count;
 extern int Global_error_count;
@@ -263,10 +264,9 @@ extern int Global_error_count;
 #if defined(NDEBUG)
 #	define Assert(expr) do { ASSUME(expr); } while (0)
 #else
-	void gr_activate(int);
 #	define Assert(expr) do {\
 		if (!(expr)) {\
-			WinAssert(#expr,__FILE__,__LINE__);\
+			os::dialogs::AssertMessage(#expr,__FILE__,__LINE__);\
 		}\
 		ASSUME( expr );\
 	} while (0)
@@ -331,28 +331,6 @@ extern int Fred_running;  // Is Fred running, or FreeSpace?
 
 // contants and defined for byteswapping routines (useful for mac)
 
-#define SWAPSHORT(x)	(							\
-						((ubyte)x << 8) |			\
-						(((ushort)x) >> 8)			\
-						)
-
-#define SWAPINT(x)		(							\
-						(x << 24) |					\
-						(((ulong)x) >> 24) |		\
-						((x & 0x0000ff00) << 8) |	\
-						((x & 0x00ff0000) >> 8)		\
-						)
-
-#ifdef SCP_UNIX
-#include "SDL_endian.h"
-#endif
-
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-#ifndef BYTE_ORDER
-#define BYTE_ORDER	BIG_ENDIAN
-#endif // !BYTE_ORDER
-#endif // SDL_BYTEORDER
-
 #ifdef SCP_SOLARIS // Solaris
 #define INTEL_INT(x)	x
 #define INTEL_SHORT(x)	x
@@ -361,39 +339,9 @@ extern int Fred_running;  // Is Fred running, or FreeSpace?
 // turn off inline asm
 #undef USE_INLINE_ASM
 
-// tigital -
-inline float SWAPFLOAT(float *x)
-{
-#if !defined(__MWERKS__)
-	// Usage:  void __stwbrx( unsigned int, unsigned int *address, int byteOffsetFromAddress );
-#define __stwbrx(value, base, index) \
-	__asm__ ( "stwbrx %0, %1, %2" :  : "r" (value), "b%" (index), "r" (base) : "memory" )
-#endif
-
-	union
-	{
-		int		i;
-		float	f;
-	} buf;
-
-	// load the float into the integer unit
-	register int a = ((int*) x)[0];
-
-	// store it to the transfer union, with byteswapping
-	__stwbrx(a, 0, &buf.i);
-
-	// load it into the FPU and return it
-	return buf.f;
-}
-
-#ifdef SCP_UNIX
 #define INTEL_INT(x)	SDL_Swap32(x)
 #define INTEL_SHORT(x)	SDL_Swap16(x)
-#else
-#define INTEL_INT(x)	SWAPINT(x)
-#define INTEL_SHORT(x)	SWAPSHORT(x)
-#endif // (unix)
-#define INTEL_FLOAT(x)	SWAPFLOAT(x)
+#define INTEL_FLOAT(x)	SDL_SwapFloat((*x))
 
 #else // Little Endian -
 #define INTEL_INT(x)	x
@@ -524,71 +472,6 @@ template <class T> void CAP( T& v, T mn, T mx )
 // Memory management functions
 //=========================================================
 
-// Returns 0 if not enough RAM.
-int vm_init(int min_heap_size);
-
-// Frees all RAM.
-void vm_free_all();
-
-#ifndef NDEBUG
-	// Debug versions
-
-	// Allocates some RAM.
-	void *_vm_malloc( int size, char *filename = NULL, int line = -1, int quiet = 0 );
-
-	// allocates some RAM for a string
-	char *_vm_strdup( const char *ptr, char *filename, int line );
-
-	// allocates some RAM for a string of a certain length
-	char *_vm_strndup( const char *ptr, int size, char *filename, int line );
-
-	// Frees some RAM.
-	void _vm_free( void *ptr, char *filename = NULL, int line= -1 );
-
-	// reallocates some RAM
-	void *_vm_realloc( void *ptr, int size, char *filename = NULL, int line= -1, int quiet = 0 );
-
-	// Easy to use macros
-	#define vm_malloc(size) _vm_malloc((size),__FILE__,__LINE__,0)
-	#define vm_free(ptr) _vm_free((ptr),__FILE__,__LINE__)
-	#define vm_strdup(ptr) _vm_strdup((ptr),__FILE__,__LINE__)
-	#define vm_strndup(ptr, size) _vm_strndup((ptr),(size),__FILE__,__LINE__)
-	#define vm_realloc(ptr, size) _vm_realloc((ptr),(size),__FILE__,__LINE__,0)
-
-	// quiet macro versions which don't report errors
-	#define vm_malloc_q(size) _vm_malloc((size),__FILE__,__LINE__,1)
-	#define vm_realloc_q(ptr, size) _vm_realloc((ptr),(size),__FILE__,__LINE__,1)
-#else
-	// Release versions
-
-	// Allocates some RAM.
-	void *_vm_malloc( int size, int quiet = 0 );
-
-	// allocates some RAM for a string
-	char *_vm_strdup( const char *ptr );
-
-	// allocates some RAM for a strings of a certain length
-	char *_vm_strndup( const char *ptr, int size );
-
-	// Frees some RAM.
-	void _vm_free( void *ptr );
-
-	// reallocates some RAM
-	void *_vm_realloc( void *ptr, int size, int quiet = 0 );
-
-	// Easy to use macros
-	#define vm_malloc(size) _vm_malloc((size),0)
-	#define vm_free(ptr) _vm_free(ptr)
-	#define vm_strdup(ptr) _vm_strdup(ptr)
-	#define vm_strndup(ptr, size) _vm_strndup((ptr),(size))
-	#define vm_realloc(ptr, size) _vm_realloc((ptr),(size),0)
-
-	// quiet macro versions which don't report errors
-	#define vm_malloc_q(size) _vm_malloc((size),1)
-	#define vm_realloc_q(ptr, size) _vm_realloc((ptr),(size),1)
-
-#endif
-
 #include "globalincs/fsmemory.h"
 
 //=========================================================
@@ -626,11 +509,14 @@ public:
 #include "globalincs/vmallocator.h"
 #include "globalincs/safe_strings.h"
 
+// Function to generate a stacktrace
+SCP_string dump_stacktrace();
+
 // DEBUG compile time catch for dangerous uses of memset/memcpy/memmove
 // would prefer std::is_trivially_copyable but it's not supported by gcc yet
 // ref: http://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html
 #ifndef NDEBUG
-	#if defined(HAVE_CXX11)
+	#if SCP_COMPILER_CXX_STATIC_ASSERT && SCP_COMPILER_CXX_AUTO_TYPE
 	// feature support seems to be: gcc   clang   msvc
 	// auto                         4.4   2.9     2010
 	// std::is_trivial              4.5   ?       2012 (2010 only duplicates std::is_pod)

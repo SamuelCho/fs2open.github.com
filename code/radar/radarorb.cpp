@@ -11,7 +11,7 @@
 
 
 #include "bmpman/bmpman.h"
-#include "freespace2/freespace.h"
+#include "freespace.h"
 #include "gamesnd/gamesnd.h"
 #include "globalincs/linklist.h"
 #include "graphics/font.h"
@@ -245,7 +245,7 @@ void HudGaugeRadarOrb::drawBlips(int blip_type, int bright, int distort)
 
 
 	// Need to set font.
-	gr_set_font(FONT1);
+	font::set_font(font::FONT1);
 
 
 	// get the appropriate blip list

@@ -13,7 +13,7 @@
 
 
 #include "cfile/cfile.h"
-#include "freespace2/freespace.h"
+#include "freespace.h"
 #include "gamehelp/contexthelp.h"
 #include "gamesequence/gamesequence.h"
 #include "gamesnd/gamesnd.h"
@@ -488,8 +488,8 @@ void barracks_init_stats(scoring_struct *stats)
 	Num_stat_lines++;
 
 	for (i=0; i<Num_stat_lines; i++) {
-		gr_force_fit_string(Stat_labels[i], Stat_column1_w[gr_screen.res], Barracks_stats_coords[gr_screen.res][BARRACKS_W_COORD]);
-		gr_force_fit_string(Stats[i], Stat_column2_w[gr_screen.res], Barracks_stats2_coords[gr_screen.res][BARRACKS_W_COORD]);
+		font::force_fit_string(Stat_labels[i], Stat_column1_w[gr_screen.res], Barracks_stats_coords[gr_screen.res][BARRACKS_W_COORD]);
+		font::force_fit_string(Stats[i], Stat_column2_w[gr_screen.res], Barracks_stats2_coords[gr_screen.res][BARRACKS_W_COORD]);
 	}
 }
 

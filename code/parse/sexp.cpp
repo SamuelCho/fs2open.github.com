@@ -33,7 +33,7 @@
 #include "cmdline/cmdline.h"
 #include "debugconsole/console.h"
 #include "fireball/fireballs.h"		// for explosion stuff
-#include "freespace2/freespace.h"
+#include "freespace.h"
 #include "gamesequence/gamesequence.h"
 #include "gamesnd/eventmusic.h"		// for change-soundtrack
 #include "gamesnd/gamesnd.h"
@@ -107,7 +107,10 @@
 #include "hud/hudmessage.h"
 #endif
 
-
+// Stupid windows workaround...
+#ifdef MessageBox
+#undef MessageBox
+#endif
 
 
 
@@ -2812,15 +2815,9 @@ int check_sexp_syntax(int node, int return_type, int recursive, int *bad_node, i
 					return SEXP_CHECK_TYPE_MISMATCH;
 				}
 
-				for (i = 0; i < Num_fonts; i++) {
-					if (!stricmp(CTEXT(node), Fonts[i].filename)) {
-						break;
-					}
-				}
-
-				if (i == Num_fonts) {
+				if (font::FontManager::getFont(CTEXT(node)) == NULL)
 					return SEXP_CHECK_INVALID_FONT;
-				}
+
 				break;
 				
 			case OPF_SOUND_ENVIRONMENT:
@@ -21610,15 +21607,7 @@ void sexp_show_subtitle_text(int node)
 		char *font_name = CTEXT(n);
 		n = CDR(n);
 
-		// perform font lookup
-		for (int j = 0; j < Num_fonts; j++)
-		{
-			if (!stricmp(font_name, Fonts[j].filename))
-			{
-				fontnum = j;
-				break;
-			}
-		}
+		fontnum = font::FontManager::getFontIndex(font_name);
 	}
 
 	bool post_shaded = false;
@@ -33904,18 +33893,18 @@ bool output_sexps(char *filepath)
 
 	if(fp == NULL)
 	{
-		MessageBox(NULL,"Error creating SEXP operator list", "Error", MB_OK);
+		os::dialogs::Message(os::dialogs::MESSAGEBOX_ERROR, "Error creating SEXP operator list");
 		return false; 
 	}
 
 	//Header
-	if (FS_VERSION_BUILD == 0 && FS_VERSION_REVIS == 0) //-V547
+	if (FS_VERSION_BUILD == 0 && FS_VERSION_HAS_REVIS == 0) //-V547
 	{
 		fprintf(fp, "<html>\n<head>\n\t<title>SEXP Output - FSO v%i.%i</title>\n</head>\n", FS_VERSION_MAJOR, FS_VERSION_MINOR);
 		fputs("<body>", fp);
 		fprintf(fp,"\t<h1>SEXP Output - FSO v%i.%i</h1>\n", FS_VERSION_MAJOR, FS_VERSION_MINOR);
 	}
-	else if (FS_VERSION_REVIS == 0)
+	else if (FS_VERSION_HAS_REVIS == 0)
 	{
 		fprintf(fp, "<html>\n<head>\n\t<title>SEXP Output - FSO v%i.%i.%i</title>\n</head>\n", FS_VERSION_MAJOR, FS_VERSION_MINOR, FS_VERSION_BUILD);
 		fputs("<body>", fp);

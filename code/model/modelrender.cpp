@@ -13,7 +13,6 @@
 #include "cmdline/cmdline.h"
 #include "gamesequence/gamesequence.h"
 #include "graphics/gropengldraw.h"
-#include "graphics/gropenglextension.h"
 #include "graphics/gropenglshader.h"
 #include "graphics/tmapper.h"
 #include "io/timer.h"
@@ -2241,7 +2240,7 @@ void model_queue_render_thrusters(model_render_params *interp, polymodel *pm, in
 
 					batching_add_beam(thruster_info.secondary_glow_bitmap, &pnt, &norm2, wVal*thruster_info.secondary_glow_rad_factor*0.5f, d);
 
-					if (Scene_framebuffer_in_frame && thruster_info.draw_distortion) {
+					if (Scene_framebuffer_in_frame && thruster_info.draw_distortion && Cmdline_fb_thrusters) {
 						vm_vec_scale_add(&norm2, &pnt, &fvec, wVal * 2 * thruster_info.distortion_length_factor);
 						int dist_bitmap;
 						if (thruster_info.distortion_bitmap > 0) {

@@ -15,9 +15,6 @@
 #include "globalincs/pstypes.h" // IAM_64BIT
 #include "graphics/font.h"
 
-extern int Gr_cursor;
-extern int Gr_cursor_size;
-
 extern ubyte Gr_original_palette[768];		// The palette 
 extern ubyte Gr_current_palette[768];
 

@@ -356,7 +356,7 @@ void gr_stub_start_instance_matrix(const vec3d *offset, const matrix *rotation)
 {
 }
 
-void gr_stub_string(int sx, int sy, const char *s, int resize_mode = GR_RESIZE_NONE)
+void gr_stub_string( float sx, float sy, const char *s, int resize_mode = GR_RESIZE_NONE, int length = -1)
 {
 }
 
@@ -499,7 +499,7 @@ void gr_stub_get_bitmap_from_texture(void* data_out, int bitmap_num)
 
 }
 
-int gr_stub_bm_make_render_target(int n, int *width, int *height, ubyte *bpp, int *mm_lvl, int flags)
+int gr_stub_bm_make_render_target(int n, int *width, int *height, int *bpp, int *mm_lvl, int flags)
 {
 	return 0;
 }

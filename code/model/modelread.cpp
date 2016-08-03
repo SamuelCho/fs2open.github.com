@@ -23,7 +23,7 @@
 #include "bmpman/bmpman.h"
 #include "cfile/cfile.h"
 #include "cmdline/cmdline.h"
-#include "freespace2/freespace.h"		// For flFrameTime
+#include "freespace.h"		// For flFrameTime
 #include "gamesnd/gamesnd.h"
 #include "globalincs/linklist.h"
 #include "io/key.h"
@@ -270,6 +270,11 @@ void model_unload(int modelnum, int force)
 
 			if ( pm->submodel[i].collision_tree_index >= 0 ) {
 				model_remove_bsp_collision_tree(pm->submodel[i].collision_tree_index);
+			}
+
+			if ( pm->submodel[i].outline_buffer != nullptr ) {
+				vm_free(pm->submodel[i].outline_buffer);
+				pm->submodel[i].outline_buffer = nullptr;
 			}
 		}
 
@@ -670,7 +675,7 @@ static void set_subsystem_info(int model_num, model_subsystem *subsystemp, char 
 		// CASE OF STEPPED ROTATION
 		if ( (strstr(props, "$stepped")) != NULL) {
 
-			subsystemp->stepped_rotation = new(stepped_rotation);
+			subsystemp->stepped_rotation = new stepped_rotation;
 			subsystemp->flags |= MSS_FLAG_STEPPED_ROTATE;
 
 			// get number of steps
@@ -2630,7 +2635,7 @@ int model_load(char *filename, int n_subsystems, model_subsystem *subsystems, in
 		model_init();
 
 #ifndef NDEBUG
-	int ram_before = TotalRam;
+	size_t ram_before = memory::get_used_memory();
 #endif
 
 	num = -1;
@@ -2704,7 +2709,7 @@ int model_load(char *filename, int n_subsystems, model_subsystem *subsystems, in
 		char buffer[100];
 		sprintf(buffer,"Serious problem loading model %s, %d normals capped to zero",
 			filename, Parse_normal_problem_count);
-		MessageBox(NULL,buffer,"Error", MB_OK);
+		os::dialogs::Message(os::dialogs::MESSAGEBOX_ERROR, buffer);
 	}
 #endif
 
@@ -2890,9 +2895,9 @@ int model_load(char *filename, int n_subsystems, model_subsystem *subsystems, in
 	}
 
 #ifndef NDEBUG
-	int ram_after = TotalRam;
+	size_t ram_after = memory::get_used_memory();
 
-	pm->ram_used = ram_after - ram_before;
+	pm->ram_used = static_cast<int>(ram_after - ram_before);
 	Model_ram += pm->ram_used;
 #endif
 

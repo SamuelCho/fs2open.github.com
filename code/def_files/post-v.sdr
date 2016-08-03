@@ -1,0 +1,10 @@
+vertIn vec4 vertPosition;
+vertIn vec4 vertTexCoord;
+vertOut vec4 fragTexCoord;
+vertOut float blurSize;
+uniform float bsize;
+void main()
+{
+	fragTexCoord = vertTexCoord;
+	gl_Position = vertPosition;
+};

@@ -18,7 +18,7 @@
 #include "render/3d.h"
 #include "model/model.h"
 #include "render/render.h"
-#include "freespace2/freespace.h"
+#include "freespace.h"
 #include "mission/missionparse.h"
 #include "network/multi.h"
 #include "object/objectshield.h"

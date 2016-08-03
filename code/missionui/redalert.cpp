@@ -11,7 +11,7 @@
 #define REDALERT_INTERNAL
 #include "ai/aigoals.h"
 #include "cfile/cfile.h"
-#include "freespace2/freespace.h"
+#include "freespace.h"
 #include "gamesequence/gamesequence.h"
 #include "gamesnd/gamesnd.h"
 #include "globalincs/alphacolors.h"
@@ -65,8 +65,8 @@ char *Red_alert_mask[GR_NUM_RESOLUTIONS] = {
 
 // font to use for "incoming transmission"
 int Ra_flash_font[GR_NUM_RESOLUTIONS] = {
-	FONT2,
-	FONT2
+	font::FONT2,
+	font::FONT2
 };
 
 int Ra_flash_y[GR_NUM_RESOLUTIONS] = {
@@ -267,7 +267,7 @@ void red_alert_blit_title()
 	int w, h;
 
 	// get the string size	
-	gr_set_font(Ra_flash_font[gr_screen.res]);
+	font::set_font(Ra_flash_font[gr_screen.res]);
 	gr_get_string_size(&w, &h, str);
 
 	// set alpha color
@@ -292,7 +292,7 @@ void red_alert_blit_title()
 	}
 
 	// back to the original font
-	gr_set_font(FONT1);
+	font::set_font(font::FONT1);
 }
 
 // Called once when red alert interface is started
@@ -423,7 +423,7 @@ void red_alert_do_frame(float frametime)
 	Ui_window.draw();
 	// hud_anim_render(&Flash_anim, frametime);
 
-	gr_set_font(FONT1);
+	font::set_font(font::FONT1);
 
 	if ( timestamp_elapsed(Text_delay) ) {
 		int finished_wipe = 0;

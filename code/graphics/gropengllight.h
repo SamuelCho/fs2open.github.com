@@ -15,6 +15,7 @@
 
 #include "graphics/gropengl.h"
 #include "lighting/lighting.h"
+#include <glad/glad.h>
 
 // Structures
 struct opengl_light

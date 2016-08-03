@@ -1,0 +1,17 @@
+vertIn vec4 vertPosition;
+vertIn vec4 vertTexCoord;
+vertIn vec4 vertColor;
+vertIn float vertRadius;
+vertOut vec4 fragTexCoord;
+vertOut vec4 fragColor;
+vertOut float fragOffset;
+uniform mat4 modelViewMatrix;
+uniform mat4 projMatrix;
+uniform float use_offset;
+void main()
+{
+	gl_Position = projMatrix * modelViewMatrix * vertPosition;
+	fragOffset = vertRadius * use_offset;
+	fragTexCoord = vertTexCoord;
+	fragColor = vertColor;
+};

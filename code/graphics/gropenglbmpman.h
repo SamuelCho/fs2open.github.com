@@ -15,6 +15,7 @@
 #include "bmpman/bmpman.h"
 #include "globalincs/pstypes.h"
 
+#include <glad/glad.h>
 
 // anything API specific to freeing bm data
 void gr_opengl_bm_free_data(int n, bool release);
@@ -31,7 +32,7 @@ void gr_opengl_bm_page_in_start();
 bool gr_opengl_bm_data(int n, bitmap* bm);
 
 void gr_opengl_bm_save_render_target(int slot);
-int gr_opengl_bm_make_render_target(int n, int *width, int *height, ubyte *bpp, int *mm_lvl, int flags);
+int gr_opengl_bm_make_render_target(int n, int *width, int *height, int *bpp, int *mm_lvl, int flags);
 int gr_opengl_bm_set_render_target(int n, int face);
 
 #endif // _OGL_BMPMAN_H

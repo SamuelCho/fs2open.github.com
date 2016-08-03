@@ -16,6 +16,7 @@
 #include "graphics/gropengl.h"
 
 #include <string>
+#include <glad/glad.h>
 
 #define MAX_SHADER_UNIFORMS		20
 

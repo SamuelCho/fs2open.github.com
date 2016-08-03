@@ -15,7 +15,7 @@
 #include "cmeasure/cmeasure.h"
 #include "debugconsole/console.h"
 #include "fireball/fireballs.h"
-#include "freespace2/freespace.h"
+#include "freespace.h"
 #include "gamesnd/gamesnd.h"
 #include "globalincs/linklist.h"
 #include "graphics/grbatch.h"
@@ -3670,6 +3670,11 @@ void weapon_delete(object *obj)
 		wp->cmeasure_ignore_list = nullptr;
 	}
 
+	if (wp->collisionInfo != nullptr) {
+		delete wp->collisionInfo;
+		wp->collisionInfo = nullptr;
+	}
+
 	wp->objnum = -1;
 	Num_weapons--;
 	Assert(Num_weapons >= 0);
@@ -5454,18 +5459,10 @@ int weapon_create( vec3d * pos, matrix * porient, int weapon_type, int parent_ob
 	wp->alpha_current = -1.0f;
 	wp->alpha_backward = 0;
 
-	wp->collisionOccured = false;
+	wp->collisionInfo = nullptr;
 	wp->hud_in_flight_snd_sig = -1;
 
 	Num_weapons++;
-
-	// reset the damage record fields (for scoring purposes)
-	wp->total_damage_received = 0.0f;
-	for(int i=0;i<MAX_WEP_DAMAGE_SLOTS;i++)
-	{
-		wp->damage_ship[i] = 0.0f;
-		wp->damage_ship_id[i] = -1;
-	}
 
 	if (Weapons_inherit_parent_collision_group) {
 		Objects[objnum].collision_group_id = Objects[parent_objnum].collision_group_id;
@@ -6202,14 +6199,6 @@ void weapon_hit( object * weapon_obj, object * other_obj, vec3d * hitpos, int qu
 		if (aip->hitter_objnum == objnum) {
 			aip->hitter_objnum = -1;
         }
-	}
-
-	// single player and multiplayer masters evaluate the scoring and kill stuff
-	if (!MULTIPLAYER_CLIENT) {
-		//If this is a bomb, set it up for scoring. -Halleck
-		if (wip->wi_flags & WIF_BOMB) {
-			scoring_eval_kill_on_weapon(weapon_obj, other_obj);
-		}
 	}
 
 	weapon_obj->flags |= OF_SHOULD_BE_DEAD;

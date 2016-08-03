@@ -14,7 +14,7 @@
 #include "render/render.h"
 #include "cmdline/cmdline.h"
 #include "debugconsole/console.h"
-#include "freespace2/freespace.h"
+#include "freespace.h"
 #include "hud/hud.h"
 #include "hud/hudtarget.h"
 #include "io/timer.h"

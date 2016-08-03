@@ -13,13 +13,12 @@
 #endif
 
 #include "cmdline/cmdline.h"
+#include "def_files/def_files.h"
 #include "globalincs/alphacolors.h"
-#include "globalincs/def_files.h"
 #include "globalincs/systemvars.h"
 #include "graphics/2d.h"
 #include "graphics/grinternal.h"
 #include "graphics/gropengldraw.h"
-#include "graphics/gropenglextension.h"
 #include "graphics/gropengllight.h"
 #include "graphics/gropenglshader.h"
 #include "graphics/gropenglstate.h"
@@ -164,7 +163,7 @@ int opengl_create_buffer_object(GLenum type, GLenum usage)
 	buffer_obj.type = type;
 	buffer_obj.size = 0;
 
-	vglGenBuffersARB(1, &buffer_obj.buffer_id);
+	glGenBuffers(1, &buffer_obj.buffer_id);
 
 	GL_buffer_objects.push_back(buffer_obj);
 
@@ -179,10 +178,10 @@ void opengl_bind_buffer_object(int handle)
 	opengl_buffer_object &buffer_obj = GL_buffer_objects[handle];
 
 	switch ( buffer_obj.type ) {
-	case GL_ARRAY_BUFFER_ARB:
+	case GL_ARRAY_BUFFER:
 		GL_state.Array.BindArrayBuffer(buffer_obj.buffer_id);
 		break;
-	case GL_ELEMENT_ARRAY_BUFFER_ARB:
+	case GL_ELEMENT_ARRAY_BUFFER:
 		GL_state.Array.BindElementBuffer(buffer_obj.buffer_id);
 		break;
 	case GL_TEXTURE_BUFFER:
@@ -215,7 +214,7 @@ void gr_opengl_update_buffer_data(int handle, uint size, void* data)
 	buffer_obj.size = size;
 	GL_vertex_data_in += buffer_obj.size;
 
-	vglBufferDataARB(buffer_obj.type, size, data, buffer_obj.usage);
+	glBufferData(buffer_obj.type, size, data, buffer_obj.usage);
 }
 
 void opengl_update_buffer_data_offset(int handle, uint offset, uint size, void* data)
@@ -263,7 +262,7 @@ void gr_opengl_delete_buffer(int handle)
 
 	GL_vertex_data_in -= buffer_obj.size;
 
-	vglDeleteBuffersARB(1, &buffer_obj.buffer_id);
+	glDeleteBuffers(1, &buffer_obj.buffer_id);
 }
 
 int gr_opengl_create_vertex_buffer(bool static_buffer)
@@ -290,7 +289,7 @@ int gr_opengl_create_stream_buffer_object()
 		return -1;
 	}
 
-	return opengl_create_buffer_object(GL_ARRAY_BUFFER_ARB, GL_STREAM_DRAW_ARB);
+	return opengl_create_buffer_object(GL_ARRAY_BUFFER, GL_STREAM_DRAW);
 }
 
 uint opengl_add_to_immediate_buffer(uint size, void *data)
@@ -335,22 +334,24 @@ void opengl_reset_immediate_buffer()
 
 int opengl_create_texture_buffer_object()
 {
-	if ( GLSL_version < 150 || !Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_BUFFER) || !Is_Extension_Enabled(GL_EXTENSION_ARB_FLOATING_POINT_TEXTURES) ) {
+	if ( GLSL_version < 130 || !GLAD_GL_ARB_texture_buffer_object || !GLAD_GL_ARB_texture_float ) {
 		return -1;
 	}
 
 	// create the buffer
-	int buffer_object_handle = opengl_create_buffer_object(GL_TEXTURE_BUFFER, GL_DYNAMIC_DRAW_ARB);
+	int buffer_object_handle = opengl_create_buffer_object(GL_TEXTURE_BUFFER_ARB, GL_DYNAMIC_DRAW);
+
+	opengl_check_for_errors();
 
 	opengl_buffer_object &buffer_obj = GL_buffer_objects[buffer_object_handle];
 
 	// create the texture
 	glGenTextures(1, &buffer_obj.texture);
-	glBindTexture(GL_TEXTURE_BUFFER, buffer_obj.texture);
+	glBindTexture(GL_TEXTURE_BUFFER_ARB, buffer_obj.texture);
 
 	gr_opengl_update_buffer_data(buffer_object_handle, 100, NULL);
 
-	vglTexBufferARB(GL_TEXTURE_BUFFER, GL_RGBA32F_ARB, buffer_obj.buffer_id);
+	glTexBufferARB(GL_TEXTURE_BUFFER_ARB, GL_RGBA32F_ARB, buffer_obj.buffer_id);
 
 	opengl_check_for_errors();
 
@@ -406,7 +407,7 @@ static void opengl_gen_buffer(opengl_vertex_buffer *vbp)
 		// clear any existing errors
 		glGetError();
 
-		vbp->vb_handle = opengl_create_buffer_object(GL_ARRAY_BUFFER_ARB, GL_STATIC_DRAW_ARB);
+		vbp->vb_handle = opengl_create_buffer_object(GL_ARRAY_BUFFER, GL_STATIC_DRAW);
 
 		// make sure we have one
 		if ( vbp->vb_handle >= 0 ) {
@@ -431,7 +432,7 @@ static void opengl_gen_buffer(opengl_vertex_buffer *vbp)
 		// clear any existing errors
 		glGetError();
 
-		vbp->ib_handle = opengl_create_buffer_object(GL_ELEMENT_ARRAY_BUFFER_ARB, GL_STATIC_DRAW_ARB);
+		vbp->ib_handle = opengl_create_buffer_object(GL_ELEMENT_ARRAY_BUFFER, GL_STATIC_DRAW);
 
 		// make sure we have one
 		if ( vbp->ib_handle >= 0 ) {
@@ -558,7 +559,7 @@ bool gr_opengl_pack_buffer(const int buffer_id, vertex_buffer *vb)
 
 
 	if (m_vbp->array_list == NULL) {
-		m_vbp->array_list = (GLfloat*)vm_malloc_q(m_vbp->vbo_size);
+		m_vbp->array_list = (GLfloat*)vm_malloc(m_vbp->vbo_size, memory::quiet_alloc);
 
 		// return invalid if we don't have the memory
 		if (m_vbp->array_list == NULL) {
@@ -569,7 +570,7 @@ bool gr_opengl_pack_buffer(const int buffer_id, vertex_buffer *vb)
 	}
 
 	if (m_vbp->index_list == NULL) {
-		m_vbp->index_list = (GLubyte*)vm_malloc_q(m_vbp->ibo_size);
+		m_vbp->index_list = (GLubyte*)vm_malloc(m_vbp->ibo_size, memory::quiet_alloc);
 
 		// return invalid if we don't have the memory
 		if (m_vbp->index_list == NULL) {
@@ -723,8 +724,8 @@ void opengl_tnl_init()
 	if(Cmdline_shadow_quality)
 	{
 		//Setup shadow map framebuffer
-		vglGenFramebuffersEXT(1, &shadow_fbo);
-		vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, shadow_fbo);
+		glGenFramebuffersEXT(1, &shadow_fbo);
+		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, shadow_fbo);
 
 		glGenTextures(1, &Shadow_map_depth_texture);
 
@@ -748,11 +749,11 @@ void opengl_tnl_init()
 		//glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);
 		//glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY);
 		int size = (Cmdline_shadow_quality == 2 ? 1024 : 512);
-		vglTexImage3D(GL_TEXTURE_2D_ARRAY_EXT, 0, GL_DEPTH_COMPONENT32, size, size, 4, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+		glTexImage3D(GL_TEXTURE_2D_ARRAY_EXT, 0, GL_DEPTH_COMPONENT32, size, size, 4, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 		//glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, size, size, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 
-		vglFramebufferTextureARB(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, Shadow_map_depth_texture, 0);
-		//vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, Shadow_map_depth_texture, 0);
+		glFramebufferTextureARB(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, Shadow_map_depth_texture, 0);
+		//glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, Shadow_map_depth_texture, 0);
 
 		glGenTextures(1, &Shadow_map_texture);
 
@@ -771,13 +772,13 @@ void opengl_tnl_init()
 // 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 // 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 // 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		vglTexImage3D(GL_TEXTURE_2D_ARRAY_EXT, 0, GL_RGB32F_ARB, size, size, 4, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+		glTexImage3D(GL_TEXTURE_2D_ARRAY_EXT, 0, GL_RGB32F_ARB, size, size, 4, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 		//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, size, size, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 
-		vglFramebufferTextureARB(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, Shadow_map_texture, 0);
-		//vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Shadow_map_texture, 0);
+		glFramebufferTextureARB(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, Shadow_map_texture, 0);
+		//glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Shadow_map_texture, 0);
 
-		vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 
 		opengl_check_for_errors("post_init_framebuffer()");
 	}
@@ -829,7 +830,7 @@ static void opengl_init_arrays(opengl_vertex_buffer *vert_src, vertex_buffer *bu
 	GLint vert_offset = (GLint)bufferp->vertex_num_offset;
 	GLubyte *ptr = NULL;
 
-	if ( is_minimum_GLSL_version() && Is_Extension_Enabled(GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+	if ( is_minimum_GLSL_version() && GLAD_GL_ARB_draw_elements_base_vertex ) {
 		vert_offset = 0;
 	}
 
@@ -847,7 +848,7 @@ static void opengl_init_arrays(indexed_vertex_source *vert_src, vertex_buffer *b
 	GLint vert_offset = (GLint)bufferp->vertex_num_offset;
 	GLubyte *ptr = NULL;
 
-	if ( is_minimum_GLSL_version() && Is_Extension_Enabled(GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+	if ( is_minimum_GLSL_version() && GLAD_GL_ARB_draw_elements_base_vertex ) {
 		vert_offset = 0;
 	}
 
@@ -1107,7 +1108,7 @@ void gr_opengl_render_model(model_material* material_info, indexed_vertex_source
 	if (Cmdline_drawelements) \
 		glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); \
 	else \
-		vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+		glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
 
 unsigned int GL_last_shader_flags = 0;
 int GL_last_shader_index = -1;
@@ -1193,19 +1194,19 @@ static void opengl_render_pipeline_program(int start, vertex_buffer *bufferp, bu
 	}
 	
 	if(Rendering_to_shadow_map) {
-		vglDrawElementsInstancedBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), 4, (GLint)bufferp->vertex_num_offset);
+		glDrawElementsInstancedBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), 4, (GLint)bufferp->vertex_num_offset);
 	} else {
-		if ( Is_Extension_Enabled(GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+		if ( GLAD_GL_ARB_draw_elements_base_vertex ) {
 			if (Cmdline_drawelements) {
-				vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
+				glDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
 			} else {
-				vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
+				glDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
 			}
 		} else {
 			if (Cmdline_drawelements) {
 				glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
 			} else {
-				vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+				glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
 			}
 		}
 	}
@@ -1259,7 +1260,7 @@ static void opengl_render_pipeline_program(int start, vertex_buffer *bufferp, bu
 		opengl_change_active_lights(0, 4);
 
 		int n_lights = MIN(Num_active_gl_lights, GL_max_lights) - 5;
-		vglUniform1iARB( opengl_shader_get_uniform("n_lights"), n_lights );
+		glUniform1iARB( opengl_shader_get_uniform("n_lights"), n_lights );
 
 		opengl_default_light_settings(0, 0, 0);
 
@@ -1380,7 +1381,7 @@ static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buff
 	if ( Cmdline_drawelements ) {
 		glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start));
 	} else {
-		vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+		glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
 	}
 
 // -------- End 2nd PASS --------------------------------------------------------- //
@@ -1448,18 +1449,18 @@ static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buff
 		// as a crazy and sometimes useless hack, avoid using alpha when specmap has none
 		if ( bm_has_alpha_channel(SPECMAP) ) {
 			GL_state.Texture.SetEnvCombineMode(GL_COMBINE_RGB, GL_MODULATE);
-			glTexEnvf( GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE );
-			glTexEnvf( GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_ALPHA );
-			glTexEnvf( GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB );
-			glTexEnvf( GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR );
+			glTexEnvf( GL_TEXTURE_ENV, GL_SOURCE0_RGB, GL_TEXTURE );
+			glTexEnvf( GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_ALPHA );
+			glTexEnvf( GL_TEXTURE_ENV, GL_SOURCE1_RGB, GL_PREVIOUS );
+			glTexEnvf( GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR );
 			GL_state.Texture.SetRGBScale(1.0f);
 			GL_state.Texture.SetAlphaScale(1.0f);
 		} else {
 			GL_state.Texture.SetEnvCombineMode(GL_COMBINE_RGB, GL_MODULATE);
-			glTexEnvf( GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE );
-			glTexEnvf( GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB );
-			glTexEnvf( GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR );
-			glTexEnvf( GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR );
+			glTexEnvf( GL_TEXTURE_ENV, GL_SOURCE0_RGB, GL_TEXTURE );
+			glTexEnvf( GL_TEXTURE_ENV, GL_SOURCE1_RGB, GL_PREVIOUS );
+			glTexEnvf( GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR );
+			glTexEnvf( GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR );
 			GL_state.Texture.SetRGBScale(1.0f);
 		}
 
@@ -1473,10 +1474,10 @@ static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buff
 		gr_opengl_tcache_set(ENVMAP, TCACHE_TYPE_CUBEMAP, &u_scale, &v_scale, render_pass);
 
 		GL_state.Texture.SetEnvCombineMode(GL_COMBINE_RGB, GL_MODULATE);
-		glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_PREVIOUS_ARB);
-		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
-		glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_TEXTURE);
-		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
+		glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB, GL_PREVIOUS);
+		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
+		glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB, GL_TEXTURE);
+		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR);
 
 		GL_state.Texture.SetRGBScale(2.0f);
 
@@ -1486,9 +1487,9 @@ static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buff
 		GL_state.Texture.SetWrapT(GL_CLAMP_TO_EDGE);
 		GL_state.Texture.SetWrapR(GL_CLAMP_TO_EDGE);
 
-		GL_state.Texture.SetTexgenModeS(GL_REFLECTION_MAP);
-		GL_state.Texture.SetTexgenModeT(GL_REFLECTION_MAP);
-		GL_state.Texture.SetTexgenModeR(GL_REFLECTION_MAP);
+		GL_state.Texture.SetTexgenModeS(GL_REFLECTION_MAP_ARB);
+		GL_state.Texture.SetTexgenModeT(GL_REFLECTION_MAP_ARB);
+		GL_state.Texture.SetTexgenModeR(GL_REFLECTION_MAP_ARB);
 
 		GL_state.Texture.TexgenS(GL_TRUE);
 		GL_state.Texture.TexgenT(GL_TRUE);
@@ -1515,7 +1516,7 @@ static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buff
 		if (Cmdline_drawelements) {
 			glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
 		} else {
-			vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+			glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
 		}
 
 		// disable and reset everything we changed
@@ -1538,7 +1539,7 @@ static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buff
 		opengl_set_texture_target();
 
 		GL_state.Texture.SetActiveUnit(0);
-		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
+		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
 
 		rendered_env = true;
 	}
@@ -1565,10 +1566,10 @@ static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buff
 		opengl_default_light_settings(0, 0, 1);
 
 		GL_state.Texture.SetEnvCombineMode(GL_COMBINE_RGB, GL_MODULATE);
-		glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
-		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
-		glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);
-		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
+		glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB, GL_TEXTURE);
+		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
+		glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB, GL_PREVIOUS);
+		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR);
 
 		GL_state.Texture.SetRGBScale( (rendered_env) ? 2.0f : 4.0f );
 
@@ -1581,7 +1582,7 @@ static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buff
 		if (Cmdline_drawelements) {
 			glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
 		} else {
-			vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+			glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
 		}
 
 		opengl_default_light_settings();
@@ -1595,16 +1596,16 @@ static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buff
 	GL_state.Texture.DisableAll();
 	GL_state.Normalize(GL_FALSE);
 	GL_state.Array.SetActiveClientUnit(1);
-	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
-	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
-	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);
-	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
+	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB, GL_TEXTURE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
+	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB, GL_PREVIOUS);
+	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR);
 	GL_state.Array.DisableClientTexture();
 	GL_state.Array.SetActiveClientUnit(0);
-	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
-	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
-	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);
-	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
+	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB, GL_TEXTURE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
+	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB, GL_PREVIOUS);
+	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR);
 	GL_state.Array.DisableClientTexture();
 	GL_state.Array.DisableClientVertex();
 	GL_state.Array.DisableClientNormal();
@@ -1734,7 +1735,7 @@ void gr_opengl_render_stream_buffer(int buffer_handle, int offset, int n_verts, 
 
 	if( (flags & TMAP_FLAG_DISTORTION) || (flags & TMAP_FLAG_DISTORTION_THRUSTER) ) {
 		GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT };
-		vglDrawBuffers(2, buffers);
+		glDrawBuffers(2, buffers);
 	}
 	
 	GL_CHECK_FOR_ERRORS("end of render3d()");
@@ -2514,11 +2515,11 @@ void gr_opengl_shadow_map_start(matrix4 *shadow_view_matrix, const matrix *light
 		return;
 
 	glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT, &saved_fb);
-	vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, shadow_fbo);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, shadow_fbo);
 
 	//glDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);
 	GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT};
-	vglDrawBuffers(1, buffers);
+	glDrawBuffers(1, buffers);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -2547,11 +2548,11 @@ void gr_opengl_shadow_map_end()
 		Rendering_to_shadow_map = false;
 
 		gr_zbuffer_set(ZBUFFER_TYPE_FULL);
-		vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, saved_fb);
+		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, saved_fb);
 		if(saved_fb)
 		{
 // 			GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT };
-// 			vglDrawBuffers(2, buffers);
+// 			glDrawBuffers(2, buffers);
 		}
 
 		Glowpoint_override = Glowpoint_override_save;

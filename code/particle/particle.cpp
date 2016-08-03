@@ -15,7 +15,6 @@
 #include "globalincs/systemvars.h"
 #include "graphics/2d.h"
 #include "graphics/grbatch.h"
-#include "graphics/gropenglextension.h"
 #include "object/object.h"
 #include "particle/particle.h"
 #include "render/3d.h"
@@ -25,6 +24,7 @@
 #ifndef NDEBUG
 #include "io/timer.h"
 #endif
+#include <glad/glad.h>
 
 int Num_particles = 0;
 static SCP_vector<particle*> Particles;
@@ -76,7 +76,7 @@ void particle_init()
 		Particle_buffer_object = gr_create_vertex_buffer();
 	}
 
-	if ( Geometry_shader_buffer_object < 0 && !Cmdline_no_geo_sdr_effects && GL_version >= 32 ) {
+	if ( Geometry_shader_buffer_object < 0 && !Cmdline_no_geo_sdr_effects && GLAD_GL_ARB_geometry_shader4) {
 		Geometry_shader_buffer_object = gr_create_vertex_buffer();
 	}
 }

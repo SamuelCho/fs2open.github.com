@@ -19,12 +19,12 @@
 #include "cmeasure/cmeasure.h"
 #include "debugconsole/console.h"
 #include "fireball/fireballs.h"
-#include "freespace2/freespace.h"
+#include "freespace.h"
 #include "gamesequence/gamesequence.h"
 #include "gamesnd/eventmusic.h"
 #include "gamesnd/gamesnd.h"
 #include "globalincs/alphacolors.h"
-#include "globalincs/def_files.h"
+#include "def_files/def_files.h"
 #include "globalincs/linklist.h"
 #include "graphics/gropenglshader.h"
 #include "hud/hud.h"
@@ -85,6 +85,10 @@
 #include "weapon/shockwave.h"
 #include "weapon/swarm.h"
 #include "weapon/weapon.h"
+
+#ifdef MessageBox
+#undef MessageBox
+#endif
 
 #define NUM_SHIP_SUBSYSTEMS_PER_SET		200 	// Reduced from 1000 to 400 by MK on 4/1/98.  DTP; bumped from 700 to 2100
 												// Reduced to 200 by taylor on 3/13/07  --  it's managed in dynamically allocated sets now
@@ -3430,7 +3434,7 @@ int parse_ship_values(ship_info* sip, const bool is_template, const bool first_t
 		} else {
 			sip->cmeasure_type = res;
 		}
-	} else if (Species_info[sip->species].cmeasure_index >= 0) {
+	} else if (first_time && Species_info[sip->species].cmeasure_index >= 0) {
 		sip->cmeasure_type = Species_info[sip->species].cmeasure_index;
 	}
 
@@ -4823,7 +4827,7 @@ void parse_shiptype_tbl(const char *filename)
 		if (filename != NULL)
 			read_file_text(filename, CF_TYPE_TABLES);
 		else
-			read_file_text_from_array(defaults_get_file("objecttypes.tbl"));
+			read_file_text_from_default(defaults_get_file("objecttypes.tbl"));
 
 		reset_parse();
 
@@ -5932,7 +5936,7 @@ void ship_set(int ship_index, int objnum, int ship_type)
 		sprintf (err_msg, "Unable to allocate ship subsystems, which shouldn't be possible anymore. Current allocation is %d (%d in use). No subsystems have been assigned to %s.", Num_ship_subsystems_allocated, Num_ship_subsystems, shipp->ship_name);
 
 		if (Fred_running) 
-			MessageBox(NULL, err_msg, "Error", MB_OK);
+			os::dialogs::Message(os::dialogs::MESSAGEBOX_ERROR, err_msg);
 		else
 			Error(LOCATION, "%s", err_msg);
 	}
@@ -6469,10 +6473,10 @@ int subsys_set(int objnum, int ignore_subsys_info)
 			Warning (LOCATION, "\"fixed firingpoint\" flag used with turret which has less weapons defined for it than it has firingpoints\nsubsystem '%s' on ship type '%s'.\nsome of the firingpoints will be left unused\n", model_system->subobj_name, sinfo->name );
 		}
 
-        if ((ship_system->system_info->flags2 & MSS_FLAG2_SHARE_FIRE_DIRECTION) && !(ship_system->system_info->flags & MSS_FLAG_TURRET_SALVO))
+        if ((ship_system->system_info->flags2 & MSS_FLAG2_SHARE_FIRE_DIRECTION) && (!(ship_system->system_info->flags & MSS_FLAG_TURRET_SALVO) || !(ship_system->system_info->flags & MSS_FLAG_USE_MULTIPLE_GUNS)))
         {
-            Warning(LOCATION, "\"share fire direction\" flag used with turret which does not have the \"salvo mode\" flag set\nsubsystem '%s' on ship type '%s'.\nsetting the \"salvo mode\" flag\n", model_system->subobj_name, sinfo->name);
-            ship_system->system_info->flags |= MSS_FLAG_TURRET_SALVO;
+            Warning(LOCATION, "\"share fire direction\" flag used with turret which does not have the \"salvo mode\" or \"use multiple guns\" flag set\nsubsystem '%s' on ship type '%s'.\n\"share fire direction\" flag is ignored\n", model_system->subobj_name, sinfo->name);
+			ship_system->system_info->flags &= (~MSS_FLAG2_SHARE_FIRE_DIRECTION);
         }
 
 		for (k=0; k<ship_system->weapons.num_secondary_banks; k++) {
@@ -11008,25 +11012,6 @@ int ship_fire_primary(object * obj, int stream_weapons, int force)
 									// std convergence
 									vm_vec_scale(&target_vec, sip->convergence_distance);
 								}
-								
-								// if there is convergence offset then make use of it)
-								if (sip->aiming_flags & AIM_FLAG_CONVERGENCE_OFFSET) {
-									vm_vec_unrotate(&convergence_offset, &sip->convergence_offset, &obj->orient);
-									vm_vec_add2(&target_vec, &convergence_offset);
-								}
-
-								vm_vec_add2(&target_vec, &obj->pos);
-								vm_vec_sub(&firing_vec, &target_vec, &firing_pos);
-
-								// set orientation
-								vm_vector_2_matrix(&firing_orient, &firing_vec, NULL, NULL);
-							} else if (sip->aiming_flags & AIM_FLAG_STD_CONVERGENCE) {
-								// fixed distance convergence
-								vec3d target_vec, firing_vec, convergence_offset;
-																
-								// make sure vector is of the set length
-								vm_vec_copy_normalize(&target_vec, &player_forward_vec);
-								vm_vec_scale(&target_vec, sip->convergence_distance);
 								
 								// if there is convergence offset then make use of it)
 								if (sip->aiming_flags & AIM_FLAG_CONVERGENCE_OFFSET) {

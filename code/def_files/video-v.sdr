@@ -1,0 +1,10 @@
+vertIn vec4 vertPosition;
+vertIn vec4 vertTexCoord;
+vertOut vec4 fragTexCoord;
+uniform mat4 modelViewMatrix;
+uniform mat4 projMatrix;
+void main()
+{
+	fragTexCoord = vertTexCoord;
+	gl_Position = projMatrix * modelViewMatrix * vertPosition;
+};

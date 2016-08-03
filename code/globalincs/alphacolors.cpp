@@ -8,7 +8,6 @@
 */ 
 
 #include "globalincs/alphacolors.h"
-#include "globalincs/def_files.h"
 #include "graphics/2d.h"
 #include "parse/parselo.h"
 
@@ -377,6 +376,7 @@ void parse_everything_else(const char *filename)
 			while (required_string_either("#End", "$Team Name:")) {
 				required_string("$Team Name:"); // required to move the parse pointer forward
 				team_color temp_color;
+				memset(&temp_color, 0, sizeof(temp_color));
 
 				char temp2[NAME_LENGTH];
 				stuff_string(temp2, F_NAME, NAME_LENGTH);

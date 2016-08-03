@@ -2,15 +2,16 @@
 
 set -e
 
+cd build
+
 if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-    make -j 4
+    ninja
 elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
-    cd projects/Xcode
-    
-    xcodebuild ARCHS=$MACOSX_ARCH ONLY_ACTIVE_ARCH=NO -project FS2_Open.xcodeproj -configuration "$CONFIGURATION" clean build | tee release.log | xcpretty
+    cmake --build . --config "$CONFIGURATION" | tee build.log | xcpretty -f `xcpretty-travis-formatter`
     XCODE_RET=${PIPESTATUS[0]}
     if [ "$XCODE_RET" -ne "0" ]; then
-        pastebin -e 1d -f release.log
+        tar -cvzf build.log.tar.gz build.log
+        curl --upload-file build.log.tar.gz "https://transfer.sh/build.log.tar.gz"
         exit $XCODE_RET
-    fi
+   fi
 fi

@@ -12,12 +12,11 @@
 #include "bmpman/bmpman.h"
 #include "cfile/cfile.h"
 #include "cutscene/oggplayer.h"
-#include "globalincs/def_files.h"
+#include "def_files/def_files.h"
 #include "globalincs/pstypes.h"
 #include "graphics/2d.h"
 #include "graphics/gropengl.h"
 #include "graphics/gropengldraw.h"
-#include "graphics/gropenglextension.h"
 #include "graphics/gropenglshader.h"
 #include "graphics/gropenglstate.h"
 #include "graphics/gropengltexture.h"
@@ -34,7 +33,6 @@
 
 extern int Cmdline_noscalevid;
 
-static int hp2, wp2;
 static int video_inited = 0;
 static int scale_video = 0;
 static int playing = 1;
@@ -54,9 +52,6 @@ static GLfloat gl_screenU = 0;
 static GLfloat gl_screenV = 0;
 static GLfloat glVertices[4][4] = {{0}};
 static int buffer_handle = -1;
-
-// video externs from API graphics functions
-extern void opengl_tcache_get_adjusted_texture_size(int w_in, int h_in, int *w_out, int *h_out);
 
 static int timer_started = 0;
 static longlong base_time = -1;
@@ -344,7 +339,6 @@ static void OGG_video_init(theora_info *tinfo)
 
 	if (gr_screen.mode == GR_OPENGL) {
 		opengl_set_texture_target(GL_TEXTURE_2D);
-		opengl_tcache_get_adjusted_texture_size(g_screenWidth, g_screenHeight, &wp2, &hp2);
 
 		buffer_handle = gr_create_vertex_buffer(true);
 
@@ -398,7 +392,7 @@ static void OGG_video_init(theora_info *tinfo)
 			glTexParameteri(GL_texture_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_texture_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_texture_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexImage2D(GL_state.Texture.GetTarget(), 0, GL_RGB8, wp2, hp2, 0, GL_BGR, GL_UNSIGNED_BYTE, NULL);
+			glTexImage2D(GL_state.Texture.GetTarget(), 0, GL_RGB8, g_screenWidth, g_screenHeight, 0, GL_BGR, GL_UNSIGNED_BYTE, NULL);
 		}
 		GL_state.SetTextureSource(TEXTURE_SOURCE_DECAL);
 		GL_state.SetAlphaBlendMode(ALPHA_BLEND_NONE);
@@ -465,7 +459,7 @@ static void OGG_video_init(theora_info *tinfo)
 	}
 
 	if(!use_shaders) {
-		pixelbuf = (ubyte *) vm_malloc_q(g_screenWidth * g_screenHeight * 3);
+		pixelbuf = (ubyte *) vm_malloc(g_screenWidth * g_screenHeight * 3, memory::quiet_alloc);
 
 		if (pixelbuf == NULL) {
 			nprintf(("MOVIE", "ERROR: Can't allocate memory for pixelbuf"));
@@ -490,8 +484,8 @@ static void OGG_video_init(theora_info *tinfo)
 		gl_screenYH = g_screenY + g_screenHeight;
 		gl_screenXW = g_screenX + g_screenWidth;
 
-		gl_screenU = i2fl(g_screenWidth) / i2fl(wp2);
-		gl_screenV = i2fl(g_screenHeight) / i2fl(hp2);
+		gl_screenU = 1.f;
+		gl_screenV = 1.f;
 
 		if(use_shaders) {
 			gl_screenU = i2fl(tinfo->frame_width-1) / i2fl(2048) ;
@@ -662,7 +656,6 @@ static void convert_YUV_to_RGB(yuv_buffer *yuv)
 	}
 }
 
-extern int Mouse_hidden;
 static void OGG_video_draw(theora_state *tstate)
 {
 	yuv_buffer yuv;
@@ -671,6 +664,7 @@ static void OGG_video_draw(theora_state *tstate)
 	if(!use_shaders)
 		convert_YUV_to_RGB(&yuv);
 	if (gr_screen.mode == GR_OPENGL) {
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		if(use_shaders) {
 			GL_state.Texture.SetActiveUnit(0);
 			glTexSubImage2D(GL_state.Texture.GetTarget(), 0, 0, 0, yuv.y_stride, yuv.y_height, GL_RED, GL_UNSIGNED_BYTE, yuv.y);
@@ -684,7 +678,7 @@ static void OGG_video_draw(theora_state *tstate)
 
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	}
-	Mouse_hidden = 1;
+	io::mouse::CursorManager::get()->showCursor(false);
 	gr_flip();
 	os_poll();
 
@@ -756,7 +750,7 @@ THEORAFILE *theora_open(char *filename)
 
 	
 	// create the file
-	movie = (THEORAFILE *) vm_malloc_q( sizeof(THEORAFILE) );
+	movie = (THEORAFILE *) vm_malloc( sizeof(THEORAFILE), memory::quiet_alloc);
 
 	if (movie == NULL)
 		return NULL;

@@ -12,7 +12,7 @@
 
 #include "cfile/cfile.h"
 #include "controlconfig/controlsconfig.h"
-#include "globalincs/def_files.h"
+#include "def_files/def_files.h"
 #include "globalincs/systemvars.h"
 #include "io/joy.h"
 #include "io/key.h"
@@ -810,7 +810,7 @@ void control_config_common_load_overrides()
 	if (cf_exists_full("controlconfigdefaults.tbl", CF_TYPE_TABLES)) {
 		read_file_text("controlconfigdefaults.tbl", CF_TYPE_TABLES);
 	} else {
-		read_file_text_from_array(defaults_get_file("controlconfigdefaults.tbl"));
+		read_file_text_from_default(defaults_get_file("controlconfigdefaults.tbl"));
 	}
 
 	reset_parse();

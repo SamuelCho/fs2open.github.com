@@ -32,37 +32,17 @@ int keypad_to_ascii(int c)
 {
 	switch(c){
 	case KEY_PAD0:
-		return key_to_ascii(KEY_0);
-		break;
 	case KEY_PAD1:
-		return key_to_ascii(KEY_1);
-		break;
 	case KEY_PAD2:
-		return key_to_ascii(KEY_2);
-		break;
 	case KEY_PAD3:
-		return key_to_ascii(KEY_3);
-		break;
 	case KEY_PAD4:
-		return key_to_ascii(KEY_4);
-		break;
 	case KEY_PAD5:
-		return key_to_ascii(KEY_5);
-		break;
 	case KEY_PAD6:
-		return key_to_ascii(KEY_6);
-		break;
 	case KEY_PAD7:
-		return key_to_ascii(KEY_7);
-		break;
 	case KEY_PAD8:
-		return key_to_ascii(KEY_8);
-		break;
 	case KEY_PAD9:
-		return key_to_ascii(KEY_9);
-		break;
 	case KEY_PADPERIOD:
-		return key_to_ascii(KEY_PERIOD);
+		return key_to_ascii(c);
 		break;
 	default :
 		return -1;
@@ -104,7 +84,7 @@ void UI_INPUTBOX::create(UI_WINDOW *wnd, int _x, int _y, int _w, int _text_len, 
 
 	Assert(_text_len >= 0);
 	Assert((int) strlen(_text) <= _text_len);
-	gr_set_font(wnd->f_id);
+	font::set_font(wnd->f_id);
 	gr_get_string_size( &tw, &th, "*" );
 
 	// check to see if the user passed in a text color otherwise use the default green color
@@ -211,7 +191,7 @@ void UI_INPUTBOX::draw()
 	h1 = h;
 	invis = flags & UI_INPUTBOX_FLAG_INVIS;
 
-	gr_set_font(my_wnd->f_id);
+	font::set_font(my_wnd->f_id);
 	gr_reset_clip();
 	if (!invis && !(flags & UI_INPUTBOX_FLAG_NO_BACK)) {
 		// draw the entire text box region

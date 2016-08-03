@@ -40,7 +40,7 @@ void opengl_texture_state::init(GLuint n_units)
 
 		default_values(unit);
 
-		vglActiveTextureARB(GL_TEXTURE0 + unit);
+		glActiveTexture(GL_TEXTURE0 + unit);
 		if (unit < (GLuint)GL_supported_texture_units) {
 			glDisable(GL_TEXTURE_GEN_S);
 			glDisable(GL_TEXTURE_GEN_T);
@@ -89,16 +89,16 @@ void opengl_texture_state::init(GLuint n_units)
 
 void opengl_texture_state::default_values(GLint unit, GLenum target)
 {
-	vglActiveTextureARB(GL_TEXTURE0 + unit);
+	glActiveTexture(GL_TEXTURE0 + unit);
 
 	if (target == GL_INVALID_ENUM) {
 		if (unit < GL_supported_texture_units) {
 			glDisable(GL_TEXTURE_2D);
-			glDisable(GL_TEXTURE_CUBE_MAP);
+			glDisable(GL_TEXTURE_CUBE_MAP_ARB);
 		}
 
 		glBindTexture(GL_TEXTURE_2D, 0);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP_ARB, 0);
 
 		units[unit].texture_target = GL_TEXTURE_2D;
 		units[unit].texture_id = 0;
@@ -200,7 +200,7 @@ void opengl_texture_state::SetActiveUnit(GLuint id)
 		id = 0;
 	}
 
-	vglActiveTextureARB(GL_TEXTURE0 + id);
+	glActiveTexture(GL_TEXTURE0 + id);
 
 	active_texture_unit = id;
 }
@@ -938,7 +938,7 @@ void opengl_array_state::SetActiveClientUnit(GLuint id)
 		return;
 	}
 
-	vglClientActiveTextureARB(GL_TEXTURE0_ARB + id);
+	glClientActiveTexture(GL_TEXTURE0 + id);
 
 	active_client_texture_unit = id;
 }
@@ -1141,7 +1141,7 @@ void opengl_array_state::EnableVertexAttrib(GLuint index)
 		return;
 	}
 
-	vglEnableVertexAttribArrayARB(index);
+	glEnableVertexAttribArray(index);
 	va_unit->status = GL_TRUE;
 	va_unit->status_init = true;
 }
@@ -1154,7 +1154,7 @@ void opengl_array_state::DisableVertexAttrib(GLuint index)
 		return;
 	}
 
-	vglDisableVertexAttribArrayARB(index);
+	glDisableVertexAttribArray(index);
 	va_unit->status = GL_FALSE;
 	va_unit->status_init = true;
 }
@@ -1176,7 +1176,7 @@ void opengl_array_state::VertexAttribPointer(GLuint index, GLint size, GLenum ty
 		return;
 	}
 
-	vglVertexAttribPointerARB(index, size, type, normalized, stride, pointer);
+	glVertexAttribPointer(index, size, type, normalized, stride, pointer);
 
 	va_unit->normalized = normalized;
 	va_unit->pointer = pointer;
@@ -1245,7 +1245,7 @@ void opengl_array_state::BindArrayBuffer(GLuint id)
 		return;
 	}
 
-	vglBindBufferARB(GL_ARRAY_BUFFER_ARB, id);
+	glBindBuffer(GL_ARRAY_BUFFER, id);
 
 	array_buffer = id;
 
@@ -1270,14 +1270,14 @@ void opengl_array_state::BindElementBuffer(GLuint id)
 		return;
 	}
 
-	vglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, id);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, id);
 
 	element_array_buffer = id;
 }
 
 void opengl_array_state::BindTextureBuffer(GLuint id)
 {
-	if ( !Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_BUFFER) ) {
+	if ( !GLAD_GL_ARB_texture_buffer_object ) {
 		return;
 	}
 
@@ -1285,14 +1285,14 @@ void opengl_array_state::BindTextureBuffer(GLuint id)
 		return;
 	}
 
-	vglBindBufferARB(GL_TEXTURE_BUFFER, id);
+	glBindBuffer(GL_TEXTURE_BUFFER_ARB, id);
 
 	texture_array_buffer = id;
 }
 
 void opengl_array_state::BindUniformBufferBindingIndex(GLuint id, GLuint index)
 {
-	if ( !Is_Extension_Enabled(GL_EXTENSION_ARB_UNIFORM_BUFFER_OBJECT) ) {
+	if ( !GLAD_GL_ARB_uniform_buffer_object ) {
 		return;
 	}
 
@@ -1300,14 +1300,14 @@ void opengl_array_state::BindUniformBufferBindingIndex(GLuint id, GLuint index)
 		return;
 	}
 
-	vglBindBufferBaseEXT(GL_UNIFORM_BUFFER, index, id);
+	glBindBufferBaseEXT(GL_UNIFORM_BUFFER, index, id);
 
 	uniform_buffer_index_bindings[index] = id;
 }
 
 void opengl_array_state::BindUniformBuffer(GLuint id)
 {
-	if ( !Is_Extension_Enabled(GL_EXTENSION_ARB_UNIFORM_BUFFER_OBJECT) ) {
+	if ( !GLAD_GL_ARB_uniform_buffer_object ) {
 		return;
 	}
 
@@ -1315,7 +1315,7 @@ void opengl_array_state::BindUniformBuffer(GLuint id)
 		return;
 	}
 
-	vglBindBufferARB(GL_UNIFORM_BUFFER, id);
+	glBindBuffer(GL_UNIFORM_BUFFER, id);
 
 	uniform_buffer = id;
 }
@@ -1373,7 +1373,7 @@ void opengl_uniform_state::setUniformi(const SCP_string &name, const int val)
 		uniform_lookup[name] = uniforms.size()-1;
 	}
 
-	vglUniform1iARB(opengl_shader_get_uniform(name.c_str()), val);
+	glUniform1i(opengl_shader_get_uniform(name.c_str()), val);
 }
 
 void opengl_uniform_state::setUniform1iv(const SCP_string &name, const int count, const int *val)
@@ -1465,7 +1465,7 @@ void opengl_uniform_state::setUniformf(const SCP_string &name, const float val)
 		uniform_lookup[name] = uniforms.size()-1;
 	}
 
-	vglUniform1fARB(opengl_shader_get_uniform(name.c_str()), val);
+	glUniform1f(opengl_shader_get_uniform(name.c_str()), val);
 }
 
 void opengl_uniform_state::setUniform2f(const SCP_string &name, const float x, const float y)
@@ -1514,7 +1514,7 @@ void opengl_uniform_state::setUniform2f(const SCP_string &name, const vec2d &val
 		uniform_lookup[name] = uniforms.size()-1;
 	}
 
-	vglUniform2fARB(opengl_shader_get_uniform(name.c_str()), val.x, val.y);
+	glUniform2f(opengl_shader_get_uniform(name.c_str()), val.x, val.y);
 }
 
 void opengl_uniform_state::setUniform3f(const SCP_string &name, const float x, const float y, const float z)
@@ -1564,7 +1564,7 @@ void opengl_uniform_state::setUniform3f(const SCP_string &name, const vec3d &val
 		uniform_lookup[name] = uniforms.size()-1;
 	}
 
-	vglUniform3fARB(opengl_shader_get_uniform(name.c_str()), val.a1d[0], val.a1d[1], val.a1d[2]);
+	glUniform3f(opengl_shader_get_uniform(name.c_str()), val.a1d[0], val.a1d[1], val.a1d[2]);
 }
 
 void opengl_uniform_state::setUniform4f(const SCP_string &name, const float x, const float y, const float z, const float w)
@@ -1616,7 +1616,7 @@ void opengl_uniform_state::setUniform4f(const SCP_string &name, const vec4 &val)
 		uniform_lookup[name] = uniforms.size()-1;
 	}
 
-	vglUniform4fARB(opengl_shader_get_uniform(name.c_str()), val.a1d[0], val.a1d[1], val.a1d[2], val.a1d[3]);
+	glUniform4f(opengl_shader_get_uniform(name.c_str()), val.a1d[0], val.a1d[1], val.a1d[2], val.a1d[3]);
 }
 
 void opengl_uniform_state::setUniform1fv(const SCP_string &name, const int count, const float *val)
@@ -1817,7 +1817,7 @@ void opengl_uniform_state::setUniformMatrix4f(const SCP_string &name, const matr
 		uniform_lookup[name] = uniforms.size()-1;
 	}
 
-	vglUniformMatrix4fvARB(opengl_shader_get_uniform(name.c_str()), 1, GL_FALSE, (const GLfloat*)&val);
+	glUniformMatrix4fv(opengl_shader_get_uniform(name.c_str()), 1, GL_FALSE, (const GLfloat*)&val);
 }
 
 void opengl_uniform_state::setUniformMatrix4fv(const SCP_string &name, const int count, const matrix4 *val)
@@ -1870,7 +1870,7 @@ void opengl_uniform_state::setUniformMatrix4fv(const SCP_string &name, const int
 		uniform_lookup[name] = uniforms.size()-1;
 	}
 
-	vglUniformMatrix4fvARB(opengl_shader_get_uniform(name.c_str()), count, GL_FALSE, (const GLfloat*)val);
+	glUniformMatrix4fv(opengl_shader_get_uniform(name.c_str()), count, GL_FALSE, (const GLfloat*)val);
 }
 
 void opengl_uniform_state::reset()

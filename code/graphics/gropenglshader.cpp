@@ -9,11 +9,10 @@
 
 
 #include "cmdline/cmdline.h"
-#include "globalincs/def_files.h"
+#include "def_files/def_files.h"
 #include "graphics/2d.h"
 #include "graphics/grinternal.h"
 #include "graphics/gropengldraw.h"
-#include "graphics/gropenglextension.h"
 #include "graphics/gropengllight.h"
 #include "graphics/gropenglpostprocessing.h"
 #include "graphics/gropenglshader.h"
@@ -223,7 +222,7 @@ opengl_shader_t *Current_shader = NULL;
 
 // Forward declarations
 GLuint opengl_shader_create(const SCP_vector<SCP_string>& vs, const SCP_vector<SCP_string>& fs, const SCP_vector<SCP_string>& gs);
-void opengl_shader_check_program_info_log(GLuint shader_object);
+void opengl_shader_check_info_log(GLuint shader_object);
 
 /**
  * Set the currently active shader 
@@ -236,13 +235,14 @@ void opengl_shader_set_current(opengl_shader_t *shader_obj)
 			GL_state.Array.ResetVertexAttribs();
 			GL_state.Uniform.reset();
 			Current_shader = shader_obj;
-			vglUseProgramObjectARB(Current_shader->program_id);
+			glUseProgram(Current_shader->program_id);
+			GL_state.Uniform.reset();
 #ifndef NDEBUG
 			if ( opengl_check_for_errors("shader_set_current()") ) {
-				vglValidateProgramARB(Current_shader->program_id);
+				glValidateProgram(Current_shader->program_id);
 
 				GLint obj_status = 0;
-				vglGetProgramiv(Current_shader->program_id, GL_OBJECT_VALIDATE_STATUS_ARB, &obj_status);
+				glGetProgramiv(Current_shader->program_id, GL_VALIDATE_STATUS, &obj_status);
 
 				if ( !obj_status ) {
 					opengl_shader_check_program_info_log(Current_shader->program_id);
@@ -262,7 +262,7 @@ void opengl_shader_set_current(opengl_shader_t *shader_obj)
 		GL_state.Array.ResetVertexAttribs();
 		GL_state.Uniform.reset();
 		Current_shader = NULL;
-		vglUseProgramObjectARB(0);
+		glUseProgram(0);
 	}
 }
 
@@ -305,7 +305,7 @@ void opengl_delete_shader(int sdr_handle)
 	Assert(sdr_handle < (int)GL_shader.size());
 
 	if (GL_shader[sdr_handle].program_id) {
-		vglDeleteObjectARB(GL_shader[sdr_handle].program_id);
+		glDeleteProgram(GL_shader[sdr_handle].program_id);
 		GL_shader[sdr_handle].program_id = 0;
 	}
 
@@ -331,7 +331,7 @@ void opengl_shader_shutdown()
 
 	for (i = 0; i < GL_shader.size(); i++) {
 		if (GL_shader[i].program_id) {
-			vglDeleteObjectARB(GL_shader[i].program_id);
+			glDeleteProgram(GL_shader[i].program_id);
 			GL_shader[i].program_id = 0;
 		}
 
@@ -449,7 +449,7 @@ static SCP_string opengl_load_shader(const char *filename)
 	//If we're still here, proceed with internals
 	mprintf(("   Loading built-in default shader for: %s\n", filename));
 	auto def_shader = defaults_get_file(filename);
-	content.assign(def_shader);
+	content.assign(reinterpret_cast<const char*>(def_shader.data), def_shader.size);
 
 	return content;
 }
@@ -504,7 +504,7 @@ int opengl_compile_shader(shader_type sdr, uint flags)
 	SCP_vector<SCP_string> geom_content;
 
 	if ( use_geo_sdr ) {
-		if ( GL_version < 32 ) {
+		if (!GLAD_GL_ARB_geometry_shader4) {
 			return -1;
 		}
 
@@ -640,7 +640,7 @@ void opengl_shader_init()
  *
  * @param shader_object		OpenGL handle of a shader object
  */
-void opengl_shader_check_shader_info_log(GLuint shader_object)
+void opengl_shader_check_info_log(GLuint shader_object)
 {
 	if (GLshader_info_log == NULL) {
 		GLshader_info_log = (char *) vm_malloc(GLshader_info_log_size);
@@ -648,23 +648,23 @@ void opengl_shader_check_shader_info_log(GLuint shader_object)
 
 	memset(GLshader_info_log, 0, GLshader_info_log_size);
 
-	vglGetShaderInfoLogARB(shader_object, GLshader_info_log_size-1, 0, GLshader_info_log);
+	glGetShaderInfoLog(shader_object, GLshader_info_log_size-1, 0, GLshader_info_log);
 }
 
 /**
-* Retrieve the compilation log for a given program object, and store it in the GLshader_info_log global variable
+* Retrieve the compilation log for a given shader object, and store it in the GLshader_info_log global variable
 *
-* @param program_object		OpenGL handle of a program object
+* @param program_object		OpenGL handle of a shader object
 */
-void opengl_shader_check_program_info_log(GLuint program_object)
+void opengl_program_check_info_log(GLuint program_object)
 {
-	if ( GLshader_info_log == NULL ) {
+	if (GLshader_info_log == NULL) {
 		GLshader_info_log = (char *)vm_malloc(GLshader_info_log_size);
 	}
 
 	memset(GLshader_info_log, 0, GLshader_info_log_size);
 
-	vglGetProgramInfoLogARB(program_object, GLshader_info_log_size - 1, 0, GLshader_info_log);
+	glGetProgramInfoLog(program_object, GLshader_info_log_size - 1, 0, GLshader_info_log);
 }
 
 /**
@@ -687,24 +687,24 @@ GLuint opengl_shader_compile_object(const SCP_vector<SCP_string>& shader_source,
 		sources.push_back(it->c_str());
 	}
 
-	shader_object = vglCreateShaderObjectARB(shader_type);
+	shader_object = glCreateShader(shader_type);
 
-	vglShaderSourceARB(shader_object, sources.size(), &sources[0], NULL);
-	vglCompileShaderARB(shader_object);
+	glShaderSource(shader_object, sources.size(), &sources[0], NULL);
+	glCompileShader(shader_object);
 
 	// check if the compile was successful
-	vglGetShaderiv(shader_object, GL_COMPILE_STATUS, &status);
+	glGetShaderiv(shader_object, GL_COMPILE_STATUS, &status);
 
 	opengl_shader_check_shader_info_log(shader_object);
 
 	// we failed, bail out now...
 	if (status == 0) {
 		// basic error check
-		mprintf(("%s shader failed to compile:\n%s\n", (shader_type == GL_VERTEX_SHADER_ARB) ? "Vertex" : ((shader_type == GL_GEOMETRY_SHADER_EXT) ? "Geometry" : "Fragment"), GLshader_info_log));
+		mprintf(("%s shader failed to compile:\n%s\n", (shader_type == GL_VERTEX_SHADER) ? "Vertex" : ((shader_type == GL_GEOMETRY_SHADER_ARB) ? "Geometry" : "Fragment"), GLshader_info_log));
 
 		// this really shouldn't exist, but just in case
 		if (shader_object) {
-			vglDeleteObjectARB(shader_object);
+			glDeleteProgram(shader_object);
 		}
 
 		return 0;
@@ -712,7 +712,7 @@ GLuint opengl_shader_compile_object(const SCP_vector<SCP_string>& shader_source,
 
 	// we succeeded, maybe output warnings too
 	if (strlen(GLshader_info_log) > 5) {
-		nprintf(("SHADER-DEBUG", "%s shader compiled with warnings:\n%s\n", (shader_type == GL_VERTEX_SHADER_ARB) ? "Vertex" : ((shader_type == GL_GEOMETRY_SHADER_EXT) ? "Geometry" : "Fragment"), GLshader_info_log));
+		nprintf(("SHADER-DEBUG", "%s shader compiled with warnings:\n%s\n", (shader_type == GL_VERTEX_SHADER) ? "Vertex" : ((shader_type == GL_GEOMETRY_SHADER_ARB) ? "Geometry" : "Fragment"), GLshader_info_log));
 	}
 
 	return shader_object;
@@ -734,38 +734,38 @@ GLuint opengl_shader_link_object(GLuint vertex_object, GLuint fragment_object, G
 	GLuint shader_object = 0;
 	GLint status = 0;
 
-	shader_object = vglCreateProgramObjectARB();
+	shader_object = glCreateProgram();
 
 	if (vertex_object) {
-		vglAttachObjectARB(shader_object, vertex_object);
+		glAttachShader(shader_object, vertex_object);
 	}
 
 	if (fragment_object) {
-		vglAttachObjectARB(shader_object, fragment_object);
+		glAttachShader(shader_object, fragment_object);
 	}
 
 	if (geometry_object) {
-		vglAttachObjectARB(shader_object, geometry_object);
+		glAttachShader(shader_object, geometry_object);
 	}
 
 	for ( int i = 0; i < opengl_vert_attrib::NUM_ATTRIBS; ++i ) {
 		// assign vert attribute binding locations before we link the shader
-		vglBindAttribLocationARB(shader_object, i, GL_vertex_attrib_info[i].name.c_str());
+		glBindAttribLocation(shader_object, i, GL_vertex_attrib_info[i].name.c_str());
 	}
 
-	vglLinkProgramARB(shader_object);
+	glLinkProgram(shader_object);
 
 	// check if the link was successful
-	vglGetProgramiv(shader_object, GL_LINK_STATUS, &status);
+	glGetProgramiv(shader_object, GL_LINK_STATUS, &status);
 
-	opengl_shader_check_program_info_log(shader_object);
+	opengl_program_check_info_log(shader_object);
 
 	// we failed, bail out now...
 	if (status == 0) {
 		mprintf(("Shader failed to link:\n%s\n", GLshader_info_log));
 
 		if (shader_object) {
-			vglDeleteObjectARB(shader_object);
+			glDeleteProgram(shader_object);
 		}
 
 		return 0;
@@ -813,7 +813,7 @@ GLuint opengl_shader_create(const SCP_vector<SCP_string>& vs, const SCP_vector<S
 	}
 
 	if (!gs.empty()) {
-		gs_o = opengl_shader_compile_object( gs, GL_GEOMETRY_SHADER );
+		gs_o = opengl_shader_compile_object( gs, GL_GEOMETRY_SHADER_ARB );
 
 		if ( !gs_o ) {
 			mprintf(("ERROR! Unable to create fragment shader!\n"));
@@ -829,15 +829,15 @@ GLuint opengl_shader_create(const SCP_vector<SCP_string>& vs, const SCP_vector<S
 
 Done:
 	if (vs_o) {
-		vglDeleteObjectARB(vs_o);
+		glDeleteShader(vs_o);
 	}
 
 	if (fs_o) {
-		vglDeleteObjectARB(fs_o);
+		glDeleteShader(fs_o);
 	}
 
 	if (gs_o) {
-		vglDeleteObjectARB(gs_o);
+		glDeleteShader(gs_o);
 	}
 
 	return program;
@@ -858,7 +858,7 @@ void opengl_shader_init_attribute(const opengl_vert_attrib *attrib_info)
 	}
 
 	new_attribute.text_id = attrib_info->name;
-	new_attribute.location = vglGetAttribLocationARB(Current_shader->program_id, attrib_info->name.c_str());
+	new_attribute.location = glGetAttribLocation(Current_shader->program_id, attrib_info->name.c_str());
 
 	if ( new_attribute.location < 0 ) {
 		nprintf(("SHADER-DEBUG", "WARNING: Unable to get shader attribute location for \"%s\"!\n", attrib_info->name.c_str()));
@@ -916,7 +916,7 @@ void opengl_shader_init_uniform(const char *uniform_text)
 	}
 
 	new_uniform.text_id = uniform_text;
-	new_uniform.location = vglGetUniformLocationARB(Current_shader->program_id, uniform_text);
+	new_uniform.location = glGetUniformLocation(Current_shader->program_id, uniform_text);
 
 	if (new_uniform.location < 0) {
 		nprintf(("SHADER-DEBUG", "WARNING: Unable to get shader uniform location for \"%s\"!\n", uniform_text));
@@ -967,9 +967,9 @@ void opengl_shader_init_uniform_block(const char *uniform_text)
 
 	new_uniform_block.text_id = uniform_text;
 #ifdef __APPLE__
-	new_uniform_block.location = vglGetUniformBlockIndexARB((long)Current_shader->program_id, uniform_text);
+	new_uniform_block.location = glGetUniformBlockIndex((long)Current_shader->program_id, uniform_text);
 #else
-	new_uniform_block.location = vglGetUniformBlockIndexARB(Current_shader->program_id, uniform_text);
+	new_uniform_block.location = glGetUniformBlockIndex(Current_shader->program_id, uniform_text);
 #endif
 	if (new_uniform_block.location < 0) {
 		nprintf(("SHADER-DEBUG", "WARNING: Unable to get shader uniform block location for \"%s\"!\n", uniform_text));

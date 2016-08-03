@@ -1,0 +1,8 @@
+vertIn vec4 vertPosition;
+vertIn vec4 vertTexCoord;
+vertOut vec4 fragTexCoord;
+void main()
+{
+	fragTexCoord = vertTexCoord;
+	gl_Position = vertPosition;
+};

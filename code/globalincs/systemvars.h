@@ -15,6 +15,8 @@
 #include "globalincs/pstypes.h"
 #include "math.h"
 
+#include <cstdint>
+
 #define	GM_MULTIPLAYER					(1 << 0)
 #define	GM_NORMAL						(1 << 1)
 #define	GM_DEAD_DIED					(1 << 2)				//	Died, waiting to blow up.
@@ -213,9 +215,9 @@ typedef struct profile_sample {
 	int open_profiles;
 	//char name[256];
 	SCP_string name;
-	uint start_time;	// in microseconds
-	uint accumulator;
-	uint children_sample_time;
+	std::uint64_t start_time;	// in microseconds
+	std::uint64_t accumulator;
+	std::uint64_t children_sample_time;
 	uint num_parents;
 	uint num_children;
 	int parent;
@@ -228,9 +230,9 @@ typedef struct profile_sample_history {
 	float avg;
 	float min;
 	float max;
-	uint avg_micro_sec;
-	uint min_micro_sec;
-	uint max_micro_sec;
+	std::uint64_t avg_micro_sec;
+	std::uint64_t min_micro_sec;
+	std::uint64_t max_micro_sec;
 } profile_sample_history;
 
 extern SCP_string profile_output;
@@ -241,8 +243,8 @@ void profile_begin(const char* name);
 void profile_begin(SCP_string &output_handle, const char* name);
 void profile_end(const char* name);
 void profile_dump_output();
-void store_profile_in_history(SCP_string &name, float percent, uint time);
-void get_profile_from_history(SCP_string &name, float* avg, float* min, float* max, uint *avg_micro_sec, uint *min_micro_sec, uint *max_micro_sec);
+void store_profile_in_history(SCP_string &name, float percent, uint64_t time);
+void get_profile_from_history(SCP_string &name, float* avg, float* min, float* max, uint64_t *avg_micro_sec, uint64_t *min_micro_sec, uint64_t *max_micro_sec);
 
 class profile_auto
 {
@@ -263,9 +265,6 @@ public:
 #define PROFILE(name, function) { profile_begin(name); function; profile_end(name); }
 
 //====================================================================================
-// Memory stuff from WinDebug.cpp
-extern int TotalRam;
-void windebug_memwatch_init();
 
 #define MAX_LIGHTS 256
 #define MAX_LIGHT_LEVELS 16
