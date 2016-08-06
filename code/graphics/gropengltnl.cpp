@@ -226,7 +226,7 @@ void opengl_update_buffer_data_offset(int handle, uint offset, uint size, void* 
 
 	opengl_bind_buffer_object(handle);
 	
-	vglBufferSubDataARB(buffer_obj.type, offset, size, data);
+	glBufferSubDataARB(buffer_obj.type, offset, size, data);
 }
 
 void gr_opengl_delete_buffer(int handle)
@@ -371,7 +371,7 @@ void gr_opengl_update_transform_buffer(void* data, uint size)
 	// need to rebind the buffer object to the texture buffer after it's been updated.
 	// didn't have to do this on AMD and Nvidia drivers but Intel drivers seem to want it.
 	glBindTexture(GL_TEXTURE_BUFFER, buffer_obj.texture);
-	vglTexBufferARB(GL_TEXTURE_BUFFER, GL_RGBA32F_ARB, buffer_obj.buffer_id);
+	glTexBufferARB(GL_TEXTURE_BUFFER, GL_RGBA32F_ARB, buffer_obj.buffer_id);
 }
 
 GLuint opengl_get_transform_buffer_texture()
@@ -887,19 +887,19 @@ void opengl_render_model_program(model_material* material_info, indexed_vertex_s
 	}
 
 	if ( Rendering_to_shadow_map ) {
-		vglDrawElementsInstancedBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), 4, (GLint)bufferp->vertex_num_offset);
+		glDrawElementsInstancedBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), 4, (GLint)bufferp->vertex_num_offset);
 	} else {
-		if ( Is_Extension_Enabled(GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+		if ( GLAD_GL_ARB_draw_elements_base_vertex ) {
 			if ( Cmdline_drawelements ) {
-				vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
+				glDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
 			} else {
-				vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
+				glDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
 			}
 		} else {
 			if ( Cmdline_drawelements ) {
 				glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start));
 			} else {
-				vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+				glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
 			}
 		}
 	}
@@ -1011,7 +1011,7 @@ void opengl_render_model_fixed(model_material* material_info, indexed_vertex_sou
 	if ( Cmdline_drawelements ) {
 		glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start));
 	} else {
-		vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+		glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
 	}
 
 	// -------- End 2nd PASS --------------------------------------------------------- //
@@ -1037,10 +1037,10 @@ void opengl_render_model_fixed(model_material* material_info, indexed_vertex_sou
 		opengl_default_light_settings(0, 0, 1);
 
 		GL_state.Texture.SetEnvCombineMode(GL_COMBINE_RGB, GL_MODULATE);
-		glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
-		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
-		glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);
-		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
+		glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB, GL_TEXTURE);
+		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
+		glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB, GL_PREVIOUS);
+		glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR);
 
 		GL_state.Texture.SetRGBScale((rendered_env) ? 2.0f : 4.0f);
 
@@ -1053,7 +1053,7 @@ void opengl_render_model_fixed(model_material* material_info, indexed_vertex_sou
 		if ( Cmdline_drawelements ) {
 			glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start));
 		} else {
-			vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+			glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
 		}
 
 		opengl_default_light_settings();
@@ -1067,16 +1067,16 @@ void opengl_render_model_fixed(model_material* material_info, indexed_vertex_sou
 	GL_state.Texture.DisableAll();
 	GL_state.Normalize(GL_FALSE);
 	GL_state.Array.SetActiveClientUnit(1);
-	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
-	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
-	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);
-	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
+	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB, GL_TEXTURE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
+	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB, GL_PREVIOUS);
+	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR);
 	GL_state.Array.DisableClientTexture();
 	GL_state.Array.SetActiveClientUnit(0);
-	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
-	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
-	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);
-	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
+	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE0_RGB, GL_TEXTURE);
+	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR);
+	glTexEnvf(GL_TEXTURE_ENV, GL_SOURCE1_RGB, GL_PREVIOUS);
+	glTexEnvf(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR);
 	GL_state.Array.DisableClientTexture();
 	GL_state.Array.DisableClientVertex();
 	GL_state.Array.DisableClientNormal();

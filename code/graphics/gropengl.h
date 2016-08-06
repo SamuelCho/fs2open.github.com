@@ -12,6 +12,7 @@
 #ifndef _GROPENGL_H
 #define _GROPENGL_H
 
+#include <glad/glad.h>
 #include "globalincs/pstypes.h"
 #include "graphics/grinternal.h"
 

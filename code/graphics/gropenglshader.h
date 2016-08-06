@@ -178,6 +178,8 @@ GLint opengl_shader_get_uniform(const char *uniform_text);
 void opengl_shader_init_uniform_block(const char *uniform_text);
 GLint opengl_shader_get_uniform_block(const char *uniform_text);
 
+void opengl_program_check_info_log(GLuint program_object);
+void opengl_shader_check_info_log(GLuint shader_object);
 
 void gr_opengl_shader_set_animated_effect(int effect, float timer);
 int opengl_shader_get_animated_effect();

@@ -1145,9 +1145,8 @@ void mission_hotkey_do_frame(float frametime)
 
 	GR_MAYBE_CLEAR_RES(Background_bitmap);
 	if (Background_bitmap >= 0) {
-		//gr_set_bitmap(Background_bitmap);
-		//gr_bitmap(0, 0, GR_RESIZE_MENU);
-		render_bitmap(Background_bitmap, 0, 0, GR_RESIZE_MENU);
+		gr_set_bitmap(Background_bitmap);
+		gr_bitmap(0, 0, GR_RESIZE_MENU);
 
 	} else
 		gr_clear();
@@ -1174,18 +1173,15 @@ void mission_hotkey_do_frame(float frametime)
 
 				gr_get_string_size(&w, &h, Hotkey_lines[line].label);
 				i = y + h / 2 - 1;
-// 				gr_line(Hotkey_list_coords[gr_screen.res][0], i, Hotkey_ship_x[gr_screen.res] - 2, i, GR_RESIZE_MENU);
-// 				gr_line(Hotkey_ship_x[gr_screen.res] + w + 1, i, Hotkey_list_coords[gr_screen.res][0] + Hotkey_list_coords[gr_screen.res][2], i, GR_RESIZE_MENU);
-				render_line(Hotkey_list_coords[gr_screen.res][0], i, Hotkey_ship_x[gr_screen.res] - 2, i, GR_RESIZE_MENU);
-				render_line(Hotkey_ship_x[gr_screen.res] + w + 1, i, Hotkey_list_coords[gr_screen.res][0] + Hotkey_list_coords[gr_screen.res][2], i, GR_RESIZE_MENU);
+ 				gr_line(Hotkey_list_coords[gr_screen.res][0], i, Hotkey_ship_x[gr_screen.res] - 2, i, GR_RESIZE_MENU);
+ 				gr_line(Hotkey_ship_x[gr_screen.res] + w + 1, i, Hotkey_list_coords[gr_screen.res][0] + Hotkey_list_coords[gr_screen.res][2], i, GR_RESIZE_MENU);
 				break;
 
 			case HOTKEY_LINE_WING:
-				//gr_set_bitmap(Wing_bmp);
+				gr_set_bitmap(Wing_bmp);
 				bm_get_info(Wing_bmp, NULL, &h, NULL);
 				i = y + font_height / 2 - h / 2 - 1;
-				//gr_bitmap(Hotkey_wing_icon_x[gr_screen.res], i, GR_RESIZE_MENU);
-				render_bitmap(Wing_bmp, Hotkey_wing_icon_x[gr_screen.res], i, GR_RESIZE_MENU);
+				gr_bitmap(Hotkey_wing_icon_x[gr_screen.res], i, GR_RESIZE_MENU);
 
 //				i = y + font_height / 2 - 1;
 //				gr_set_color_fast(&circle_color);

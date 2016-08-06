@@ -52,7 +52,6 @@ void opengl_reset_spec_mapping();
 
 void opengl_draw_sphere();
 void gr_opengl_line_htl(const vec3d *start, const vec3d *end);
-void gr_opengl_sphere_htl(float rad);
 void gr_opengl_sphere(material *material_def, float rad);
 void gr_opengl_deferred_light_sphere_init(int rings, int segments);
 void gr_opengl_draw_deferred_light_sphere(const vec3d *position, float rad, bool clearStencil);

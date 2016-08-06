@@ -270,9 +270,8 @@ void multi_df_debrief_do()
 	// draw the background
 	GR_MAYBE_CLEAR_RES(Multi_df_background_bitmap);
 	if (Multi_df_background_bitmap >= 0) {
-		//gr_set_bitmap(Multi_df_background_bitmap);
-		//gr_bitmap(0, 0, GR_RESIZE_MENU);
-		render_bitmap(Multi_df_background_bitmap, 0, 0, GR_RESIZE_MENU);
+		gr_set_bitmap(Multi_df_background_bitmap);
+		gr_bitmap(0, 0, GR_RESIZE_MENU);
 	} 
 
 	// draw the window
@@ -288,8 +287,7 @@ void multi_df_debrief_do()
 	strcpy_s(buf, The_mission.name);
 	font::force_fit_string(buf, 255, Kill_matrix_title_coords[gr_screen.res][2]);
 	gr_set_color_fast(&Color_bright_white);
-	//gr_string(Kill_matrix_title_coords[gr_screen.res][0], Kill_matrix_title_coords[gr_screen.res][1], buf, GR_RESIZE_MENU);
-	render_string(Kill_matrix_title_coords[gr_screen.res][0], Kill_matrix_title_coords[gr_screen.res][1], buf, GR_RESIZE_MENU);
+	gr_string(Kill_matrix_title_coords[gr_screen.res][0], Kill_matrix_title_coords[gr_screen.res][1], buf, GR_RESIZE_MENU);
 
 	// flip
 	gr_flip();
@@ -418,8 +416,7 @@ void multi_df_blit_kill_matrix()
 		if(Multi_df_score[idx].np_index >= 0){
 			gr_set_color_fast(Color_netplayer[Multi_df_score[idx].np_index]);
 		}
-		//gr_string(cx + (int)((max_item_width - (float)str_len)/2.0f), cy, squashed_string, GR_RESIZE_MENU);
-		render_string(cx + (int)((max_item_width - (float)str_len)/2.0f), cy, squashed_string, GR_RESIZE_MENU);
+		gr_string(cx + (int)((max_item_width - (float)str_len)/2.0f), cy, squashed_string, GR_RESIZE_MENU);
 
 		// next spot
 		cx += (int)max_item_width;
@@ -433,9 +430,8 @@ void multi_df_blit_kill_matrix()
 		// draw a check if necessary
 		if(!MULTI_CONNECTED(Net_players[Multi_df_score[idx].np_index]) || (Net_players[Multi_df_score[idx].np_index].state == NETPLAYER_STATE_DEBRIEF_ACCEPT) || (Net_players[Multi_df_score[idx].np_index].state == NETPLAYER_STATE_DEBRIEF_REPLAY)){
 			if(Multi_common_icons[MICON_VALID] != -1){
-				//gr_set_bitmap(Multi_common_icons[MICON_VALID]);
-				//gr_bitmap(Multi_df_check_coords[gr_screen.res], cy, GR_RESIZE_MENU);
-				render_bitmap(Multi_common_icons[MICON_VALID], Multi_df_check_coords[gr_screen.res], cy, GR_RESIZE_MENU);
+				gr_set_bitmap(Multi_common_icons[MICON_VALID]);
+				gr_bitmap(Multi_df_check_coords[gr_screen.res], cy, GR_RESIZE_MENU);
 			}
 		}
 
@@ -448,8 +444,7 @@ void multi_df_blit_kill_matrix()
 		if(Multi_df_score[idx].np_index >= 0){
 			gr_set_color_fast(Color_netplayer[Multi_df_score[idx].np_index]);
 		}
-		//gr_string(cx, cy, squashed_string, GR_RESIZE_MENU);
-		render_string(cx, cy, squashed_string, GR_RESIZE_MENU);
+		gr_string(cx, cy, squashed_string, GR_RESIZE_MENU);
 
 		cx = top_x_start;
 		row_total = 0;
@@ -469,8 +464,7 @@ void multi_df_blit_kill_matrix()
 			// draw the string
 			font::force_fit_string(squashed_string, CALLSIGN_LEN, (int)max_text_width);
 			gr_get_string_size(&str_len, NULL, squashed_string);
-			//gr_string(cx + (int)((max_item_width - (float)str_len)/2.0f), cy, squashed_string, GR_RESIZE_MENU);
-			render_string(cx + (int)((max_item_width - (float)str_len)/2.0f), cy, squashed_string, GR_RESIZE_MENU);
+			gr_string(cx + (int)((max_item_width - (float)str_len)/2.0f), cy, squashed_string, GR_RESIZE_MENU);
 
 			// next spot
 			cx += (int)max_item_width;
@@ -480,8 +474,7 @@ void multi_df_blit_kill_matrix()
 		gr_set_color_fast(Color_netplayer[Multi_df_score[idx].np_index]);
 		sprintf(squashed_string, "(%d)", row_total);
 		gr_get_string_size(&str_len, NULL, squashed_string);
-		//gr_string(Multi_df_display_coords[gr_screen.res][0] + Multi_df_display_coords[gr_screen.res][2] - (MULTI_DF_TOTAL_ADJUST + str_len), cy, squashed_string, GR_RESIZE_MENU);
-		render_string(Multi_df_display_coords[gr_screen.res][0] + Multi_df_display_coords[gr_screen.res][2] - (MULTI_DF_TOTAL_ADJUST + str_len), cy, squashed_string, GR_RESIZE_MENU);
+		gr_string(Multi_df_display_coords[gr_screen.res][0] + Multi_df_display_coords[gr_screen.res][2] - (MULTI_DF_TOTAL_ADJUST + str_len), cy, squashed_string, GR_RESIZE_MENU);
 
 		cy += dy;
 	}

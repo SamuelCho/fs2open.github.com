@@ -395,15 +395,13 @@ void multi_pause_do()
 	if (!(Game_mode & GM_STANDALONE_SERVER)) {
 		// restore saved screen data if any
 		if (Multi_paused_screen_id >= 0) {
-			//gr_restore_screen(Multi_paused_screen_id);
-			render_bitmap(Multi_paused_screen_id, 0, 0, GR_RESIZE_NONE);
+			gr_restore_screen(Multi_paused_screen_id);
 		}
 
 		// set the background image
 		if (Multi_paused_background >= 0) {
-			//gr_set_bitmap(Multi_paused_background);
-			//gr_bitmap(0, 0, GR_RESIZE_MENU);
-			render_bitmap(Multi_paused_background, 0, 0, GR_RESIZE_MENU);
+			gr_set_bitmap(Multi_paused_background);
+			gr_bitmap(0, 0, GR_RESIZE_MENU);
 		}
 
 		// if we're inside of popup code right now, don't process the window
@@ -534,7 +532,6 @@ void multi_pause_render_callsign()
 
 		// blit it
 		gr_set_color_fast(&Color_bright);
-		//gr_string(Mp_callsign_coords[gr_screen.res][0], Mp_callsign_coords[gr_screen.res][1], pause_str, GR_RESIZE_MENU);
-		render_string(Mp_callsign_coords[gr_screen.res][0], Mp_callsign_coords[gr_screen.res][1], pause_str, GR_RESIZE_MENU);
+		gr_string(Mp_callsign_coords[gr_screen.res][0], Mp_callsign_coords[gr_screen.res][1], pause_str, GR_RESIZE_MENU);
 	} 	
 }

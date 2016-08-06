@@ -125,8 +125,7 @@ void stats_underline_text(int sx, int sy, char *text)
 
 	gr_get_string_size(&w,&h,text);
 	fh=gr_get_font_height();
-	//gr_line(sx-1, sy+fh, sx+w+1, sy+fh, GR_RESIZE_MENU);
-	render_line(sx-1, sy+fh, sx+w+1, sy+fh, GR_RESIZE_MENU);
+	gr_line(sx-1, sy+fh, sx+w+1, sy+fh, GR_RESIZE_MENU);
 }
 
 void show_stats_numbers(int stage, int sx, int sy, int dy,int add_mission)

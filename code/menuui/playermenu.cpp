@@ -411,9 +411,8 @@ void player_select_do()
 
 	// draw the player select pseudo-dialog over it
 	GR_MAYBE_CLEAR_RES(Player_select_background_bitmap);
-	//gr_set_bitmap(Player_select_background_bitmap);
-	//gr_bitmap(0,0,GR_RESIZE_MENU);
-	render_bitmap(Player_select_background_bitmap, 0, 0, GR_RESIZE_MENU);
+	gr_set_bitmap(Player_select_background_bitmap);
+	gr_bitmap(0,0,GR_RESIZE_MENU);
 
 	// press the accept button
 	if (Player_select_autoaccept) {
@@ -1135,15 +1134,13 @@ void player_select_display_copyright()
 	gr_get_string_size(&w, NULL, Copyright_msg1);
 	sx = fl2i((gr_screen.max_w_unscaled / 2) - w/2.0f + 0.5f);
 	sy = (gr_screen.max_h_unscaled - 2) - 2*gr_get_font_height();
-	//gr_string(sx, sy, Copyright_msg1, GR_RESIZE_MENU);
-	render_string(sx, sy, Copyright_msg1, GR_RESIZE_MENU);
+	gr_string(sx, sy, Copyright_msg1, GR_RESIZE_MENU);
 
 	gr_get_string_size(&w, NULL, Copyright_msg2);
 	sx = fl2i((gr_screen.max_w_unscaled / 2) - w/2.0f + 0.5f);
 	sy = (gr_screen.max_h_unscaled - 2) - gr_get_font_height();
 
-	//gr_string(sx, sy, Copyright_msg2, GR_RESIZE_MENU);
-	render_string(sx, sy, Copyright_msg2, GR_RESIZE_MENU);
+	gr_string(sx, sy, Copyright_msg2, GR_RESIZE_MENU);
 }
 
 void player_select_display_all_text()

@@ -12,13 +12,12 @@
 #ifndef _GRAPHICS_H
 #define _GRAPHICS_H
 
+#include "graphics/grinternal.h"
 #include "bmpman/bmpman.h"
 #include "cfile/cfile.h"
 #include "globalincs/pstypes.h"
 #include "graphics/tmapper.h"
-#include "graphics/grinternal.h"
 #include "cfile/cfile.h"
-#include "bmpman/bmpman.h"
 #include "math/vecmat.h"
 #include "io/cursor.h"
 
@@ -299,6 +298,19 @@ public:
 		add_vertex_component(format_type, sizeof(vertex), offset);
 	}
 };
+
+typedef enum gr_capability {
+	CAPABILITY_ENVIRONMENT_MAP,
+	CAPABILITY_NORMAL_MAP,
+	CAPABILITY_HEIGHT_MAP,
+	CAPABILITY_SOFT_PARTICLES,
+	CAPABILITY_DISTORTION,
+	CAPABILITY_POST_PROCESSING,
+	CAPABILITY_DEFERRED_LIGHTING,
+	CAPABILITY_SHADOWS,
+	CAPABILITY_BATCHED_SUBMODELS,
+	CAPABILITY_POINT_PARTICLES
+} gr_capability;
 
 // stencil buffering stuff
 extern int gr_stencil_mode;

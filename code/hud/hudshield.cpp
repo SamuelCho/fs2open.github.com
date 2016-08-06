@@ -394,8 +394,7 @@ void hud_show_mini_ship_integrity(object *objp, int x_force, int y_force)
 		hud_num_make_mono(text_integrity);
 	}	
 
-	//gr_string(final_pos[0], final_pos[1], text_integrity);
-	render_string(final_pos[0], final_pos[1], text_integrity);
+	gr_string(final_pos[0], final_pos[1], text_integrity);
 }
 
 // Draw the miniature shield icon that is drawn near the reticle

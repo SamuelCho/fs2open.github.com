@@ -2894,12 +2894,9 @@ void hud_tri(float x1,float y1,float x2,float y2,float x3,float y3)
 
 void hud_tri_empty(float x1,float y1,float x2,float y2,float x3,float y3)
 {
-// 	gr_line(fl2i(x1),fl2i(y1),fl2i(x2),fl2i(y2));
-// 	gr_line(fl2i(x2),fl2i(y2),fl2i(x3),fl2i(y3));
-// 	gr_line(fl2i(x3),fl2i(y3),fl2i(x1),fl2i(y1));
-	render_line(fl2i(x1),fl2i(y1),fl2i(x2),fl2i(y2));
-	render_line(fl2i(x2),fl2i(y2),fl2i(x3),fl2i(y3));
-	render_line(fl2i(x3),fl2i(y3),fl2i(x1),fl2i(y1));
+ 	gr_line(fl2i(x1),fl2i(y1),fl2i(x2),fl2i(y2));
+ 	gr_line(fl2i(x2),fl2i(y2),fl2i(x3),fl2i(y3));
+ 	gr_line(fl2i(x3),fl2i(y3),fl2i(x1),fl2i(y1));
 }
 
 HudGaugeReticleTriangle::HudGaugeReticleTriangle():
@@ -2996,8 +2993,7 @@ void HudGaugeReticleTriangle::renderTriangleMissileTail(float ang, float xpos, f
 
 	// draw the tail indicating length
 	if ( tail_len > 0 ) {
-		//gr_line(fl2i(xpos), fl2i(ypos), fl2i(xtail), fl2i(ytail));
-		render_line(fl2i(xpos), fl2i(ypos), fl2i(xtail), fl2i(ytail));
+		gr_line(fl2i(xpos), fl2i(ypos), fl2i(xtail), fl2i(ytail));
 	}
 	gr_reset_screen_scale();
 }
@@ -6520,8 +6516,7 @@ void HudGaugeOffscreen::renderOffscreenIndicator(vec2d *coords, int dir, float d
 		y6 = y5 + Offscreen_tri_base;
 
 		if ( buf[0] ) {
-			//gr_string( fl2i(xpos - w - 10), fl2i(ypos - h/2.0f+0.5f), buf);
-			render_string( fl2i(xpos - w - 10), fl2i(ypos - h/2.0f+0.5f), buf);
+			gr_string( fl2i(xpos - w - 10), fl2i(ypos - h/2.0f+0.5f), buf);
 		}
 	} else if (dir == 1) {
 		x1 = x4 = (xpos-1);
@@ -6534,8 +6529,7 @@ void HudGaugeOffscreen::renderOffscreenIndicator(vec2d *coords, int dir, float d
 		y6 = y5 + Offscreen_tri_base;
 
 		if ( buf[0] ) {
-			//gr_string(fl2i(xpos + 10), fl2i(ypos - h/2.0f+0.5f), buf);
-			render_string(fl2i(xpos + 10), fl2i(ypos - h/2.0f+0.5f), buf);
+			gr_string(fl2i(xpos + 10), fl2i(ypos - h/2.0f+0.5f), buf);
 		}
 	} else if (dir == 2) {
 		y1 = y4 = (ypos-1);
@@ -6548,8 +6542,7 @@ void HudGaugeOffscreen::renderOffscreenIndicator(vec2d *coords, int dir, float d
 		x6 = x5 + Offscreen_tri_base;
 
 		if ( buf[0] ) {
-			//gr_string(fl2i(xpos - w/2.0f+0.5f), fl2i(ypos+10), buf);
-			render_string(fl2i(xpos - w/2.0f+0.5f), fl2i(ypos+10), buf);
+			gr_string(fl2i(xpos - w/2.0f+0.5f), fl2i(ypos+10), buf);
 		}
 	} else if (dir == 3) {
 		y1 = y4 = (ypos+2);
@@ -6562,8 +6555,7 @@ void HudGaugeOffscreen::renderOffscreenIndicator(vec2d *coords, int dir, float d
 		x6 = x5 + Offscreen_tri_base;
 
 		if ( buf[0] ) {
-			//gr_string(fl2i(xpos - w/2.0f+0.5f), fl2i(ypos-h-10), buf);
-			render_string(fl2i(xpos - w/2.0f+0.5f), fl2i(ypos-h-10), buf);
+			gr_string(fl2i(xpos - w/2.0f+0.5f), fl2i(ypos-h-10), buf);
 		}
 	}
 
@@ -6576,14 +6568,11 @@ void HudGaugeOffscreen::renderOffscreenIndicator(vec2d *coords, int dir, float d
 	}
 
 	if (dir == 0 || dir == 3){
-		//gr_line(fl2i(x2),fl2i(y2),fl2i(x5),fl2i(y5));
-		render_line(fl2i(x2),fl2i(y2),fl2i(x5),fl2i(y5));
+		gr_line(fl2i(x2),fl2i(y2),fl2i(x5),fl2i(y5));
 	} else if (dir == 1) {
-		//gr_line(fl2i(x2-1),fl2i(y2),fl2i(x5-1),fl2i(y5));
-		render_line(fl2i(x2-1),fl2i(y2),fl2i(x5-1),fl2i(y5));
+		gr_line(fl2i(x2-1),fl2i(y2),fl2i(x5-1),fl2i(y5));
 	} else {
-		//gr_line(fl2i(x2),fl2i(y2-1),fl2i(x5),fl2i(y5-1));
-		render_line(fl2i(x2),fl2i(y2-1),fl2i(x5),fl2i(y5-1));
+		gr_line(fl2i(x2),fl2i(y2-1),fl2i(x5),fl2i(y5-1));
 	}
 
 	gr_reset_screen_scale();

@@ -280,8 +280,7 @@ void red_alert_blit_title()
 
 	// draw
 	gr_set_color_fast(&flash_color);
-	//gr_string(Ra_brief_text_wnd_coords[gr_screen.res][0] + ((Ra_brief_text_wnd_coords[gr_screen.res][2] - w) / 2), Ra_flash_y[gr_screen.res] - h - 5, str, GR_RESIZE_MENU);
-	render_string(Ra_brief_text_wnd_coords[gr_screen.res][0] + ((Ra_brief_text_wnd_coords[gr_screen.res][2] - w) / 2), Ra_flash_y[gr_screen.res] - h - 5, str, GR_RESIZE_MENU);
+	gr_string(Ra_brief_text_wnd_coords[gr_screen.res][0] + ((Ra_brief_text_wnd_coords[gr_screen.res][2] - w) / 2), Ra_flash_y[gr_screen.res] - h - 5, str, GR_RESIZE_MENU);
 	gr_set_color_fast(&Color_normal);	
 
 	// increment flash time
@@ -415,9 +414,8 @@ void red_alert_do_frame(float frametime)
 
 	GR_MAYBE_CLEAR_RES(Background_bitmap);
 	if (Background_bitmap >= 0) {
-		//gr_set_bitmap(Background_bitmap);
-		//gr_bitmap(0, 0, GR_RESIZE_MENU);
-		render_bitmap(Background_bitmap, 0, 0, GR_RESIZE_MENU);
+		gr_set_bitmap(Background_bitmap);
+		gr_bitmap(0, 0, GR_RESIZE_MENU);
 	} 
 
 	Ui_window.draw();

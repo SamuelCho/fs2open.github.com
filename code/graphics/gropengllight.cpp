@@ -624,12 +624,12 @@ void opengl_light_init()
 
 	memset( opengl_lights, 0, MAX_LIGHTS * sizeof(opengl_light) );
 
-	opengl_light_uniforms.Position = (vec4 *)vm_malloc_q(GL_max_lights * sizeof(vec4));
-	opengl_light_uniforms.Diffuse_color = (vec3d *)vm_malloc_q(GL_max_lights * sizeof(vec3d));
-	opengl_light_uniforms.Spec_color = (vec3d *)vm_malloc_q(GL_max_lights * sizeof(vec3d));
-	opengl_light_uniforms.Direction = (vec3d *)vm_malloc_q(GL_max_lights * sizeof(vec3d));
-	opengl_light_uniforms.Light_type = (int *)vm_malloc_q(GL_max_lights * sizeof(int));
-	opengl_light_uniforms.Attenuation = (float *)vm_malloc_q(GL_max_lights * sizeof(float));
+	opengl_light_uniforms.Position = (vec4 *)vm_malloc(GL_max_lights * sizeof(vec4));
+	opengl_light_uniforms.Diffuse_color = (vec3d *)vm_malloc(GL_max_lights * sizeof(vec3d));
+	opengl_light_uniforms.Spec_color = (vec3d *)vm_malloc(GL_max_lights * sizeof(vec3d));
+	opengl_light_uniforms.Direction = (vec3d *)vm_malloc(GL_max_lights * sizeof(vec3d));
+	opengl_light_uniforms.Light_type = (int *)vm_malloc(GL_max_lights * sizeof(int));
+	opengl_light_uniforms.Attenuation = (float *)vm_malloc(GL_max_lights * sizeof(float));
 }
 
 bool ambient_state = false;

@@ -743,21 +743,18 @@ void model_draw_debug_points( polymodel *pm, bsp_info * submodel, uint flags )
 
 	// Draw a red pivot point
 	gr_set_color(128,0,0);
-	//g3_draw_sphere_ez(&vmd_zero_vector, 2.0f );
-	render_sphere_fast(&vmd_zero_vector, 2.0f );
+	g3_draw_sphere_ez(&vmd_zero_vector, 2.0f );
 
 	// Draw a green center of mass when drawing the hull
 	if ( submodel && (submodel->parent==-1) )	{
 		gr_set_color(0,128,0);
-		//g3_draw_sphere_ez( &pm->center_of_mass, 1.0f );
-		render_sphere_fast( &pm->center_of_mass, 1.0f );
+		g3_draw_sphere_ez( &pm->center_of_mass, 1.0f );
 	}
 
 	if ( submodel )	{
 		// Draw a blue center point
 		gr_set_color(0,0,128);
-		//g3_draw_sphere_ez( &submodel->geometric_center, 0.9f );
-		render_sphere_fast( &submodel->geometric_center, 0.9f );
+		g3_draw_sphere_ez( &submodel->geometric_center, 0.9f );
 	}
 	
 	// Draw the bounding box
@@ -853,8 +850,7 @@ void model_draw_paths( int model_num, uint flags )
 					gr_set_color( 255, 0, 0 );
 				}
 
-				//g3_draw_sphere( &tmp, 0.5f );
-				render_sphere_fast( &tmp, 0.5f );
+				g3_draw_sphere( &tmp, 0.5f );
 
 				if (j) {
 					g3_draw_line(&prev_pnt, &tmp);
@@ -994,8 +990,7 @@ void model_draw_bay_paths(int model_num)
 			g3_rotate_vertex(&l2, &v2);
 
 			// draw the point and normal
-			//g3_draw_sphere(&l1, 2.0);
-			render_sphere_fast(&l1, 2.0);
+			g3_draw_sphere(&l1, 2.0);
 			g3_draw_line(&l1, &l2);
 		}
 	}
@@ -2343,7 +2338,7 @@ bool model_interp_pack_buffer(indexed_vertex_source *vert_src, vertex_buffer *vb
 	uint arsize = 0;
 
 	if ( vert_src->Vertex_list == NULL ) {
-		vert_src->Vertex_list = (float*)vm_malloc_q(vert_src->Vertex_list_size);
+		vert_src->Vertex_list = (float*)vm_malloc(vert_src->Vertex_list_size);
 
 		// return invalid if we don't have the memory
 		if ( vert_src->Vertex_list == NULL ) {
@@ -2354,7 +2349,7 @@ bool model_interp_pack_buffer(indexed_vertex_source *vert_src, vertex_buffer *vb
 	}
 
 	if ( vert_src->Index_list == NULL ) {
-		vert_src->Index_list = (ubyte*)vm_malloc_q(vert_src->Index_list_size);
+		vert_src->Index_list = (ubyte*)vm_malloc(vert_src->Index_list_size);
 
 		// return invalid if we don't have the memory
 		if ( vert_src->Index_list == NULL ) {

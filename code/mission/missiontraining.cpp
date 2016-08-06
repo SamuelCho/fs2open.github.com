@@ -1050,9 +1050,8 @@ void HudGaugeTrainingMessages::render(float frametime)
 
 	gr_set_screen_scale(base_w, base_h);
 	height = gr_get_font_height();
-	//gr_set_shader(&Training_msg_glass);
-	//gr_shade(position[0], position[1], TRAINING_MESSAGE_WINDOW_WIDTH, Training_num_lines * height + height);
-	render_colored_rect(&Training_msg_glass, position[0], position[1], TRAINING_MESSAGE_WINDOW_WIDTH, Training_num_lines * height + height);
+	gr_set_shader(&Training_msg_glass);
+	gr_shade(position[0], position[1], TRAINING_MESSAGE_WINDOW_WIDTH, Training_num_lines * height + height);
 	gr_reset_screen_scale();
 
 	gr_set_color_fast(&Color_bright_blue);

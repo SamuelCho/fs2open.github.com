@@ -1226,8 +1226,7 @@ void labviewer_do_render(float frametime)
 	if ( (Lab_model_num < 0) && (Lab_bitmap_id < 0) ) {
 		gr_get_string_size(&w, &h, "Viewer off");
 		gr_set_color_fast(&Color_white);
-		//gr_string(gr_screen.center_offset_x + gr_screen.center_w - w, gr_screen.center_offset_y + gr_screen.center_h - h, "Viewer off", GR_RESIZE_NONE);
-		render_string(gr_screen.center_offset_x + gr_screen.center_w - w, gr_screen.center_offset_y + gr_screen.center_h - h, "Viewer off", GR_RESIZE_NONE);
+		gr_string(gr_screen.center_offset_x + gr_screen.center_w - w, gr_screen.center_offset_y + gr_screen.center_h - h, "Viewer off", GR_RESIZE_NONE);
 
 		return;
 	}
@@ -1245,8 +1244,7 @@ void labviewer_do_render(float frametime)
 		if ( strlen(Lab_model_filename) ) {
 			gr_get_string_size(&w, &h, Lab_model_filename);
 			gr_set_color_fast(&Color_white);
-			//gr_string(gr_screen.center_offset_x + gr_screen.center_w - w, gr_screen.center_offset_y + gr_screen.center_h - h, Lab_model_filename, GR_RESIZE_NONE);
-			render_string(gr_screen.center_offset_x + gr_screen.center_w - w, gr_screen.center_offset_y + gr_screen.center_h - h, Lab_model_filename, GR_RESIZE_NONE);
+			gr_string(gr_screen.center_offset_x + gr_screen.center_w - w, gr_screen.center_offset_y + gr_screen.center_h - h, Lab_model_filename, GR_RESIZE_NONE);
 		}
 	} else if (Lab_bitmap_id >= 0) {
 		gr_scene_texture_begin();
@@ -1259,8 +1257,7 @@ void labviewer_do_render(float frametime)
 		if ( strlen(Lab_bitmap_filename) ) {
 			gr_get_string_size(&w, &h, Lab_bitmap_filename);
 			gr_set_color_fast(&Color_white);
-			//gr_string(gr_screen.center_offset_x + gr_screen.center_w - w, gr_screen.center_offset_y + gr_screen.center_h - h, Lab_bitmap_filename, GR_RESIZE_NONE);
-			render_string(gr_screen.center_offset_x + gr_screen.center_w - w, gr_screen.center_offset_y + gr_screen.center_h - h, Lab_bitmap_filename, GR_RESIZE_NONE);
+			gr_string(gr_screen.center_offset_x + gr_screen.center_w - w, gr_screen.center_offset_y + gr_screen.center_h - h, Lab_bitmap_filename, GR_RESIZE_NONE);
 		}
 	}
 
@@ -1276,8 +1273,7 @@ void labviewer_do_render(float frametime)
 	if (frametotal != 0.0f) {
 		gr_printf_no_resize(gr_screen.center_offset_x + 2, gr_screen.center_offset_y + gr_screen.center_h - gr_get_font_height(), "FPS: %i", fl2i(Framerate + 0.5f));
 	} else {
-		//gr_string(gr_screen.center_offset_x + 10, gr_screen.center_offset_y + gr_screen.center_h - gr_get_font_height(), "FPS: ?", GR_RESIZE_NONE);
-		render_string(gr_screen.center_offset_x + 10, gr_screen.center_offset_y + gr_screen.center_h - gr_get_font_height(), "FPS: ?", GR_RESIZE_NONE);
+		gr_string(gr_screen.center_offset_x + 10, gr_screen.center_offset_y + gr_screen.center_h - gr_get_font_height(), "FPS: ?", GR_RESIZE_NONE);
 	}
 
 	//Print FXAA preset
@@ -2564,12 +2560,9 @@ void lab_do_frame(float frametime)
 	gr_clear();
 
 	if (Lab_in_mission) {
-		gr_reset_clip();
-		render_bitmap(Lab_screen_save_bitmap, 0, 0, GR_RESIZE_NONE);
-		//gr_restore_screen(Lab_screen_save_bitmap);
-		//gr_set_shader(&Lab_shader);
-		//gr_shade(0, 0, gr_screen.max_w, gr_screen.max_h, GR_RESIZE_NONE);
-		render_colored_rect(&Lab_shader, 0, 0, gr_screen.max_w, gr_screen.max_h, GR_RESIZE_NONE);
+		gr_restore_screen(Lab_screen_save_bitmap);
+		gr_set_shader(&Lab_shader);
+		gr_shade(0, 0, gr_screen.max_w, gr_screen.max_h, GR_RESIZE_NONE);
 	} else {
 		labviewer_do_render(frametime);
 	}

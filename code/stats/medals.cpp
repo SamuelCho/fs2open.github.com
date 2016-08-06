@@ -650,8 +650,7 @@ void blit_label(char *label, int num)
 	y = Medals_label_coords[gr_screen.res].y;
 
 	// do it
-	//gr_string(x, y, text, GR_RESIZE_MENU);
-	render_string(x, y, text, GR_RESIZE_MENU);
+	gr_string(x, y, text, GR_RESIZE_MENU);
 }
 
 void blit_callsign()
@@ -691,9 +690,8 @@ int medal_main_do()
 	gr_reset_clip();
 	GR_MAYBE_CLEAR_RES(Medals_bitmap);
 	if (Medals_bitmap != -1) {
-		//gr_set_bitmap(Medals_bitmap);
-		//gr_bitmap(0,0,GR_RESIZE_MENU);
-		render_bitmap(Medals_bitmap, 0, 0, GR_RESIZE_MENU);
+		gr_set_bitmap(Medals_bitmap);
+		gr_bitmap(0,0,GR_RESIZE_MENU);
 	}
 
 	// check to see if a button was pressed
@@ -856,16 +854,14 @@ void blit_medals()
 				continue;
 			}
 #endif
-			//gr_set_bitmap(Medal_display_info[idx].bitmap);
-			//gr_bitmap(Medal_display_info[idx].coords[gr_screen.res].x, Medal_display_info[idx].coords[gr_screen.res].y, GR_RESIZE_MENU);
-			render_bitmap(Medal_display_info[idx].bitmap, Medal_display_info[idx].coords[gr_screen.res].x, Medal_display_info[idx].coords[gr_screen.res].y, GR_RESIZE_MENU);
+			gr_set_bitmap(Medal_display_info[idx].bitmap);
+			gr_bitmap(Medal_display_info[idx].coords[gr_screen.res].x, Medal_display_info[idx].coords[gr_screen.res].y, GR_RESIZE_MENU);
 		}
 	}
 
 	// now blit rank, since that "medal" doesn't get loaded (or drawn) the normal way
-	//gr_set_bitmap(Rank_bm);
-	//gr_bitmap(Medal_display_info[Rank_medal_index].coords[gr_screen.res].x, Medal_display_info[Rank_medal_index].coords[gr_screen.res].y, GR_RESIZE_MENU);
-	render_bitmap(Rank_bm, Medal_display_info[Rank_medal_index].coords[gr_screen.res].x, Medal_display_info[Rank_medal_index].coords[gr_screen.res].y, GR_RESIZE_MENU);
+	gr_set_bitmap(Rank_bm);
+	gr_bitmap(Medal_display_info[Rank_medal_index].coords[gr_screen.res].x, Medal_display_info[Rank_medal_index].coords[gr_screen.res].y, GR_RESIZE_MENU);
 }
 
 int medals_info_lookup(const char *name)

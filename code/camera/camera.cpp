@@ -726,8 +726,7 @@ void subtitle::do_frame(float frametime)
 
 	for(SCP_vector<SCP_string>::iterator line = text_lines.begin(); line != text_lines.end(); ++line)
 	{
-		//gr_string(x, y, (char*)line->c_str(), GR_RESIZE_NONE);
-		render_string(x, y, (char*)line->c_str(), GR_RESIZE_NONE);
+		gr_string(x, y, (char*)line->c_str(), GR_RESIZE_NONE);
 		y += font_height;
 	}
 
@@ -739,7 +738,7 @@ void subtitle::do_frame(float frametime)
 
 	if(image_id >= 0)
 	{
-		//gr_set_bitmap(image_id, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, text_color.alpha/255.0f);
+		gr_set_bitmap(image_id, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, text_color.alpha/255.0f);
 
 		// scaling?
 		if (image_pos.w > 0 || image_pos.h > 0)
@@ -753,15 +752,13 @@ void subtitle::do_frame(float frametime)
 			scale.xyz.z = 1.0f;
 
 			gr_push_scale_matrix(&scale);
-			//gr_bitmap(fl2i(image_pos.x / scale.xyz.x), fl2i(image_pos.y / scale.xyz.y), GR_RESIZE_NONE);
-			render_bitmap_blended(image_id, i2fl(text_color.alpha/255.0f), fl2i(image_pos.x / scale.xyz.x), fl2i(image_pos.y / scale.xyz.y), GR_RESIZE_NONE);
+			gr_bitmap(fl2i(image_pos.x / scale.xyz.x), fl2i(image_pos.y / scale.xyz.y), GR_RESIZE_NONE);
 			gr_pop_scale_matrix();
 		}
 		// no scaling
 		else
 		{
-			//gr_bitmap(image_pos.x, image_pos.y, GR_RESIZE_NONE);
-			render_bitmap_blended(image_id, text_color.alpha/255.0f, image_pos.x, image_pos.y, GR_RESIZE_NONE);
+			gr_bitmap(image_pos.x, image_pos.y, GR_RESIZE_NONE);
 		}
 	}
 

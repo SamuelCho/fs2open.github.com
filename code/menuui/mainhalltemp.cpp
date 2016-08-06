@@ -177,9 +177,8 @@ void mht_do()
 	gr_reset_clip();
 	GR_MAYBE_CLEAR_RES(Mht_bitmap);
 	if(Mht_bitmap != -1){		
-		//gr_set_bitmap(Mht_bitmap);
-		//gr_bitmap(0,0,GR_RESIZE_MENU);
-		render_bitmap(Mht_bitmap, 0, 0, GR_RESIZE_MENU);
+		gr_set_bitmap(Mht_bitmap);
+		gr_bitmap(0,0,GR_RESIZE_MENU);
 	}
 	Mht_window.draw();	
 	

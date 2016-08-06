@@ -259,14 +259,13 @@ void HudGaugeRadarStd::drawContactImage( int x, int y, int rad, int idx, int clr
 	gr_push_scale_matrix(&blip_scaler);
 
 	if ( idx >= 0 ) {
-		//gr_set_bitmap(idx,GR_ALPHABLEND_NONE,GR_BITBLT_MODE_NORMAL,1.0f);
+		gr_set_bitmap(idx,GR_ALPHABLEND_NONE,GR_BITBLT_MODE_NORMAL,1.0f);
 		renderBitmap( idx, x, y );
 	}
 
 	if ( clr_idx >= 0 ) {
 		gr_set_screen_scale(base_w, base_h);
-		//gr_bitmap(x, y);
-		render_bitmap(clr_idx, x, y);
+		gr_bitmap(x, y);
 		gr_reset_screen_scale();
 	}
 

@@ -68,21 +68,17 @@ void UI_SLIDER2::draw() {
 		int bitmap_id = -1;
 		switch (slider_mode) {
 		case S2M_ON_ME:
-			//gr_set_bitmap(bmap_ids[S2_HIGHLIGHT]);  // draw slider level
-			bitmap_id = bmap_ids[S2_HIGHLIGHT]; // draw slider level
+			gr_set_bitmap(bmap_ids[S2_HIGHLIGHT]);  // draw slider level
 			break;
 		case S2M_MOVING:
-			//gr_set_bitmap(bmap_ids[S2_PRESSED]);
-			bitmap_id = bmap_ids[S2_PRESSED];
+			gr_set_bitmap(bmap_ids[S2_PRESSED]);
 			break;
 		case S2M_DEFAULT:
 		default:
 			gr_set_bitmap(bmap_ids[S2_NORMAL]);  // draw slider level
-			bitmap_id = bmap_ids[S2_NORMAL]; // draw slider level
 			break;
 		}
-		//gr_bitmap(x, y+currentPosition, GR_RESIZE_MENU);
-		render_bitmap(bitmap_id, x, y+currentPosition, GR_RESIZE_MENU);
+		gr_bitmap(x, y+currentPosition, GR_RESIZE_MENU);
 	}
 }
 

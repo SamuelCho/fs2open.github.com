@@ -6619,8 +6619,7 @@ void render_dock_bays(object *objp)
 	g3_rotate_vertex(&v1, &p3);
 	gr_set_color(255, 255, 0);
 	g3_draw_line(&v0, &v1);
-	//g3_draw_sphere(&v1, 1.25f);
-	render_sphere_fast(&v1, 1.25f);
+	g3_draw_sphere(&v1, 1.25f);
 
 }
 #endif
@@ -6991,15 +6990,13 @@ int ship_start_render_cockpit_display(int cockpit_display_num)
 	gr_clear();
 	
 	if ( display->source >= 0 ) {
-		//gr_set_bitmap(display->source);
-		//gr_bitmap(0, 0, GR_RESIZE_NONE);
-		render_bitmap(display->source, 0, 0, GR_RESIZE_NONE);
+		gr_set_bitmap(display->source);
+		gr_bitmap(0, 0, GR_RESIZE_NONE);
 	}
 
 	if ( display->background >= 0 ) {
-		//gr_set_bitmap(display->background);
-		//gr_bitmap_ex(display->offset[0], display->offset[1], display->size[0], display->size[1], 0, 0, GR_RESIZE_NONE);
-		render_bitmap_ex(display->background, 1.0f, display->offset[0], display->offset[1], display->size[0], display->size[1], 0, 0, GR_RESIZE_NONE);
+		gr_set_bitmap(display->background);
+		gr_bitmap_ex(display->offset[0], display->offset[1], display->size[0], display->size[1], 0, 0, GR_RESIZE_NONE);
 	}
 
 	gr_set_cull(cull);
@@ -7028,9 +7025,8 @@ void ship_end_render_cockpit_display(int cockpit_display_num)
 	int cull = gr_set_cull(0);
 	if ( display->foreground >= 0 ) {
 		gr_reset_clip();
-		//gr_set_bitmap(display->foreground);
-		//gr_bitmap_ex(display->offset[0], display->offset[1], display->size[0], display->size[1], 0, 0, GR_RESIZE_NONE);
-		render_bitmap_ex(display->foreground, 1.0f, display->offset[0], display->offset[1], display->size[0], display->size[1], 0, 0, GR_RESIZE_NONE);
+		gr_set_bitmap(display->foreground);
+		gr_bitmap_ex(display->offset[0], display->offset[1], display->size[0], display->size[1], 0, 0, GR_RESIZE_NONE);
 	}
 
 	gr_set_cull(cull);

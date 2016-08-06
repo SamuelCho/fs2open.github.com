@@ -497,12 +497,7 @@ void gr_opengl_fog_set(int fog_mode, int r, int g, int b, float fog_near, float 
 		return;
 	}
 
-  	if (OGL_fogmode == 3) {
-		glFogf(GL_FOG_DISTANCE_MODE_NV, GL_EYE_RADIAL_NV);
-		glFogf(GL_FOG_COORDINATE_SOURCE_EXT, GL_FRAGMENT_DEPTH_EXT);
-	} else {
-		glFogf(GL_FOG_COORDINATE_SOURCE_EXT, GL_FRAGMENT_DEPTH_EXT);
-	}
+	glFogf(GL_FOG_COORDINATE_SOURCE_EXT, GL_FRAGMENT_DEPTH_EXT);
 
 	GL_state.Fog(GL_TRUE);
 	glFogf(GL_FOG_MODE, GL_LINEAR);
@@ -1089,8 +1084,8 @@ void gr_opengl_shutdown()
 	opengl_post_process_shutdown();
 	opengl_shader_shutdown();
 
-	if ( Is_Extension_Enabled(GL_EXTENSION_ARB_VERTEX_ARRAY_OBJECT) ) {
-		vglDeleteVertexArrays(1, &GL_vao);
+	if ( GLAD_GL_ARB_vertex_array_object ) {
+		glDeleteVertexArrays(1, &GL_vao);
 		GL_vao = 0;
 	}
 
@@ -1454,7 +1449,6 @@ void opengl_setup_function_pointers()
 	gr_screen.gf_set_line_width		= gr_opengl_set_line_width;
 
 	gr_screen.gf_line_htl			= gr_opengl_line_htl;
-	gr_screen.gf_sphere_htl			= gr_opengl_sphere_htl;
 	gr_screen.gf_sphere				= gr_opengl_sphere;
 
 	gr_screen.gf_set_animated_effect = gr_opengl_shader_set_animated_effect;
@@ -1675,9 +1669,9 @@ bool gr_opengl_init()
 	glGetIntegerv(GL_MAX_TEXTURE_COORDS, &max_texture_coords);
 
 	// create vertex array object to make OpenGL Core happy if we can
-	if ( Is_Extension_Enabled(GL_EXTENSION_ARB_VERTEX_ARRAY_OBJECT) ) {
-		vglGenVertexArrays(1, &GL_vao);
-		vglBindVertexArray(GL_vao);
+	if ( GLAD_GL_ARB_vertex_array_object ) {
+		glGenVertexArrays(1, &GL_vao);
+		glBindVertexArray(GL_vao);
 	}
 
 	GL_state.Texture.init(max_texture_units);
@@ -1788,13 +1782,13 @@ bool gr_opengl_is_capable(gr_capability capability)
 		return false;
 	}
 
-	if ( !Is_Extension_Enabled(GL_EXTENSION_ARB_FRAMEBUFFER_OBJECT) || !Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_NON_POWER_OF_TWO) ) {
+	if ( !GLAD_GL_ARB_framebuffer_object ) {
 		return false;
 	}
 
 	switch ( capability ) {
 	case CAPABILITY_ENVIRONMENT_MAP:
-		return Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_CUBE_MAP) && Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_ENV_COMBINE);
+		return GLAD_GL_ARB_texture_cube_map ? true : false;
 	case CAPABILITY_NORMAL_MAP:
 		return Cmdline_normal ? true : false;
 	case CAPABILITY_HEIGHT_MAP:
@@ -1807,9 +1801,9 @@ bool gr_opengl_is_capable(gr_capability capability)
 	case CAPABILITY_DEFERRED_LIGHTING:
 		return !Cmdline_no_fbo && !Cmdline_no_deferred_lighting && (GLSL_version >= 120);
 	case CAPABILITY_SHADOWS:
-		return Is_Extension_Enabled(GL_EXTENSION_ARB_DRAW_ELEMENTS_BASE_VERTEX) && GL_version >= 32;
+		return GLAD_GL_ARB_draw_elements_base_vertex && GL_version >= 32;
 	case CAPABILITY_BATCHED_SUBMODELS:
-		return (GLSL_version >= 150) && Is_Extension_Enabled(GL_EXTENSION_ARB_TEXTURE_BUFFER) && Is_Extension_Enabled(GL_EXTENSION_ARB_FLOATING_POINT_TEXTURES);
+		return (GLSL_version >= 150) && GLAD_GL_ARB_texture_buffer_object && GLAD_GL_ARB_texture_float;
 	case CAPABILITY_POINT_PARTICLES:
 		return GL_version >= 32 && !Cmdline_no_geo_sdr_effects;
 	}

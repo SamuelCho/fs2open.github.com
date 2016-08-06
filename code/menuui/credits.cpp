@@ -711,9 +711,8 @@ void credits_do_frame(float frametime)
 	gr_reset_clip();	
 	GR_MAYBE_CLEAR_RES(Background_bitmap);
 	if (Background_bitmap >= 0) {
-		//gr_set_bitmap(Background_bitmap);
-		//gr_bitmap(0, 0, GR_RESIZE_MENU);
-		render_bitmap(Background_bitmap, 0, 0, GR_RESIZE_MENU);
+		gr_set_bitmap(Background_bitmap);
+		gr_bitmap(0, 0, GR_RESIZE_MENU);
 	} 
 
 	percent = (int) (100.0f - (Credits_artwork_display_time - Credits_counter) * 100.0f / Credits_artwork_fade_time);
@@ -764,7 +763,7 @@ void credits_do_frame(float frametime)
 		bx2 = Credits_image_coords[gr_screen.res][CREDITS_X_COORD] + ((Credits_image_coords[gr_screen.res][CREDITS_W_COORD] - bw2)/2);
 		by2 = Credits_image_coords[gr_screen.res][CREDITS_Y_COORD] + ((Credits_image_coords[gr_screen.res][CREDITS_H_COORD] - bh2)/2);
 
-		render_cross_fade(bm1, bm2, bx1, by1, bx2, by2, (float)percent / 100.0f, GR_RESIZE_MENU);
+		gr_cross_fade(bm1, bm2, bx1, by1, bx2, by2, (float)percent / 100.0f, GR_RESIZE_MENU);
 	}
 
 	Ui_window.draw();

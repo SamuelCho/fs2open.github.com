@@ -286,9 +286,8 @@ void goal_list::icons_display(int yoff)
 				- ys / 2;									// center of icon offest
 
 			if ((y >= Goal_screen_text_y - ys / 2) && (y + ys <= Goal_screen_text_y + Goal_screen_text_h + ys / 2)) {
-				//gr_set_bitmap(bmp);
-				//gr_bitmap(Goal_screen_icon_x, y, GR_RESIZE_MENU);
-				render_bitmap(bmp, Goal_screen_icon_x, y, GR_RESIZE_MENU);
+				gr_set_bitmap(bmp);
+				gr_bitmap(Goal_screen_icon_x, y, GR_RESIZE_MENU);
 			}
 		}
 	}
@@ -350,10 +349,8 @@ void goal_text::display(int n, int y)
 		y1 = y + h / 2 - 1;
 
 		// custom_size me
-// 		gr_line(Goal_screen_icon_x, y1, Goal_screen_text_x - 2, y1, GR_RESIZE_MENU);
-// 		gr_line(Goal_screen_text_x + w + 1, y1, Goal_screen_icon_x + Goal_screen_text_w, y1, GR_RESIZE_MENU);
-		render_line(Goal_screen_icon_x, y1, Goal_screen_text_x - 2, y1, GR_RESIZE_MENU);
-		render_line(Goal_screen_text_x + w + 1, y1, Goal_screen_icon_x + Goal_screen_text_w, y1, GR_RESIZE_MENU);
+ 		gr_line(Goal_screen_icon_x, y1, Goal_screen_text_x - 2, y1, GR_RESIZE_MENU);
+ 		gr_line(Goal_screen_text_x + w + 1, y1, Goal_screen_icon_x + Goal_screen_text_w, y1, GR_RESIZE_MENU);
 
 	} else {
 		gr_set_color_fast(&Color_text_normal);
@@ -561,9 +558,8 @@ void mission_show_goals_do_frame(float frametime)
 
 	GR_MAYBE_CLEAR_RES(Goals_screen_bg_bitmap);
 	if (Goals_screen_bg_bitmap >= 0) {
-		//gr_set_bitmap(Goals_screen_bg_bitmap);
-		//gr_bitmap(0, 0, GR_RESIZE_MENU);
-		render_bitmap(Goals_screen_bg_bitmap, 0, 0, GR_RESIZE_MENU);
+		gr_set_bitmap(Goals_screen_bg_bitmap);
+		gr_bitmap(0, 0, GR_RESIZE_MENU);
 	}
 	Goals_screen_ui_window.draw();
 
@@ -704,43 +700,27 @@ void ML_render_objectives_key()
 {
 	// display icon key at the bottom
 	if (Lcl_gr) {
-// 		gr_set_bitmap(Goal_complete_bitmap);
-// 		gr_bitmap(Objective_key_icon_coords_gr[gr_screen.res][0][0], Objective_key_icon_coords_gr[gr_screen.res][0][1], GR_RESIZE_MENU);
-// 		gr_set_bitmap(Goal_incomplete_bitmap);
-// 		gr_bitmap(Objective_key_icon_coords_gr[gr_screen.res][1][0], Objective_key_icon_coords_gr[gr_screen.res][1][1], GR_RESIZE_MENU);
-// 		gr_set_bitmap(Goal_failed_bitmap);
-// 		gr_bitmap(Objective_key_icon_coords_gr[gr_screen.res][2][0], Objective_key_icon_coords_gr[gr_screen.res][2][1], GR_RESIZE_MENU);
+		gr_set_bitmap(Goal_complete_bitmap);
+		gr_bitmap(Objective_key_icon_coords_gr[gr_screen.res][0][0], Objective_key_icon_coords_gr[gr_screen.res][0][1], GR_RESIZE_MENU);
+		gr_set_bitmap(Goal_incomplete_bitmap);
+		gr_bitmap(Objective_key_icon_coords_gr[gr_screen.res][1][0], Objective_key_icon_coords_gr[gr_screen.res][1][1], GR_RESIZE_MENU);
+		gr_set_bitmap(Goal_failed_bitmap);
+		gr_bitmap(Objective_key_icon_coords_gr[gr_screen.res][2][0], Objective_key_icon_coords_gr[gr_screen.res][2][1], GR_RESIZE_MENU);
 
-		render_bitmap(Goal_complete_bitmap, Objective_key_icon_coords_gr[gr_screen.res][0][0], Objective_key_icon_coords_gr[gr_screen.res][0][1], GR_RESIZE_MENU);
-		render_bitmap(Goal_incomplete_bitmap, Objective_key_icon_coords_gr[gr_screen.res][1][0], Objective_key_icon_coords_gr[gr_screen.res][1][1], GR_RESIZE_MENU);
-		render_bitmap(Goal_failed_bitmap, Objective_key_icon_coords_gr[gr_screen.res][2][0], Objective_key_icon_coords_gr[gr_screen.res][2][1], GR_RESIZE_MENU);
-
-// 		gr_string(Objective_key_text_coords_gr[gr_screen.res][0][0], Objective_key_text_coords_gr[gr_screen.res][0][1] , XSTR("Complete",	1437), GR_RESIZE_MENU);
-// 		gr_string(Objective_key_text_coords_gr[gr_screen.res][1][0], Objective_key_text_coords_gr[gr_screen.res][1][1] , XSTR("Incomplete", 1438), GR_RESIZE_MENU);
-// 		gr_string(Objective_key_text_coords_gr[gr_screen.res][2][0], Objective_key_text_coords_gr[gr_screen.res][2][1] , XSTR("Failed",		1439), GR_RESIZE_MENU);
-
-		render_string(Objective_key_text_coords_gr[gr_screen.res][0][0], Objective_key_text_coords_gr[gr_screen.res][0][1] , XSTR("Complete",	1437), GR_RESIZE_MENU);
-		render_string(Objective_key_text_coords_gr[gr_screen.res][1][0], Objective_key_text_coords_gr[gr_screen.res][1][1] , XSTR("Incomplete", 1438), GR_RESIZE_MENU);
-		render_string(Objective_key_text_coords_gr[gr_screen.res][2][0], Objective_key_text_coords_gr[gr_screen.res][2][1] , XSTR("Failed",		1439), GR_RESIZE_MENU);
+ 		gr_string(Objective_key_text_coords_gr[gr_screen.res][0][0], Objective_key_text_coords_gr[gr_screen.res][0][1] , XSTR("Complete",	1437), GR_RESIZE_MENU);
+ 		gr_string(Objective_key_text_coords_gr[gr_screen.res][1][0], Objective_key_text_coords_gr[gr_screen.res][1][1] , XSTR("Incomplete", 1438), GR_RESIZE_MENU);
+ 		gr_string(Objective_key_text_coords_gr[gr_screen.res][2][0], Objective_key_text_coords_gr[gr_screen.res][2][1] , XSTR("Failed",		1439), GR_RESIZE_MENU);
 	} else {
-// 		gr_set_bitmap(Goal_complete_bitmap);
-// 		gr_bitmap(Objective_key_icon_coords[gr_screen.res][0][0], Objective_key_icon_coords[gr_screen.res][0][1], GR_RESIZE_MENU);
-// 		gr_set_bitmap(Goal_incomplete_bitmap);
-// 		gr_bitmap(Objective_key_icon_coords[gr_screen.res][1][0], Objective_key_icon_coords[gr_screen.res][1][1], GR_RESIZE_MENU);
-// 		gr_set_bitmap(Goal_failed_bitmap);
-// 		gr_bitmap(Objective_key_icon_coords[gr_screen.res][2][0], Objective_key_icon_coords[gr_screen.res][2][1], GR_RESIZE_MENU);
+		gr_set_bitmap(Goal_complete_bitmap);
+		gr_bitmap(Objective_key_icon_coords[gr_screen.res][0][0], Objective_key_icon_coords[gr_screen.res][0][1], GR_RESIZE_MENU);
+		gr_set_bitmap(Goal_incomplete_bitmap);
+		gr_bitmap(Objective_key_icon_coords[gr_screen.res][1][0], Objective_key_icon_coords[gr_screen.res][1][1], GR_RESIZE_MENU);
+		gr_set_bitmap(Goal_failed_bitmap);
+		gr_bitmap(Objective_key_icon_coords[gr_screen.res][2][0], Objective_key_icon_coords[gr_screen.res][2][1], GR_RESIZE_MENU);
 
-		render_bitmap(Goal_complete_bitmap, Objective_key_icon_coords[gr_screen.res][0][0], Objective_key_icon_coords[gr_screen.res][0][1], GR_RESIZE_MENU);
-		render_bitmap(Goal_incomplete_bitmap, Objective_key_icon_coords[gr_screen.res][1][0], Objective_key_icon_coords[gr_screen.res][1][1], GR_RESIZE_MENU);
-		render_bitmap(Goal_failed_bitmap, Objective_key_icon_coords[gr_screen.res][2][0], Objective_key_icon_coords[gr_screen.res][2][1], GR_RESIZE_MENU);
-
-// 		gr_string(Objective_key_text_coords[gr_screen.res][0][0], Objective_key_text_coords[gr_screen.res][0][1] , XSTR("Complete",	1437), GR_RESIZE_MENU);
-// 		gr_string(Objective_key_text_coords[gr_screen.res][1][0], Objective_key_text_coords[gr_screen.res][1][1] , XSTR("Incomplete", 1438), GR_RESIZE_MENU);
-// 		gr_string(Objective_key_text_coords[gr_screen.res][2][0], Objective_key_text_coords[gr_screen.res][2][1] , XSTR("Failed",		1439), GR_RESIZE_MENU);
-
-		render_string(Objective_key_text_coords[gr_screen.res][0][0], Objective_key_text_coords[gr_screen.res][0][1] , XSTR("Complete",	1437), GR_RESIZE_MENU);
-		render_string(Objective_key_text_coords[gr_screen.res][1][0], Objective_key_text_coords[gr_screen.res][1][1] , XSTR("Incomplete", 1438), GR_RESIZE_MENU);
-		render_string(Objective_key_text_coords[gr_screen.res][2][0], Objective_key_text_coords[gr_screen.res][2][1] , XSTR("Failed",		1439), GR_RESIZE_MENU);
+ 		gr_string(Objective_key_text_coords[gr_screen.res][0][0], Objective_key_text_coords[gr_screen.res][0][1] , XSTR("Complete",	1437), GR_RESIZE_MENU);
+ 		gr_string(Objective_key_text_coords[gr_screen.res][1][0], Objective_key_text_coords[gr_screen.res][1][1] , XSTR("Incomplete", 1438), GR_RESIZE_MENU);
+ 		gr_string(Objective_key_text_coords[gr_screen.res][2][0], Objective_key_text_coords[gr_screen.res][2][1] , XSTR("Failed",		1439), GR_RESIZE_MENU);
 	}
 }
 

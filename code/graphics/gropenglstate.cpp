@@ -1426,7 +1426,7 @@ void opengl_uniform_state::setUniform1iv(const SCP_string &name, const int count
 		uniform_lookup[name] = uniforms.size() - 1;
 	}
 
-	vglUniform1ivARB(opengl_shader_get_uniform(name.c_str()), count, (const GLint*)val);
+	glUniform1ivARB(opengl_shader_get_uniform(name.c_str()), count, (const GLint*)val);
 }
 
 void opengl_uniform_state::setUniformf(const SCP_string &name, const float val)
@@ -1669,7 +1669,7 @@ void opengl_uniform_state::setUniform1fv(const SCP_string &name, const int count
 		uniform_lookup[name] = uniforms.size() - 1;
 	}
 
-	vglUniform1fvARB(opengl_shader_get_uniform(name.c_str()), count, (const GLfloat*)val);
+	glUniform1fvARB(opengl_shader_get_uniform(name.c_str()), count, (const GLfloat*)val);
 }
 
 void opengl_uniform_state::setUniform3fv(const SCP_string &name, const int count, const vec3d *val)
@@ -1722,7 +1722,7 @@ void opengl_uniform_state::setUniform3fv(const SCP_string &name, const int count
 		uniform_lookup[name] = uniforms.size() - 1;
 	}
 
-	vglUniform3fvARB(opengl_shader_get_uniform(name.c_str()), count, (const GLfloat*)val);
+	glUniform3fvARB(opengl_shader_get_uniform(name.c_str()), count, (const GLfloat*)val);
 }
 
 void opengl_uniform_state::setUniform4fv(const SCP_string &name, const int count, const vec4 *val)
@@ -1775,7 +1775,7 @@ void opengl_uniform_state::setUniform4fv(const SCP_string &name, const int count
 		uniform_lookup[name] = uniforms.size() - 1;
 	}
 
-	vglUniform4fvARB(opengl_shader_get_uniform(name.c_str()), count, (const GLfloat*)val);
+	glUniform4fvARB(opengl_shader_get_uniform(name.c_str()), count, (const GLfloat*)val);
 }
 
 void opengl_uniform_state::setUniformMatrix4f(const SCP_string &name, const matrix4 &val)

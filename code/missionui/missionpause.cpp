@@ -148,19 +148,16 @@ void pause_do()
 			Pause_type = PAUSE_TYPE_VIEWER;
 		}
 		else if(Pause_type == PAUSE_TYPE_NORMAL)	{
-			//gr_restore_screen(Pause_saved_screen);
-			gr_reset_clip();
-			render_bitmap(Pause_saved_screen, 0, 0, GR_RESIZE_NONE);
+			gr_restore_screen(Pause_saved_screen);
 		}
 	}
 
 	if(Pause_type == PAUSE_TYPE_NORMAL){
 		if (Pause_background_bitmap >= 0) {
-			//gr_set_bitmap(Pause_background_bitmap);
+			gr_set_bitmap(Pause_background_bitmap);
 
 			// draw the bitmap
-			//gr_bitmap(Please_wait_coords[gr_screen.res][0], Please_wait_coords[gr_screen.res][1], GR_RESIZE_MENU);
-			render_bitmap(Pause_background_bitmap, Please_wait_coords[gr_screen.res][0], Please_wait_coords[gr_screen.res][1], GR_RESIZE_MENU);
+			gr_bitmap(Please_wait_coords[gr_screen.res][0], Please_wait_coords[gr_screen.res][1], GR_RESIZE_MENU);
 			
 			// draw "Paused" on it
 			gr_set_color_fast(&Color_normal);

@@ -1128,16 +1128,14 @@ void brief_render(float frametime)
 		return;
 	}
 
-	//gr_set_bitmap(Brief_grid_bitmap);
-	//gr_bitmap(Brief_bmap_coords[gr_screen.res][0], Brief_bmap_coords[gr_screen.res][1], GR_RESIZE_MENU);
-	render_bitmap(Brief_grid_bitmap, Brief_bmap_coords[gr_screen.res][0], Brief_bmap_coords[gr_screen.res][1], GR_RESIZE_MENU);
+	gr_set_bitmap(Brief_grid_bitmap);
+	gr_bitmap(Brief_bmap_coords[gr_screen.res][0], Brief_bmap_coords[gr_screen.res][1], GR_RESIZE_MENU);
 
 	brief_render_map(Current_brief_stage, frametime);
 
 	// draw the frame bitmaps
-	//gr_set_bitmap(Brief_text_bitmap);
-	//gr_bitmap(Brief_infobox_coords[gr_screen.res][0], Brief_infobox_coords[gr_screen.res][1], GR_RESIZE_MENU);
-	render_bitmap(Brief_text_bitmap, Brief_infobox_coords[gr_screen.res][0], Brief_infobox_coords[gr_screen.res][1], GR_RESIZE_MENU);
+	gr_set_bitmap(Brief_text_bitmap);
+	gr_bitmap(Brief_infobox_coords[gr_screen.res][0], Brief_infobox_coords[gr_screen.res][1], GR_RESIZE_MENU);
 	brief_blit_stage_num(Current_brief_stage, Num_brief_stages);
 
 	// only try to render text and play audio if there is really something here - taylor
@@ -1157,11 +1155,9 @@ void brief_render(float frametime)
 
 			gr_get_string_size(&w, &h, XSTR("more", 1469), strlen(XSTR("more", 1469)));
 			gr_set_color_fast(&Color_black);
-			//gr_rect(more_txt_x-2, more_txt_y, w+3, h, GR_RESIZE_MENU);
-			render_colored_rect(more_txt_x-2, more_txt_y, w+3, h, GR_RESIZE_MENU);
+			gr_rect(more_txt_x-2, more_txt_y, w+3, h, GR_RESIZE_MENU);
 			gr_set_color_fast(&Color_more_indicator);
-			//gr_string(more_txt_x, more_txt_y, XSTR("more", 1469), GR_RESIZE_MENU);
-			render_string(more_txt_x, more_txt_y, XSTR("more", 1469), GR_RESIZE_MENU);  // base location on the input x and y?
+			gr_string(more_txt_x, more_txt_y, XSTR("more", 1469), GR_RESIZE_MENU);  // base location on the input x and y?
 		}
 	}
 
@@ -1183,8 +1179,7 @@ void brief_render(float frametime)
 		gr_string(Title_coords_multi[gr_screen.res][0], Title_coords_multi[gr_screen.res][1], buf, GR_RESIZE_MENU);
 	} else {
 		gr_get_string_size(&w, NULL, The_mission.name);
-		//gr_string(Title_coords[gr_screen.res][0] - w, Title_coords[gr_screen.res][1], The_mission.name, GR_RESIZE_MENU);
-		render_string(Title_coords[gr_screen.res][0] - w, Title_coords[gr_screen.res][1], The_mission.name, GR_RESIZE_MENU);
+		gr_string(Title_coords[gr_screen.res][0] - w, Title_coords[gr_screen.res][1], The_mission.name, GR_RESIZE_MENU);
 	}
 
 	// maybe do objectives
@@ -1727,9 +1722,8 @@ void brief_do_frame(float frametime)
 
 		if (Closeup_icon && (Closeup_bitmap >= 0)) {
 			// blit closeup background
-			//gr_set_bitmap(Closeup_bitmap);
-			//gr_bitmap(Closeup_coords[gr_screen.res][BRIEF_X_COORD], Closeup_coords[gr_screen.res][BRIEF_Y_COORD], GR_RESIZE_MENU);
-			render_bitmap(Closeup_bitmap, Closeup_coords[gr_screen.res][BRIEF_X_COORD], Closeup_coords[gr_screen.res][BRIEF_Y_COORD], GR_RESIZE_MENU);
+			gr_set_bitmap(Closeup_bitmap);
+			gr_bitmap(Closeup_coords[gr_screen.res][BRIEF_X_COORD], Closeup_coords[gr_screen.res][BRIEF_Y_COORD], GR_RESIZE_MENU);
 		}
 
 		Brief_ui_window.draw();
@@ -1947,9 +1941,8 @@ void brief_maybe_blit_scene_cut(float frametime)
 			framenum = Fade_anim.num_frames-1;
 
 		// Blit the bitmap for this frame
-		//gr_set_bitmap(Fade_anim.first_frame + framenum);
-		//gr_bitmap(Fade_anim.sx, Fade_anim.sy, GR_RESIZE_MENU);
-		render_bitmap(Fade_anim.first_frame + framenum, Fade_anim.sx, Fade_anim.sy, GR_RESIZE_MENU);
+		gr_set_bitmap(Fade_anim.first_frame + framenum);
+		gr_bitmap(Fade_anim.sx, Fade_anim.sy, GR_RESIZE_MENU);
 	}
 
 
@@ -1974,9 +1967,8 @@ void brief_maybe_blit_scene_cut(float frametime)
 			framenum = Fade_anim.num_frames-1;
 
 		// Blit the bitmap for this frame
-		//gr_set_bitmap(Fade_anim.first_frame + (Fade_anim.num_frames-1) - framenum);
-		//gr_bitmap(Fade_anim.sx, Fade_anim.sy, GR_RESIZE_MENU);
-		render_bitmap(Fade_anim.first_frame + (Fade_anim.num_frames-1) - framenum, Fade_anim.sx, Fade_anim.sy, GR_RESIZE_MENU);
+		gr_set_bitmap(Fade_anim.first_frame + (Fade_anim.num_frames-1) - framenum);
+		gr_bitmap(Fade_anim.sx, Fade_anim.sy, GR_RESIZE_MENU);
 	}
 }
 

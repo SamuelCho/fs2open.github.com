@@ -486,8 +486,7 @@ void emp_hud_string(int x, int y, int gauge_id, const char *str, int resize_mode
 	}
 
 	// print the string out
-	//gr_string(x, y, tmp, resize_mode);
-	render_string(x, y, tmp, resize_mode);
+	gr_string(x, y, tmp, resize_mode);
 }
 
 // emp hud printf
@@ -511,8 +510,7 @@ void emp_hud_printf(int x, int y, int gauge_id, const char *format, ...)
 	}
 
 	// print the string out
-	//gr_string(x, y, tmp);
-	render_string(x, y, tmp);
+	gr_string(x, y, tmp);
 }
 
 // maybe reformat a string 

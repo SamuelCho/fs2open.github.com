@@ -1741,8 +1741,7 @@ void stars_draw_stars()
 			p1.screen.xyw.y = p2.screen.xyw.y;
 		}
 
-		//gr_aaline(&p1, &p2);
-		render_aaline(&p1, &p2);
+		gr_aaline(&p1, &p2);
 	}
 }
 

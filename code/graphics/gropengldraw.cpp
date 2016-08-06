@@ -87,28 +87,6 @@ namespace
     }
 }
 
-
-#ifdef _WIN32
-	#include "graphics/gl/glu.h"
-#elif defined(SCP_UNIX)
-#ifdef __APPLE__
-	#include <OpenGL/glu.h>
-#else
-#include <GL/glu.h>
-#endif // __APPLE__
-#endif
-
-
-#ifdef _WIN32
-	#include "graphics/gl/glu.h"
-#elif defined(SCP_UNIX)
-#ifdef __APPLE__
-	#include <OpenGL/glu.h>
-#else
-#include <GL/glu.h>
-#endif // __APPLE__
-#endif
-
 GLuint Scene_framebuffer;
 GLuint Scene_ldr_texture;
 GLuint Scene_color_texture;
@@ -2092,43 +2070,6 @@ void gr_opengl_bitmap_ex(int x, int y, int w, int h, int sx, int sy, int resize_
 	gr_opengl_bitmap_ex(dx1, dy1, dx2-dx1+1, dy2-dy1+1, sx, sy, resize_mode);
 }*/
 
-void gr_opengl_sphere_htl(float rad)
-{
-	GLUquadricObj *quad = NULL;
-
-	// FIXME: before this is used in anything other than FRED2 we need to make this creation/deletion
-	// stuff global so that it's not so slow (it can be reused for multiple quadratic objects)
-	quad = gluNewQuadric();
-
-	if (quad == NULL) {
-		Int3();
-		return;
-	}
-
-	GL_state.SetTextureSource(TEXTURE_SOURCE_NONE);
-	GL_state.SetAlphaBlendMode(ALPHA_BLEND_NONE);
-	GL_state.SetZbufferType(ZBUFFER_TYPE_FULL);
-	opengl_shader_set_current();
-
-	GL_state.Color(gr_screen.current_color.red, gr_screen.current_color.green, gr_screen.current_color.blue);
-
-	// FIXME: opengl_check_for_errors() needs to be modified to work with this at
-	// some point but for now I just don't care so it does nothing
-	gluQuadricCallback(quad, GLU_ERROR, NULL);
-
-	// FIXME: maybe support fill/wireframe with a future flag?
-	gluQuadricDrawStyle(quad, GLU_FILL);
-
-	// assuming unlit spheres, otherwise use GLU_SMOOTH so that it looks better
-	gluQuadricNormals(quad, GLU_NONE);
-
-	// we could set the slices/stacks at some point in the future but just use 16 now since it looks ok
-	gluSphere(quad, (GLdouble)rad, 16, 16);
-
-	// FIXME: I just heard this scream "Globalize Me!!".  It was really scary.  I even cried.
-	gluDeleteQuadric(quad);
-}
-
 void gr_opengl_sphere(material* material_def, float rad)
 {
 	opengl_tnl_set_material(material_def, true);
@@ -3261,7 +3202,7 @@ void gr_opengl_render_primitives_distortion(distortion_material* material_info, 
 	opengl_render_primitives(prim_type, layout, n_verts, buffer_handle, offset, 0);
 
 	GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT };
-	vglDrawBuffers(2, buffers);
+	glDrawBuffers(2, buffers);
 
 	GL_CHECK_FOR_ERRORS("start of gr_opengl_render_primitives_distortion()");
 }

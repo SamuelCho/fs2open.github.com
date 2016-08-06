@@ -932,15 +932,16 @@ void render_one_model_htl(object *objp)
 		if (size < LOLLIPOP_SIZE)
 			size = LOLLIPOP_SIZE;
 
+		color clr;
 		if (Fred_outline)
 		{
-			gr_set_color(__min(r*2,255),__min(g*2,255),__min(b*2,255));
-			g3_draw_htl_sphere(&objp->pos,  size * 1.5f);
+			gr_init_color(&clr, __min(r * 2, 255), __min(g * 2, 255), __min(b * 2, 255));
+			g3_draw_htl_sphere(&clr, &objp->pos,  size * 1.5f);
 		}
 		else
 		{
-			gr_set_color(r,g,b);
-			g3_draw_htl_sphere(&objp->pos, size);
+			gr_init_color(&clr, r, g, b);
+			g3_draw_htl_sphere(&clr, &objp->pos, size);
 		}
 	}
 

@@ -1826,9 +1826,8 @@ void control_config_do_frame(float frametime)
 
 	GR_MAYBE_CLEAR_RES(Background_bitmap);
 	if (Background_bitmap >= 0) {
-		//gr_set_bitmap(Background_bitmap);
-		//gr_bitmap(0, 0, GR_RESIZE_MENU);
-		render_bitmap(Background_bitmap, 0, 0, GR_RESIZE_MENU);
+		gr_set_bitmap(Background_bitmap);
+		gr_bitmap(0, 0, GR_RESIZE_MENU);
 	} 
 
 	// highlight tab with conflict
@@ -1862,8 +1861,7 @@ void control_config_do_frame(float frametime)
 		int sw, sh;
 		gr_get_string_size(&sw, &sh, conflict_str);
 
-		//gr_string((gr_screen.max_w / 2) - (sw / 2), Conflict_warning_coords[gr_screen.res][1], conflict_str, GR_RESIZE_MENU);
-		render_string((gr_screen.max_w / 2) - (sw / 2), Conflict_warning_coords[gr_screen.res][1], conflict_str, GR_RESIZE_MENU);
+		gr_string((gr_screen.max_w / 2) - (sw / 2), Conflict_warning_coords[gr_screen.res][1], conflict_str, GR_RESIZE_MENU);
 
 		font::set_font(font::FONT1);
 	} else {
@@ -2079,8 +2077,7 @@ void control_config_do_frame(float frametime)
 					gr_set_color_fast(c);
 				}
 
-				//gr_string(x, y, Joy_axis_text[j], GR_RESIZE_MENU);
-				render_string(x, y, Joy_axis_text[j], GR_RESIZE_MENU);
+				gr_string(x, y, Joy_axis_text[j], GR_RESIZE_MENU);
 			}
 		}
 
@@ -2127,11 +2124,9 @@ void control_config_do_frame(float frametime)
 		gr_set_color_fast(&Color_text_normal);
 
 		if (gr_screen.res == GR_640) {
-			//gr_string(16, (24 - font_height) / 2, preset_str.c_str(), GR_RESIZE_MENU);
-			render_string(16, (24 - font_height) / 2, preset_str.c_str(), GR_RESIZE_MENU);
+			gr_string(16, (24 - font_height) / 2, preset_str.c_str(), GR_RESIZE_MENU);
 		} else {
-			//gr_string(24, (40 - font_height) / 2, preset_str.c_str(), GR_RESIZE_MENU);
-			render_string(24, (40 - font_height) / 2, preset_str.c_str(), GR_RESIZE_MENU);
+			gr_string(24, (40 - font_height) / 2, preset_str.c_str(), GR_RESIZE_MENU);
 		}
 	}
 

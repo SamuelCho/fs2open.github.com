@@ -211,8 +211,7 @@ void dc_draw_cursor( SCP_string &cmd_string, int x, int y )
 
 		w %= (DCOLS * col_width);
 		//gr_string( w, debug_y*16, "_" );
-		//gr_rect(gr_screen.center_offset_x + (x + (w + 1)), gr_screen.center_offset_y + (y + (h + 1)), 2, Current_font->h, GR_RESIZE_NONE);
-		render_colored_rect(gr_screen.center_offset_x + (x + (w + 1)), gr_screen.center_offset_y + (y + (h + 1)), 2, fl2i(font::get_current_font()->getHeight()), GR_RESIZE_NONE);
+		gr_rect(gr_screen.center_offset_x + (x + (w + 1)), gr_screen.center_offset_y + (y + (h + 1)), 2, fl2i(font::get_current_font()->getHeight()), GR_RESIZE_NONE);
 	}
 }
 
@@ -248,8 +247,7 @@ void dc_draw_window(bool show_prompt)
 	// Draw the buffer strings
 	for (i = 0; i < buffer_lines; ++i) {
 		if ((i + dc_scroll_y) < dc_buffer.size()) {
-			//gr_string(gr_screen.center_offset_x, gr_screen.center_offset_y + ((i * row_height) + row_height), dc_buffer[i + dc_scroll_y].substr(dc_scroll_x).c_str(), GR_RESIZE_NONE);
-			render_string(gr_screen.center_offset_x, gr_screen.center_offset_y + ((i * row_height) + row_height), dc_buffer[i + dc_scroll_y].substr(dc_scroll_x).c_str(), GR_RESIZE_NONE);
+			gr_string(gr_screen.center_offset_x, gr_screen.center_offset_y + ((i * row_height) + row_height), dc_buffer[i + dc_scroll_y].substr(dc_scroll_x).c_str(), GR_RESIZE_NONE);
 		}
 	}
 
@@ -268,8 +266,7 @@ void dc_draw_window(bool show_prompt)
 			}
 		}
 
-		//gr_string(gr_screen.center_offset_x, gr_screen.center_offset_y + ((i * row_height) + row_height), out_str.c_str(), GR_RESIZE_NONE);
-		render_string(gr_screen.center_offset_x, gr_screen.center_offset_y + ((i * row_height) + row_height), out_str.c_str(), GR_RESIZE_NONE);
+		gr_string(gr_screen.center_offset_x, gr_screen.center_offset_y + ((i * row_height) + row_height), out_str.c_str(), GR_RESIZE_NONE);
 
 		dc_draw_cursor(out_str, 0, ((i * row_height)));
 		gr_set_color_fast(&Color_normal);

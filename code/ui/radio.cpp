@@ -53,16 +53,14 @@ void UI_RADIO::draw()
 		if ( disabled_flag ) {
 			if ( flag ) {
 				if ( bmap_ids[RADIO_DISABLED_MARKED] != -1 ) {
-					//gr_set_bitmap(bmap_ids[RADIO_DISABLED_MARKED]);
-					//gr_bitmap(x,y,GR_RESIZE_MENU);
-					render_bitmap(bmap_ids[RADIO_DISABLED_MARKED], x, y, GR_RESIZE_MENU);
+					gr_set_bitmap(bmap_ids[RADIO_DISABLED_MARKED]);
+					gr_bitmap(x,y,GR_RESIZE_MENU);
 				}
 			}
 			else {
 				if ( bmap_ids[RADIO_DISABLED_CLEAR] != -1 ) {
-					//gr_set_bitmap(bmap_ids[RADIO_DISABLED_CLEAR]);
-					//gr_bitmap(x,y,GR_RESIZE_MENU);
-					render_bitmap(bmap_ids[RADIO_DISABLED_CLEAR], x, y, GR_RESIZE_MENU);
+					gr_set_bitmap(bmap_ids[RADIO_DISABLED_CLEAR]);
+					gr_bitmap(x,y,GR_RESIZE_MENU);
 				}
 			}
 		}
@@ -70,32 +68,28 @@ void UI_RADIO::draw()
 			if ( position == 0 )	{	// up
 				if ( flag ) {			// marked
 					if ( bmap_ids[RADIO_UP_MARKED] != -1 ) {
-						//gr_set_bitmap(bmap_ids[RADIO_UP_MARKED]);
-						//gr_bitmap(x,y,GR_RESIZE_MENU);
-						render_bitmap(bmap_ids[RADIO_UP_MARKED], x, y, GR_RESIZE_MENU);
+						gr_set_bitmap(bmap_ids[RADIO_UP_MARKED]);
+						gr_bitmap(x,y,GR_RESIZE_MENU);
 					}
 				}
 				else {					// not marked
 					if ( bmap_ids[RADIO_UP_CLEAR] != -1 ) {
-						//gr_set_bitmap(bmap_ids[RADIO_UP_CLEAR]);
-						//gr_bitmap(x,y,GR_RESIZE_MENU);
-						render_bitmap(bmap_ids[RADIO_UP_CLEAR], x, y, GR_RESIZE_MENU);
+						gr_set_bitmap(bmap_ids[RADIO_UP_CLEAR]);
+						gr_bitmap(x,y,GR_RESIZE_MENU);
 					}
 				}
 			}
 			else {						// down 
 				if ( flag ) {			// marked
 					if ( bmap_ids[RADIO_DOWN_MARKED] != -1 ) {
-						//gr_set_bitmap(bmap_ids[RADIO_DOWN_MARKED]);
-						//gr_bitmap(x,y,GR_RESIZE_MENU);
-						render_bitmap(bmap_ids[RADIO_DOWN_MARKED], x, y, GR_RESIZE_MENU);
+						gr_set_bitmap(bmap_ids[RADIO_DOWN_MARKED]);
+						gr_bitmap(x,y,GR_RESIZE_MENU);
 					}
 				}
 				else {					// not marked
 					if ( bmap_ids[RADIO_DOWN_CLEAR] != -1 ) {
-						//gr_set_bitmap(bmap_ids[RADIO_DOWN_CLEAR]);
-						//gr_bitmap(x,y,GR_RESIZE_MENU);
-						render_bitmap(bmap_ids[RADIO_DOWN_CLEAR], x, y, GR_RESIZE_MENU);
+						gr_set_bitmap(bmap_ids[RADIO_DOWN_CLEAR]);
+						gr_bitmap(x,y,GR_RESIZE_MENU);
 					}
 				}
 			}
@@ -121,14 +115,11 @@ void UI_RADIO::draw()
 			gr_set_color_fast(&CGREEN);
 
 		if (flag)	{
-			//gr_circle( Middle(w)+offset, Middle(h)+offset, 8, GR_RESIZE_MENU );
-			render_circle( Middle(w)+offset, Middle(h)+offset, 8, GR_RESIZE_MENU );
+			gr_circle( Middle(w)+offset, Middle(h)+offset, 8, GR_RESIZE_MENU );
 		} else {
-			//gr_circle( Middle(w)+offset, Middle(h)+offset, 8, GR_RESIZE_MENU );
-			render_circle( Middle(w)+offset, Middle(h)+offset, 8, GR_RESIZE_MENU );
+			gr_circle( Middle(w)+offset, Middle(h)+offset, 8, GR_RESIZE_MENU );
 			gr_set_color_fast( &CWHITE );
-			//gr_circle( Middle(w)+offset, Middle(h)+offset, 4, GR_RESIZE_MENU );
-			render_circle( Middle(w)+offset, Middle(h)+offset, 4, GR_RESIZE_MENU );
+			gr_circle( Middle(w)+offset, Middle(h)+offset, 4, GR_RESIZE_MENU );
 		}
 
 		if (disabled_flag)
@@ -140,8 +131,7 @@ void UI_RADIO::draw()
 
 		if ( text )	{
 			gr_reset_clip();
-			//gr_string( x+w+4, y+2, text, GR_RESIZE_MENU );
-			render_string( x+w+4, y+2, text, GR_RESIZE_MENU );
+			gr_string( x+w+4, y+2, text, GR_RESIZE_MENU );
 		}
 	}
 }

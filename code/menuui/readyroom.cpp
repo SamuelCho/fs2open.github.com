@@ -1085,9 +1085,8 @@ void sim_room_init()
 	// HACK
 	GR_MAYBE_CLEAR_RES(Background_bitmap);
 	if(Background_bitmap != -1){
-		//gr_set_bitmap(Background_bitmap);
-		//gr_bitmap(0, 0, GR_RESIZE_MENU);
-		render_bitmap(Background_bitmap, 0, 0, GR_RESIZE_MENU);
+		gr_set_bitmap(Background_bitmap);
+		gr_bitmap(0, 0, GR_RESIZE_MENU);
 	}
 	Ui_window.draw();
 	gr_flip();		
@@ -1264,9 +1263,8 @@ void sim_room_do_frame(float frametime)
 
 	GR_MAYBE_CLEAR_RES(Background_bitmap);
 	if (Background_bitmap >= 0) {
-		//gr_set_bitmap(Background_bitmap);
-		//gr_bitmap(0, 0, GR_RESIZE_MENU);
-		render_bitmap(Background_bitmap, 0, 0, GR_RESIZE_MENU);
+		gr_set_bitmap(Background_bitmap);
+		gr_bitmap(0, 0, GR_RESIZE_MENU);
 	}
 
 	Ui_window.draw();
@@ -1369,9 +1367,8 @@ void sim_room_blit_icons(int line_index, int y_start, fs_builtin_mission *fb, in
 
 	// if the line is flagged as a volition file
 	if(is_from_volition && (Mission_icon_bitmaps[MISSION_ICON_VOLITION] >= 0)){		
-		//gr_set_bitmap(Mission_icon_bitmaps[MISSION_ICON_VOLITION]);
-		//gr_bitmap(Sim_volition_icon_x[gr_screen.res], y_start + MISSION_ICON_VOLITION_Y_OFFSET, GR_RESIZE_MENU);
-		render_bitmap(Mission_icon_bitmaps[MISSION_ICON_VOLITION], Sim_volition_icon_x[gr_screen.res], y_start + MISSION_ICON_VOLITION_Y_OFFSET, GR_RESIZE_MENU);
+		gr_set_bitmap(Mission_icon_bitmaps[MISSION_ICON_VOLITION]);
+		gr_bitmap(Sim_volition_icon_x[gr_screen.res], y_start + MISSION_ICON_VOLITION_Y_OFFSET, GR_RESIZE_MENU);
 	}	
 }
 
@@ -1802,9 +1799,8 @@ void campaign_room_do_frame(float frametime)
 
 	GR_MAYBE_CLEAR_RES(Background_bitmap);
 	if (Background_bitmap >= 0) {
-		//gr_set_bitmap(Background_bitmap);
-		//gr_bitmap(0, 0, GR_RESIZE_MENU);
-		render_bitmap(Background_bitmap, 0, 0, GR_RESIZE_MENU);
+		gr_set_bitmap(Background_bitmap);
+		gr_bitmap(0, 0, GR_RESIZE_MENU);
 	}
 
 	Ui_window.draw();
@@ -1820,18 +1816,13 @@ void campaign_room_do_frame(float frametime)
 		if (!stricmp(sim_room_lines[line].filename, Campaign.filename)) {
 			gr_set_color_fast(&Color_white);
 			i = y + font_height / 2 - 1;
-			//gr_circle(Cr_list_coords[gr_screen.res][0] - 6, i, 5, GR_RESIZE_MENU);
-			render_circle(Cr_list_coords[gr_screen.res][0] - 6, i, 5, GR_RESIZE_MENU);
+			gr_circle(Cr_list_coords[gr_screen.res][0] - 6, i, 5, GR_RESIZE_MENU);
 
 			gr_set_color_fast(&Color_bright_white);
-			//gr_line(Cr_list_coords[gr_screen.res][0] - 10, i, Cr_list_coords[gr_screen.res][0] - 8, i, GR_RESIZE_MENU);
-			//gr_line(Cr_list_coords[gr_screen.res][0] - 6, i - 4, Cr_list_coords[gr_screen.res][0] - 6, i - 2, GR_RESIZE_MENU);
-			//gr_line(Cr_list_coords[gr_screen.res][0] - 4, i, Cr_list_coords[gr_screen.res][0] - 2, i, GR_RESIZE_MENU);
-			//gr_line(Cr_list_coords[gr_screen.res][0] - 6, i + 2, Cr_list_coords[gr_screen.res][0] - 6, i + 4, GR_RESIZE_MENU);
-			render_line(Cr_list_coords[gr_screen.res][0] - 10, i, Cr_list_coords[gr_screen.res][0] - 8, i, GR_RESIZE_MENU);
-			render_line(Cr_list_coords[gr_screen.res][0] - 6, i - 4, Cr_list_coords[gr_screen.res][0] - 6, i - 2, GR_RESIZE_MENU);
-			render_line(Cr_list_coords[gr_screen.res][0] - 4, i, Cr_list_coords[gr_screen.res][0] - 2, i, GR_RESIZE_MENU);
-			render_line(Cr_list_coords[gr_screen.res][0] - 6, i + 2, Cr_list_coords[gr_screen.res][0] - 6, i + 4, GR_RESIZE_MENU);
+			gr_line(Cr_list_coords[gr_screen.res][0] - 10, i, Cr_list_coords[gr_screen.res][0] - 8, i, GR_RESIZE_MENU);
+			gr_line(Cr_list_coords[gr_screen.res][0] - 6, i - 4, Cr_list_coords[gr_screen.res][0] - 6, i - 2, GR_RESIZE_MENU);
+			gr_line(Cr_list_coords[gr_screen.res][0] - 4, i, Cr_list_coords[gr_screen.res][0] - 2, i, GR_RESIZE_MENU);
+			gr_line(Cr_list_coords[gr_screen.res][0] - 6, i + 2, Cr_list_coords[gr_screen.res][0] - 6, i + 4, GR_RESIZE_MENU);
 		}
 
 		if (line == Selected_campaign_index)
@@ -1863,8 +1854,7 @@ void campaign_room_do_frame(float frametime)
 		strncpy(line_text, Info_text_ptrs[i], Info_text_line_size[i]);
 		line_text[Info_text_line_size[i]] = 0;
 		drop_white_space(line_text);
-		//gr_string(Cr_info_coords[gr_screen.res][0], Cr_info_coords[gr_screen.res][1] + y, line_text, GR_RESIZE_MENU);
-		render_string(Cr_info_coords[gr_screen.res][0], Cr_info_coords[gr_screen.res][1] + y, line_text, GR_RESIZE_MENU);
+		gr_string(Cr_info_coords[gr_screen.res][0], Cr_info_coords[gr_screen.res][1] + y, line_text, GR_RESIZE_MENU);
 		y += font_height;
 		i++;
 	}

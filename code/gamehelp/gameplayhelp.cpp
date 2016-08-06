@@ -169,20 +169,16 @@ void gameplay_help_blit_control_line(int x, int y, int id)
 		strcpy_s(buf, XSTR( "no binding", 130));
 	}
 
-	//gr_string(x,y,buf,GR_RESIZE_MENU);
-	render_string(x,y,buf,GR_RESIZE_MENU);
+	gr_string(x,y,buf,GR_RESIZE_MENU);
 
 //	gr_string(x+KEY_DESCRIPTION_OFFSET,y,ci->text,GR_RESIZE_MENU);
-	//gr_string(x+KEY_DESCRIPTION_OFFSET, y, XSTR(ci->text, CONTROL_CONFIG_XSTR + id), GR_RESIZE_MENU);
-	render_string(x+KEY_DESCRIPTION_OFFSET, y, XSTR(ci->text, CONTROL_CONFIG_XSTR + id), GR_RESIZE_MENU);
+	gr_string(x+KEY_DESCRIPTION_OFFSET, y, XSTR(ci->text, CONTROL_CONFIG_XSTR + id), GR_RESIZE_MENU);
 }
 
 void gameplay_help_blit_control_line_raw(int x, int y, const char *control_text, const char *control_description)
 {
-	//gr_string(x,y,control_text,GR_RESIZE_MENU);
-	render_string(x,y,control_text,GR_RESIZE_MENU);
-	//gr_string(x+KEY_DESCRIPTION_OFFSET,y,control_description,GR_RESIZE_MENU);
-	render_string(x+KEY_DESCRIPTION_OFFSET,y,control_description,GR_RESIZE_MENU);
+	gr_string(x,y,control_text,GR_RESIZE_MENU);
+	gr_string(x+KEY_DESCRIPTION_OFFSET,y,control_description,GR_RESIZE_MENU);
 }
 
 // game_play_help_set_title() will display the title for the help screen and
@@ -819,9 +815,8 @@ void gameplay_help_do_frame(float frametime)
 	
 	GR_MAYBE_CLEAR_RES(Background_bitmap);
 	if (Background_bitmap >= 0) {
-		//gr_set_bitmap(Background_bitmap);
-		//gr_bitmap(0, 0, GR_RESIZE_MENU);
-		render_bitmap(Background_bitmap, 0, 0, GR_RESIZE_MENU);
+		gr_set_bitmap(Background_bitmap);
+		gr_bitmap(0, 0, GR_RESIZE_MENU);
 	}
 
 	Ui_window.draw();

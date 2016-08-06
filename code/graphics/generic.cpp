@@ -707,23 +707,22 @@ void generic_anim_render(generic_anim *ga, float frametime, int x, int y, bool m
 		bitmap_id = generic_anim_render_fixed_frame_delay(ga, frametime);
 	}
 
+	gr_set_bitmap(bitmap_id);
+
 	if(ga->num_frames > 0) {
 		ga->previous_frame = ga->current_frame;
 
 		if(ga->use_hud_color) {
-			//gr_aabitmap(x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
-			render_aabitmap(bitmap_id, x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
+			gr_aabitmap(x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
 		}
 		else {
 			if (ge == nullptr) {
-				//gr_bitmap(x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
-				render_bitmap(bitmap_id, x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
+				gr_bitmap(x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
 			}
 			else if (ge->draw == true) {
 				// currently only for lua streaminganim objects
 				// and don't draw them unless requested...
-				//gr_bitmap_uv(x, y, ge->width, ge->height, ge->u0, ge->v0, ge->u1, ge->v1, GR_RESIZE_NONE);
-				render_bitmap_uv(bitmap_id, x, y, ge->width, ge->height, ge->u0, ge->v0, ge->u1, ge->v1, GR_RESIZE_NONE);
+				gr_bitmap_uv(x, y, ge->width, ge->height, ge->u0, ge->v0, ge->u1, ge->v1, GR_RESIZE_NONE);
 			}
 		}
 	}

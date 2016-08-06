@@ -68,32 +68,24 @@ void draw_brackets_square(int x1, int y1, int x2, int y2, int resize_mode)
 
 	// horizontal lines
 	if ( (x1 + bracket_width > 0) && (x1 < gr_screen.clip_width) ){
-		//gr_gradient(x1,y1,x1+bracket_width-1,y1,GR_RESIZE_NONE);	// top left
-		//gr_gradient(x1,y2,x1+bracket_width-1,y2,GR_RESIZE_NONE);	// bottom left
-		render_gradient(x1,y1,x1+bracket_width-1,y1,GR_RESIZE_NONE);	// top left
-		render_gradient(x1,y2,x1+bracket_width-1,y2,GR_RESIZE_NONE);	// bottom left
+		gr_gradient(x1,y1,x1+bracket_width-1,y1,GR_RESIZE_NONE);	// top left
+		gr_gradient(x1,y2,x1+bracket_width-1,y2,GR_RESIZE_NONE);	// bottom left
 	}
 
 	if ( (x2 - bracket_width < gr_screen.clip_width) && (x2 > 0) )	{
-		//gr_gradient(x2, y1, x2-bracket_width+1,y1,GR_RESIZE_NONE);	// top right
-		//gr_gradient(x2, y2, x2-bracket_width+1,y2,GR_RESIZE_NONE);	// bottom right
-		render_gradient(x2, y1, x2-bracket_width+1,y1,GR_RESIZE_NONE);	// top right
-		render_gradient(x2, y2, x2-bracket_width+1,y2,GR_RESIZE_NONE);	// bottom right
+		gr_gradient(x2, y1, x2-bracket_width+1,y1,GR_RESIZE_NONE);	// top right
+		gr_gradient(x2, y2, x2-bracket_width+1,y2,GR_RESIZE_NONE);	// bottom right
 	}
 
 	// vertical lines
 	if ( (y1 + bracket_height > 0) && (y1 < gr_screen.clip_height) ) {
-		//gr_gradient(x1,y1,x1,y1+bracket_height-1,GR_RESIZE_NONE);		// top left
-		//gr_gradient(x2,y1,x2,y1+bracket_height-1,GR_RESIZE_NONE);		// top right
-		render_gradient(x1,y1,x1,y1+bracket_height-1,GR_RESIZE_NONE);		// top left
-		render_gradient(x2,y1,x2,y1+bracket_height-1,GR_RESIZE_NONE);		// top right
+		gr_gradient(x1,y1,x1,y1+bracket_height-1,GR_RESIZE_NONE);		// top left
+		gr_gradient(x2,y1,x2,y1+bracket_height-1,GR_RESIZE_NONE);		// top right
 	}
 
 	if ( (y2 - bracket_height < gr_screen.clip_height) && (y2 > 0) )	{
-		//gr_gradient(x1,y2,x1,y2-bracket_height+1,GR_RESIZE_NONE);	// bottom left
-		//gr_gradient(x2,y2,x2,y2-bracket_height+1,GR_RESIZE_NONE);	// bottom right
-		render_gradient(x1,y2,x1,y2-bracket_height+1,GR_RESIZE_NONE);	// bottom left
-		render_gradient(x2,y2,x2,y2-bracket_height+1,GR_RESIZE_NONE);	// bottom right
+		gr_gradient(x1,y2,x1,y2-bracket_height+1,GR_RESIZE_NONE);	// bottom left
+		gr_gradient(x2,y2,x2,y2-bracket_height+1,GR_RESIZE_NONE);	// bottom right
 	}
 }
 
@@ -110,61 +102,41 @@ void draw_brackets_square_quick(int x1, int y1, int x2, int y2, int thick)
 	int bracket_height = height/4;
 
 	// top line
-// 	gr_line(x1,y1,x1+bracket_width,y1);
-// 	gr_line(x2,y1,x2-bracket_width,y1);
-	render_line(x1,y1,x1+bracket_width,y1);
-	render_line(x2,y1,x2-bracket_width,y1);
+ 	gr_line(x1,y1,x1+bracket_width,y1);
+ 	gr_line(x2,y1,x2-bracket_width,y1);
 	if ( thick ) {
-// 		gr_line(x1,y1+1,x1+bracket_width,y1+1);
-// 		gr_line(x2,y1+1,x2-bracket_width,y1+1);
-		render_line(x1,y1+1,x1+bracket_width,y1+1);
-		render_line(x2,y1+1,x2-bracket_width,y1+1);
+ 		gr_line(x1,y1+1,x1+bracket_width,y1+1);
+ 		gr_line(x2,y1+1,x2-bracket_width,y1+1);
 	}
 
 	// bottom line
-// 	gr_line(x1,y2,x1+bracket_width,y2);
-// 	gr_line(x2,y2,x2-bracket_width,y2);
-	render_line(x1,y2,x1+bracket_width,y2);
-	render_line(x2,y2,x2-bracket_width,y2);
+ 	gr_line(x1,y2,x1+bracket_width,y2);
+ 	gr_line(x2,y2,x2-bracket_width,y2);
 	if ( thick ) {
-// 		gr_line(x1,y2-1,x1+bracket_width,y2-1);
-// 		gr_line(x2,y2-1,x2-bracket_width,y2-1);
-		render_line(x1,y2-1,x1+bracket_width,y2-1);
-		render_line(x2,y2-1,x2-bracket_width,y2-1);
+ 		gr_line(x1,y2-1,x1+bracket_width,y2-1);
+ 		gr_line(x2,y2-1,x2-bracket_width,y2-1);
 	}
 
 	// left line
 	if ( thick ) {
-// 		gr_line(x1,y1+2,x1,y1+bracket_height);
-// 		gr_line(x1,y2-2,x1,y2-bracket_height);
-// 		gr_line(x1+1,y1+2,x1+1,y1+bracket_height);
-// 		gr_line(x1+1,y2-2,x1+1,y2-bracket_height);
-		render_line(x1,y1+2,x1,y1+bracket_height);
-		render_line(x1,y2-2,x1,y2-bracket_height);
-		render_line(x1+1,y1+2,x1+1,y1+bracket_height);
-		render_line(x1+1,y2-2,x1+1,y2-bracket_height);
+ 		gr_line(x1,y1+2,x1,y1+bracket_height);
+ 		gr_line(x1,y2-2,x1,y2-bracket_height);
+ 		gr_line(x1+1,y1+2,x1+1,y1+bracket_height);
+ 		gr_line(x1+1,y2-2,x1+1,y2-bracket_height);
 	} else {
-// 		gr_line(x1,y1+1,x1,y1+bracket_height);
-// 		gr_line(x1,y2-1,x1,y2-bracket_height);
-		render_line(x1,y1+1,x1,y1+bracket_height);
-		render_line(x1,y2-1,x1,y2-bracket_height);
+ 		gr_line(x1,y1+1,x1,y1+bracket_height);
+ 		gr_line(x1,y2-1,x1,y2-bracket_height);
 	}
 
 	// right line
 	if ( thick ) {
-// 		gr_line(x2,y1+2,x2,y1+bracket_height);
-// 		gr_line(x2,y2-2,x2,y2-bracket_height);
-// 		gr_line(x2-1,y1+2,x2-1,y1+bracket_height);
-// 		gr_line(x2-1,y2-2,x2-1,y2-bracket_height);
-		render_line(x2,y1+2,x2,y1+bracket_height);
-		render_line(x2,y2-2,x2,y2-bracket_height);
-		render_line(x2-1,y1+2,x2-1,y1+bracket_height);
-		render_line(x2-1,y2-2,x2-1,y2-bracket_height);
+ 		gr_line(x2,y1+2,x2,y1+bracket_height);
+ 		gr_line(x2,y2-2,x2,y2-bracket_height);
+ 		gr_line(x2-1,y1+2,x2-1,y1+bracket_height);
+ 		gr_line(x2-1,y2-2,x2-1,y2-bracket_height);
 	} else {
-// 		gr_line(x2,y1+1,x2,y1+bracket_height);
-// 		gr_line(x2,y2-1,x2,y2-bracket_height);
-		render_line(x2,y1+1,x2,y1+bracket_height);
-		render_line(x2,y2-1,x2,y2-bracket_height);
+ 		gr_line(x2,y1+1,x2,y1+bracket_height);
+ 		gr_line(x2,y2-1,x2,y2-bracket_height);
 	}
 }
 
@@ -206,39 +178,23 @@ void draw_brackets_dashed_square_quick(int x1, int y1, int x2, int y2)
 
 	for ( i = 0; i < NUM_DASHES; i++ ) {
 		// top line
-// 		gr_line(dash_x1, y1, dash_x1+(dash_width-1), y1);
-// 		gr_line(dash_x2, y1, dash_x2-(dash_width-1), y1);
+ 		gr_line(dash_x1, y1, dash_x1+(dash_width-1), y1);
+ 		gr_line(dash_x2, y1, dash_x2-(dash_width-1), y1);
 
 		// bottom line
-// 		gr_line(dash_x1, y2, dash_x1+(dash_width-1), y2);
-// 		gr_line(dash_x2, y2, dash_x2-(dash_width-1), y2);
-
-		// top line
-		render_line(dash_x1, y1, dash_x1+(dash_width-1), y1);
-		render_line(dash_x2, y1, dash_x2-(dash_width-1), y1);
-
-		// bottom line
-		render_line(dash_x1, y2, dash_x1+(dash_width-1), y2);
-		render_line(dash_x2, y2, dash_x2-(dash_width-1), y2);
+ 		gr_line(dash_x1, y2, dash_x1+(dash_width-1), y2);
+ 		gr_line(dash_x2, y2, dash_x2-(dash_width-1), y2);
 		
 		dash_x1 += dash_width*2;
 		dash_x2 -= dash_width*2;
 
 		// left line
-// 		gr_line(x1, dash_y1, x1, dash_y1+(dash_height-1));
-// 		gr_line(x1, dash_y2, x1, dash_y2-(dash_height-1));
+ 		gr_line(x1, dash_y1, x1, dash_y1+(dash_height-1));
+ 		gr_line(x1, dash_y2, x1, dash_y2-(dash_height-1));
 
 		// right line
-// 		gr_line(x2, dash_y1, x2, dash_y1+(dash_height-1));
-// 		gr_line(x2, dash_y2, x2, dash_y2-(dash_height-1));
-
-		// left line
-		render_line(x1, dash_y1, x1, dash_y1+(dash_height-1));
-		render_line(x1, dash_y2, x1, dash_y2-(dash_height-1));
-
-		// right line
-		render_line(x2, dash_y1, x2, dash_y1+(dash_height-1));
-		render_line(x2, dash_y2, x2, dash_y2-(dash_height-1));
+ 		gr_line(x2, dash_y1, x2, dash_y1+(dash_height-1));
+ 		gr_line(x2, dash_y2, x2, dash_y2-(dash_height-1));
 
 		dash_y1 += dash_height*2;
 		dash_y2 -= dash_height*2;
@@ -276,28 +232,20 @@ void draw_brackets_diamond(int x1, int y1, int x2, int y2)
 	center_y = y1 + half_height;
 
 	// top left line
-	//gr_gradient(center_x - x_delta, y1 + y_delta,center_x, y1);
-	//gr_gradient(x1 + x_delta, center_y - y_delta, x1, center_y);
-	render_gradient(center_x - x_delta, y1 + y_delta,center_x, y1);
-	render_gradient(x1 + x_delta, center_y - y_delta, x1, center_y);
+	gr_gradient(center_x - x_delta, y1 + y_delta,center_x, y1);
+	gr_gradient(x1 + x_delta, center_y - y_delta, x1, center_y);
 
 	// top right line
-	//gr_gradient(center_x + x_delta, y1 + y_delta,center_x, y1);
-	//gr_gradient(x2 - x_delta, center_y - y_delta, x2, center_y);
-	render_gradient(center_x + x_delta, y1 + y_delta,center_x, y1);
-	render_gradient(x2 - x_delta, center_y - y_delta, x2, center_y);
+	gr_gradient(center_x + x_delta, y1 + y_delta,center_x, y1);
+	gr_gradient(x2 - x_delta, center_y - y_delta, x2, center_y);
 
 	// bottom left line
-	//gr_gradient(x1 + x_delta, center_y + y_delta, x1, center_y);
-	//gr_gradient(center_x - x_delta, y2 - y_delta, center_x, y2);
-	render_gradient(x1 + x_delta, center_y + y_delta, x1, center_y);
-	render_gradient(center_x - x_delta, y2 - y_delta, center_x, y2);
+	gr_gradient(x1 + x_delta, center_y + y_delta, x1, center_y);
+	gr_gradient(center_x - x_delta, y2 - y_delta, center_x, y2);
 
 	// bottom right line
-	//gr_gradient(x2 - x_delta, center_y + y_delta, x2, center_y);
-	//gr_gradient(center_x + x_delta, y2 - y_delta, center_x, y2);
-	render_gradient(x2 - x_delta, center_y + y_delta, x2, center_y);
-	render_gradient(center_x + x_delta, y2 - y_delta, center_x, y2);
+	gr_gradient(x2 - x_delta, center_y + y_delta, x2, center_y);
+	gr_gradient(center_x + x_delta, y2 - y_delta, center_x, y2);
 }
 
 void draw_brackets_diamond_quick(int x1, int y1, int x2, int y2)
@@ -323,45 +271,25 @@ void draw_brackets_diamond_quick(int x1, int y1, int x2, int y2)
 	center_x = x1 + half_width;
 	center_y = y1 + half_height;
 
-// 	// top left line
-// 	gr_line(center_x - x_delta, y1 + y_delta,center_x, y1);
-// 	gr_line(x1 + x_delta, center_y - y_delta, x1, center_y);
-// 
-// 	// top right line
-// 	gr_line(center_x + x_delta, y1 + y_delta,center_x, y1);
-// 	gr_line(x2 - x_delta, center_y - y_delta, x2, center_y);
-// 
-// 	// bottom left line
-// 	gr_line(x1 + x_delta, center_y + y_delta, x1, center_y);
-// 	gr_line(center_x - x_delta, y2 - y_delta, center_x, y2);
-// 
-// 	// bottom right line
-// 	gr_line(x2 - x_delta, center_y + y_delta, x2, center_y);
-// 	gr_line(center_x + x_delta, y2 - y_delta, center_x, y2);
-// 
-// 	// draw an 'X' in the middle of the brackets
-// 	gr_line(center_x-x_delta, center_y-y_delta, center_x+x_delta, center_y+y_delta);
-// 	gr_line(center_x-x_delta, center_y+y_delta, center_x+x_delta, center_y-y_delta);
-
-	// top left line
-	render_line(center_x - x_delta, y1 + y_delta,center_x, y1);
-	render_line(x1 + x_delta, center_y - y_delta, x1, center_y);
-
-	// top right line
-	render_line(center_x + x_delta, y1 + y_delta,center_x, y1);
-	render_line(x2 - x_delta, center_y - y_delta, x2, center_y);
-
-	// bottom left line
-	render_line(x1 + x_delta, center_y + y_delta, x1, center_y);
-	render_line(center_x - x_delta, y2 - y_delta, center_x, y2);
-
-	// bottom right line
-	render_line(x2 - x_delta, center_y + y_delta, x2, center_y);
-	render_line(center_x + x_delta, y2 - y_delta, center_x, y2);
-
-	// draw an 'X' in the middle of the brackets
-	render_line(center_x-x_delta, center_y-y_delta, center_x+x_delta, center_y+y_delta);
-	render_line(center_x-x_delta, center_y+y_delta, center_x+x_delta, center_y-y_delta);
+ 	// top left line
+ 	gr_line(center_x - x_delta, y1 + y_delta,center_x, y1);
+ 	gr_line(x1 + x_delta, center_y - y_delta, x1, center_y);
+ 
+ 	// top right line
+ 	gr_line(center_x + x_delta, y1 + y_delta,center_x, y1);
+ 	gr_line(x2 - x_delta, center_y - y_delta, x2, center_y);
+ 
+ 	// bottom left line
+ 	gr_line(x1 + x_delta, center_y + y_delta, x1, center_y);
+ 	gr_line(center_x - x_delta, y2 - y_delta, center_x, y2);
+ 
+ 	// bottom right line
+ 	gr_line(x2 - x_delta, center_y + y_delta, x2, center_y);
+ 	gr_line(center_x + x_delta, y2 - y_delta, center_x, y2);
+ 
+ 	// draw an 'X' in the middle of the brackets
+ 	gr_line(center_x-x_delta, center_y-y_delta, center_x+x_delta, center_y+y_delta);
+ 	gr_line(center_x-x_delta, center_y+y_delta, center_x+x_delta, center_y-y_delta);
 }
 
 //	Draw bounding brackets for a subobject.
@@ -480,8 +408,7 @@ void hud_target_show_dist_on_bracket(int x, int y, float distance, int font_num)
 		y += 4;
 	}
 
-	//gr_string(x - w+2, y+y_delta, text_dist);
-	render_string(x - w+2, y+y_delta, text_dist);
+	gr_string(x - w+2, y+y_delta, text_dist);
 }
 
 
@@ -955,8 +882,7 @@ void HudGaugeBrackets::renderNavBrackets(vec3d* nav_pos, vertex* nav_point, colo
 
 	// draw the nav name
 	if(string) {
-		//gr_string(x-(box_scale+10), y-(box_scale+20), string);
-		render_string(x-(box_scale+10), y-(box_scale+20), string);
+		gr_string(x-(box_scale+10), y-(box_scale+20), string);
 	}
 
 	// draw distance to target in lower right corner of box
@@ -1111,12 +1037,10 @@ void HudGaugeBrackets::renderBoundingBrackets(int x1, int y1, int x2, int y2, in
 		}
 
 		if(tinfo_name && (flags & TARGET_DISPLAY_NAME)) {
-			//gr_string(x2+3, y1, tinfo_name);
-			render_string(x2+3, y1, tinfo_name);
+			gr_string(x2+3, y1, tinfo_name);
 		} 
 		if(tinfo_class && (flags & TARGET_DISPLAY_CLASS)) {
-			//gr_string(x2 + 3, y1 + gr_get_font_height(), tinfo_class);
-			render_string(x2 + 3, y1 + gr_get_font_height(), tinfo_class);
+			gr_string(x2 + 3, y1 + gr_get_font_height(), tinfo_class);
 		}
 	}
 

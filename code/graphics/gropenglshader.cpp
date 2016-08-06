@@ -245,7 +245,7 @@ void opengl_shader_set_current(opengl_shader_t *shader_obj)
 				glGetProgramiv(Current_shader->program_id, GL_VALIDATE_STATUS, &obj_status);
 
 				if ( !obj_status ) {
-					opengl_shader_check_program_info_log(Current_shader->program_id);
+					opengl_program_check_info_log(Current_shader->program_id);
 	
 					mprintf(("VALIDATE INFO-LOG:\n"));
 
@@ -527,11 +527,11 @@ int opengl_compile_shader(shader_type sdr, uint flags)
 
 	// bind fragment data locations
 	if ( GL_version >= 32 && GLSL_version >= 150 ) {
-		vglBindFragDataLocation(new_shader.program_id, 0, "fragOut0");
-		vglBindFragDataLocation(new_shader.program_id, 1, "fragOut1");
-		vglBindFragDataLocation(new_shader.program_id, 2, "fragOut2");
-		vglBindFragDataLocation(new_shader.program_id, 3, "fragOut3");
-		vglBindFragDataLocation(new_shader.program_id, 4, "fragOut4");
+		glBindFragDataLocation(new_shader.program_id, 0, "fragOut0");
+		glBindFragDataLocation(new_shader.program_id, 1, "fragOut1");
+		glBindFragDataLocation(new_shader.program_id, 2, "fragOut2");
+		glBindFragDataLocation(new_shader.program_id, 3, "fragOut3");
+		glBindFragDataLocation(new_shader.program_id, 4, "fragOut4");
 	}
 
 	// initialize uniforms and attributes
@@ -695,7 +695,7 @@ GLuint opengl_shader_compile_object(const SCP_vector<SCP_string>& shader_source,
 	// check if the compile was successful
 	glGetShaderiv(shader_object, GL_COMPILE_STATUS, &status);
 
-	opengl_shader_check_shader_info_log(shader_object);
+	opengl_shader_check_info_log(shader_object);
 
 	// we failed, bail out now...
 	if (status == 0) {
@@ -866,7 +866,7 @@ void opengl_shader_init_attribute(const opengl_vert_attrib *attrib_info)
 	}
 
 	// assign default value to vertex attribute
-	vglVertexAttrib4fARB(
+	glVertexAttrib4fARB(
 		new_attribute.location,
 		attrib_info->default_value.xyzw.x,
 		attrib_info->default_value.xyzw.y,
