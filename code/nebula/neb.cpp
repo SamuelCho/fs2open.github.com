@@ -1080,7 +1080,9 @@ void neb2_render_player()
 				gr_set_lighting(false, false);
 				//gr_fog_set(GR_FOGMODE_NONE, 0, 0, 0);
 				//g3_draw_rotated_bitmap(&p, fl_radians(Neb2_cubes[idx1][idx2][idx3].rot), Nd->prad, TMAP_FLAG_TEXTURED);
-				render_rotated_bitmap(Neb2_cubes[idx1][idx2][idx3].bmap, alpha + Neb2_cubes[idx1][idx2][idx3].flash, &p, fl_radians(Neb2_cubes[idx1][idx2][idx3].rot), Nd->prad);
+				material mat_params;
+				render_set_unlit_material(&mat_params, Neb2_cubes[idx1][idx2][idx3].bmap, alpha + Neb2_cubes[idx1][idx2][idx3].flash, true, true);
+				render_rotated_bitmap(&mat_params, &p, fl_radians(Neb2_cubes[idx1][idx2][idx3].rot), Nd->prad);
 			}
 		}
 	}
@@ -1094,9 +1096,8 @@ void neb2_render_player()
 #ifdef NEB2_THUMBNAIL
 	extern int tbmap;
 	if (tbmap != -1) {
-		//gr_set_bitmap(tbmap);
-		//gr_bitmap(0, 0);
-		render_bitmap(tbmap, 0, 0);
+		gr_set_bitmap(tbmap);
+		gr_bitmap(0, 0);
 	}
 #endif
 }

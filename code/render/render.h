@@ -17,6 +17,8 @@ gr_alpha_blend render_determine_blend_mode(int base_bitmap, bool is_transparent)
 gr_zbuffer_type render_determine_depth_mode(bool depth_testing, bool is_transparent);
 
 void render_set_unlit_material(material* mat_info, int texture, float alpha, bool blending, bool depth_testing);
+void render_set_unlit_color_material(material* mat_info, int texture, color *clr, bool blending, bool depth_testing);
+void render_set_unlit_color_material(material* mat_info, int texture, color *clr, float alpha, bool blending, bool depth_testing);
 void render_set_volume_emissive_material(particle_material* mat_info, int texture, bool point_sprites);
 void render_set_distortion_material(distortion_material *mat_info, int texture, bool thruster);
 
@@ -26,21 +28,16 @@ void render_primitives_colored_textured(material* mat, vertex* verts, int n_vert
 
 void render_rod(color *clr, int num_points, vec3d *pvecs, float width);
 
-void render_laser(int texture, color *clr, float alpha, vec3d *headp, float head_width, vec3d *tailp, float tail_width);
-void render_laser_2d(int texture, color* clr, float alpha, vec3d *headp, float head_width, vec3d *tailp, float tail_width, float max_len);
-void render_laser_2d(int texture, float alpha, vec3d *headp, float head_width, vec3d *tailp, float tail_width, float max_len);
+void render_laser(material *mat_params, vec3d *headp, float head_width, vec3d *tailp, float tail_width);
+void render_laser_2d(material *mat_params, vec3d *headp, float head_width, vec3d *tailp, float tail_width, float max_len);
 
-void render_rotated_bitmap(int texture, float alpha, vertex *pnt, float angle, float rad);
+void render_rotated_bitmap(material *mat_params, vertex *pnt, float angle, float rad);
 
-void render_oriented_bitmap(int texture, float alpha, vertex *pnt, int orient, float rad, float depth = 0.0f);
-void render_oriented_bitmap_2d(int texture, float alpha, vertex *pnt, int orient, float rad);
-void render_oriented_bitmap_2d(int texture, vertex *pnt, int orient, float rad);
+void render_oriented_bitmap(material *mat_params, vertex *pnt, int orient, float rad, float depth = 0.0f);
+void render_oriented_bitmap_2d(material *mat_params, vertex *pnt, int orient, float rad);
 
-void render_oriented_quad(int texture, vec3d *pos, matrix *ori, float width, float height);
-void render_oriented_quad(int texture, float alpha, vec3d *pos, matrix *ori, float width, float height);
-void render_oriented_quad(int texture, float alpha, vec3d *pos, vec3d *norm, float width, float height);
-void render_oriented_quad_colored(int texture, float alpha, vec3d *pos, matrix *ori, float width, float height);
-void render_oriented_quad_colored(int texture, color *clr, float alpha, vec3d *pos, matrix *ori, float width, float height);
+void render_oriented_quad(material* mat_info, vec3d *pos, matrix *ori, float width, float height);
+void render_oriented_quad(material* mat_info, vec3d *pos, vec3d *norm, float width, float height);
 
 void render_line_3d(color *clr, bool depth_testing, vec3d *start, vec3d *end);
 void render_line_3d(bool depth_testing, vec3d *start, vec3d *end);

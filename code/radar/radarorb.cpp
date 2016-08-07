@@ -588,12 +588,16 @@ void HudGaugeRadarOrb::drawContactImage(vec3d *pnt, int rad, int idx, int clr_id
 
 	if ( idx >= 0 ) {
 		//g3_draw_polygon(pnt, &vmd_identity_matrix, sizef/35.0f, aspect_mp*sizef/35.0f, tmap_flags);
-		render_oriented_quad_colored(idx, 1.0f, pnt, &vmd_identity_matrix, sizef / 35.0f, aspect_mp * sizef / 35.0f);
+		material mat_params;
+		render_set_unlit_color_material(&mat_params, idx, &gr_screen.current_color, true, false);
+		render_oriented_quad(&mat_params, pnt, &vmd_identity_matrix, sizef / 35.0f, aspect_mp * sizef / 35.0f);
 	}
 
 	if ( clr_idx >= 0 ) {
 		//g3_draw_polygon(pnt, &vmd_identity_matrix, sizef/35.0f, aspect_mp*sizef/35.0f, TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT);
-		render_oriented_quad(clr_idx, 1.0f, pnt, &vmd_identity_matrix, sizef / 35.0f, aspect_mp * sizef / 35.0f);
+		material mat_params;
+		render_set_unlit_material(&mat_params, clr_idx, 1.0f, true, false);
+		render_oriented_quad(&mat_params, pnt, &vmd_identity_matrix, sizef / 35.0f, aspect_mp * sizef / 35.0f);
 	}
 }
 

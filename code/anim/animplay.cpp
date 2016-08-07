@@ -506,7 +506,9 @@ int anim_show_next_frame(anim_instance *instance, float frametime)
 			g3_rotate_vertex(&image_vertex,instance->world_pos);
 			Assert(instance->radius != 0.0f);
 			//g3_draw_bitmap(&image_vertex, 0, instance->radius*1.5f, TMAP_FLAG_TEXTURED | TMAP_HTL_2D);
-			render_oriented_bitmap_2d(bitmap_id, &image_vertex, 0, instance->radius*1.5f);
+			material mat_params;
+			render_set_unlit_material(&mat_params, bitmap_id, 1.0f, false, false);
+			render_oriented_bitmap_2d(&mat_params, &image_vertex, 0, instance->radius*1.5f);
 		}
 									  
 		instance->last_bitmap = bitmap_id;

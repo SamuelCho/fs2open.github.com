@@ -13824,11 +13824,9 @@ ADE_FUNC(drawPolygon, l_Graphics, "texture Texture, [vector Position={0,0,0}, or
 
 	//gr_set_bitmap(tdx, lua_Opacity_type, GR_BITBLT_MODE_NORMAL, lua_Opacity);
 	//g3_draw_polygon(&pos, orip, width, height, TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT);
-	if ( lua_Opacity_type ) {
-		render_oriented_quad(tdx, lua_Opacity, &pos, orip, width, height);
-	} else {
-		render_oriented_quad(tdx, &pos, orip, width, height);
-	}
+	material mat_params;
+	render_set_unlit_material(&mat_params, tdx, lua_Opacity, lua_Opacity_type == GR_ALPHABLEND_FILTER ? true : false, false);
+	render_oriented_quad(&mat_params, &pos, orip, width, height);
 
 	if(!in_frame)
 		g3_end_frame();
