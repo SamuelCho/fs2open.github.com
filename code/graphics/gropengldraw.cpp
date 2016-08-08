@@ -575,16 +575,12 @@ void gr_opengl_string_old(float sx, float sy, const char* s, const char* end, fo
 	
 	spacing = 0;
 
-	GL_state.Array.BindArrayBuffer(0);
-
 	vertex_layout vert_def;
 
-	vert_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(v4), &GL_string_render_buff[0].x);
-	vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(v4), &GL_string_render_buff[0].u);
+	vert_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(v4), (int)offsetof(v4, x));
+	vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(v4), (int)offsetof(v4, u));
 
-	opengl_bind_vertex_layout(vert_def);
-	//opengl_shader_set_current();
-	opengl_shader_set_passthrough(true, true);
+	opengl_shader_set_passthrough(true, true, &gr_screen.current_color);
 
 	// pick out letter coords, draw it, goto next letter and do the same
 	while (s < end) {
@@ -676,7 +672,7 @@ void gr_opengl_string_old(float sx, float sy, const char* s, const char* end, fo
 		v1 = v_scale * (i2fl((v+yd)+hc) / bh);
 
 		if ( buffer_offset == MAX_VERTS_PER_DRAW ) {
-			glDrawArrays(GL_TRIANGLES, 0, buffer_offset);
+			opengl_render_primitives_immediate(PRIM_TYPE_TRIS, &vert_def, buffer_offset, GL_string_render_buff, sizeof(v4) * MAX_VERTS_PER_DRAW);
 			buffer_offset = 0;
 		}
 
@@ -718,10 +714,11 @@ void gr_opengl_string_old(float sx, float sy, const char* s, const char* end, fo
 	}
 
 	if (buffer_offset) {
-		glDrawArrays(GL_TRIANGLES, 0, buffer_offset);
+		opengl_render_primitives_immediate(PRIM_TYPE_TRIS, &vert_def, buffer_offset, GL_string_render_buff, sizeof(v4) * buffer_offset);
 	}
 
 	GL_CHECK_FOR_ERRORS("end of string()");
+	gr_clear_states();
 }
 
 void gr_opengl_string(float sx, float sy, const char *s, int resize_mode, int in_length) {

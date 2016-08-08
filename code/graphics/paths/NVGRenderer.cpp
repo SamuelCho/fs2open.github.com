@@ -48,8 +48,9 @@ namespace
 
 		GL_state.Uniform.reset();
 
-		// State that is not currently tracked by FSO:
-		//   glBindVertexArray(arr);
+		if ( GLAD_GL_ARB_vertex_array_object ) {
+			glBindVertexArray(GL_vao);
+		}
 
 		// Now reset the values to what we need
 		GL_state.SetStencilType(STENCIL_TYPE_NONE);
@@ -96,6 +97,10 @@ namespace graphics
 
 		void NVGRenderer::endFrame()
 		{
+			if ( GLAD_GL_ARB_vertex_array_object ) {
+				glBindVertexArray(0);
+			}
+
 			gr_opengl_set_2d_matrix();
 
 			nvgEndFrame(m_context);
