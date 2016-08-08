@@ -737,7 +737,7 @@ void draw_list::render_outline(outline_draw &outline_info)
 	material_instance.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
 	material_instance.set_color(outline_info.clr);
 
-	render_primitives_colored(&material_instance, outline_info.vert_array, outline_info.n_verts, PRIM_TYPE_LINES, false);
+	g3_render_primitives_colored(&material_instance, outline_info.vert_array, outline_info.n_verts, PRIM_TYPE_LINES, false);
 
 	g3_done_instance(true);
 }
@@ -1187,7 +1187,7 @@ void model_render_buffers(draw_list* scene, model_material *rendering_material, 
 		}
 
 		gr_alpha_blend blend_mode = model_render_determine_blend_mode(texture_maps[TM_BASE_TYPE], use_blending);
-		gr_zbuffer_type depth_mode = render_determine_depth_mode(use_depth_test, use_blending);
+		gr_zbuffer_type depth_mode = material_determine_depth_mode(use_depth_test, use_blending);
 
 		rendering_material->set_depth_mode(depth_mode);
 		rendering_material->set_blend_mode(blend_mode);
@@ -2330,7 +2330,7 @@ void model_render_insignias(insignia_draw_data *insignia)
 	insignia_material.set_depth_bias(1);
 
 	// set the proper texture
-	render_set_unlit_material(&insignia_material, bitmap_num, 0.65f, true, true);
+	material_set_unlit(&insignia_material, bitmap_num, 0.65f, true, true);
 
 	if ( insignia->clip ) {
 		insignia_material.set_clip_plane(insignia->clip_normal, insignia->clip_position);
@@ -2374,7 +2374,7 @@ void model_render_insignias(insignia_draw_data *insignia)
 			vecs[0].a = vecs[1].a = vecs[2].a = 255;
 
 			// draw the polygon
-			render_primitives_colored_textured(&insignia_material, vecs, 3, PRIM_TYPE_TRIFAN, false);
+			g3_render_primitives_colored_textured(&insignia_material, vecs, 3, PRIM_TYPE_TRIFAN, false);
 		}
 	}
 }
@@ -2392,10 +2392,10 @@ void model_render_arc(vec3d *v1, vec3d *v2, color *primary, color *secondary, fl
 	// use primary color for fist pass
 	Assert( primary );
 
-	render_rod(primary, Num_arc_segment_points, Arc_segment_points, arc_width);
+	g3_render_rod(primary, Num_arc_segment_points, Arc_segment_points, arc_width);
 
 	if (secondary) {
-		render_rod(secondary, Num_arc_segment_points, Arc_segment_points, arc_width * 0.33f);
+		g3_render_rod(secondary, Num_arc_segment_points, Arc_segment_points, arc_width * 0.33f);
 	}
 }
 

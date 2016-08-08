@@ -1247,8 +1247,8 @@ void beam_render(beam *b, float u_offset)
 		}
 
 		material material_params;
-		render_set_unlit_material(&material_params, bwsi->texture.first_frame + framenum, 0.9999f, true, true);
-		render_primitives_colored_textured(&material_params, h1, 4, PRIM_TYPE_TRIFAN, false);
+		material_set_unlit(&material_params, bwsi->texture.first_frame + framenum, 0.9999f, true, true);
+		g3_render_primitives_colored_textured(&material_params, h1, 4, PRIM_TYPE_TRIFAN, false);
 	}		
 	
 	// turn backface culling back on
@@ -1468,8 +1468,8 @@ void beam_render_muzzle_glow(beam *b)
 		//g3_draw_poly(4, verts, TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT);
 
 		material material_info;
-		render_set_unlit_material(&material_info, bwi->beam_glow.first_frame + framenum, alpha * pct, true, true);
-		render_primitives_textured(&material_info, h1, 4, PRIM_TYPE_TRIFAN, false);
+		material_set_unlit(&material_info, bwi->beam_glow.first_frame + framenum, alpha * pct, true, true);
+		g3_render_primitives_textured(&material_info, h1, 4, PRIM_TYPE_TRIFAN, false);
 
 	} else {
 
@@ -1489,23 +1489,23 @@ void beam_render_muzzle_glow(beam *b)
 		// draw 1 bitmap
 		//g3_draw_bitmap(&pt, 0, rad, tmap_flags);
 		material mat_params;
-		render_set_unlit_material(&mat_params, bwi->beam_glow.first_frame + framenum, alpha * pct, true, true);
-		render_oriented_bitmap(&mat_params, &pt, 0, rad, 0.0f);
+		material_set_unlit(&mat_params, bwi->beam_glow.first_frame + framenum, alpha * pct, true, true);
+		g3_render_rect_screen_aligned(&mat_params, &pt, 0, rad, 0.0f);
 
 		// maybe draw more
 		if ( pct > 0.3f ) {
 			//g3_draw_bitmap(&pt, 0, rad * 0.75f, tmap_flags, rad * 0.25f);
-			render_oriented_bitmap(&mat_params, &pt, 0, rad * 0.75f, rad * 0.25f);
+			g3_render_rect_screen_aligned(&mat_params, &pt, 0, rad * 0.75f, rad * 0.25f);
 		}
 
 		if ( pct > 0.5f ) {
 			//g3_draw_bitmap(&pt, 0, rad * 0.45f, tmap_flags, rad * 0.55f);
-			render_oriented_bitmap(&mat_params, &pt, 0, rad * 0.45f, rad * 0.55f);
+			g3_render_rect_screen_aligned(&mat_params, &pt, 0, rad * 0.45f, rad * 0.55f);
 		}
 
 		if ( pct > 0.7f ) {
 			//g3_draw_bitmap(&pt, 0, rad * 0.25f, tmap_flags, rad * 0.75f);
-			render_oriented_bitmap(&mat_params, &pt, 0, rad * 0.25f, rad * 0.75f);
+			g3_render_rect_screen_aligned(&mat_params, &pt, 0, rad * 0.25f, rad * 0.75f);
 		}
 	}
 }

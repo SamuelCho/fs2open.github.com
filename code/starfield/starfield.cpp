@@ -1113,8 +1113,8 @@ void stars_draw_sun(int show_sun)
 		}
 
 		material mat_params;
-		render_set_unlit_material(&mat_params, bitmap_id, 0.999f, true, false);
-		render_oriented_bitmap_2d(&mat_params, &sun_vex, 0, 0.05f * Suns[idx].scale_x * local_scale);
+		material_set_unlit(&mat_params, bitmap_id, 0.999f, true, false);
+		g3_render_rect_screen_aligned_2d(&mat_params, &sun_vex, 0, 0.05f * Suns[idx].scale_x * local_scale);
 		Sun_drew++;
 
 // 		if ( !g3_draw_bitmap(&sun_vex, 0, 0.05f * Suns[idx].scale_x * local_scale, TMAP_FLAG_TEXTURED) )
@@ -1167,8 +1167,8 @@ void stars_draw_lens_flare(vertex *sun_vex, int sun_n)
 				flare_vex.screen.xyw.y = sun_vex->screen.xyw.y + dy * bm->flare_infos[i].pos;
 				//g3_draw_bitmap(&flare_vex, 0, 0.05f * bm->flare_infos[i].scale, TMAP_FLAG_TEXTURED);
 				material mat_params;
-				render_set_unlit_material(&mat_params, bm->flare_bitmaps[j].bitmap_id, 0.999f, true, false);
-				render_oriented_bitmap_2d(&mat_params, &flare_vex, 0, 0.05f * bm->flare_infos[i].scale);
+				material_set_unlit(&mat_params, bm->flare_bitmaps[j].bitmap_id, 0.999f, true, false);
+				g3_render_rect_screen_aligned_2d(&mat_params, &flare_vex, 0, 0.05f * bm->flare_infos[i].scale);
 			}
 		}
 	}
@@ -1231,8 +1231,8 @@ void stars_draw_sun_glow(int sun_n)
 	//int zbuff = gr_zbuffer_set(GR_ZBUFF_NONE);
 	//g3_draw_bitmap(&sun_vex, 0, 0.10f * Suns[sun_n].scale_x * local_scale, TMAP_FLAG_TEXTURED);
 	material mat_params;
-	render_set_unlit_material(&mat_params, bitmap_id, 0.5f, true, false);
-	render_oriented_bitmap_2d(&mat_params, &sun_vex, 0, 0.10f * Suns[sun_n].scale_x * local_scale);
+	material_set_unlit(&mat_params, bitmap_id, 0.5f, true, false);
+	g3_render_rect_screen_aligned_2d(&mat_params, &sun_vex, 0, 0.10f * Suns[sun_n].scale_x * local_scale);
 
 	if (bm->flare) {
 		vec3d light_dir;
@@ -1304,8 +1304,8 @@ void stars_draw_bitmaps(int show_bitmaps)
 		}
 
 		material material_params;
-		render_set_unlit_material(&material_params, bitmap_id, alpha, blending, false);
-		render_primitives_textured(&material_params, Starfield_bitmap_instances[idx].verts, Starfield_bitmap_instances[idx].n_verts, PRIM_TYPE_TRIS, false);
+		material_set_unlit(&material_params, bitmap_id, alpha, blending, false);
+		g3_render_primitives_textured(&material_params, Starfield_bitmap_instances[idx].verts, Starfield_bitmap_instances[idx].n_verts, PRIM_TYPE_TRIS, false);
 	}
 	
 	gr_end_instance_matrix();
@@ -1487,17 +1487,17 @@ void subspace_render()
 
 	//gr_set_bitmap(Subspace_glow_bitmap, GR_ALPHABLEND_FILTER, GR_BITBLT_MODE_NORMAL, 1.0f);
 	material mat_params;
-	render_set_unlit_material(&mat_params, Subspace_glow_bitmap, 1.0f, true, false);
+	material_set_unlit(&mat_params, Subspace_glow_bitmap, 1.0f, true, false);
 
 	g3_rotate_faraway_vertex(&glow_vex, &glow_pos);
 	//g3_draw_bitmap(&glow_vex, 0, 17.0f + 0.5f * Noise[framenum], TMAP_FLAG_TEXTURED);
-	render_oriented_bitmap_2d(&mat_params, &glow_vex, 0, 17.0f + 0.5f * Noise[framenum]);
+	g3_render_rect_screen_aligned_2d(&mat_params, &glow_vex, 0, 17.0f + 0.5f * Noise[framenum]);
 
 	glow_pos.xyz.z = -100.0f;
 
 	g3_rotate_faraway_vertex(&glow_vex, &glow_pos);
 	//g3_draw_bitmap(&glow_vex, 0, 17.0f + 0.5f * Noise[framenum], TMAP_FLAG_TEXTURED);
-	render_oriented_bitmap_2d(&mat_params, &glow_vex, 0, 17.0f + 0.5f * Noise[framenum]);
+	g3_render_rect_screen_aligned_2d(&mat_params, &glow_vex, 0, 17.0f + 0.5f * Noise[framenum]);
 
 	Interp_subspace = 0;
 	gr_zbuffer_set(saved_gr_zbuffering);
@@ -1824,8 +1824,8 @@ void stars_draw_debris()
 			vm_vec_add( &tmp, &d->last_pos, &Eye_position );
 			//g3_draw_laser( &d->pos,d->size,&tmp,d->size, TMAP_FLAG_TEXTURED|TMAP_FLAG_XPARENT, 25.0f );
 			material mat_params;
-			render_set_unlit_material(&mat_params, Debris_vclips[d->vclip].bm + frame, alpha, true, true);
-			render_laser_2d(&mat_params, &d->pos, d->size, &tmp, d->size, 25.0f);
+			material_set_unlit(&mat_params, Debris_vclips[d->vclip].bm + frame, alpha, true, true);
+			g3_render_laser_2d(&mat_params, &d->pos, d->size, &tmp, d->size, 25.0f);
 		}
 
 		vm_vec_sub( &d->last_pos, &d->pos, &Eye_position );

@@ -1155,8 +1155,8 @@ void labviewer_render_bitmap(float frametime)
 	if(wip->laser_length > 0.0001f) {
 		//g3_draw_laser(&headp, wip->laser_head_radius, &vmd_zero_vector, wip->laser_tail_radius, TMAP_FLAG_TEXTURED | TMAP_FLAG_XPARENT | TMAP_HTL_3D_UNLIT);
 		material mat_params;
-		render_set_unlit_color_material(&mat_params, wip->laser_bitmap.first_frame + framenum, &wip->laser_color_1, true, true);
-		render_laser(&mat_params, &headp, wip->laser_head_radius, &vmd_zero_vector, wip->laser_tail_radius);
+		material_set_unlit_color(&mat_params, wip->laser_bitmap.first_frame + framenum, &wip->laser_color_1, true, true);
+		g3_render_laser(&mat_params, &headp, wip->laser_head_radius, &vmd_zero_vector, wip->laser_tail_radius);
 	}
 
 	// now draw the laser glow bitmap, if there is one, and if we are supposed to
@@ -1210,8 +1210,8 @@ void labviewer_render_bitmap(float frametime)
 		if(wip->laser_length > 0.0001f) {
 			//g3_draw_laser_rgb(&headp2, wip->laser_head_radius * weapon_glow_scale_f, &tailp, wip->laser_tail_radius * weapon_glow_scale_r, c.red, c.green, c.blue,  TMAP_FLAG_TEXTURED | TMAP_FLAG_XPARENT  | TMAP_FLAG_RGB | TMAP_HTL_3D_UNLIT);
 			material mat_params;
-			render_set_unlit_color_material(&mat_params, wip->laser_glow_bitmap.first_frame + framenum, &c, weapon_glow_alpha, true, false);
-			render_laser(&mat_params, &headp2, wip->laser_head_radius * weapon_glow_scale_f, &tailp, wip->laser_tail_radius * weapon_glow_scale_r);
+			material_set_unlit_color(&mat_params, wip->laser_glow_bitmap.first_frame + framenum, &c, weapon_glow_alpha, true, false);
+			g3_render_laser(&mat_params, &headp2, wip->laser_head_radius * weapon_glow_scale_f, &tailp, wip->laser_tail_radius * weapon_glow_scale_r);
 		}
 	}
 

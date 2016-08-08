@@ -220,7 +220,7 @@ void nebula_render()
 		verts[1].a = 255;
 		verts[2].a = 255;
 
-		render_primitives_colored(&nebula_material, verts, 3, PRIM_TYPE_TRIFAN, true);
+		g3_render_primitives_colored(&nebula_material, verts, 3, PRIM_TYPE_TRIFAN, true);
 	}
 
 	g3_done_instance(false);

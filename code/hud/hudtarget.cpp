@@ -2883,7 +2883,7 @@ void hud_tri(float x1,float y1,float x2,float y2,float x3,float y3)
 	material_def.set_texture_source(TEXTURE_SOURCE_NONE);
 	material_def.set_cull_mode(false);
 
-	render_primitives_colored(&material_def, verts, 3, PRIM_TYPE_TRIFAN, true);
+	g3_render_primitives_colored(&material_def, verts, 3, PRIM_TYPE_TRIFAN, true);
 
 	//g3_draw_poly_constant_sw(3, vertlist, TMAP_FLAG_GOURAUD | TMAP_FLAG_RGB | TMAP_FLAG_ALPHA, 0.1f);	
 

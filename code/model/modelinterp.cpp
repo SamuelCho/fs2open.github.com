@@ -902,12 +902,12 @@ void model_draw_paths_htl( int model_num, uint flags )
 				gr_set_color( 255, 0, 0 );
 			}
 
-			render_sphere(&pnt, 0.5f);
+			g3_render_sphere(&pnt, 0.5f);
 			
 			if (j)
 			{
 				//g3_draw_htl_line(&prev_pnt, &pnt);
-				render_line_3d(true, &prev_pnt, &pnt);
+				g3_render_line_3d(true, &prev_pnt, &pnt);
 			}
 
 			prev_pnt = pnt;
@@ -939,9 +939,9 @@ void model_draw_bay_paths_htl(int model_num)
 			vm_vec_scale_add(&v2, &v1, &pm->docking_bays[idx].norm[s_idx], 10.0f);
 
 			// draw the point and normal
-			render_sphere(&v1, 2.0);
+			g3_render_sphere(&v1, 2.0);
 			//g3_draw_htl_line(&v1, &v2);
-			render_line_3d(true, &v1, &v2);
+			g3_render_line_3d(true, &v1, &v2);
 		}
 	}
 
@@ -956,7 +956,7 @@ void model_draw_bay_paths_htl(int model_num)
 				v2 = pm->paths[idx].verts[s_idx+1].pos;
 
 				//g3_draw_htl_line(&v1, &v2);
-				render_line_3d(true, &v1, &v2);
+				g3_render_line_3d(true, &v1, &v2);
 			}
 		}
 	}	

@@ -1730,7 +1730,7 @@ void draw_model_rotating(model_render_params *render_info, int model_id, int x1,
 			stop.xyz.y = 0.0f;
 			stop.xyz.z = -clip;
 			//g3_draw_htl_line(&start,&stop);
-			render_line_3d(true, &start, &stop);
+			g3_render_line_3d(true, &start, &stop);
 		}
 		g3_done_instance(true);
 
@@ -1752,7 +1752,7 @@ void draw_model_rotating(model_render_params *render_info, int model_id, int x1,
 			for (i = -3; i < 4; i++) {
 				start.xyz.x = stop.xyz.x = size*0.333f*i;
 				//g3_draw_htl_line(&start,&stop);
-				render_line_3d(false, &start, &stop);
+				g3_render_line_3d(false, &start, &stop);
 			}
 
 			start.xyz.x = size;
@@ -1763,7 +1763,7 @@ void draw_model_rotating(model_render_params *render_info, int model_id, int x1,
 				if ((time < 1.5f) && (start.xyz.z <= -clip))
 					break;
 				//g3_draw_htl_line(&start,&stop);
-				render_line_3d(false, &start, &stop);
+				g3_render_line_3d(false, &start, &stop);
 			}
 
 			g3_done_instance(true);
@@ -1840,7 +1840,7 @@ void draw_model_rotating(model_render_params *render_info, int model_id, int x1,
 				stop.xyz.z = -clip;
 				g3_start_instance_angles(&vmd_zero_vector,&view_angles);
 				//g3_draw_htl_line(&start,&stop);
-				render_line_3d(false, &start, &stop);
+				g3_render_line_3d(false, &start, &stop);
 				g3_done_instance(true);
 			}
 		}

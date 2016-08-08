@@ -876,7 +876,7 @@ void HudGaugeShield::renderShieldIcon(coord2d coords[6])
 	}
 
 	//gr_shield_icon(coords);
-	render_shield_icon(coords);
+	g3_render_shield_icon(coords);
 	gr_reset_screen_scale();
 }
 

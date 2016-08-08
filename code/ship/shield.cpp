@@ -311,8 +311,8 @@ void shield_render_low_detail_bitmap(int texture, float alpha, gshield_tri *trip
 	}
 
 	material material_params;
-	render_set_unlit_material(&material_params, texture, alpha, true, true);
-	render_primitives_colored_textured(&material_params, vertlist, 4, PRIM_TYPE_TRIFAN, false);
+	material_set_unlit(&material_params, texture, alpha, true, true);
+	g3_render_primitives_colored_textured(&material_params, vertlist, 4, PRIM_TYPE_TRIFAN, false);
 }
 
 /**
@@ -370,7 +370,7 @@ void shield_render_triangle(int texture, float alpha, gshield_tri *trip, matrix 
 	vm_vec_perp(&norm, &verts[0].world, &verts[1].world, &verts[2].world);
 
 	material material_params;
-	render_set_unlit_material(&material_params, texture, alpha, true, true);
+	material_set_unlit(&material_params, texture, alpha, true, true);
 
 	if ( vm_vec_dot(&norm, &verts[1].world) >= 0.0 ) {
 		vertex	vertlist[3];
@@ -378,9 +378,9 @@ void shield_render_triangle(int texture, float alpha, gshield_tri *trip, matrix 
 		vertlist[1] = verts[1]; 
 		vertlist[2] = verts[0];
 
-		render_primitives_colored_textured(&material_params, vertlist, 3, PRIM_TYPE_TRIFAN, false);
+		g3_render_primitives_colored_textured(&material_params, vertlist, 3, PRIM_TYPE_TRIFAN, false);
 	} else {
-		render_primitives_colored_textured(&material_params, verts, 3, PRIM_TYPE_TRIFAN, false);
+		g3_render_primitives_colored_textured(&material_params, verts, 3, PRIM_TYPE_TRIFAN, false);
 	}
 }
 

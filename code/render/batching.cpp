@@ -83,7 +83,7 @@ void batching_init_buffer(primitive_batch_buffer *buffer, primitive_type prim_ty
 
 void batching_determine_blend_color(color *clr, int texture, float alpha)
 {
-	gr_alpha_blend blend_mode = render_determine_blend_mode(texture, true);
+	gr_alpha_blend blend_mode = material_determine_blend_mode(texture, true);
 
 	if ( blend_mode == ALPHA_BLEND_ADDITIVE ) {
 		gr_init_alphacolor(clr, fl2i(255.0f*alpha), fl2i(255.0f*alpha), fl2i(255.0f*alpha), 255);
@@ -863,17 +863,17 @@ void batching_render_batch_item(primitive_batch_item *item, vertex_layout *layou
 	if ( item->batch_item_info.mat_type == batch_info::VOLUME_EMISSIVE ) { // Cmdline_softparticles
 		particle_material material_def;
 
-		render_set_volume_emissive_material(&material_def, item->batch_item_info.texture, prim_type == PRIM_TYPE_POINTS);
+		material_set_unlit_volume(&material_def, item->batch_item_info.texture, prim_type == PRIM_TYPE_POINTS);
 		gr_render_primitives_particle(&material_def, prim_type, layout, item->offset, item->n_verts, buffer_num);
 	} else if ( item->batch_item_info.mat_type == batch_info::DISTORTION ) {
 		distortion_material material_def;
 
-		render_set_distortion_material(&material_def, item->batch_item_info.texture, item->batch_item_info.thruster);
+		material_set_distortion(&material_def, item->batch_item_info.texture, item->batch_item_info.thruster);
 		gr_render_primitives_distortion(&material_def, PRIM_TYPE_TRIS, layout, item->offset, item->n_verts, buffer_num);
 	} else {
 		material material_def;
 
-		render_set_unlit_material(&material_def, item->batch_item_info.texture, 1.0f, true, true);
+		material_set_unlit(&material_def, item->batch_item_info.texture, 1.0f, true, true);
 		gr_render_primitives(&material_def, PRIM_TYPE_TRIS, layout, item->offset, item->n_verts, buffer_num);
 	}
 }

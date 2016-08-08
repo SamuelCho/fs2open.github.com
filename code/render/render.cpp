@@ -27,7 +27,7 @@
 #include "graphics/material.h"
 #include "render/render.h"
 
-gr_alpha_blend render_determine_blend_mode(int base_bitmap, bool blending)
+gr_alpha_blend material_determine_blend_mode(int base_bitmap, bool blending)
 {
 	if ( blending ) {
 		if ( base_bitmap >= 0 && bm_has_alpha_channel(base_bitmap) ) {
@@ -40,7 +40,7 @@ gr_alpha_blend render_determine_blend_mode(int base_bitmap, bool blending)
 	return ALPHA_BLEND_ALPHA_BLEND_ALPHA;
 }
 
-gr_zbuffer_type render_determine_depth_mode(bool depth_testing, bool blending)
+gr_zbuffer_type material_determine_depth_mode(bool depth_testing, bool blending)
 {
 	if ( depth_testing ) {
 		if ( blending ) {
@@ -53,12 +53,12 @@ gr_zbuffer_type render_determine_depth_mode(bool depth_testing, bool blending)
 	return ZBUFFER_TYPE_NONE;
 }
 
-void render_set_unlit_material(material* mat_info, int texture, float alpha, bool blending, bool depth_testing)
+void material_set_unlit(material* mat_info, int texture, float alpha, bool blending, bool depth_testing)
 {
 	mat_info->set_texture_map(TM_BASE_TYPE, texture);
 
-	gr_alpha_blend blend_mode = render_determine_blend_mode(texture, blending);
-	gr_zbuffer_type depth_mode = render_determine_depth_mode(depth_testing, blending);
+	gr_alpha_blend blend_mode = material_determine_blend_mode(texture, blending);
+	gr_zbuffer_type depth_mode = material_determine_depth_mode(depth_testing, blending);
 
 	mat_info->set_blend_mode(blend_mode);
 	mat_info->set_depth_mode(depth_mode);
@@ -76,12 +76,12 @@ void render_set_unlit_material(material* mat_info, int texture, float alpha, boo
 	}
 }
 
-void render_set_unlit_color_material(material* mat_info, int texture, color *clr, bool blending, bool depth_testing)
+void material_set_unlit_color(material* mat_info, int texture, color *clr, bool blending, bool depth_testing)
 {
 	mat_info->set_texture_map(TM_BASE_TYPE, texture);
 
-	gr_alpha_blend blend_mode = render_determine_blend_mode(texture, blending);
-	gr_zbuffer_type depth_mode = render_determine_depth_mode(depth_testing, blending);
+	gr_alpha_blend blend_mode = material_determine_blend_mode(texture, blending);
+	gr_zbuffer_type depth_mode = material_determine_depth_mode(depth_testing, blending);
 
 	mat_info->set_blend_mode(blend_mode);
 	mat_info->set_depth_mode(depth_mode);
@@ -90,20 +90,20 @@ void render_set_unlit_color_material(material* mat_info, int texture, color *clr
 	mat_info->set_color(*clr);
 }
 
-void render_set_unlit_color_material(material* mat_info, int texture, color *clr, float alpha, bool blending, bool depth_testing)
+void material_set_unlit_color(material* mat_info, int texture, color *clr, float alpha, bool blending, bool depth_testing)
 {
 	color clr_with_alpha;
 	gr_init_alphacolor(&clr_with_alpha, clr->red, clr->green, clr->blue, fl2i(alpha * 255.0f));
 
-	render_set_unlit_color_material(mat_info, texture, &clr_with_alpha, blending, depth_testing);
+	material_set_unlit_color(mat_info, texture, &clr_with_alpha, blending, depth_testing);
 }
 
-void render_set_interface_material(material* mat_info, int texture, bool blended, float alpha)
+void material_set_interface(material* mat_info, int texture, bool blended, float alpha)
 {
 	mat_info->set_texture_map(TM_BASE_TYPE, texture);
 	mat_info->set_texture_type(material::TEX_TYPE_INTERFACE);
 
-	mat_info->set_blend_mode(render_determine_blend_mode(texture, blended));
+	mat_info->set_blend_mode(material_determine_blend_mode(texture, blended));
 	mat_info->set_depth_mode(ZBUFFER_TYPE_NONE);
 	mat_info->set_cull_mode(false);
 	mat_info->set_texture_source(TEXTURE_SOURCE_NO_FILTERING);
@@ -111,19 +111,19 @@ void render_set_interface_material(material* mat_info, int texture, bool blended
 	mat_info->set_color(1.0f, 1.0f, 1.0f, blended ? alpha : 1.0f);
 }
 
-void render_set_volume_emissive_material(particle_material* mat_info, int texture, bool point_sprites)
+void material_set_unlit_volume(particle_material* mat_info, int texture, bool point_sprites)
 {
 	mat_info->set_point_sprite_mode(point_sprites);
 	mat_info->set_depth_mode(ZBUFFER_TYPE_NONE);
 
-	mat_info->set_blend_mode(render_determine_blend_mode(texture, true));
+	mat_info->set_blend_mode(material_determine_blend_mode(texture, true));
 
 	mat_info->set_texture_map(TM_BASE_TYPE, texture);
 	mat_info->set_cull_mode(false);
 	mat_info->set_color(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
-void render_set_distortion_material(distortion_material *mat_info, int texture, bool thruster)
+void material_set_distortion(distortion_material *mat_info, int texture, bool thruster)
 {
 	mat_info->set_thruster_rendering(thruster);
 
@@ -136,7 +136,7 @@ void render_set_distortion_material(distortion_material *mat_info, int texture, 
 	mat_info->set_color(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
-void render_primitives_textured(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic)
+void g3_render_primitives_textured(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic)
 {
 	vertex_layout layout;
 
@@ -155,7 +155,7 @@ void render_primitives_textured(material* mat, vertex* verts, int n_verts, primi
 	}
 }
 
-void render_primitives_colored(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic)
+void g3_render_primitives_colored(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic)
 {
 	vertex_layout layout;
 	uint mask = 0;
@@ -175,7 +175,7 @@ void render_primitives_colored(material* mat, vertex* verts, int n_verts, primit
 	}
 }
 
-void render_primitives_colored_textured(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic)
+void g3_render_primitives_colored_textured(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic)
 {
 	vertex_layout layout;
 
@@ -276,7 +276,7 @@ void render_screen_points(
 }
 
 // adapted from g3_draw_polygon()
-void render_oriented_quad_internal(material* material_params, vec3d *pos, matrix *ori, float width, float height)
+void g3_render_rect_oriented_internal(material* material_params, vec3d *pos, matrix *ori, float width, float height)
 {
 	//idiot-proof
 	if ( width == 0 || height == 0 )
@@ -329,25 +329,25 @@ void render_oriented_quad_internal(material* material_params, vec3d *pos, matrix
 	v[3].texture_position.u = 1.0f;
 	v[3].texture_position.v = 1.0f;
 	
-	render_primitives_textured(material_params, v, 4, PRIM_TYPE_TRIFAN, false);
+	g3_render_primitives_textured(material_params, v, 4, PRIM_TYPE_TRIFAN, false);
 }
 
-void render_oriented_quad(material* mat_info, vec3d *pos, matrix *ori, float width, float height)
+void g3_render_rect_oriented(material* mat_info, vec3d *pos, matrix *ori, float width, float height)
 {
-	render_oriented_quad_internal(mat_info, pos, ori, width, height);
+	g3_render_rect_oriented_internal(mat_info, pos, ori, width, height);
 }
 
-void render_oriented_quad(material* mat_info, vec3d *pos, vec3d *norm, float width, float height)
+void g3_render_rect_oriented(material* mat_info, vec3d *pos, vec3d *norm, float width, float height)
 {
 	matrix m;
 	vm_vector_2_matrix(&m, norm, NULL, NULL);
 
-	render_oriented_quad_internal(mat_info, pos, &m, width, height);
+	g3_render_rect_oriented_internal(mat_info, pos, &m, width, height);
 }
 
 // adapted g3_draw_rotated_bitmap_3d()
 //void render_rotated_bitmap(int texture, float alpha, vertex *pnt, float angle, float rad)
-void render_rotated_bitmap(material *mat_params, vertex *pnt, float angle, float rad)
+void g3_render_rect_screen_aligned_rotated(material *mat_params, vertex *pnt, float angle, float rad)
 {
 	rad *= 1.41421356f;//1/0.707, becase these are the points of a square or width and hieght rad
 
@@ -392,11 +392,11 @@ void render_rotated_bitmap(material *mat_params, vertex *pnt, float angle, float
 	P[2].texture_position.u = 1.0f;	P[2].texture_position.v = 1.0f;
 	P[3].texture_position.u = 0.0f;	P[3].texture_position.v = 1.0f;
 
-	render_primitives_textured(mat_params, P, 4, PRIM_TYPE_TRIFAN, false);
+	g3_render_primitives_textured(mat_params, P, 4, PRIM_TYPE_TRIFAN, false);
 }
 
 // adapted from gr_opengl_scaler()
-void render_bitmap_scaler(material *mat_params, vertex *va, vertex *vb)
+void g3_render_rect_scaler(material *mat_params, vertex *va, vertex *vb)
 {
 	float x0, y0, x1, y1;
 	float u0, v0, u1, v1;
@@ -516,12 +516,12 @@ void render_bitmap_scaler(material *mat_params, vertex *va, vertex *vb)
 	v[3].spec_g = 0;
 	v[3].spec_b = 0;
 
-	render_primitives_textured(mat_params, v, 4, PRIM_TYPE_TRIFAN, true);
+	g3_render_primitives_textured(mat_params, v, 4, PRIM_TYPE_TRIFAN, true);
 }
 
 // adapted from g3_draw_bitmap()
 //void render_oriented_bitmap_2d(int texture, float alpha, bool blending, vertex *pnt, int orient, float rad)
-void render_oriented_bitmap_2d(material *mat_params, vertex *pnt, int orient, float rad)
+void g3_render_rect_screen_aligned_2d(material *mat_params, vertex *pnt, int orient, float rad)
 {
 	vertex va, vb;
 	float t,w,h;
@@ -593,11 +593,11 @@ void render_oriented_bitmap_2d(material *mat_params, vertex *pnt, int orient, fl
 		vb.texture_position.v = 1.0f;
 	}
 
-	render_bitmap_scaler(mat_params, &va, &vb);
+	g3_render_rect_scaler(mat_params, &va, &vb);
 }
 
 // adapted from g3_draw_bitmap_3d
-void render_oriented_bitmap(material *mat_params, vertex *pnt, int orient, float rad, float depth)
+void g3_render_rect_screen_aligned(material *mat_params, vertex *pnt, int orient, float rad, float depth)
 {
 	rad *= 1.41421356f;//1/0.707, becase these are the points of a square or width and hieght rad
 
@@ -654,11 +654,11 @@ void render_oriented_bitmap(material *mat_params, vertex *pnt, int orient, float
 		P[3].texture_position.v = 1.0f;
 	}
 
-	render_primitives_textured(mat_params, P, 4, PRIM_TYPE_TRIFAN, false);
+	g3_render_primitives_textured(mat_params, P, 4, PRIM_TYPE_TRIFAN, false);
 }
 
 // adapted from g3_draw_laser_htl()
-void render_laser(material *mat_params, vec3d *headp, float head_width, vec3d *tailp, float tail_width)
+void g3_render_laser(material *mat_params, vec3d *headp, float head_width, vec3d *tailp, float tail_width)
 {
 	head_width *= 0.5f;
 	tail_width *= 0.5f;
@@ -722,12 +722,12 @@ void render_laser(material *mat_params, vec3d *headp, float head_width, vec3d *t
 	pts[3].texture_position.u = 0.0f;
 	pts[3].texture_position.v = 1.0f;
 
-	render_primitives_textured(mat_params, pts, 4, PRIM_TYPE_TRIFAN, false);
+	g3_render_primitives_textured(mat_params, pts, 4, PRIM_TYPE_TRIFAN, false);
 }
 
 // adapted from g3_draw_laser()
 //void render_laser_2d(int texture, color* clr, float alpha, vec3d *headp, float head_width, vec3d *tailp, float tail_width, float max_len)
-void render_laser_2d(material *mat_params, vec3d *headp, float head_width, vec3d *tailp, float tail_width, float max_len)
+void g3_render_laser_2d(material *mat_params, vec3d *headp, float head_width, vec3d *tailp, float tail_width, float max_len)
 {
 	float headx, heady, headr, tailx, taily, tailr;
 	vertex pt1, pt2;
@@ -862,11 +862,11 @@ void render_laser_2d(material *mat_params, vec3d *headp, float head_width, vec3d
 	v[3].texture_position.v = 1.0f;
 	v[3].b = 191;
 
-	render_primitives_textured(mat_params, v, 4, PRIM_TYPE_TRIFAN, true);
+	g3_render_primitives_textured(mat_params, v, 4, PRIM_TYPE_TRIFAN, true);
 }
 
 // adapted from g3_draw_rod()
-void render_rod(color *clr, int num_points, vec3d *pvecs, float width)
+void g3_render_rod(color *clr, int num_points, vec3d *pvecs, float width)
 {
 	const int MAX_ROD_VERTS = 100;
 	vec3d uvec, fvec, rvec;
@@ -932,11 +932,11 @@ void render_rod(color *clr, int num_points, vec3d *pvecs, float width)
 	material_params.set_depth_mode(ZBUFFER_TYPE_READ);
 	material_params.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
 
-	render_primitives_colored(&material_params, pts, nv, PRIM_TYPE_TRISTRIP, false);
+	g3_render_primitives_colored(&material_params, pts, nv, PRIM_TYPE_TRISTRIP, false);
 }
 
 // adapted from g3_draw_2d_shield_icon()
-void render_shield_icon(color *clr, coord2d coords[6], int resize_mode)
+void g3_render_shield_icon(color *clr, coord2d coords[6], int resize_mode)
 {
 	vertex v[6];
 	vertex *verts[6] = {&v[0], &v[1], &v[2], &v[3], &v[4], &v[5]};
@@ -1034,16 +1034,16 @@ void render_shield_icon(color *clr, coord2d coords[6], int resize_mode)
 	material_instance.set_color(1.0f, 1.0f, 1.0f, 1.0f);
 	
 	// draw the polys
-	render_primitives_colored(&material_instance, v, 4, PRIM_TYPE_TRISTRIP, true);
+	g3_render_primitives_colored(&material_instance, v, 4, PRIM_TYPE_TRISTRIP, true);
 }
 
-void render_shield_icon(coord2d coords[6], int resize_mode)
+void g3_render_shield_icon(coord2d coords[6], int resize_mode)
 {
-	render_shield_icon(&gr_screen.current_color, coords, resize_mode);
+	g3_render_shield_icon(&gr_screen.current_color, coords, resize_mode);
 }
 
 // adapted from gr_opengl_line_htl()
-void render_line_3d(color *clr, bool depth_testing, vec3d *start, vec3d *end)
+void g3_render_line_3d(color *clr, bool depth_testing, vec3d *start, vec3d *end)
 {
 	material mat;
 
@@ -1070,12 +1070,12 @@ void render_line_3d(color *clr, bool depth_testing, vec3d *start, vec3d *end)
 	gr_render_primitives_immediate(&mat, PRIM_TYPE_LINES, &vert_def, 2, line, sizeof(float) * 6);
 }
 
-void render_line_3d(bool depth_testing, vec3d *start, vec3d *end)
+void g3_render_line_3d(bool depth_testing, vec3d *start, vec3d *end)
 {
-	render_line_3d(&gr_screen.current_color, depth_testing, start, end);
+	g3_render_line_3d(&gr_screen.current_color, depth_testing, start, end);
 }
 
-void render_sphere(color *clr, vec3d* position, float radius)
+void g3_render_sphere(color *clr, vec3d* position, float radius)
 {
 	g3_start_instance_matrix(position, &vmd_identity_matrix, true);
 
@@ -1091,7 +1091,7 @@ void render_sphere(color *clr, vec3d* position, float radius)
 	g3_done_instance(true);
 }
 
-void render_sphere(vec3d* position, float radius)
+void g3_render_sphere(vec3d* position, float radius)
 {
-	render_sphere(&gr_screen.current_color, position, radius);
+	g3_render_sphere(&gr_screen.current_color, position, radius);
 }
