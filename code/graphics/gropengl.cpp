@@ -86,7 +86,7 @@ static int GL_minimized = 0;
 
 static GLenum GL_read_format = GL_BGRA;
 
-static GLuint GL_vao = 0;
+GLuint GL_vao = 0;
 SDL_GLContext GL_context = NULL;
 
 void opengl_go_fullscreen()

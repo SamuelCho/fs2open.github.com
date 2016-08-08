@@ -2066,6 +2066,10 @@ void opengl_light_state::SetSpotCutoff(GLfloat val)
 
 void gr_opengl_clear_states()
 {
+	if ( GLAD_GL_ARB_vertex_array_object ) {
+		glBindVertexArray(GL_vao);
+	}
+
 	GL_state.Texture.DisableAll();
 
 	gr_zbias(0);

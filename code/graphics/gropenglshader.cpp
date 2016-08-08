@@ -1121,11 +1121,11 @@ void opengl_shader_set_passthrough(bool textured, bool alpha, color *clr, float 
 
  	if ( High_dynamic_range ) {
  		GL_state.Uniform.setUniformi("srgb", 1);
+		GL_state.Uniform.setUniformf("intensity", color_scale);
  	} else {
  		GL_state.Uniform.setUniformi("srgb", 0);
+		GL_state.Uniform.setUniformf("intensity", 1.0f);
  	}
-
-	GL_state.Uniform.setUniformf("intensity", color_scale);
 
 	GL_state.Uniform.setUniformf("alphaThreshold", GL_alpha_threshold);
 

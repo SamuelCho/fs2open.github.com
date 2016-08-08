@@ -37,6 +37,8 @@ extern int GLSL_version;
 extern int Use_VBOs;
 extern int Use_PBOs;
 
+extern GLuint GL_vao;
+
 extern float GL_alpha_threshold;
 
 #endif
