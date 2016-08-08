@@ -31,7 +31,6 @@
 #include "popup/popup.h"
 #include "popup/popupdead.h"
 #include "ui/ui.h"
-#include "render/render.h"
 
 UI_WINDOW	Popupdead_window;
 UI_BUTTON	Popupdead_buttons[POPUPDEAD_NUM_CHOICES_MAX];				// actual lit buttons

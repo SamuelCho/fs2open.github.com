@@ -16,7 +16,6 @@
 #include "io/key.h"
 #include "io/timer.h"
 #include "osapi/osapi.h"
-#include "render/render.h"
 
 #include <algorithm>
 #include <cmath>

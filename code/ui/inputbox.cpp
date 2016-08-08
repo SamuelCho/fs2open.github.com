@@ -16,7 +16,6 @@
 #include "io/timer.h"
 #include "ui/ui.h"
 #include "ui/uidefs.h"
-#include "render/render.h"
 
 
 #define INPUTBOX_PASSWD_CHAR        '*'   // the password protected char

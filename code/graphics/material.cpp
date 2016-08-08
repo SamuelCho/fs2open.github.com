@@ -5,6 +5,115 @@
 #include "globalincs/systemvars.h"
 #include "cmdline/cmdline.h"
 
+gr_alpha_blend material_determine_blend_mode(int base_bitmap, bool blending)
+{
+	if ( blending ) {
+		if ( base_bitmap >= 0 && bm_has_alpha_channel(base_bitmap) ) {
+			return ALPHA_BLEND_ALPHA_BLEND_ALPHA;
+		}
+
+		return ALPHA_BLEND_ADDITIVE;
+	}
+
+	return ALPHA_BLEND_ALPHA_BLEND_ALPHA;
+}
+
+gr_zbuffer_type material_determine_depth_mode(bool depth_testing, bool blending)
+{
+	if ( depth_testing ) {
+		if ( blending ) {
+			return ZBUFFER_TYPE_READ;
+		}
+
+		return ZBUFFER_TYPE_FULL;
+	}
+
+	return ZBUFFER_TYPE_NONE;
+}
+
+void material_set_unlit(material* mat_info, int texture, float alpha, bool blending, bool depth_testing)
+{
+	mat_info->set_texture_map(TM_BASE_TYPE, texture);
+
+	gr_alpha_blend blend_mode = material_determine_blend_mode(texture, blending);
+	gr_zbuffer_type depth_mode = material_determine_depth_mode(depth_testing, blending);
+
+	mat_info->set_blend_mode(blend_mode);
+	mat_info->set_depth_mode(depth_mode);
+	mat_info->set_cull_mode(false);
+	mat_info->set_texture_source(TEXTURE_SOURCE_NO_FILTERING);
+
+	if ( blend_mode == ALPHA_BLEND_ADDITIVE ) {
+		mat_info->set_color(alpha, alpha, alpha, 1.0f);
+	} else {
+		mat_info->set_color(1.0f, 1.0f, 1.0f, alpha);
+	}
+
+	if ( texture >= 0 && bm_has_alpha_channel(texture) ) {
+		mat_info->set_texture_type(material::TEX_TYPE_XPARENT);
+	}
+}
+
+void material_set_unlit_color(material* mat_info, int texture, color *clr, bool blending, bool depth_testing)
+{
+	mat_info->set_texture_map(TM_BASE_TYPE, texture);
+
+	gr_alpha_blend blend_mode = material_determine_blend_mode(texture, blending);
+	gr_zbuffer_type depth_mode = material_determine_depth_mode(depth_testing, blending);
+
+	mat_info->set_blend_mode(blend_mode);
+	mat_info->set_depth_mode(depth_mode);
+	mat_info->set_cull_mode(false);
+	mat_info->set_texture_source(TEXTURE_SOURCE_NO_FILTERING);
+	mat_info->set_color(*clr);
+}
+
+void material_set_unlit_color(material* mat_info, int texture, color *clr, float alpha, bool blending, bool depth_testing)
+{
+	color clr_with_alpha;
+	gr_init_alphacolor(&clr_with_alpha, clr->red, clr->green, clr->blue, fl2i(alpha * 255.0f));
+
+	material_set_unlit_color(mat_info, texture, &clr_with_alpha, blending, depth_testing);
+}
+
+void material_set_interface(material* mat_info, int texture, bool blended, float alpha)
+{
+	mat_info->set_texture_map(TM_BASE_TYPE, texture);
+	mat_info->set_texture_type(material::TEX_TYPE_INTERFACE);
+
+	mat_info->set_blend_mode(material_determine_blend_mode(texture, blended));
+	mat_info->set_depth_mode(ZBUFFER_TYPE_NONE);
+	mat_info->set_cull_mode(false);
+	mat_info->set_texture_source(TEXTURE_SOURCE_NO_FILTERING);
+
+	mat_info->set_color(1.0f, 1.0f, 1.0f, blended ? alpha : 1.0f);
+}
+
+void material_set_unlit_volume(particle_material* mat_info, int texture, bool point_sprites)
+{
+	mat_info->set_point_sprite_mode(point_sprites);
+	mat_info->set_depth_mode(ZBUFFER_TYPE_NONE);
+
+	mat_info->set_blend_mode(material_determine_blend_mode(texture, true));
+
+	mat_info->set_texture_map(TM_BASE_TYPE, texture);
+	mat_info->set_cull_mode(false);
+	mat_info->set_color(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+void material_set_distortion(distortion_material *mat_info, int texture, bool thruster)
+{
+	mat_info->set_thruster_rendering(thruster);
+
+	mat_info->set_depth_mode(ZBUFFER_TYPE_READ);
+
+	mat_info->set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+
+	mat_info->set_texture_map(TM_BASE_TYPE, texture);
+	mat_info->set_cull_mode(false);
+	mat_info->set_color(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
 template <> SCP_vector<int>& uniform_data::get_array<int>() { return int_data; }
 template <> SCP_vector<float>& uniform_data::get_array<float>() { return float_data; }
 template <> SCP_vector<vec2d>& uniform_data::get_array<vec2d>() { return vec2_data; }

@@ -22,7 +22,6 @@
 #include "network/multi_pause.h"
 #include "object/object.h"
 #include "popup/popup.h"
-#include "render/render.h"
 #include "sound/audiostr.h"
 #include "ui/ui.h"
 #include "weapon/weapon.h"	

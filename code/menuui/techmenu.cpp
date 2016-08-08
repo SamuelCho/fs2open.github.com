@@ -27,7 +27,6 @@
 #include "playerman/player.h"
 #include "render/3d.h"
 #include "render/batching.h"
-#include "render/render.h"
 #include "ship/ship.h"
 #include "sound/fsspeech.h"
 #include "ui/ui.h"

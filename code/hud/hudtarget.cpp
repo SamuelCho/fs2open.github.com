@@ -39,7 +39,6 @@
 #include "parse/parselo.h"
 #include "playerman/player.h"
 #include "render/3dinternal.h"
-#include "render/render.h"
 #include "ship/awacs.h"
 #include "ship/ship.h"
 #include "ship/subsysdamage.h"

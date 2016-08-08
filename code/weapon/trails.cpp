@@ -15,7 +15,6 @@
 #include "graphics/gropenglextension.h"
 #include "io/timer.h"
 #include "render/3d.h" 
-#include "render/render.h"
 #include "ship/ship.h"
 #include "weapon/trails.h"
 

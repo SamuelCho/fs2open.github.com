@@ -24,7 +24,6 @@
 #include "network/multimsgs.h"
 #include "object/object.h"
 #include "parse/parselo.h"
-#include "render/render.h"
 #include "ship/ship.h"
 #include "weapon/emp.h"
 #include "weapon/weapon.h"

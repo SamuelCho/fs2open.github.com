@@ -11,7 +11,6 @@
 
 #include <limits.h>
 
-#include "render/render.h"
 #include "cmdline/cmdline.h"
 #include "debugconsole/console.h"
 #include "freespace.h"
@@ -25,7 +24,6 @@
 #include "nebula/neb.h"
 #include "parse/parselo.h"
 #include "render/3d.h"
-#include "render/render.h"
 #include "starfield/nebula.h"
 #include "starfield/starfield.h"
 #include "starfield/supernova.h"

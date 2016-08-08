@@ -31,7 +31,6 @@
 #include "parse/parselo.h"
 #include "particle/particle.h"
 #include "render/3dinternal.h"
-#include "render/render.h"
 #include "ship/ship.h"
 #include "ship/shipfx.h"
 #include "weapon/shockwave.h"

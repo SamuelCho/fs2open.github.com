@@ -540,4 +540,14 @@ public:
 	virtual int get_shader_handle();
 };
 
+gr_alpha_blend material_determine_blend_mode(int base_bitmap, bool is_transparent);
+gr_zbuffer_type material_determine_depth_mode(bool depth_testing, bool is_transparent);
+
+void material_set_interface(material* mat_info, int texture, bool blended, float alpha);
+void material_set_unlit(material* mat_info, int texture, float alpha, bool blending, bool depth_testing);
+void material_set_unlit_color(material* mat_info, int texture, color *clr, bool blending, bool depth_testing);
+void material_set_unlit_color(material* mat_info, int texture, color *clr, float alpha, bool blending, bool depth_testing);
+void material_set_unlit_volume(particle_material* mat_info, int texture, bool point_sprites);
+void material_set_distortion(distortion_material *mat_info, int texture, bool thruster);
+
 #endif

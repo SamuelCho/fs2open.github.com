@@ -16,7 +16,6 @@
 #include "lab/wmcgui.h"
 #include "localization/localize.h"
 #include "parse/parselo.h"
-#include "render/render.h"
 
 //Gobals
 GUISystem GUI_system;

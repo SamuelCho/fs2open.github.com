@@ -19,7 +19,6 @@
 #include "graphics/gropengltnl.h"
 #include "io/key.h"
 #include "io/timer.h"
-#include "render/render.h"
 #include "osapi/osapi.h"
 #include "sound/openal.h"
 #include "sound/sound.h"

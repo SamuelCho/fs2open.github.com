@@ -70,7 +70,6 @@
 #include "radar/radarsetup.h"
 #include "render/3d.h"
 #include "render/batching.h"
-#include "render/render.h"
 #include "ship/afterburner.h"
 #include "ship/ship.h"
 #include "ship/shipcontrails.h"

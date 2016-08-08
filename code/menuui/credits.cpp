@@ -25,7 +25,6 @@
 #include "missionui/missionscreencommon.h"
 #include "parse/parselo.h"
 #include "playerman/player.h"
-#include "render/render.h"
 #include "sound/audiostr.h"
 #include "ui/ui.h"
 

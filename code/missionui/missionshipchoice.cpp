@@ -46,7 +46,6 @@
 #include "playerman/player.h"
 #include "popup/popup.h"
 #include "render/3d.h"
-#include "render/render.h"
 #include "ship/ship.h"
 #include "species_defs/species_defs.h"
 #include "weapon/weapon.h"

@@ -19,7 +19,6 @@
 #include "sound/audiostr.h"
 #include "ui/ui.h"
 #include "weapon/weapon.h"
-#include "render/render.h"
 
 
 // text positioning constats

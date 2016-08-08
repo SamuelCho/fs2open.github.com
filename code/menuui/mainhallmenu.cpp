@@ -37,7 +37,6 @@
 #include "parse/scripting.h"
 #include "playerman/player.h"
 #include "popup/popup.h"
-#include "render/render.h"
 #include "sound/audiostr.h"
 
 #ifndef NDEBUG

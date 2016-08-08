@@ -21,7 +21,6 @@
 #include "playerman/player.h"
 #include "network/multi_xfer.h"
 #include "globalincs/alphacolors.h"
-#include "render/render.h"
 
 
 // ---------------------------------------------------------------------------------------

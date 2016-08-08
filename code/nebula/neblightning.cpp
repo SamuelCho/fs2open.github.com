@@ -20,7 +20,6 @@
 #include "network/multi.h"
 #include "network/multimsgs.h"
 #include "graphics/material.h"
-#include "render/render.h"
 #include "parse/parselo.h"
 #include "render/3d.h"
 #include "weapon/emp.h"

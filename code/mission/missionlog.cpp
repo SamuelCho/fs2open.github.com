@@ -23,7 +23,6 @@
 #include "parse/parselo.h"
 #include "playerman/player.h"
 #include "ship/ship.h"
-#include "render/render.h"
 
 
 #define MAX_LOG_ENTRIES		700

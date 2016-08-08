@@ -33,7 +33,6 @@
 #include "pilotfile/pilotfile.h"
 #include "fs2netd/fs2netd_client.h"
 #include "cfile/cfile.h"
-#include "render/render.h"
 
 
 // ----------------------------------------------------------------------------------------------------

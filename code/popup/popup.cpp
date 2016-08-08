@@ -24,7 +24,6 @@
 #include "playerman/player.h"
 #include "popup/popup.h"
 #include "ui/ui.h"
-#include "render/render.h"
 
 #define POPUP_MAX_CHOICES			3					// max number of buttons allowed on popup
 

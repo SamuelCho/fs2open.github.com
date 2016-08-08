@@ -58,7 +58,6 @@
 #include "physics/physics.h"
 #include "playerman/player.h"
 #include "render/3d.h"
-#include "render/render.h"
 #include "ship/afterburner.h"
 #include "ship/awacs.h"
 #include "ship/ship.h"

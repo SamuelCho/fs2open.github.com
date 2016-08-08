@@ -2,7 +2,6 @@
 #include "globalincs/globals.h"
 #include "graphics/2d.h"
 #include "graphics/generic.h"
-#include "render/render.h"
 #define BMPMAN_INTERNAL
 #include "bmpman/bm_internal.h"
 #ifdef _WIN32

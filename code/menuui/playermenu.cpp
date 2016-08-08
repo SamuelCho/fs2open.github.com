@@ -31,7 +31,6 @@
 #include "playerman/managepilot.h"
 #include "playerman/player.h"
 #include "popup/popup.h"
-#include "render/render.h"
 #include "ui/ui.h"
 
 #include "graphics/paths/PathRenderer.h"

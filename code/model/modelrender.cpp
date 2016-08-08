@@ -22,7 +22,6 @@
 #include "particle/particle.h"
 #include "render/3dinternal.h"
 #include "render/batching.h"
-#include "render/render.h"
 #include "math/staticrand.h"
 #include "ship/ship.h"
 #include "ship/shipfx.h"

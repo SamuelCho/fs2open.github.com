@@ -13,7 +13,6 @@
 #include "io/timer.h"
 #include "ui/ui.h"
 #include "ui/uidefs.h"
-#include "render/render.h"
 
 #define KEY_BUFFER_TIMEOUT		1000		// time to clear buffer in milliseconds
 

@@ -19,7 +19,6 @@
 #include "parse/parselo.h"
 #include "ui/ui.h"
 #include "ui/uidefs.h"
-#include "render/render.h"
 
 
 // global xstr colors

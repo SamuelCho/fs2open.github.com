@@ -28,7 +28,6 @@
 #include "parse/scripting.h"
 #include "pilotfile/pilotfile.h"
 #include "popup/popup.h"
-#include "render/render.h"
 #include "ui/ui.h"
 #include "ui/uidefs.h"
 

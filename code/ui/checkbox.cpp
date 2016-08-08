@@ -12,7 +12,6 @@
 #include "globalincs/alphacolors.h"
 #include "ui/ui.h"
 #include "ui/uidefs.h"
-#include "render/render.h"
 
 void UI_CHECKBOX::create(UI_WINDOW *wnd, char *_text, int _x, int _y, int _state )
 {

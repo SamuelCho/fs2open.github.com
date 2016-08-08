@@ -43,7 +43,6 @@
 #include "io/timer.h"
 #include "playerman/player.h"
 #include "network/multi_log.h"
-#include "render/render.h"
 
 // --------------------------------------------------------------------------------------------------
 // DAVE's BIGASS INGAME JOIN WARNING/DISCLAIMER

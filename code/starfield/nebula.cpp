@@ -17,7 +17,6 @@
 #include "palman/palman.h"
 #include "graphics/material.h"
 #include "render/3d.h"
-#include "render/render.h"
 #include "starfield/nebula.h"
 
 #define MAX_TRIS 200

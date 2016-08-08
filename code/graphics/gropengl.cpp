@@ -30,7 +30,6 @@
 #include "osapi/osregistry.h"
 #include "palman/palman.h"
 #include "render/3d.h"
-#include "render/render.h"
 #include "popup/popup.h"
 
 #include "gl/glu.h"

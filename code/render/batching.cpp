@@ -12,7 +12,6 @@
 #include "graphics/2d.h"
 #include "render/3d.h"
 #include "graphics/material.h"
-#include "render/render.h"
 
 static SCP_map<batch_info, primitive_batch> Batching_primitives;
 static SCP_map<batch_buffer_key, primitive_batch_buffer> Batching_buffers;

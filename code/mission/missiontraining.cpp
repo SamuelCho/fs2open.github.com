@@ -25,7 +25,6 @@
 #include "parse/sexp.h"
 #include "playerman/player.h"
 #include "popup/popup.h"
-#include "render/render.h"
 #include "ship/ship.h"
 #include "sound/audiostr.h"
 #include "sound/sound.h"

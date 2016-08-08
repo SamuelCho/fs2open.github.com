@@ -19,7 +19,6 @@
 #include "hud/hud.h"
 #include "network/multi.h"
 #include "playerman/player.h"
-#include "render/render.h"
 #include "stats/stats.h"
 
 #define MISSION_STATS_START_Y 80

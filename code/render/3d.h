@@ -369,6 +369,32 @@ void g3_draw_htl_line(const vec3d *start, const vec3d *end);
  */
 void g3_draw_htl_sphere(color *clr, const vec3d *position, float radius);
 
+void g3_render_primitives_textured(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic = false);
+void g3_render_primitives_colored(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic = false);
+void g3_render_primitives_colored_textured(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic = false);
+
+void g3_render_rod(color *clr, int num_points, vec3d *pvecs, float width);
+
+void g3_render_laser(material *mat_params, vec3d *headp, float head_width, vec3d *tailp, float tail_width);
+void g3_render_laser_2d(material *mat_params, vec3d *headp, float head_width, vec3d *tailp, float tail_width, float max_len);
+
+void g3_render_rect_screen_aligned_rotated(material *mat_params, vertex *pnt, float angle, float rad);
+
+void g3_render_rect_screen_aligned(material *mat_params, vertex *pnt, int orient, float rad, float depth = 0.0f);
+void g3_render_rect_screen_aligned_2d(material *mat_params, vertex *pnt, int orient, float rad);
+
+void g3_render_rect_oriented(material* mat_info, vec3d *pos, matrix *ori, float width, float height);
+void g3_render_rect_oriented(material* mat_info, vec3d *pos, vec3d *norm, float width, float height);
+
+void g3_render_line_3d(color *clr, bool depth_testing, vec3d *start, vec3d *end);
+void g3_render_line_3d(bool depth_testing, vec3d *start, vec3d *end);
+
+void g3_render_sphere(color *clr, vec3d* position, float radius);
+void g3_render_sphere(vec3d* position, float radius);
+
+void g3_render_shield_icon(color *clr, coord2d coords[6], int resize_mode = GR_RESIZE_FULL);
+void g3_render_shield_icon(coord2d coords[6], int resize_mode = GR_RESIZE_FULL);
+
 typedef struct horz_pt {
 	float x, y;
 	int edge;

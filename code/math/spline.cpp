@@ -13,7 +13,6 @@
 #include "graphics/2d.h"
 #include "math/spline.h"
 #include "render/3d.h"
-#include "render/render.h"
 
 
 // -------------------------------------------------------------------------------------------------

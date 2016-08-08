@@ -31,7 +31,6 @@
 #include "pilotfile/pilotfile.h"
 #include "popup/popup.h"
 #include "popup/popupdead.h"
-#include "render/render.h"
 #include "sound/audiostr.h"
 #include "weapon/weapon.h"
 

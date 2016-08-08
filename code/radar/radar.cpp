@@ -24,7 +24,6 @@
 #include "object/object.h"
 #include "playerman/player.h"
 #include "radar/radar.h"
-#include "render/render.h"
 #include "ship/awacs.h"
 #include "ship/ship.h"
 #include "ship/subsysdamage.h"

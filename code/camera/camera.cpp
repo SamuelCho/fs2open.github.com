@@ -10,7 +10,6 @@
 #include "parse/parselo.h"
 #include "playerman/player.h" //player_get_padlock_orient
 #include "ship/ship.h" //compute_slew_matrix
-#include "render/render.h"
 
 //*************************IMPORTANT GLOBALS*************************
 float VIEWER_ZOOM_DEFAULT = 0.75f;			//	Default viewer zoom, 0.625 as per multi-lateral agreement on 3/24/97

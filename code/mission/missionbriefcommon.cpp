@@ -29,7 +29,6 @@
 #include "parse/parselo.h"
 #include "playerman/player.h"
 #include "render/3d.h"
-#include "render/render.h"
 #include "ship/ship.h"
 #include "sound/audiostr.h"
 #include "sound/fsspeech.h"

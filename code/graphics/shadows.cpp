@@ -18,7 +18,6 @@
 #include "model/model.h"
 #include "model/modelrender.h"
 #include "render/3d.h"
-#include "render/render.h"
 
 extern vec3d check_offsets[8];
 

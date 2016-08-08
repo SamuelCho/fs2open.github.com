@@ -29,7 +29,6 @@
 #include "missionui/redalert.h"
 #include "mod_table/mod_table.h"
 #include "model/model.h"
-#include "render/render.h"
 #include "ship/ship.h"
 #include "sound/audiostr.h"
 #include "sound/fsspeech.h"

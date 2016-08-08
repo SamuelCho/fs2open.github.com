@@ -24,7 +24,6 @@
 #include "parse/parselo.h"
 #include "playerman/player.h"
 #include "popup/popup.h"
-#include "render/render.h"
 #include "sound/ds.h"
 #include "sound/rtvoice.h"
 

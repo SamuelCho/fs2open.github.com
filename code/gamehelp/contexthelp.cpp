@@ -31,7 +31,6 @@
 #include "missionui/missionweaponchoice.h"
 #include "network/multiui.h"
 #include "parse/parselo.h"
-#include "render/render.h"
 
 
 ////////////////////////////////////////////////////////////////////

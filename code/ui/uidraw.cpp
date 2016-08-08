@@ -12,7 +12,6 @@
 #include "globalincs/alphacolors.h"
 #include "ui/ui.h"
 #include "ui/uidefs.h"
-#include "render/render.h"
 
 
 void ui_hline(int x1, int x2, int y )

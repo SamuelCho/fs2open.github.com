@@ -38,7 +38,6 @@
 #include "popup/popup.h"
 #include "render/3d.h"
 #include "render/batching.h"
-#include "render/render.h"
 #include "ship/ship.h"
 #include "weapon/weapon.h"
 

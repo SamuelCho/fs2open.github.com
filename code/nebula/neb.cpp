@@ -21,7 +21,6 @@
 #include "parse/parselo.h"
 #include "pcxutils/pcxutils.h"
 #include "render/3d.h"
-#include "render/render.h"
 #include "ship/ship.h"
 #include "starfield/starfield.h"
 #include "tgautils/tgautils.h"

@@ -39,7 +39,6 @@
 #include "weapon/beam.h"
 #include "weapon/weapon.h"
 #include "globalincs/globals.h"
-#include "render/render.h"
 
 // ------------------------------------------------------------------------------------------------
 // BEAM WEAPON DEFINES/VARS

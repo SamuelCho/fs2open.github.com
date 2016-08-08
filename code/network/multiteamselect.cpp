@@ -36,7 +36,6 @@
 #include "object/object.h"
 #include "parse/parselo.h"
 #include "mission/missionparse.h"
-#include "render/render.h"
 
 
 // ------------------------------------------------------------------------------------------------------

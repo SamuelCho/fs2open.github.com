@@ -22,7 +22,6 @@
 #include "parse/parselo.h"
 #include "playerman/player.h"
 #include "render/3d.h"	//For g3_start_frame
-#include "render/render.h"
 #include "ship/ship.h"
 #include "weapon/emp.h"
 

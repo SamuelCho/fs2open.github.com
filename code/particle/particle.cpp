@@ -19,7 +19,6 @@
 #include "particle/particle.h"
 #include "render/3d.h"
 #include "render/batching.h"
-#include "render/render.h"
 
 #ifndef NDEBUG
 #include "io/timer.h"

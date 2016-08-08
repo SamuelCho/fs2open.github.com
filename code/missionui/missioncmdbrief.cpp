@@ -24,7 +24,6 @@
 #include "missionui/missionscreencommon.h"
 #include "missionui/redalert.h"
 #include "playerman/player.h"
-#include "render/render.h"
 #include "sound/audiostr.h"
 #include "sound/fsspeech.h"
 #include "ui/uidefs.h"

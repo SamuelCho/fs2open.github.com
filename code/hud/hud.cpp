@@ -49,7 +49,6 @@
 #include "radar/radar.h"
 #include "radar/radarsetup.h"
 #include "render/3d.h"
-#include "render/render.h"
 #include "ship/ship.h"
 #include "starfield/supernova.h"
 #include "weapon/emp.h"

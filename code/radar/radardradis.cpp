@@ -23,7 +23,6 @@
 #include "radar/radardradis.h"
 #include "radar/radarorb.h"
 #include "render/3d.h"
-#include "render/render.h"
 #include "ship/awacs.h"
 #include "ship/ship.h"
 #include "ship/subsysdamage.h"

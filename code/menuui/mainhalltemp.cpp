@@ -18,7 +18,6 @@
 #include "mission/missioncampaign.h"
 #include "mission/missionload.h"
 #include "playerman/player.h"
-#include "render/render.h"
 #include "ui/ui.h"
 
 

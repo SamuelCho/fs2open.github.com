@@ -19,8 +19,7 @@
 #include "io/timer.h"
 #include "pcxutils/pcxutils.h"
 #include "render/3d.h"
-#include "render/render.h"
-
+#include "graphics/material.h"
 
 static color Color_xparent;
 

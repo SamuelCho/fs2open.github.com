@@ -18,7 +18,6 @@
 #include "missionui/missionscreencommon.h"
 #include "missionui/redalert.h"
 #include "mod_table/mod_table.h"
-#include "render/render.h"
 #include "sound/audiostr.h"
 
 
