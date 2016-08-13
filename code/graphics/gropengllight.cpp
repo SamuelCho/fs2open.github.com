@@ -609,13 +609,15 @@ void opengl_light_init()
 
 		// more realistic lighting model
 		glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, 1);
+
+		glGetIntegerv(GL_MAX_LIGHTS, &GL_max_lights); // Get the max number of lights supported
+
+		Verify(GL_max_lights > 0);
+	} else {
+		GL_max_lights = 8;
 	}
 	
-	glGetIntegerv(GL_MAX_LIGHTS, &GL_max_lights); // Get the max number of lights supported
-
 	// allocate memory for enabled lights
-	Verify(GL_max_lights > 0);
-
 	if ( opengl_lights == NULL )
 		opengl_lights = (opengl_light *) vm_malloc(MAX_LIGHTS * sizeof(opengl_light), memory::quiet_alloc);
 

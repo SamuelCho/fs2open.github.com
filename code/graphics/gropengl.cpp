@@ -1237,6 +1237,10 @@ int opengl_init_display_device()
 		return 1;
 	}
 
+	const int gl_versions[] = { 41, 40, 33, 32, 31, 30, 21, 20 };
+	const int num_gl_versions = sizeof(gl_versions) / sizeof(int);
+	int version_index = 0;
+
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, Gr_red.bits);
 	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, Gr_green.bits);
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, Gr_blue.bits);
@@ -1248,6 +1252,10 @@ int opengl_init_display_device()
 
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, (fsaa_samples == 0) ? 0 : 1);
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, fsaa_samples);
+
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, gl_versions[version_index] / 10);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, gl_versions[version_index] % 10);
+	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 
 	mprintf(("  Requested SDL Video values = R: %d, G: %d, B: %d, depth: %d, stencil: %d, double-buffer: %d, FSAA: %d\n", Gr_red.bits, Gr_green.bits, Gr_blue.bits, (bpp == 32) ? 24 : 16, (bpp == 32) ? 8 : 1, db, fsaa_samples));
 
@@ -1271,7 +1279,17 @@ int opengl_init_display_device()
 		os_set_window(window);
 	}
 
-	GL_context = SDL_GL_CreateContext(os_get_window());
+	// find the latest and greatest OpenGL context
+	while ( (GL_context = SDL_GL_CreateContext(os_get_window())) == NULL ) {
+		++version_index;
+
+		if ( version_index >= num_gl_versions ) {
+			return 1;	
+		}
+		
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, gl_versions[version_index] / 10);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, gl_versions[version_index] % 10);
+	}
 
 	if (GL_context == nullptr) {
 		mprintf(("Error creating GL_context: %s\n", SDL_GetError()));
@@ -1663,9 +1681,10 @@ bool gr_opengl_init()
 
 	if (is_minimum_GLSL_version()) {
 		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
+		max_texture_coords = 1;
+	} else {
+		glGetIntegerv(GL_MAX_TEXTURE_COORDS, &max_texture_coords);
 	}
-
-	glGetIntegerv(GL_MAX_TEXTURE_COORDS, &max_texture_coords);
 
 	// create vertex array object to make OpenGL Core happy if we can
 	if ( GLAD_GL_ARB_vertex_array_object ) {
@@ -1705,10 +1724,9 @@ bool gr_opengl_init()
 
 	if ( !is_minimum_GLSL_version() ) {
 		glShadeModel(GL_SMOOTH);
+		glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+		glHint(GL_FOG_HINT, GL_NICEST);
 	}
-
-	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-	glHint(GL_FOG_HINT, GL_NICEST);
 
 	if ( GLAD_GL_ARB_seamless_cube_map ) {
 		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);

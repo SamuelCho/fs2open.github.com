@@ -11,7 +11,8 @@
 
 #include "nanovg/nanovg.h"
 // NanoVG supports OpenGL 2 and 3, we currently use OpenGL 2
-#define NANOVG_GL2_IMPLEMENTATION
+//#define NANOVG_GL2_IMPLEMENTATION
+#define NANOVG_GL3_IMPLEMENTATION
 
 #include "nanovg/nanovg_gl.h"
 #pragma GCC diagnostic pop
@@ -69,14 +70,14 @@ namespace graphics
 	{
 		NVGRenderer::NVGRenderer() : m_inFrame(false)
 		{
-			m_context = nvgCreateGL2(NVG_ANTIALIAS | NVG_STENCIL_STROKES);
+			m_context = nvgCreateGL3(NVG_ANTIALIAS | NVG_STENCIL_STROKES);
 		}
 
 		NVGRenderer::~NVGRenderer()
 		{
 			if (m_context)
 			{
-				nvgDeleteGL2(m_context);
+				nvgDeleteGL3(m_context);
 				m_context = nullptr;
 			}
 		}

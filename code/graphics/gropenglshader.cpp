@@ -348,7 +348,7 @@ void opengl_shader_shutdown()
 	}
 }
 
-static SCP_string get_shader_header(shader_type type_id, int flags, shader_stage stage) {
+static SCP_string opengl_shader_get_header(shader_type type_id, int flags, shader_stage stage) {
 	SCP_stringstream sflags;
 
 #ifdef __APPLE__
@@ -359,8 +359,8 @@ static SCP_string get_shader_header(shader_type type_id, int flags, shader_stage
 
 	// apply different macros for differing GLSL versions
 	if ( GL_version >= 32 && GLSL_version >= 150 ) {
+		sflags << "#version " << GLSL_version << "\n";
 		if ( stage == SDR_STAGE_VERTEX ) {
-			sflags << "#version 150\n";
 			sflags << "#define vertIn in\n";
 			sflags << "#define vertOut out\n";
 			sflags << "#define tex2D texture\n";
@@ -368,7 +368,6 @@ static SCP_string get_shader_header(shader_type type_id, int flags, shader_stage
 			sflags << "#define texCube texture\n";
 			sflags << "#define tex2DArray texture\n";
 		} else if ( stage == SDR_STAGE_FRAGMENT ) {
-			sflags << "#version 150\n";
 			sflags << "#define fragIn in\n";
 			sflags << "#define tex2D texture\n";
 			sflags << "#define tex2DLod textureLod\n";
@@ -456,7 +455,7 @@ static SCP_string opengl_load_shader(const char *filename)
 
 static SCP_vector<SCP_string> opengl_get_shader_content(shader_type type_id, const char* filename, int flags, shader_stage stage) {
 	SCP_vector<SCP_string> parts;
-	parts.push_back(get_shader_header(type_id, flags, stage));
+	parts.push_back(opengl_shader_get_header(type_id, flags, stage));
 
 	parts.push_back(opengl_load_shader(filename));
 

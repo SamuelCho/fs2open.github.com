@@ -188,7 +188,10 @@ void opengl_tcache_init()
 
 	GL_xlat[15] = GL_xlat[1];
 
-	glGetIntegerv(GL_MAX_TEXTURE_UNITS, &GL_supported_texture_units);
+	if ( !is_minimum_GLSL_version() ) {
+		glGetIntegerv(GL_MAX_TEXTURE_UNITS, &GL_supported_texture_units);
+	}
+
 	Assert( GL_supported_texture_units >= 2 );
 
 	GL_last_detail = Detail.hardware_textures;
