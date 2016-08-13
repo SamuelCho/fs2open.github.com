@@ -42,15 +42,15 @@ namespace
 		GL_state.Texture.SetTarget(0);
 		GL_state.Texture.DisableAll();
 
+		if ( GLAD_GL_ARB_vertex_array_object ) {
+			glBindVertexArray(GL_vao);
+		}
+
 		GL_state.Array.BindArrayBuffer(0);
 		GL_state.Array.BindUniformBuffer(0);
 		opengl_shader_set_current(nullptr);
 
 		GL_state.Uniform.reset();
-
-		if ( GLAD_GL_ARB_vertex_array_object ) {
-			glBindVertexArray(GL_vao);
-		}
 
 		// Now reset the values to what we need
 		GL_state.SetStencilType(STENCIL_TYPE_NONE);

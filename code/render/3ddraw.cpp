@@ -1943,7 +1943,8 @@ int g3_draw_2d_poly_bitmap_rect_list(bitmap_rect_list* b_list, int n_bm, uint ad
 
 void g3_draw_htl_line(const vec3d *start, const vec3d *end)
 {
-	gr_line_htl(start, end);
+	//gr_line_htl(start, end);
+	g3_render_line_3d(true, start, end);
 }
 
 void g3_draw_htl_sphere(color *clr, const vec3d* position, float radius)
@@ -2871,7 +2872,7 @@ void g3_render_shield_icon(coord2d coords[6], int resize_mode)
 }
 
 // adapted from gr_opengl_line_htl()
-void g3_render_line_3d(color *clr, bool depth_testing, vec3d *start, vec3d *end)
+void g3_render_line_3d(color *clr, bool depth_testing, const vec3d *start, const vec3d *end)
 {
 	material mat;
 
@@ -2898,7 +2899,7 @@ void g3_render_line_3d(color *clr, bool depth_testing, vec3d *start, vec3d *end)
 	gr_render_primitives_immediate(&mat, PRIM_TYPE_LINES, &vert_def, 2, line, sizeof(float) * 6);
 }
 
-void g3_render_line_3d(bool depth_testing, vec3d *start, vec3d *end)
+void g3_render_line_3d(bool depth_testing, const vec3d *start, const vec3d *end)
 {
 	g3_render_line_3d(&gr_screen.current_color, depth_testing, start, end);
 }
@@ -2922,6 +2923,77 @@ void g3_render_sphere(color *clr, vec3d* position, float radius)
 void g3_render_sphere(vec3d* position, float radius)
 {
 	g3_render_sphere(&gr_screen.current_color, position, radius);
+}
+
+void g3_render_colored_rect(color *clr, int x, int y, int w, int h, int resize_mode)
+{
+	if ( resize_mode != GR_RESIZE_NONE ) {
+		gr_resize_screen_pos(&x, &y, &w, &h, resize_mode);
+	}
+
+	vertex v[4];
+
+	memset(v, 0, sizeof(vertex) * 4);
+
+	float sw = 0.1f;
+
+	// stuff coords		
+	v[0].screen.xyw.x = i2fl(x);
+	v[0].screen.xyw.y = i2fl(y);
+	v[0].screen.xyw.w = sw;
+	v[0].texture_position.u = 0.0f;
+	v[0].texture_position.v = 0.0f;
+	v[0].flags = PF_PROJECTED;
+	v[0].codes = 0;
+	v[0].r = (ubyte)clr->red;
+	v[0].g = (ubyte)clr->green;
+	v[0].b = (ubyte)clr->blue;
+	v[0].a = (ubyte)clr->alpha;
+
+	v[1].screen.xyw.x = i2fl(x + w);
+	v[1].screen.xyw.y = i2fl(y);
+	v[1].screen.xyw.w = sw;
+	v[1].texture_position.u = 0.0f;
+	v[1].texture_position.v = 0.0f;
+	v[1].flags = PF_PROJECTED;
+	v[1].codes = 0;
+	v[1].r = (ubyte)clr->red;
+	v[1].g = (ubyte)clr->green;
+	v[1].b = (ubyte)clr->blue;
+	v[1].a = (ubyte)clr->alpha;
+
+	v[2].screen.xyw.x = i2fl(x + w);
+	v[2].screen.xyw.y = i2fl(y + h);
+	v[2].screen.xyw.w = sw;
+	v[2].texture_position.u = 0.0f;
+	v[2].texture_position.v = 0.0f;
+	v[2].flags = PF_PROJECTED;
+	v[2].codes = 0;
+	v[2].r = (ubyte)clr->red;
+	v[2].g = (ubyte)clr->green;
+	v[2].b = (ubyte)clr->blue;
+	v[2].a = (ubyte)clr->alpha;
+
+	v[3].screen.xyw.x = i2fl(x);
+	v[3].screen.xyw.y = i2fl(y + h);
+	v[3].screen.xyw.w = sw;
+	v[3].texture_position.u = 0.0f;
+	v[3].texture_position.v = 0.0f;
+	v[3].flags = PF_PROJECTED;
+	v[3].codes = 0;
+	v[3].r = (ubyte)clr->red;
+	v[3].g = (ubyte)clr->green;
+	v[3].b = (ubyte)clr->blue;
+	v[3].a = (ubyte)clr->alpha;
+
+	material material_params;
+	material_params.set_depth_mode(ZBUFFER_TYPE_NONE);
+	material_params.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+	material_params.set_cull_mode(false);
+	material_params.set_texture_source(TEXTURE_SOURCE_NONE);
+
+	// draw the polys
+	g3_render_primitives_colored(&material_params, v, 4, PRIM_TYPE_TRIFAN, true);
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++//

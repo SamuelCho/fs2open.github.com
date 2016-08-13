@@ -2709,7 +2709,7 @@ void Slider::DoDraw(float frametime)
 	auto sliderX = GetSliderOffset();
 
 	gr_set_shader(&SliderShade);
-	gr_shade(BarCoords[1], sliderX + SliderWidth, BarCoords[3], false);
+	gr_opengl_shade(sliderX, BarCoords[1], sliderX + SliderWidth, BarCoords[3], false);
 }
 
 int Slider::DoMouseDown(float frametime)

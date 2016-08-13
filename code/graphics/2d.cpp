@@ -2061,21 +2061,8 @@ void gr_shield_icon(coord2d coords[6], int resize_mode)
 	if (gr_screen.mode == GR_STUB) {
 		return;
 	}
-
-	if (resize_mode != GR_RESIZE_NONE) {
-		gr_resize_screen_pos(&coords[0].x, &coords[0].y, NULL, NULL, resize_mode);
-		gr_resize_screen_pos(&coords[1].x, &coords[1].y, NULL, NULL, resize_mode);
-		gr_resize_screen_pos(&coords[2].x, &coords[2].y, NULL, NULL, resize_mode);
-		gr_resize_screen_pos(&coords[3].x, &coords[3].y, NULL, NULL, resize_mode);
-		gr_resize_screen_pos(&coords[4].x, &coords[4].y, NULL, NULL, resize_mode);
-		gr_resize_screen_pos(&coords[5].x, &coords[5].y, NULL, NULL, resize_mode);
-	}
-
-	g3_draw_2d_shield_icon(coords,
-		gr_screen.current_color.red,
-		gr_screen.current_color.green,
-		gr_screen.current_color.blue,
-		gr_screen.current_color.alpha);
+	
+	g3_render_shield_icon(&gr_screen.current_color, coords, resize_mode);
 }
 
 void gr_rect(int x, int y, int w, int h, int resize_mode)
@@ -2084,15 +2071,7 @@ void gr_rect(int x, int y, int w, int h, int resize_mode)
 		return;
 	}
 
-	if (resize_mode != GR_RESIZE_NONE) {
-		gr_resize_screen_pos(&x, &y, &w, &h, resize_mode);
-	}
-
-	g3_draw_2d_rect(x, y, w, h,
-		gr_screen.current_color.red,
-		gr_screen.current_color.green,
-		gr_screen.current_color.blue,
-		gr_screen.current_color.alpha);
+	g3_render_colored_rect(&gr_screen.current_color, x, y, w, h, resize_mode);
 }
 
 void gr_shade(int x, int y, int w, int h, int resize_mode)
@@ -2102,17 +2081,16 @@ void gr_shade(int x, int y, int w, int h, int resize_mode)
 	if (gr_screen.mode == GR_STUB) {
 		return;
 	}
-
-	if (resize_mode != GR_RESIZE_NONE) {
-		gr_resize_screen_pos(&x, &y, &w, &h, resize_mode);
-	}
-
+	
 	r = (int)gr_screen.current_shader.r;
 	g = (int)gr_screen.current_shader.g;
 	b = (int)gr_screen.current_shader.b;
 	a = (int)gr_screen.current_shader.c;
+	
+	color clr;
+	gr_init_alphacolor(&clr, r, g, b, a);
 
-	g3_draw_2d_rect(x, y, w, h, r, g, b, a);
+	g3_render_colored_rect(&clr, x, y, w, h, resize_mode);
 }
 
 void gr_set_bitmap(int bitmap_num, int alphablend_mode, int bitblt_mode, float alpha)

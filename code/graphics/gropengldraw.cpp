@@ -321,11 +321,12 @@ void opengl_aabitmap_ex_internal(int x, int y, int w, int h, int sx, int sy, int
 
 	GLboolean cull_face = GL_state.CullFace(GL_FALSE);
 
-	opengl_shader_set_passthrough(true, true);
+	opengl_shader_set_passthrough(true, true, &gr_screen.current_color);
 
 	opengl_draw_textured_quad(x1,y1,u0,v0, x2,y2,u1,v1);
 
 	GL_state.CullFace(cull_face);
+	gr_clear_states();
 
 	GL_CHECK_FOR_ERRORS("end of aabitmap_ex_internal()");
 }
@@ -509,7 +510,7 @@ void gr_opengl_aabitmap(int x, int y, int resize_mode, bool mirror)
 	opengl_aabitmap_ex_internal(dx1, dy1, (dx2 - dx1 + 1), (dy2 - dy1 + 1), sx, sy, resize_mode, mirror);
 }
 
-#define MAX_VERTS_PER_DRAW 120
+#define MAX_VERTS_PER_DRAW 300
 struct v4 { GLfloat x,y,u,v; };
 static v4 GL_string_render_buff[MAX_VERTS_PER_DRAW];
 
@@ -526,19 +527,28 @@ void gr_opengl_string_old(float sx, float sy, const char* s, const char* end, fo
 	float bw, bh;
 	float u0, u1, v0, v1;
 	float x1, x2, y1, y2;
-	float u_scale, v_scale;
+	float u_scale = 1.0f, v_scale = 1.0f;
 		
 	GL_CHECK_FOR_ERRORS("start of string()");
 
-	gr_set_bitmap(fontData->bitmap_id);
+ 	gr_set_bitmap(fontData->bitmap_id);
+ 
+//  	GL_state.SetTextureSource(TEXTURE_SOURCE_NO_FILTERING);
+//  	GL_state.SetAlphaBlendMode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+//  	GL_state.SetZbufferType(ZBUFFER_TYPE_NONE);
+ 
+//  	if (!gr_opengl_tcache_set(gr_screen.current_bitmap, TCACHE_TYPE_AABITMAP, &u_scale, &v_scale)) {
+//  		return;
+//  	}
 
-	GL_state.SetTextureSource(TEXTURE_SOURCE_NO_FILTERING);
-	GL_state.SetAlphaBlendMode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
-	GL_state.SetZbufferType(ZBUFFER_TYPE_NONE);
-
-	if (!gr_opengl_tcache_set(gr_screen.current_bitmap, TCACHE_TYPE_AABITMAP, &u_scale, &v_scale)) {
-		return;
-	}
+	material material_params;
+	material_params.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
+	material_params.set_depth_mode(ZBUFFER_TYPE_NONE);
+	material_params.set_texture_source(TEXTURE_SOURCE_NO_FILTERING);
+	material_params.set_texture_map(TM_BASE_TYPE, fontData->bitmap_id);
+	material_params.set_texture_type(material::TEX_TYPE_AABITMAP);
+	material_params.set_color(gr_screen.current_color);
+	material_params.set_cull_mode(false);
 
 	int buffer_offset = 0;
 
@@ -580,7 +590,7 @@ void gr_opengl_string_old(float sx, float sy, const char* s, const char* end, fo
 	vert_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(v4), (int)offsetof(v4, x));
 	vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(v4), (int)offsetof(v4, u));
 
-	opengl_shader_set_passthrough(true, true, &gr_screen.current_color);
+	//opengl_shader_set_passthrough(true, true, &gr_screen.current_color);
 
 	// pick out letter coords, draw it, goto next letter and do the same
 	while (s < end) {
@@ -672,7 +682,9 @@ void gr_opengl_string_old(float sx, float sy, const char* s, const char* end, fo
 		v1 = v_scale * (i2fl((v+yd)+hc) / bh);
 
 		if ( buffer_offset == MAX_VERTS_PER_DRAW ) {
-			opengl_render_primitives_immediate(PRIM_TYPE_TRIS, &vert_def, buffer_offset, GL_string_render_buff, sizeof(v4) * MAX_VERTS_PER_DRAW);
+			opengl_tnl_set_material(&material_params, true);
+			opengl_render_primitives_immediate(PRIM_TYPE_TRIS, &vert_def, buffer_offset, GL_string_render_buff, sizeof(v4) * buffer_offset);
+			//gr_opengl_render_primitives_2d_immediate(&material_params, PRIM_TYPE_TRIS, &vert_def, buffer_offset, GL_string_render_buff, sizeof(v4) * buffer_offset);
 			buffer_offset = 0;
 		}
 
@@ -714,6 +726,8 @@ void gr_opengl_string_old(float sx, float sy, const char* s, const char* end, fo
 	}
 
 	if (buffer_offset) {
+		opengl_tnl_set_material(&material_params, true);
+		//gr_opengl_render_primitives_2d_immediate(&material_params, PRIM_TYPE_TRIS, &vert_def, buffer_offset, GL_string_render_buff, sizeof(v4) * buffer_offset);
 		opengl_render_primitives_immediate(PRIM_TYPE_TRIS, &vert_def, buffer_offset, GL_string_render_buff, sizeof(v4) * buffer_offset);
 	}
 
@@ -1489,6 +1503,7 @@ void opengl_render_internal(int nverts, vertex *verts, uint flags)
 
 void opengl_render_internal3d(int nverts, vertex *verts, uint flags)
 {
+	return;
 	int alpha, tmap_type, r, g, b;
 	float u_scale = 1.0f, v_scale = 1.0f;
 	GLenum gl_mode = GL_TRIANGLE_FAN;
@@ -1808,6 +1823,10 @@ void gr_opengl_shade(int x, int y, int w, int h, int resize_mode)
 	GL_state.Color( (GLubyte)gr_screen.current_shader.r, (GLubyte)gr_screen.current_shader.g,
 				(GLubyte)gr_screen.current_shader.b, (GLubyte)gr_screen.current_shader.c );
 
+	color clr;
+	gr_init_alphacolor(&clr, gr_screen.current_shader.r, gr_screen.current_shader.g, gr_screen.current_shader.b, gr_screen.current_shader.c);
+	opengl_shader_set_passthrough(false, false, &clr);
+
 	opengl_draw_coloured_quad((GLint)x1, (GLint)y1, (GLint)x2, (GLint)y2);
 
 	gr_opengl_end_2d_matrix();
@@ -1834,6 +1853,10 @@ void gr_opengl_flash(int r, int g, int b)
 
 	GL_state.Color( (GLubyte)r, (GLubyte)g, (GLubyte)b, 255 );
 
+	color clr;
+	gr_init_alphacolor(&clr, (GLubyte)r, (GLubyte)g, (GLubyte)b, 255);
+	opengl_shader_set_passthrough(false, false, &clr);
+
 	opengl_draw_coloured_quad((GLint)x1, (GLint)y1, (GLint)x2, (GLint)y2);
 }
 
@@ -1858,6 +1881,10 @@ void gr_opengl_flash_alpha(int r, int g, int b, int a)
 	int y2 = (gr_screen.clip_bottom + gr_screen.offset_y) + 1;
 
 	GL_state.Color( (GLubyte)r, (GLubyte)g, (GLubyte)b, (GLubyte)a );
+
+	color clr;
+	gr_init_alphacolor(&clr, (GLubyte)r, (GLubyte)g, (GLubyte)b, (GLubyte)a);
+	opengl_shader_set_passthrough(false, false, &clr);
 
 	opengl_draw_coloured_quad((GLint)x1, (GLint)y1, (GLint)x2, (GLint)y2);
 }
@@ -1906,9 +1933,14 @@ void opengl_bitmap_ex_internal(int x, int y, int w, int h, int sx, int sy, int r
 	}
 
 	GL_state.Color(255, 255, 255, (GLubyte)(gr_screen.current_alpha * 255));
-	opengl_shader_set_passthrough();
+
+	color clr;
+	gr_init_alphacolor(&clr, 255, 255, 255, gr_screen.current_alpha * 255);
+	opengl_shader_set_passthrough(true, false, &clr);
 
 	opengl_draw_textured_quad(x1, y1, u0, v0, x2, y2, u1, v1);
+
+	gr_clear_states();
 }
 
 

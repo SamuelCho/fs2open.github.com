@@ -131,8 +131,8 @@ inline void opengl_draw_textured_quad(
 }
 
 inline void opengl_draw_coloured_quad(
-	GLint x1, GLint y1, 
-	GLint x2, GLint y2 )
+	GLint x1, GLint y1,
+	GLint x2, GLint y2)
 {
 	GLint glVertices[8] = {
 		x1, y1,
@@ -143,12 +143,11 @@ inline void opengl_draw_coloured_quad(
 
 	vertex_layout vert_def;
 
-	vert_def.add_vertex_component(vertex_format_data::SCREEN_POS, 0, glVertices);
+	vert_def.add_vertex_component(vertex_format_data::SCREEN_POS, 0, 0);
 
 	opengl_bind_vertex_layout(vert_def);
-	opengl_shader_set_passthrough(false, false);
 
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	opengl_render_primitives_immediate(PRIM_TYPE_TRISTRIP, &vert_def, 4, glVertices, sizeof(GLint) * 8);
 }
 
 inline void opengl_draw_coloured_quad(
@@ -164,12 +163,11 @@ inline void opengl_draw_coloured_quad(
 
 	vertex_layout vert_def;
 
-	vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, glVertices);
+	vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, 0);
 
 	opengl_bind_vertex_layout(vert_def);
-	opengl_shader_set_passthrough(false, false);
 
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	opengl_render_primitives_immediate(PRIM_TYPE_TRISTRIP, &vert_def, 4, glVertices, sizeof(GLfloat) * 8);
 }
 
 inline GLenum opengl_primitive_type(primitive_type prim_type);
