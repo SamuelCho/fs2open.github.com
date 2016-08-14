@@ -71,7 +71,7 @@ vec3d shadow_ref_point;
 
 static bool use_last_view = false;
 
-int GL_vertex_data_in = 0;
+size_t GL_vertex_data_in = 0;
 
 GLint GL_max_elements_vertices = 4096;
 GLint GL_max_elements_indices = 4096;
@@ -81,7 +81,7 @@ team_color* Current_team_color;
 team_color Current_temp_color;
 bool Using_Team_Color = false;
 
-int GL_transform_buffer_offset = -1;
+size_t GL_transform_buffer_offset = INVALID_SIZE;
 
 GLuint Shadow_map_texture = 0;
 GLuint Shadow_map_depth_texture = 0;
@@ -102,7 +102,7 @@ struct opengl_buffer_object {
 	GLuint buffer_id;
 	GLenum type;
 	GLenum usage;
-	uint size;
+	size_t size;
 
 	GLuint texture;	// for texture buffer objects
 };
@@ -114,8 +114,8 @@ struct opengl_vertex_buffer {
 	int vb_handle;
 	int ib_handle;
 
-	uint vbo_size;
-	uint ibo_size;
+	size_t vbo_size;
+	size_t ibo_size;
 
 	opengl_vertex_buffer() :
 		array_list(NULL), index_list(NULL), 
@@ -167,7 +167,7 @@ int opengl_create_buffer_object(GLenum type, GLenum usage)
 
 	GL_buffer_objects.push_back(buffer_obj);
 
-	return GL_buffer_objects.size() - 1;
+	return (int)(GL_buffer_objects.size() - 1);
 }
 
 void opengl_bind_buffer_object(int handle)
@@ -197,7 +197,7 @@ void opengl_bind_buffer_object(int handle)
 	}
 }
 
-void gr_opengl_update_buffer_data(int handle, uint size, void* data)
+void gr_opengl_update_buffer_data(int handle, size_t size, void* data)
 {
 	if ( !Use_VBOs ) {
 		return;
@@ -358,7 +358,7 @@ int opengl_create_texture_buffer_object()
 	return buffer_object_handle;
 }
 
-void gr_opengl_update_transform_buffer(void* data, uint size)
+void gr_opengl_update_transform_buffer(void* data, size_t size)
 {
 	if ( Transform_buffer_handle < 0 || size <= 0 ) {
 		return;
@@ -383,7 +383,7 @@ GLuint opengl_get_transform_buffer_texture()
 	return GL_buffer_objects[Transform_buffer_handle].texture;
 }
 
-void gr_opengl_set_transform_buffer_offset(int offset)
+void gr_opengl_set_transform_buffer_offset(size_t offset)
 {
 	GL_transform_buffer_offset = offset;
 }
@@ -553,7 +553,7 @@ bool gr_opengl_pack_buffer(const int buffer_id, vertex_buffer *vb)
 		return false;
 	}
 
-	int i, n_verts = 0;
+	size_t n_verts = 0;
 	size_t j;
 	uint arsize = 0;
 
@@ -585,7 +585,7 @@ bool gr_opengl_pack_buffer(const int buffer_id, vertex_buffer *vb)
 
 	// generate the vertex array
 	n_verts = vb->model_list->n_verts;
-	for (i = 0; i < n_verts; i++) {
+	for (size_t i = 0; i < n_verts; i++) {
 		vertex *vl = &vb->model_list->vert[i];
 
 		// don't try to generate more data than what's available
@@ -630,7 +630,7 @@ bool gr_opengl_pack_buffer(const int buffer_id, vertex_buffer *vb)
 	for (j = 0; j < vb->tex_buf.size(); j++) {
 		buffer_data* tex_buf = &vb->tex_buf[j];
 		n_verts = tex_buf->n_verts;
-		uint offset = tex_buf->index_offset;
+		size_t offset = tex_buf->index_offset;
 		const uint *index = tex_buf->get_index();
 
 		// bump to our spot in the buffer
@@ -641,7 +641,7 @@ bool gr_opengl_pack_buffer(const int buffer_id, vertex_buffer *vb)
 		} else {
 			ushort *mybuf = (ushort*)ibuf;
 
-			for (i = 0; i < n_verts; i++) {
+			for (size_t i = 0; i < n_verts; i++) {
 				mybuf[i] = (ushort)index[i];
 			}
 		}
@@ -1128,8 +1128,8 @@ static void opengl_render_pipeline_program(int start, vertex_buffer *bufferp, bu
 	int r, g, b, a, tmap_type;
 	GLubyte *ibuffer = NULL;
 
-	int end = (datap->n_verts - 1);
-	int count = (end - (start*3) + 1);
+	auto end = (datap->n_verts - 1);
+	auto count = (end - (start*3) + 1);
 
 	GLenum element_type = (datap->flags & VB_FLAG_LARGE_INDEX) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
 
@@ -1145,7 +1145,7 @@ static void opengl_render_pipeline_program(int start, vertex_buffer *bufferp, bu
 		textured ? true : false, 
 		Rendering_to_shadow_map,
 		GL_thrust_scale > 0.0f,
-		(flags & TMAP_FLAG_BATCH_TRANSFORMS) && (GL_transform_buffer_offset >= 0) && (bufferp->flags & VB_FLAG_MODEL_ID),
+		(flags & TMAP_FLAG_BATCH_TRANSFORMS) && (GL_transform_buffer_offset != INVALID_SIZE) && (bufferp->flags & VB_FLAG_MODEL_ID),
 		Using_Team_Color, 
 		flags, 
 		(SPECGLOSSMAP > 0) ? SPECGLOSSMAP : SPECMAP, 
@@ -1194,19 +1194,19 @@ static void opengl_render_pipeline_program(int start, vertex_buffer *bufferp, bu
 	}
 	
 	if(Rendering_to_shadow_map) {
-		glDrawElementsInstancedBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), 4, (GLint)bufferp->vertex_num_offset);
+		glDrawElementsInstancedBaseVertex(GL_TRIANGLES, (GLsizei)count, element_type, ibuffer + (datap->index_offset + start), 4, (GLint)bufferp->vertex_num_offset);
 	} else {
 		if ( GLAD_GL_ARB_draw_elements_base_vertex ) {
 			if (Cmdline_drawelements) {
-				glDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
+				glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei)count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
 			} else {
-				glDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
+				glDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, (GLsizei)count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
 			}
 		} else {
 			if (Cmdline_drawelements) {
-				glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
+				glDrawElements(GL_TRIANGLES, (GLsizei)count, element_type, ibuffer + (datap->index_offset + start));
 			} else {
-				glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+				glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, (GLsizei)count, element_type, ibuffer + (datap->index_offset + start));
 			}
 		}
 	}
@@ -1290,8 +1290,8 @@ static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buff
 	bool using_spec = false;
 	bool using_env = false;
 
-	int end = (datap->n_verts - 1);
-	int count = (end - start + 1);
+	auto end = (datap->n_verts - 1);
+	auto count = (end - start + 1);
 
 	GLenum element_type = (datap->flags & VB_FLAG_LARGE_INDEX) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
 
@@ -1354,7 +1354,7 @@ static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buff
 		if ( !Basemap_override ) {
 			GL_state.Array.SetActiveClientUnit(render_pass);
 			GL_state.Array.EnableClientTexture();
-			GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
+			GL_state.Array.TexPointer( 2, GL_FLOAT, (GLsizei)bufferp->stride, BUFFER_OFFSET(0) );
 
 			gr_opengl_tcache_set(gr_screen.current_bitmap, tmap_type, &u_scale, &v_scale, render_pass);
 
@@ -1366,7 +1366,7 @@ static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buff
 		if (using_glow) {
 			GL_state.Array.SetActiveClientUnit(render_pass);
 			GL_state.Array.EnableClientTexture();
-			GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
+			GL_state.Array.TexPointer( 2, GL_FLOAT, (GLsizei)bufferp->stride, BUFFER_OFFSET(0) );
 
 			// set glowmap on relevant ARB
 			gr_opengl_tcache_set(GLOWMAP, tmap_type, &u_scale, &v_scale, render_pass);
@@ -1379,9 +1379,9 @@ static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buff
 
 	// DRAW IT!!
 	if ( Cmdline_drawelements ) {
-		glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start));
+		glDrawElements(GL_TRIANGLES, (GLsizei)count, element_type, ibuffer + (datap->index_offset + start));
 	} else {
-		glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+		glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, (GLsizei)count, element_type, ibuffer + (datap->index_offset + start));
 	}
 
 // -------- End 2nd PASS --------------------------------------------------------- //
@@ -1438,7 +1438,7 @@ static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buff
 		// set specmap, for us to modulate against
 		GL_state.Array.SetActiveClientUnit(render_pass);
 		GL_state.Array.EnableClientTexture();
-		GL_state.Array.TexPointer(2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
+		GL_state.Array.TexPointer(2, GL_FLOAT, (GLsizei)bufferp->stride, BUFFER_OFFSET(0) );
 
 		// set specmap on relevant ARB
 		gr_opengl_tcache_set(SPECMAP, tmap_type, &u_scale, &v_scale, render_pass);
@@ -1469,7 +1469,7 @@ static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buff
 		// now move the to the envmap
 		GL_state.Array.SetActiveClientUnit(render_pass);
 		GL_state.Array.EnableClientTexture();
-		GL_state.Array.TexPointer(2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
+		GL_state.Array.TexPointer(2, GL_FLOAT, (GLsizei)bufferp->stride, BUFFER_OFFSET(0) );
 
 		gr_opengl_tcache_set(ENVMAP, TCACHE_TYPE_CUBEMAP, &u_scale, &v_scale, render_pass);
 
@@ -1514,9 +1514,9 @@ static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buff
 
 		// DRAW IT!!
 		if (Cmdline_drawelements) {
-			glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
+			glDrawElements(GL_TRIANGLES, (GLsizei)count, element_type, ibuffer + (datap->index_offset + start));
 		} else {
-			glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+			glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, (GLsizei)count, element_type, ibuffer + (datap->index_offset + start));
 		}
 
 		// disable and reset everything we changed
@@ -1558,7 +1558,7 @@ static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buff
 
 		GL_state.Array.SetActiveClientUnit(0);
 		GL_state.Array.EnableClientTexture();
-		GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
+		GL_state.Array.TexPointer( 2, GL_FLOAT, (GLsizei)bufferp->stride, BUFFER_OFFSET(0) );
 
 		gr_opengl_tcache_set(SPECMAP, tmap_type, &u_scale, &v_scale, render_pass);
 
@@ -1580,9 +1580,9 @@ static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buff
 
 		// DRAW IT!!
 		if (Cmdline_drawelements) {
-			glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
+			glDrawElements(GL_TRIANGLES, (GLsizei)count, element_type, ibuffer + (datap->index_offset + start));
 		} else {
-			glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+			glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, (GLsizei)count, element_type, ibuffer + (datap->index_offset + start));
 		}
 
 		opengl_default_light_settings();
@@ -1612,7 +1612,7 @@ static void opengl_render_pipeline_fixed(int start, vertex_buffer *bufferp, buff
 }
 
 // start is the first part of the buffer to render, n_prim is the number of primitives, index_list is an index buffer, if index_list == NULL render non-indexed
-void gr_opengl_render_buffer(int start, vertex_buffer *bufferp, int texi, int flags)
+void gr_opengl_render_buffer(int start, vertex_buffer *bufferp, size_t texi, int flags)
 {
 	Assert( GL_htl_projection_matrix_set );
 	Assert( GL_htl_view_matrix_set );
@@ -1624,8 +1624,6 @@ void gr_opengl_render_buffer(int start, vertex_buffer *bufferp, int texi, int fl
 	if ( GL_state.CullFace() ) {
 		GL_state.FrontFaceValue(GL_CW);
 	}
-
-	Assert( texi >= 0 );
 
 	buffer_data *datap = &bufferp->tex_buf[texi];
 
@@ -1642,7 +1640,7 @@ extern GLuint Scene_depth_texture;
 extern GLuint Scene_position_texture;
 extern GLuint Distortion_texture[2];
 extern int Distortion_switch;
-void gr_opengl_render_stream_buffer(int buffer_handle, int offset, int n_verts, int flags)
+void gr_opengl_render_stream_buffer(int buffer_handle, size_t offset, size_t n_verts, int flags)
 {
 	int alpha, tmap_type, r, g, b;
 	float u_scale = 1.0f, v_scale = 1.0f;
@@ -1731,7 +1729,7 @@ void gr_opengl_render_stream_buffer(int buffer_handle, int offset, int n_verts, 
 
 	opengl_bind_vertex_layout(vert_def);
 
-	glDrawArrays(gl_mode, offset, n_verts);
+	glDrawArrays(gl_mode, (GLint)offset, (GLsizei)n_verts);
 
 	if( (flags & TMAP_FLAG_DISTORTION) || (flags & TMAP_FLAG_DISTORTION_THRUSTER) ) {
 		GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT };
@@ -2866,8 +2864,8 @@ void opengl_tnl_set_model_material(model_material *material_info)
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_TRANSFORM ) {
 		GL_state.Uniform.setUniformi("transform_tex", render_pass);
-		GL_state.Uniform.setUniformi("buffer_matrix_offset", GL_transform_buffer_offset);
-
+		GL_state.Uniform.setUniformi("buffer_matrix_offset", (int)GL_transform_buffer_offset);
+		
 		GL_state.Texture.SetActiveUnit(render_pass);
 		GL_state.Texture.SetTarget(GL_TEXTURE_BUFFER);
 		GL_state.Texture.Enable(opengl_get_transform_buffer_texture());

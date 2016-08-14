@@ -13,6 +13,7 @@
 #define _GRAPHICS_H
 
 #include "graphics/grinternal.h"
+#include <osapi/osapi.h>
 #include "bmpman/bmpman.h"
 #include "cfile/cfile.h"
 #include "globalincs/pstypes.h"
@@ -218,10 +219,10 @@ struct vertex_format_data
 	void *data_src;
 	int offset;
 
-	vertex_format_data(vertex_format i_format_type, uint i_stride, void *i_data_src) : 
+	vertex_format_data(vertex_format i_format_type, size_t i_stride, void *i_data_src) : 
 	format_type(i_format_type), stride(i_stride), data_src(i_data_src), offset(-1) {}
 
-	vertex_format_data(vertex_format i_format_type, uint i_stride, int i_offset) : 
+	vertex_format_data(vertex_format i_format_type, size_t i_stride, int i_offset) : 
 	format_type(i_format_type), stride(i_stride), data_src(NULL), offset(i_offset) {}
 
 	static inline uint mask(vertex_format v_format) { return 1 << v_format; }
@@ -237,9 +238,9 @@ public:
 
 	vertex_layout(void* init_ptr): Vertex_mask(0) {}
 
-	uint get_num_vertex_components() { return Vertex_components.size(); }
+	size_t get_num_vertex_components() { return Vertex_components.size(); }
 
-	vertex_format_data* get_vertex_component(uint index) { return &Vertex_components[index]; }
+	vertex_format_data* get_vertex_component(size_t index) { return &Vertex_components[index]; }
 	
 	bool resident_vertex_format(vertex_format_data::vertex_format format_type)
 	{ 
@@ -251,7 +252,7 @@ public:
 		add_vertex_component(format_type, 0, src);
 	}
 
-	void add_vertex_component(vertex_format_data::vertex_format format_type, uint stride, void* src) 
+	void add_vertex_component(vertex_format_data::vertex_format format_type, size_t stride, void* src) 
 	{
 		if ( resident_vertex_format(format_type) ) {
 			// we already have a vertex component of this format type
@@ -262,7 +263,7 @@ public:
 		Vertex_components.push_back(vertex_format_data(format_type, stride, src));
 	}
 
-	void add_vertex_component(vertex_format_data::vertex_format format_type, uint stride, int offset) 
+	void add_vertex_component(vertex_format_data::vertex_format format_type, size_t stride, int offset) 
 	{
 		if ( resident_vertex_format(format_type) ) {
 			// we already have a vertex component of this format type
@@ -430,7 +431,7 @@ public:
 	int flags;
 
 	int texture;		// this is the texture the vertex buffer will use
-	int n_verts;
+	size_t n_verts;
 
 	size_t index_offset;
 
@@ -449,7 +450,7 @@ public:
 		}
 	}
 
-	void assign(int i, uint j)
+	void assign(size_t i, uint j)
 	{
 		const_cast<uint *>(index)[i] = j;
 		if (i_first > i_last)
@@ -468,7 +469,7 @@ public:
 	{
 	}
 
-	buffer_data(int n_vrts) :
+	explicit buffer_data(size_t n_vrts) :
 		flags(0), texture(-1), n_verts(n_vrts), index_offset(0),
 		i_first(1), i_last(0), index(NULL)
 	{
@@ -484,7 +485,7 @@ public:
 	{
 		if ( other.index ) {
 			index = new(std::nothrow) uint[other.n_verts];
-			for (size_t i=0; i < (size_t) other.n_verts; i++)
+			for (size_t i=0; i < other.n_verts; i++)
 			{
 				index[i] = other.index[i];
 			}
@@ -513,7 +514,7 @@ public:
 
 			if ( rhs.index && rhs.n_verts > 0 ) {
 				index = new(std::nothrow) uint[rhs.n_verts];
-				for (size_t i=0; i < (size_t) rhs.n_verts; i++)
+				for (size_t i=0; i < rhs.n_verts; i++)
 				{
 					index[i] = rhs.index[i];
 				}
@@ -546,7 +547,7 @@ class vertex_buffer
 public:
 	int flags;
 
-	uint stride;
+	size_t stride;
 	size_t vertex_offset;
 	size_t vertex_num_offset;
 
@@ -810,14 +811,14 @@ typedef struct screen {
 	bool (*gf_config_buffer)(const int buffer_id, vertex_buffer *vb, bool update_ibuffer_only);
 	void (*gf_destroy_buffer)(int);
 	void (*gf_set_buffer)(int);
-	void (*gf_render_buffer)(int, vertex_buffer*, int, int);
+	void (*gf_render_buffer)(int, vertex_buffer*, size_t, int);
 
-	void (*gf_update_buffer_data)(int handle, uint size, void* data);
-	void (*gf_update_transform_buffer)(void* data, uint size);
-	void (*gf_set_transform_buffer_offset)(int offset);
+	void (*gf_update_buffer_data)(int handle, size_t size, void* data);
+	void (*gf_update_transform_buffer)(void* data, size_t size);
+	void (*gf_set_transform_buffer_offset)(size_t offset);
 
 	int (*gf_create_stream_buffer)();
-	void (*gf_render_stream_buffer)(int buffer_handle, int offset, int n_verts, int flags);
+	void (*gf_render_stream_buffer)(int buffer_handle, size_t offset, size_t n_verts, int flags);
 	
 	//the projection matrix; fov, aspect ratio, near, far
  	void (*gf_set_proj_matrix)(float, float, float, float);
@@ -925,12 +926,14 @@ typedef struct screen {
 
 extern const char *Resolution_prefixes[GR_NUM_RESOLUTIONS];
 
-extern bool gr_init(int d_mode = GR_DEFAULT, int d_width = GR_DEFAULT, int d_height = GR_DEFAULT, int d_depth = GR_DEFAULT);
+extern bool gr_init(os::GraphicsOperations* graphicsOps, int d_mode = GR_DEFAULT,
+					int d_width = GR_DEFAULT, int d_height = GR_DEFAULT, int d_depth = GR_DEFAULT);
+
 extern void gr_screen_resize(int width, int height);
 extern int gr_get_resolution_class(int width, int height);
 
 // Call this when your app ends.
-extern void gr_close();
+extern void gr_close(os::GraphicsOperations* graphicsOps);
 
 extern screen gr_screen;
 
@@ -963,13 +966,13 @@ bool gr_resize_screen_posf(float *x, float *y, float *w = NULL, float *h = NULL,
 // Does formatted printing.  This calls gr_string after formatting,
 // so if you don't need to format the string, then call gr_string
 // directly.
-extern void _cdecl gr_printf( int x, int y, const char * format, ... );
+extern void gr_printf( int x, int y, const char * format, ... );
 // same as gr_printf but positions text correctly in menus
-extern void _cdecl gr_printf_menu( int x, int y, const char * format, ... );
+extern void gr_printf_menu( int x, int y, const char * format, ... );
 // same as gr_printf_menu but accounts for menu zooming
-extern void _cdecl gr_printf_menu_zoomed( int x, int y, const char * format, ... );
+extern void gr_printf_menu_zoomed( int x, int y, const char * format, ... );
 // same as gr_printf but doesn't resize for non-standard resolutions
-extern void _cdecl gr_printf_no_resize( int x, int y, const char * format, ... );
+extern void gr_printf_no_resize( int x, int y, const char * format, ... );
 
 // Returns the size of the string in pixels in w and h
 extern void gr_get_string_size( int *w, int *h, const char * text, int len = 9999 );
@@ -1147,7 +1150,7 @@ __inline int gr_create_index_buffer(bool static_buffer = false)
 #define gr_pack_buffer					GR_CALL(*gr_screen.gf_pack_buffer)
 #define gr_config_buffer				GR_CALL(*gr_screen.gf_config_buffer)
 #define gr_destroy_buffer				 GR_CALL(*gr_screen.gf_destroy_buffer)
-__inline void gr_render_buffer(int start, vertex_buffer *bufferp, int texi, int flags = TMAP_FLAG_TEXTURED)
+__inline void gr_render_buffer(int start, vertex_buffer *bufferp, size_t texi, int flags = TMAP_FLAG_TEXTURED)
 {
 	(*gr_screen.gf_render_buffer)(start, bufferp, texi, flags);
 }

@@ -605,10 +605,10 @@ void geometry_shader_batcher::render_buffer(int buffer_handle, int flags)
 	buffer_offset = -1;
 }
 
-void geometry_shader_batcher::load_buffer(particle_pnt* buffer, int *n_verts)
+void geometry_shader_batcher::load_buffer(particle_pnt* buffer, size_t *n_verts)
 {
-	int verts_to_render = vertices.size();
-	int i;
+	size_t verts_to_render = vertices.size();
+	size_t i;
 
 	buffer_offset = *n_verts;
 
@@ -1085,7 +1085,7 @@ void batch_load_buffer_geometry_map_bitmaps(effect_vertex* buffer, int *n_verts)
 	}
 }
 
-void batch_load_buffer_geometry_shader_map_bitmaps(particle_pnt* buffer, int *n_verts)
+void batch_load_buffer_geometry_shader_map_bitmaps(particle_pnt* buffer, size_t *n_verts)
 {
 	for (SCP_map<int, g_sdr_batch_item>::iterator bi = geometry_shader_map.begin(); bi != geometry_shader_map.end(); ++bi) {
 
@@ -1106,8 +1106,8 @@ void geometry_batch_render(int stream_buffer)
 		return;
 	}
 
-	int n_to_render = geometry_batch_get_size();
-	int n_verts = 0;
+	size_t n_to_render = geometry_batch_get_size();
+	size_t n_verts = 0;
 
 	if ( Batch_geometry_buffer_size < (n_to_render * sizeof(particle_pnt)) ) {
 		if ( Batch_geometry_buffer != NULL ) {
@@ -1301,9 +1301,9 @@ int batch_get_size()
 	return n_to_render * 3;
 }
 
-int geometry_batch_get_size()
+size_t geometry_batch_get_size()
 {
-	int n_to_render = 0;
+	size_t n_to_render = 0;
 	SCP_map<int, g_sdr_batch_item>::iterator bi;
 
 	for (bi = geometry_shader_map.begin(); bi != geometry_shader_map.end(); ++bi) {

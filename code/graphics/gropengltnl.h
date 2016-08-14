@@ -66,21 +66,21 @@ bool gr_opengl_pack_buffer(const int buffer_id, vertex_buffer *vb);
 bool gr_opengl_config_buffer(const int buffer_id, vertex_buffer *vb, bool update_ibuffer_only);
 void gr_opengl_destroy_buffer(int idx);
 void gr_opengl_set_buffer(int idx);
-void gr_opengl_render_buffer(int start, vertex_buffer *bufferp, int texi, int flags);
+void gr_opengl_render_buffer(int start, vertex_buffer *bufferp, size_t texi, int flags);
 void gr_opengl_render_to_env(int FACE);
 
 void opengl_bind_buffer_object(int handle);
-void gr_opengl_update_buffer_data(int handle, uint size, void* data);
+void gr_opengl_update_buffer_data(int handle, size_t size, void* data);
 void gr_opengl_delete_buffer(int handle);
 
-void gr_opengl_update_transform_buffer(void* data, uint size);
-void gr_opengl_set_transform_buffer_offset(int offset);
+void gr_opengl_update_transform_buffer(void* data, size_t size);
+void gr_opengl_set_transform_buffer_offset(size_t offset);
 
 uint opengl_add_to_immediate_buffer(uint size, void *data);
 void opengl_reset_immediate_buffer();
 
 int gr_opengl_create_stream_buffer_object();
-void gr_opengl_render_stream_buffer(int buffer_handle, int offset, int n_verts, int flags);
+void gr_opengl_render_stream_buffer(int buffer_handle, size_t offset, size_t n_verts, int flags);
 
 void gr_opengl_set_thrust_scale(float scale = -1.0f);
 void gr_opengl_set_team_color(const team_color *colors);

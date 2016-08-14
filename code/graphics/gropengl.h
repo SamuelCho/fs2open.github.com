@@ -18,8 +18,8 @@
 
 const ubyte GL_zero_3ub[3] = { 0, 0, 0 };
 
-bool gr_opengl_init();
-void gr_opengl_cleanup(bool closing, int minimize=1);
+bool gr_opengl_init(os::GraphicsOperations* graphicsOps);
+void gr_opengl_cleanup(os::GraphicsOperations* graphicsOps, bool closing, int minimize=1);
 int opengl_check_for_errors(char *err_at = NULL);
 bool gr_opengl_is_capable(gr_capability capability);
 uint opengl_data_type_size(GLenum data_type);
@@ -40,5 +40,6 @@ extern int Use_PBOs;
 extern GLuint GL_vao;
 
 extern float GL_alpha_threshold;
+extern float GL_line_width;
 
 #endif

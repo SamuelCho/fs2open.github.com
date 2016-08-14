@@ -3387,13 +3387,7 @@ bool multi_create_sort_func(const multi_create_info &m1, const multi_create_info
 		test = stricmp(m1.name, m2.name);
 	}
 
-	if (test < 0) {
-		return true;
-	} else if (test > 0) {
-		return false;
-	} else {
-		return true;
-	}
+	return test < 0;
 }
 
 void multi_create_list_sort(int mode)
@@ -4654,7 +4648,7 @@ void multi_create_list_do()
 	int y_start = Mc_list_coords[gr_screen.res][MC_Y_COORD];		
 
 	start_index = multi_create_select_to_index(Multi_create_list_start);
-	stop_index = (Multi_create_list_mode == MULTI_CREATE_SHOW_MISSIONS) ? Multi_create_mission_list.size() : Multi_create_campaign_list.size();
+	stop_index = (int)((Multi_create_list_mode == MULTI_CREATE_SHOW_MISSIONS) ? Multi_create_mission_list.size() : Multi_create_campaign_list.size());
 
 	for (idx = start_index; idx < stop_index; idx++) {
 		multi_create_info *mcip;
@@ -4871,7 +4865,7 @@ void multi_create_list_blit_icons(int list_index, int y_start)
 	int max_index;
 
 	// get a pointer to the list item
-	max_index = (Multi_create_list_mode == MULTI_CREATE_SHOW_MISSIONS) ? Multi_create_mission_list.size() - 1 : Multi_create_campaign_list.size() - 1;
+	max_index = (int)((Multi_create_list_mode == MULTI_CREATE_SHOW_MISSIONS) ? Multi_create_mission_list.size() - 1 : Multi_create_campaign_list.size() - 1);
 
 	if ( (list_index < 0) || (list_index > max_index) ) {
 		return;

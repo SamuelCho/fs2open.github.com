@@ -14,6 +14,7 @@
  #include <direct.h>
  #include <io.h>
  #include <windows.h>
+ #include <Psapi.h>
 #ifndef _MINGW
  #include <crtdbg.h>
 #endif // !_MINGW
@@ -131,6 +132,7 @@
 #include "parse/scripting.h"
 #include "parse/sexp.h"
 #include "particle/particle.h"
+#include "particle/ParticleManager.h"
 #include "pilotfile/pilotfile.h"
 #include "playerman/managepilot.h"
 #include "playerman/player.h"
@@ -160,6 +162,10 @@
 #include "weapon/muzzleflash.h"
 #include "weapon/shockwave.h"
 #include "weapon/weapon.h"
+
+#include "SDLGraphicsOperations.h"
+
+#include <inttypes.h>
 
 #include <stdexcept>
 #include <SDL.h>
@@ -504,7 +510,7 @@ char Game_CDROM_dir[MAX_PATH_LEN];
 int init_cdrom();
 
 // How much RAM is on this machine. Set in WinMain
-uint FreeSpace_total_ram = 0;
+uint64_t FreeSpace_total_ram = 0;
 
 // game flash stuff
 float Game_flash_red = 0.0f;
@@ -523,6 +529,7 @@ sound_env Game_sound_env;
 sound_env Game_default_sound_env = { EAX_ENVIRONMENT_BATHROOM, 0.2f, 0.2f, 1.0f };
 int Game_sound_env_update_timestamp;
 
+static std::unique_ptr<SDLGraphicsOperations> sdlGraphicsOperations;
 
 fs_builtin_mission *game_find_builtin_mission(char *filename)
 {
@@ -565,7 +572,7 @@ void game_framerate_check_init()
 	Gf_critical_time = 0.0f;
 		
 	// nebula missions
-	if(The_mission.flags & MISSION_FLAG_FULLNEB){
+	if(The_mission.flags[Mission::Mission_Flags::Fullneb]){
 		Gf_critical = 15.0f;			
 	} else {
 		Gf_critical = 25.0f;
@@ -905,7 +912,8 @@ void game_level_close()
 		mission_brief_common_reset();		// close out parsed briefing/mission stuff
 		cam_close();
 		subtitles_close();
-		particle_close();
+		particle::ParticleManager::get()->clearSources();
+		particle::close();
 		trail_level_close();
 		ship_clear_cockpit_displays();
 		hud_level_close();
@@ -1000,7 +1008,7 @@ void game_level_init()
 	player_level_init();
 	shipfx_flash_init();			// Init the ship gun flash system.
 	game_flash_reset();			// Reset the flash effect
-	particle_init();				// Reset the particle system
+	particle::init();				// Reset the particle system
 	fireball_init();
 	debris_init();
 	shield_hit_init();				//	Initialize system for showing shield hits
@@ -1863,7 +1871,8 @@ void game_init()
 // SOUND INIT END
 /////////////////////////////
 
-	if ( gr_init() == false ) {
+	sdlGraphicsOperations.reset(new SDLGraphicsOperations());
+	if ( gr_init(sdlGraphicsOperations.get()) == false ) {
 		os::dialogs::Message(os::dialogs::MESSAGEBOX_ERROR, "Error intializing graphics!");
 		exit(1);
 		return;
@@ -1961,6 +1970,8 @@ void game_init()
 	// load non-darkening pixel defs
 	palman_load_pixels();
 
+	particle::ParticleManager::init();
+
 	iff_init();						// Goober5000 - this must be done even before species_defs :p
 	species_init();					// Load up the species defs - this needs to be done FIRST -- Kazan
 
@@ -1988,7 +1999,7 @@ void game_init()
 
 	// standalone's don't use the joystick and it seems to sometimes cause them to not get shutdown properly
 	if(!Is_standalone){
-		joy_init();
+		io::joystick::init();
 	}
 
 	player_controls_init();
@@ -2088,11 +2099,6 @@ MONITOR(NumVerts)
 MONITOR(BmpUsed)
 MONITOR(BmpNew)
 
-
-uint Mem_starttime_phys;
-uint Mem_starttime_pagefile;
-uint Mem_starttime_virtual;
-
 void game_get_framerate()
 {	
 	if (frame_int == -1) {
@@ -2187,38 +2193,36 @@ void game_show_framerate()
 		sx = gr_screen.center_offset_x + 20;
 		sy = gr_screen.center_offset_y + 100 + (line_height * 2);
 
-		char mem_buffer[50];
+		SCP_string mem_buffer;
 
-		MEMORYSTATUS mem_stats;
-		GlobalMemoryStatus(&mem_stats);
+		PROCESS_MEMORY_COUNTERS_EX process_stats;
+		process_stats.cb = sizeof(process_stats);
 
-		// on win2k+, it should be == -1 if >4gig (indicates wrap around)
-		if ( ((int)Mem_starttime_phys == -1) || ((int)mem_stats.dwAvailPhys == -1) )
-			sprintf(mem_buffer, "Using Physical: *** (>4G)");
-		else
-			sprintf(mem_buffer,"Using Physical: %d Meg",(Mem_starttime_phys - mem_stats.dwAvailPhys)/1024/1024);
+		if (GetProcessMemoryInfo(GetCurrentProcess(), reinterpret_cast<PPROCESS_MEMORY_COUNTERS>(&process_stats), sizeof(process_stats))) {
+			sprintf(mem_buffer, "Private Usage: " SIZE_T_ARG " Meg", process_stats.PrivateUsage / 1024 / 1024);
+			gr_string(sx, sy, mem_buffer.c_str(), GR_RESIZE_NONE);
+			sy += line_height;
 
-		gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
-		sy += line_height;
-		sprintf(mem_buffer,"Using Pagefile: %d Meg",(Mem_starttime_pagefile - mem_stats.dwAvailPageFile)/1024/1024);
-		gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
-		sy += line_height;
-		sprintf(mem_buffer,"Using Virtual:  %d Meg",(Mem_starttime_virtual - mem_stats.dwAvailVirtual)/1024/1024);
-		gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
-		sy += line_height * 2;
+			sprintf(mem_buffer, "Working set size: " SIZE_T_ARG " Meg", process_stats.WorkingSetSize / 1024 / 1024);
+			gr_string(sx, sy, mem_buffer.c_str(), GR_RESIZE_NONE);
+			sy += line_height;
+			sy += line_height;
+		}
 
-		if ( ((int)mem_stats.dwAvailPhys == -1) || ((int)mem_stats.dwTotalPhys == -1) )
-			sprintf(mem_buffer, "Physical Free: *** / *** (>4G)");
-		else
-			sprintf(mem_buffer,"Physical Free: %d / %d Meg",mem_stats.dwAvailPhys/1024/1024, mem_stats.dwTotalPhys/1024/1024);
+		MEMORYSTATUSEX mem_stats;
+		mem_stats.dwLength = sizeof(mem_stats);
+		if (GlobalMemoryStatusEx(&mem_stats)) {
+			sprintf(mem_buffer, "Physical Free: %" PRIu64 " / %" PRIu64 " Meg", mem_stats.ullAvailPhys / 1024 / 1024, mem_stats.ullTotalPhys / 1024 / 1024);
+			gr_string(sx, sy, mem_buffer.c_str(), GR_RESIZE_NONE);
+			sy += line_height;
 
-		gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
-		sy += line_height;
-		sprintf(mem_buffer,"Pagefile Free: %d / %d Meg",mem_stats.dwAvailPageFile/1024/1024, mem_stats.dwTotalPageFile/1024/1024);
-		gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
-		sy += line_height;
-		sprintf(mem_buffer,"Virtual Free:  %d / %d Meg",mem_stats.dwAvailVirtual/1024/1024, mem_stats.dwTotalVirtual/1024/1024);
-		gr_string( sx, sy, mem_buffer, GR_RESIZE_NONE);
+			sprintf(mem_buffer, "Pagefile Free: %" PRIu64 " / %" PRIu64 " Meg", mem_stats.ullAvailPageFile / 1024 / 1024, mem_stats.ullTotalPageFile / 1024 / 1024);
+			gr_string(sx, sy, mem_buffer.c_str(), GR_RESIZE_NONE);
+			sy += line_height;
+
+			sprintf(mem_buffer, "Virtual Free:  %" PRIu64 " / %" PRIu64 " Meg", mem_stats.ullAvailVirtual / 1024 / 1024, mem_stats.ullTotalVirtual / 1024 / 1024);
+			gr_string(sx, sy, mem_buffer.c_str(), GR_RESIZE_NONE);
+		}
 	}
 #endif
 
@@ -2279,7 +2283,7 @@ void game_show_framerate()
 		gr_set_color_fast(&HUD_color_debug);
 
 		{
-			gr_printf_no_resize( sx, sy, NOX("DYN: %d KB\n"), memory::get_used_memory()/1024 );
+			gr_printf_no_resize( sx, sy, NOX("DYN: " SIZE_T_ARG " KB\n"), memory::get_used_memory()/1024 );
 			sy += line_height;
 		}	
 
@@ -2297,8 +2301,8 @@ void game_show_framerate()
 
 		{
 			extern int GL_textures_in;
-			extern int GL_vertex_data_in;
-			gr_printf_no_resize( sx, sy, NOX("VRAM: %d KB\n"), (GL_textures_in + GL_vertex_data_in)/1024 );
+			extern size_t GL_vertex_data_in;
+			gr_printf_no_resize( sx, sy, NOX("VRAM: " SIZE_T_ARG " KB\n"), (GL_textures_in + GL_vertex_data_in)/1024 );
 			sy += line_height;
 		}
 	}
@@ -2813,7 +2817,7 @@ void game_tst_mark(object *objp, ship *shipp)
 	}
 
 	tst_pos = objp->pos;
-	if(sip->flags & (SIF_BIG_SHIP | SIF_HUGE_SHIP)){
+	if(sip->is_big_or_huge()){
 		tst_big = 1;
 	}
 	tst = 3;
@@ -2833,14 +2837,14 @@ void player_repair_frame(float frametime)
 			if(MULTI_CONNECTED(Net_players[idx]) && (Net_player != NULL) && (Net_player->player_id != Net_players[idx].player_id) && (Net_players[idx].m_player != NULL) && (Net_players[idx].m_player->objnum >= 0) && (Net_players[idx].m_player->objnum < MAX_OBJECTS)){
 
 				// don't rearm/repair if the player is dead or dying/departing
-				if ( !NETPLAYER_IS_DEAD(np) && !(Ships[Objects[np->m_player->objnum].instance].flags & (SF_DYING|SF_DEPARTING)) ) {
+				if ( !NETPLAYER_IS_DEAD(np) && !(Ships[Objects[np->m_player->objnum].instance].is_dying_or_departing()) ) {
 					ai_do_repair_frame(&Objects[Net_players[idx].m_player->objnum],&Ai_info[Ships[Objects[Net_players[idx].m_player->objnum].instance].ai_index],frametime);
 				}
 			}
 		}
 	}	
 
-	if ( (Player_obj != NULL) && (Player_obj->type == OBJ_SHIP) && !(Game_mode & GM_STANDALONE_SERVER) && (Player_ship != NULL) && !(Player_ship->flags & SF_DYING) ) {
+	if ( (Player_obj != NULL) && (Player_obj->type == OBJ_SHIP) && !(Game_mode & GM_STANDALONE_SERVER) && (Player_ship != NULL) && !(Player_ship->flags[Ship::Ship_Flags::Dying]) ) {
 		ai_do_repair_frame(Player_obj, &Ai_info[Ships[Player_obj->instance].ai_index], frametime);
 	}
 }
@@ -2993,7 +2997,7 @@ void say_view_target()
 			char view_target_name[128] = "";
 			switch(Objects[Player_ai->target_objnum].type) {
 			case OBJ_SHIP:
-				if (Ships[Objects[Player_ai->target_objnum].instance].flags2 & SF2_HIDE_SHIP_NAME) {
+				if (Ships[Objects[Player_ai->target_objnum].instance].flags[Ship::Ship_Flags::Hide_ship_name]) {
 					strcpy_s(view_target_name, "targeted ship");
 				} else {
 					strcpy_s(view_target_name, Ships[Objects[Player_ai->target_objnum].instance].ship_name);
@@ -3303,7 +3307,7 @@ void game_environment_map_gen()
 		gr_screen.envmap_render_target = -1;
 	}
 
-	if ( Dynamic_environment || (The_mission.flags & MISSION_FLAG_SUBSPACE) ) {
+	if ( Dynamic_environment || (The_mission.flags[Mission::Mission_Flags::Subspace]) ) {
 		Dynamic_environment = true;
 		gen_flags &= ~BMP_FLAG_RENDER_TARGET_STATIC;
 		gen_flags |= BMP_FLAG_RENDER_TARGET_DYNAMIC;
@@ -3360,7 +3364,7 @@ camid game_render_frame_setup()
 
 	//First, make sure we take into account 2D Missions.
 	//These replace the normal player in-cockpit view with a topdown view.
-	if(The_mission.flags & MISSION_FLAG_2D_MISSION)
+	if(The_mission.flags[Mission::Mission_Flags::Mission_2d])
 	{
 		if(!Viewer_mode)
 		{
@@ -3734,7 +3738,7 @@ void game_render_frame( camid cid )
 	render_shields();
 
 	PROFILE("Trails", trail_render_all());						// render missilie trails after everything else.
-	PROFILE("Particles", particle_render_all());					// render particles after everything else.	
+	PROFILE("Particles", particle::render_all());					// render particles after everything else.	
 	
 #ifdef DYN_CLIP_DIST
 	gr_end_proj_matrix();
@@ -3768,7 +3772,7 @@ void game_render_frame( camid cid )
 	//This is so we can change the minimum clipping distance without messing everything up.
 	if ( Viewer_obj
 		&& (Viewer_obj->type == OBJ_SHIP)
-		&& (Ship_info[Ships[Viewer_obj->instance].ship_info_index].flags2 & SIF2_SHOW_SHIP_MODEL)
+		&& (Ship_info[Ships[Viewer_obj->instance].ship_info_index].flags[Ship::Info_Flags::Show_ship_model])
 		&& (!Viewer_mode || (Viewer_mode & VM_PADLOCK_ANY) || (Viewer_mode & VM_OTHER_SHIP) || (Viewer_mode & VM_TRACK)) )
 	{
 		gr_post_process_save_zbuffer();
@@ -3909,7 +3913,7 @@ void game_simulation_frame()
 			sip = &Ship_info[shipp->ship_info_index];
 
 			// only blow up small ships			
-			if((sip->flags & SIF_SMALL_SHIP) && (multi_find_player_by_object(&Objects[moveup->objnum]) < 0) && (shipp->team == Iff_traitor) ){							
+			if((sip->is_small_ship()) && (multi_find_player_by_object(&Objects[moveup->objnum]) < 0) && (shipp->team == Iff_traitor) ){							
 				// function to simply explode a ship where it is currently at
 				ship_self_destruct( &Objects[moveup->objnum] );					
 			}
@@ -4030,7 +4034,8 @@ void game_simulation_frame()
 
 		if (!physics_paused)	{
 			// Move particle system
-			PROFILE("Move Particles", particle_move_all(flFrametime));	
+			PROFILE("Move Particles", particle::move_all(flFrametime));
+			PROFILE("Process Particle Effects", particle::ParticleManager::get()->doFrame(flFrametime));
 
 			// Move missile trails
 			PROFILE("Move Trails", trail_move_all(flFrametime));		
@@ -4083,7 +4088,7 @@ void game_maybe_do_dead_popup(float frametime)
 
 			// this should only happen during a red alert mission
 			case 3:				
-				if (The_mission.flags & MISSION_FLAG_RED_ALERT)
+				if (The_mission.flags[Mission::Mission_Flags::Red_alert])
 				{
 					// choose the previous mission
 					mission_campaign_previous_mission();
@@ -4771,7 +4776,7 @@ void game_do_frame()
 	game_set_frametime(GS_STATE_GAME_PLAY);
 	game_update_missiontime();
 
-//	if (Player_ship->flags & SF_DYING)
+//	if (Player_ship->flags[Ship::Ship_Flags::Dying])
 //		flFrametime /= 15.0;
 
 	if (Game_mode & GM_STANDALONE_SERVER) {
@@ -4807,7 +4812,6 @@ void game_flush()
 {
 	key_flush();
 	mouse_flush();
-	joy_flush();
 	snazzy_flush();
 
 	Joymouse_button_status = 0;
@@ -4868,9 +4872,14 @@ int game_poll()
 	if (os_foreground() && !io::mouse::CursorManager::get()->isCursorShown() && (Use_joy_mouse))	{
 		// Move the mouse cursor with the joystick
 		int mx, my, dx, dy;
-		int jx, jy, jz, jr;
+		int jx, jy;
 
-		joy_get_pos( &jx, &jy, &jz, &jr );
+		int raw_axis[2];
+
+		joystick_read_raw_axis(2, raw_axis);
+
+		jx = joy_get_scaled_reading(raw_axis[0]);
+		jy = joy_get_scaled_reading(raw_axis[1]);
 
 		dx = fl2i(f2fl(jx)*flFrametime*500.0f);
 		dy = fl2i(f2fl(jy)*flFrametime*500.0f);
@@ -6169,7 +6178,7 @@ void mouse_force_pos(int x, int y);
 			}
 
 			Game_subspace_effect = 0;
-			if (The_mission.flags & MISSION_FLAG_SUBSPACE) {
+			if (The_mission.flags[Mission::Mission_Flags::Subspace]) {
 				Game_subspace_effect = 1;
 				if( !(Game_mode & GM_STANDALONE_SERVER) ){	
 					game_start_subspace_ambient_sound();
@@ -6717,7 +6726,7 @@ void game_do_state(int state)
 
 #ifdef _WIN32
 // return 0 if there is enough RAM to run FreeSpace, otherwise return -1
-int game_do_ram_check(uint ram_in_bytes)
+int game_do_ram_check(uint64_t ram_in_bytes)
 {
 	if ( ram_in_bytes < 30*1024*1024 )	{
 		int allowed_to_run = 1;
@@ -6910,9 +6919,12 @@ DCF(pofspew, "Spews POF info without shutting down the game")
 	game_spew_pof_info();
 }
 
-// returns:
-// 0 on an error
-// 1 on a clean exit
+/**
+* Does some preliminary checks and then enters main event loop.
+*
+* @returns 0 on a clean exit, or
+* @returns 1 on an error
+*/
 int game_main(int argc, char *argv[])
 {
 	int state;
@@ -6925,20 +6937,16 @@ int game_main(int argc, char *argv[])
 
 #ifdef _WIN32
 	// Find out how much RAM is on this machine
-	MEMORYSTATUS ms;
-	ms.dwLength = sizeof(MEMORYSTATUS);
-	GlobalMemoryStatus(&ms);
-	FreeSpace_total_ram = ms.dwTotalPhys;
-
-	Mem_starttime_phys      = ms.dwAvailPhys;
-	Mem_starttime_pagefile  = ms.dwAvailPageFile;
-	Mem_starttime_virtual   = ms.dwAvailVirtual;
+	MEMORYSTATUSEX ms;
+	ms.dwLength = sizeof(ms);
+	GlobalMemoryStatusEx(&ms);
+	FreeSpace_total_ram = ms.ullTotalPhys;
 
 	if ( game_do_ram_check(FreeSpace_total_ram) == -1 ) {
 		return 1;
 	}
 
-	if ( ms.dwTotalVirtual < 1024 )	{
+	if ( ms.ullTotalVirtual < 1024 ) {
 		os::dialogs::Message( os::dialogs::MESSAGEBOX_ERROR, XSTR( "FreeSpace requires virtual memory to run.\r\n", 196), XSTR( "No Virtual Memory", 197) );
 		return 1;
 	}
@@ -7100,11 +7108,13 @@ void game_shutdown(void)
 		Pilot.save_savefile();
 	}
 
+	particle::ParticleManager::shutdown();
+
 	// load up common multiplayer icons
 	multi_unload_common_icons();
 	hud_close();	
 	fireball_close();				// free fireball system
-	particle_close();			// close out the particle system
+	particle::close();			// close out the particle system
 	weapon_close();					// free any memory that was allocated for the weapons
 	ship_close();					// free any memory that was allocated for the ships
 	hud_free_scrollback_list();// free space allocated to store hud messages in hud scrollback
@@ -7132,13 +7142,12 @@ void game_shutdown(void)
 	// the menu close functions will unload the bitmaps if they were displayed during the game
 	main_hall_close();
 	training_menu_close();
-	gr_close();
 
 	// free left over memory from table parsing
 	player_tips_close();
 
 	control_config_common_close();
-	joy_close();
+	io::joystick::shutdown();
 
 	audiostream_close();
 	snd_close();
@@ -7149,6 +7158,8 @@ void game_shutdown(void)
 	model_free_all();
 	bm_unload_all();			// unload/free bitmaps, has to be called *after* model_free_all()!
 
+	gr_close(sdlGraphicsOperations.get());
+	sdlGraphicsOperations.reset();
 	os_cleanup();
 
 	// although the comment in cmdline.cpp said this isn't needed,
@@ -8570,11 +8581,6 @@ int actual_main(int argc, char *argv[])
 
 	::CoInitialize(NULL);
 
-#ifdef _DEBUG
-	void memblockinfo_output_memleak();
-	atexit(memblockinfo_output_memleak);
-#endif
-
 	SCP_mspdbcs_Initialise();
 #else
 #ifdef APPLE_APP
@@ -8594,7 +8600,7 @@ int actual_main(int argc, char *argv[])
 #else
 	try {
 #endif
-		result = !game_main(argc, argv);
+		result = game_main(argc, argv);
 #if defined(GAME_ERRORLOG_TXT) && defined(_MSC_VER)
 	}
 	__except (RecordExceptionInfo(GetExceptionInformation(), "FreeSpace 2 Main Thread")) {

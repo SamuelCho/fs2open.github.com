@@ -427,8 +427,10 @@ int beam_fire(beam_fire_info *fire_info)
 		beam_get_binfo(new_item, fire_info->accuracy, wip->b_info.beam_shots);			// to fill in b_info	- the set of directional aim vectors
 	}	
 
+    flagset<Object::Object_Flags> default_flags;
+    default_flags.set(Object::Object_Flags::Collides);
 	// create the associated object
-	objnum = obj_create(OBJ_BEAM, ((fire_info->shooter != NULL) ? OBJ_INDEX(fire_info->shooter) : -1), new_item - Beams, &vmd_identity_matrix, &vmd_zero_vector, 1.0f, OF_COLLIDES);
+	objnum = obj_create(OBJ_BEAM, ((fire_info->shooter != NULL) ? OBJ_INDEX(fire_info->shooter) : -1), BEAM_INDEX(new_item), &vmd_identity_matrix, &vmd_zero_vector, 1.0f, default_flags);
 	if(objnum < 0){
 		beam_delete(new_item);
 		nprintf(("General", "obj_create() failed for beam weapon! bah!\n"));
@@ -554,7 +556,9 @@ int beam_fire_targeting(fighter_beam_fire_info *fire_info)
 	// type c is a very special weapon type - binfo has no meaning
 
 	// create the associated object
-	objnum = obj_create(OBJ_BEAM, OBJ_INDEX(fire_info->shooter), new_item - Beams, &vmd_identity_matrix, &vmd_zero_vector, 1.0f, OF_COLLIDES);
+    flagset<Object::Object_Flags> default_flags;
+    default_flags.set(Object::Object_Flags::Collides);
+	objnum = obj_create(OBJ_BEAM, OBJ_INDEX(fire_info->shooter), BEAM_INDEX(new_item), &vmd_identity_matrix, &vmd_zero_vector, 1.0f, default_flags);
 
 	if(objnum < 0){
 		beam_delete(new_item);
@@ -1269,7 +1273,7 @@ void beam_generate_muzzle_particles(beam *b)
 	weapon_info *wip;
 	vec3d turret_norm, turret_pos, particle_pos, particle_dir;
 	matrix m;
-	particle_info pinfo;
+	particle::particle_info pinfo;
 
 	// if our hack stamp has expired
 	if(!((b->Beam_muzzle_stamp == -1) || timestamp_elapsed(b->Beam_muzzle_stamp))){
@@ -1319,7 +1323,7 @@ void beam_generate_muzzle_particles(beam *b)
 			vm_vec_add2(&particle_dir, &b->objp->phys_info.vel);	//move along with our parent
 		}
 
-		memset(&pinfo, 0, sizeof(particle_info));
+		memset(&pinfo, 0, sizeof(particle::particle_info));
 		pinfo.pos = particle_pos;
 		pinfo.vel = particle_dir;
 		pinfo.lifetime = p_life;
@@ -1327,10 +1331,9 @@ void beam_generate_muzzle_particles(beam *b)
 		pinfo.attached_sig = 0;
 		pinfo.rad = wip->b_info.beam_particle_radius;
 		pinfo.reverse = 1;
-		pinfo.type = PARTICLE_BITMAP;
+		pinfo.type = particle::PARTICLE_BITMAP;
 		pinfo.optional_data = wip->b_info.beam_particle_ani.first_frame;
-		pinfo.tracer_length = -1.0f;		
-		particle_create(&pinfo);
+		particle::create(&pinfo);
 	}
 }
 
@@ -2187,7 +2190,7 @@ void beam_aim(beam *b)
 		}
 
 		// if we're shooting at a big ship - shoot directly at the model
-		if((b->target != nullptr) && (b->target->type == OBJ_SHIP) && (Ship_info[Ships[b->target->instance].ship_info_index].flags & (SIF_BIG_SHIP | SIF_HUGE_SHIP))){
+		if((b->target != nullptr) && (b->target->type == OBJ_SHIP) && (Ship_info[Ships[b->target->instance].ship_info_index].is_big_or_huge())){
 			if ((b->subsys != nullptr) && (b->subsys->system_info->flags2 & MSS_FLAG2_SHARE_FIRE_DIRECTION)) {
 				vec3d pnt;
 				vm_vec_unrotate(&pnt, &b->binfo.dir_a, &b->target->orient);
@@ -2494,16 +2497,16 @@ int beam_collide_ship(obj_pair *pair)
 	// check shields for impact
 	// (tooled ships are probably not going to be maintaining a shield over their exit hole,
 	// therefore we need only check the entrance, just as with conventional weapons)
-	if (!(ship_objp->flags & OF_NO_SHIELDS))
+	if (!(ship_objp->flags[Object::Object_Flags::No_shields]))
 	{
 		// pick out the shield quadrant
 		if (shield_collision)
 			quadrant_num = get_quadrant(&mc_shield.hit_point, ship_objp);
-		else if (hull_enter_collision && (sip->flags2 & SIF2_SURFACE_SHIELDS))
+		else if (hull_enter_collision && (sip->flags[Ship::Info_Flags::Surface_shields]))
 			quadrant_num = get_quadrant(&mc_hull_enter.hit_point, ship_objp);
 
 		// make sure that the shield is active in that quadrant
-		if ((quadrant_num >= 0) && ((shipp->flags & SF_DYING) || !ship_is_shield_up(ship_objp, quadrant_num)))
+		if ((quadrant_num >= 0) && ((shipp->flags[Ship::Ship_Flags::Dying]) || !ship_is_shield_up(ship_objp, quadrant_num)))
 			quadrant_num = -1;
 
 		// see if we hit the shield
@@ -3099,35 +3102,32 @@ void beam_handle_collisions(beam *b)
 		// KOMET_EXT -->
 
 		// draw flash, explosion
-		if (draw_effects && ((wi->piercing_impact_explosion_radius > 0) || (wi->flash_impact_explosion_radius > 0))) {
-			float flash_rad = (1.2f + 0.007f * (float)(rand()%100));
+		if (draw_effects && ((wi->piercing_impact_effect >= 0) || (wi->flash_impact_weapon_expl_effect >= 0))) {
 			float rnd = frand();
 			int do_expl = 0;
-			if((rnd < 0.2f || do_damage) && wi->impact_weapon_expl_index >= 0){
+			if((rnd < 0.2f || do_damage) && wi->impact_weapon_expl_effect >= 0){
 				do_expl = 1;
 			}
-			float ani_radius;
 			vec3d temp_pos, temp_local_pos;
 				
 			vm_vec_sub(&temp_pos, &b->f_collisions[idx].cinfo.hit_point_world, &Objects[target].pos);
 			vm_vec_rotate(&temp_local_pos, &temp_pos, &Objects[target].orient);
 						
-			if (wi->flash_impact_explosion_radius > 0) {
-				ani_radius = wi->flash_impact_explosion_radius * flash_rad;	
-				if (wi->flash_impact_weapon_expl_index > -1) {
-					int ani_handle = Weapon_explosions.GetAnim(wi->flash_impact_weapon_expl_index, &b->f_collisions[idx].cinfo.hit_point_world, ani_radius);
-					particle_create( &temp_local_pos, &vmd_zero_vector, 0.005f * ani_radius, ani_radius, PARTICLE_BITMAP_PERSISTENT, ani_handle, -1, &Objects[target] );
-				} else {
-					particle_create( &temp_local_pos, &vmd_zero_vector, 0.005f * ani_radius, ani_radius, PARTICLE_SMOKE, 0, -1, &Objects[target] );
-				}
+			if (wi->flash_impact_weapon_expl_effect >= 0) {
+				auto particleSource = particle::ParticleManager::get()->createSource(wi->flash_impact_weapon_expl_effect);
+				particleSource.moveToObject(&Objects[target], &temp_local_pos);
+
+				particleSource.finish();
 			}
+
 			if(do_expl){
-				ani_radius = 0.7f * wi->impact_explosion_radius * flash_rad;
-				int ani_handle = Weapon_explosions.GetAnim(wi->impact_weapon_expl_index, &b->f_collisions[idx].cinfo.hit_point_world, ani_radius);
-				particle_create( &temp_local_pos, &vmd_zero_vector, 0.0f, ani_radius, PARTICLE_BITMAP_PERSISTENT, ani_handle, -1, &Objects[target] );
+				auto particleSource = particle::ParticleManager::get()->createSource(wi->impact_weapon_expl_effect);
+				particleSource.moveToObject(&Objects[target], &temp_local_pos);
+
+				particleSource.finish();
 			}
 			
-			if (wi->piercing_impact_explosion_radius > 0) {
+			if (wi->piercing_impact_effect > 0) {
 				vec3d fvec;
 				vm_vec_sub(&fvec, &b->last_shot, &b->last_start);
 
@@ -3180,38 +3180,11 @@ void beam_handle_collisions(beam *b)
 						
 						// stream of fire for big ships
 						if (widest <= Objects[target].radius * BEAM_AREA_PERCENT) {
+							auto particleSource = particle::ParticleManager::get()->createSource(wi->piercing_impact_effect);
+							particleSource.moveTo(&b->f_collisions[idx].cinfo.hit_point_world);
+							particleSource.setOrientationFromNormalizedVec(&fvec);
 
-							vec3d expl_vel, expl_splash_vel;
-
-							float flame_size = wi->piercing_impact_explosion_radius * frand_range(0.5f,2.0f);
-							float base_v, back_v;
-							vec3d rnd_vec;
-
-							vm_vec_rand_vec_quick(&rnd_vec);
-
-							if (wi->piercing_impact_particle_velocity != 0.0f)
-								base_v = wi->piercing_impact_particle_velocity;
-							else
-								base_v = wi->piercing_impact_explosion_radius;
-
-							if (wi->piercing_impact_particle_back_velocity != 0.0f)
-								back_v = wi->piercing_impact_particle_back_velocity;
-							else
-								back_v = base_v * (-0.2f);
-
-							vm_vec_copy_scale( &expl_vel, &fvec, base_v * frand_range(1.0f, 2.0f));
-							vm_vec_copy_scale( &expl_splash_vel, &fvec, back_v * frand_range(1.0f, 2.0f));
-							vm_vec_scale_add2( &expl_vel, &rnd_vec, base_v * wi->piercing_impact_particle_variance);
-							vm_vec_scale_add2( &expl_splash_vel, &rnd_vec, back_v * wi->piercing_impact_particle_variance);
-
-							if (wi->piercing_impact_weapon_expl_index > -1) {
-								int ani_handle = Weapon_explosions.GetAnim(wi->piercing_impact_weapon_expl_index, &b->f_collisions[idx].cinfo.hit_point_world, flame_size);
-								particle_create( &b->f_collisions[idx].cinfo.hit_point_world, &expl_vel, 0.0f, flame_size, PARTICLE_BITMAP_PERSISTENT, ani_handle );
-								particle_create( &b->f_collisions[idx].cinfo.hit_point_world, &expl_splash_vel, 0.0f, flame_size, PARTICLE_BITMAP_PERSISTENT, ani_handle );
-							} else {
-								particle_create( &b->f_collisions[idx].cinfo.hit_point_world, &expl_vel, 0.3f, flame_size, PARTICLE_SMOKE );
-								particle_create( &b->f_collisions[idx].cinfo.hit_point_world, &expl_splash_vel, 0.6f, flame_size, PARTICLE_SMOKE );
-							}
+							particleSource.finish();
 						}
 					}
 				}
@@ -3220,9 +3193,11 @@ void beam_handle_collisions(beam *b)
 		} else {
 			if(draw_effects && do_damage && !physics_paused){
 				// maybe draw an explosion, if we aren't hitting shields
-				if ( (wi->impact_weapon_expl_index >= 0) && (b->f_collisions[idx].quadrant < 0) ) {
-					int ani_handle = Weapon_explosions.GetAnim(wi->impact_weapon_expl_index, &b->f_collisions[idx].cinfo.hit_point_world, wi->impact_explosion_radius);
-					particle_create( &b->f_collisions[idx].cinfo.hit_point_world, &vmd_zero_vector, 0.0f, wi->impact_explosion_radius, PARTICLE_BITMAP_PERSISTENT, ani_handle );
+				if ( (wi->impact_weapon_expl_effect >= 0) && (b->f_collisions[idx].quadrant < 0) ) {
+					auto particleSource = particle::ParticleManager::get()->createSource(wi->impact_weapon_expl_effect);
+					particleSource.moveTo(&b->f_collisions[idx].cinfo.hit_point_world);
+
+					particleSource.finish();
 				}
 			}
 		}
@@ -3339,7 +3314,7 @@ void beam_get_cull_vals(object *objp, beam *b, float *cull_dot, float *cull_dist
 
 	case OBJ_SHIP:
 		// for large ships, cull at some multiple of the radius
-		if(Ship_info[Ships[objp->instance].ship_info_index].flags & (SIF_BIG_SHIP | SIF_HUGE_SHIP)){
+		if(Ship_info[Ships[objp->instance].ship_info_index].is_big_or_huge()){
 			*cull_dot = 1.0f - ((1.0f - beam_get_cone_dot(b)) * 1.25f);
 			
 			*cull_dist = (objp->radius * 1.3f) * (objp->radius * 1.3f);

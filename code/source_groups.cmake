@@ -252,6 +252,7 @@ set (file_root_globalincs
 	globalincs/version.h
 	globalincs/vmallocator.h
 	globalincs/scp_defines.h
+	globalincs/flagset.h
 )
 
 IF (WIN32)
@@ -305,8 +306,8 @@ set (file_root_graphics
 	graphics/tmapper.h
 	graphics/shadows.cpp
 	graphics/shadows.h
-	graphics/materials.cpp
-	graphics/materials.h
+	graphics/material.cpp
+	graphics/material.h
 )
 
 # Graphics -> OpenGLGr files
@@ -563,6 +564,7 @@ set (file_root_mission
 	mission/missionparse.h
 	mission/missiontraining.cpp
 	mission/missiontraining.h
+	mission/mission_flags.h
 )
 
 # MissionUI files
@@ -609,6 +611,7 @@ set (file_root_model
 	model/modelrender.h
 	model/modelrender.cpp
 	model/modelsinc.h
+	model/model_flags.h
 )
 
 # Nebula files
@@ -721,6 +724,7 @@ set (file_root_object
 	object/parseobjectdock.h
 	object/waypoint.cpp
 	object/waypoint.h
+	object/object_flags.h
 )
 
 # Observer files
@@ -767,6 +771,34 @@ set (file_root_parse
 set (file_root_particle
 	particle/particle.cpp
 	particle/particle.h
+	particle/ParticleEffect.h
+	particle/ParticleManager.cpp
+	particle/ParticleManager.h
+	particle/ParticleSource.cpp
+	particle/ParticleSource.h
+	particle/ParticleSourceWrapper.cpp
+	particle/ParticleSourceWrapper.h
+)
+
+set(file_root_particle_effects
+	particle/effects/SingleParticleEffect.cpp
+	particle/effects/SingleParticleEffect.h
+	particle/effects/BeamPiercingEffect.cpp
+	particle/effects/BeamPiercingEffect.h
+	particle/effects/ParticleEmitterEffect.cpp
+	particle/effects/ParticleEmitterEffect.h
+	particle/effects/CompositeEffect.cpp
+	particle/effects/CompositeEffect.h
+	particle/effects/ConeGeneratorEffect.cpp
+	particle/effects/ConeGeneratorEffect.h
+)
+
+set(file_root_particle_util
+	particle/util/EffectTiming.cpp
+	particle/util/EffectTiming.h
+	particle/util/RandomRange.h
+	particle/util/ParticleProperties.cpp
+	particle/util/ParticleProperties.h
 )
 
 # PcxUtils files
@@ -856,6 +888,7 @@ set (file_root_ship
 	ship/shiphit.cpp
 	ship/shiphit.h
 	ship/subsysdamage.h
+	ship/ship_flags.h
 )
 
 # Sound files
@@ -964,6 +997,7 @@ set (file_root_weapon
 	weapon/trails.h
 	weapon/weapon.h
 	weapon/weapons.cpp
+	weapon/weapon_flags.h
 )
 
 # Windows stubs files
@@ -1039,6 +1073,8 @@ source_group("OsApi"                              FILES ${file_root_osapi})
 source_group("Palman"                             FILES ${file_root_palman})
 source_group("Parse"                              FILES ${file_root_parse})
 source_group("Particle"                           FILES ${file_root_particle})
+source_group("Particle\\Effects"                  FILES ${file_root_particle_effects})
+source_group("Particle\\Util"                     FILES ${file_root_particle_util})
 source_group("PcxUtils"                           FILES ${file_root_pcxutils})
 source_group("Physics"                            FILES ${file_root_physics})
 source_group("PilotFile"                          FILES ${file_root_pilotfile})
@@ -1120,6 +1156,8 @@ set (file_root
 	${file_root_palman}
 	${file_root_parse}
 	${file_root_particle}
+	${file_root_particle_effects}
+	${file_root_particle_util}
 	${file_root_pcxutils}
 	${file_root_physics}
 	${file_root_pilotfile}

@@ -49,7 +49,7 @@ int Debris_num_submodels = 0;
 
 #define	MAX_DEBRIS_DIST					10000.0f			//	Debris goes away if it's this far away.
 #define	DEBRIS_DISTANCE_CHECK_TIME		(10*1000)		//	Check every 10 seconds.
-#define	DEBRIS_INDEX(dp) (dp-Debris)
+#define	DEBRIS_INDEX(dp) (int)(dp-Debris)
 
 #define	MAX_SPEED_SMALL_DEBRIS		200					// maximum velocity of small debris piece
 #define	MAX_SPEED_BIG_DEBRIS			150					// maximum velocity of big debris piece
@@ -78,7 +78,7 @@ static void debris_start_death_roll(object *debris_obj, debris *debris_p)
 		}
 	}
 
-  	debris_obj->flags |= OF_SHOULD_BE_DEAD;
+    debris_obj->flags.set(Object::Object_Flags::Should_be_dead);
 }
 
 /**
@@ -201,7 +201,7 @@ void maybe_delete_debris(debris *db)
 				db->next_distance_check = timestamp(DEBRIS_DISTANCE_CHECK_TIME);
 		} else {
 			for ( objp = GET_FIRST(&obj_used_list); objp !=END_OF_LIST(&obj_used_list); objp = GET_NEXT(objp) ) {
-				if (objp->flags & OF_PLAYER_SHIP) {
+				if (objp->flags[Object::Object_Flags::Player_ship]) {
 					if (vm_vec_dist_quick(&objp->pos, &Objects[db->objnum].pos) < MAX_DEBRIS_DIST) {
 						db->next_distance_check = timestamp(DEBRIS_DISTANCE_CHECK_TIME);
 						return;
@@ -378,7 +378,7 @@ int debris_find_oldest()
 	oldest_time = 0x7fffffff;
 
 	for ( db = GET_FIRST(&Hull_debris_list); db != END_OF_LIST(&Hull_debris_list); db = GET_NEXT(db) ) {
-		if ( (db->time_started < oldest_time) && !(Objects[db->objnum].flags & OF_SHOULD_BE_DEAD) ) {
+		if ( (db->time_started < oldest_time) && !(Objects[db->objnum].flags[Object::Object_Flags::Should_be_dead]) ) {
 			oldest_index = DEBRIS_INDEX(db);
 			oldest_time = db->time_started;
 		}
@@ -418,7 +418,7 @@ object *debris_create(object *source_obj, int model_num, int submodel_num, vec3d
 	Assert( source_obj->instance >= 0 && source_obj->instance < MAX_SHIPS );	
 	shipp = &Ships[source_obj->instance];
 	sip = &Ship_info[shipp->ship_info_index];
-	vaporize = (shipp->flags &SF_VAPORIZE);
+	vaporize = (shipp->flags[Ship::Ship_Flags::Vaporize]);
 
 	if ( !hull_flag )	{
 		// Make vaporize debris seen from farther away
@@ -548,10 +548,12 @@ object *debris_create(object *source_obj, int model_num, int submodel_num, vec3d
 	if ( pos == NULL )
 		pos = &source_obj->pos;
 
-	uint flags = OF_RENDERS | OF_PHYSICS;
-	if ( hull_flag )	
-		flags |= OF_COLLIDES;
-	objnum = obj_create( OBJ_DEBRIS, parent_objnum, n, &source_obj->orient, pos, radius, flags );
+    flagset<Object::Object_Flags> default_flags;
+    default_flags.set(Object::Object_Flags::Renders);
+    default_flags.set(Object::Object_Flags::Physics);
+    default_flags.set(Object::Object_Flags::Collides, hull_flag != 0);
+
+    objnum = obj_create( OBJ_DEBRIS, parent_objnum, n, &source_obj->orient, pos, radius, default_flags);
 	if ( objnum == -1 ) {
 		mprintf(("Couldn't create debris object -- out of object slots\n"));
 		return NULL;
@@ -696,7 +698,7 @@ void debris_hit(object *debris_obj, object *other_obj, vec3d *hitpos, float dama
 
 	// Do a little particle spark shower to show we hit
 	{
-		particle_emitter	pe;
+		particle::particle_emitter pe;
 
 		pe.pos = *hitpos;								// Where the particles emit from
 		pe.vel = debris_obj->phys_info.vel;		// Initial velocity of all the particles
@@ -718,7 +720,7 @@ void debris_hit(object *debris_obj, object *other_obj, vec3d *hitpos, float dama
 		pe.max_vel = 10.0f;				// How fast the fastest particle can move
 		pe.min_life = 0.25f;			// How long the particles live
 		pe.max_life = 0.75f;			// How long the particles live
-		particle_emit( &pe, PARTICLE_FIRE, 0 );
+		particle::emit( &pe, particle::PARTICLE_FIRE, 0 );
 	}
 
 	// multiplayer clients bail here
@@ -747,7 +749,7 @@ void debris_hit(object *debris_obj, object *other_obj, vec3d *hitpos, float dama
  * NOTE: debris_hit_info pointer NULL for debris:weapon collision, otherwise debris:ship collision.
  * @return true if hit, else return false.
  */
-int debris_check_collision(object *pdebris, object *other_obj, vec3d *hitpos, collision_info_struct *debris_hit_info)
+int debris_check_collision(object *pdebris, object *other_obj, vec3d *hitpos, collision_info_struct *debris_hit_info, vec3d* hitNormal)
 {
 	mc_info	mc;
 	mc_info_init(&mc);
@@ -776,6 +778,14 @@ int debris_check_collision(object *pdebris, object *other_obj, vec3d *hitpos, co
 
 		if (model_collide(&mc)) {
 			*hitpos = mc.hit_point_world;
+
+			if (hitNormal)
+			{
+				vec3d normal;
+				model_find_world_dir(&normal, &mc.hit_normal, mc.model_num, mc.hit_submodel, mc.orient);
+
+				*hitNormal = normal;
+			}
 		}
 
 		weapon *wp = &Weapons[other_obj->instance];

@@ -196,7 +196,7 @@ struct insignia_draw_data
 
 struct queued_buffer_draw
 {
-	int transform_buffer_offset;
+	size_t transform_buffer_offset;
 
 	model_material render_material;
 
@@ -205,7 +205,7 @@ struct queued_buffer_draw
 
 	indexed_vertex_source *vert_src;
 	vertex_buffer *buffer;
-	int texi;
+	size_t texi;
 	int flags;
 	int sdr_flags;
 
@@ -229,9 +229,9 @@ class model_batch_buffer
 {
 	SCP_vector<matrix4> Submodel_matrices;
 	void* Mem_alloc;
-	uint Mem_alloc_size;
+	size_t Mem_alloc_size;
 
-	int Current_offset;
+	size_t Current_offset;
 
 	void allocate_memory();
 public:
@@ -239,7 +239,7 @@ public:
 
 	void reset();
 
-	int get_buffer_offset();
+	size_t get_buffer_offset();
 	void set_num_models(int n_models);
 	void set_model_transform(matrix4 &transform, int model_id);
 
@@ -279,7 +279,7 @@ public:
 	void add_submodel_to_batch(int model_num);
 	void start_model_batch(int n_models);
 
-	void add_buffer_draw(model_material *render_material, indexed_vertex_source *vert_src, vertex_buffer *buffer, int texi, uint tmap_flags);
+	void add_buffer_draw(model_material *render_material, indexed_vertex_source *vert_src, vertex_buffer *buffer, size_t texi, uint tmap_flags);
 	
 	vec3d get_view_position();
 	void clear_transforms();

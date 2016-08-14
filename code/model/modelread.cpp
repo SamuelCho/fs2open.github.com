@@ -382,7 +382,7 @@ void model_instance_free_all()
 	// free any outstanding model instances
 	for ( i = 0; i < Polygon_model_instances.size(); ++i ) {
 		if ( Polygon_model_instances[i] ) {
-			model_delete_instance(i);
+			model_delete_instance((int)i);
 		}
 	}
 
@@ -446,7 +446,6 @@ void model_init()
 		Polygon_models[i] = NULL;
 	}
 
-	atexit( model_free_all );
 	model_initted = 1;
 }
 
@@ -901,7 +900,7 @@ void create_vertex_buffer(polymodel *pm)
 	bool use_batched_rendering = true;
 
 	if ( GLSL_version >= 150 && !Cmdline_no_batching ) {
-		uint stride = 0;
+		size_t stride = 0;
 
 		// figure out if the vertex stride of this entire model matches. if not, turn off batched rendering for this model
 		for ( i = 0; i < pm->n_models; ++i ) {
@@ -1839,7 +1838,7 @@ int read_model_file(polymodel * pm, char *filename, int n_subsystems, model_subs
 						if ( (p = strstr(props, "$name"))!= NULL ) {
 							get_user_prop_value(p+5, bay->name);
 
-							int length = strlen(bay->name);
+							auto length = strlen(bay->name);
 							if ((length > 0) && is_white_space(bay->name[length-1])) {
 								nprintf(("Model", "model '%s' has trailing whitespace on bay name '%s'; this will be trimmed\n", pm->filename, bay->name));
 								drop_trailing_white_space(bay->name);
@@ -1946,11 +1945,11 @@ int read_model_file(polymodel * pm, char *filename, int n_subsystems, model_subs
 	
 					cfread_string_len(props, MAX_PROP_LEN, fp);
 					// look for $glow_texture=xxx
-					int length = strlen(props);
+					auto length = strlen(props);
 
 					if (length > 0)
 					{
-						int base_length = strlen("$glow_texture=");
+						auto base_length = strlen("$glow_texture=");
 						Assert(strstr( (const char *)&props, "$glow_texture=") != NULL);
 						Assert(length > base_length);
 						char *glow_texture_name = props + base_length;
@@ -2033,9 +2032,9 @@ int read_model_file(polymodel * pm, char *filename, int n_subsystems, model_subs
 						} else {
 							cfread_string_len( props, MAX_PROP_LEN, fp );
 							// look for $engine_subsystem=xxx
-							int length = strlen(props);
+							auto length = strlen(props);
 							if (length > 0) {
-								int base_length = strlen("$engine_subsystem=");
+								auto base_length = strlen("$engine_subsystem=");
 								Assert( strstr( (const char *)&props, "$engine_subsystem=") != NULL );
 								Assert( length > base_length );
 								char *engine_subsys_name = props + base_length;
@@ -2764,7 +2763,8 @@ int model_load(char *filename, int n_subsystems, model_subsystem *subsystems, in
 	//==============================
 	// Find all the lower detail versions of the hires model
 	for (i=0; i<pm->n_models; i++ )	{
-		int j, l1;
+		int j;
+		size_t l1;
 		bsp_info * sm1 = &pm->submodel[i];
 
 		// set all arc types to be default 		
@@ -2794,7 +2794,6 @@ int model_load(char *filename, int n_subsystems, model_subsystem *subsystems, in
 		}
 
 		for (j=0; j<pm->n_models; j++ )	{
-			int k;
 			bsp_info * sm2 = &pm->submodel[j];
 
 			if ( i==j ) continue;
@@ -2805,11 +2804,11 @@ int model_load(char *filename, int n_subsystems, model_subsystem *subsystems, in
 			}
 
 			// if sm2 is a detail of sm1 and sm1 is a high detail, then add it to sm1's list
-			if ((int)strlen(sm2->name)!=l1) continue; 
+			if (strlen(sm2->name)!=l1) continue; 
 	
 			int ndiff = 0;
-			int first_diff = 0;
-			for ( k=0; k<l1; k++)	{
+			size_t first_diff = 0;
+			for ( size_t k=0; k<l1; k++)	{
 				// If a backward compatibility LOD name is declared use it
 				if (sm1->lod_name[0] != '\0') {
 					if (sm1->lod_name[k] != sm2->name[k] )	{
@@ -2927,7 +2926,7 @@ int model_create_instance(bool is_ship, int model_num)
 	// if not found, create a slot
 	if ( open_slot < 0 ) {
 		Polygon_model_instances.push_back( pmi );
-		open_slot = Polygon_model_instances.size() - 1;
+		open_slot = (int)(Polygon_model_instances.size() - 1);
 	} else {
 		Polygon_model_instances[open_slot] = pmi;
 	}
@@ -3069,7 +3068,7 @@ void model_set_bay_path_nums(polymodel *pm)
 
 	/*
 	// currently only capital ships have fighter bays
-	if ( !(sip->flags & (SIF_BIG_SHIP | SIF_HUGE_SHIP)) ) {
+	if ( !(sip->is_big_or_huge()) ) {
 		return;
 	}
 	*/
@@ -5239,7 +5238,7 @@ int model_create_bsp_collision_tree()
 	tree.used = true;
 	Bsp_collision_tree_list.push_back(tree);
 
-	return Bsp_collision_tree_list.size() - 1;
+	return (int)(Bsp_collision_tree_list.size() - 1);
 }
 
 bsp_collision_tree *model_get_bsp_collision_tree(int tree_index)

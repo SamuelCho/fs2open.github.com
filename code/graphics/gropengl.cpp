@@ -43,7 +43,7 @@
 #include <glad/glad.h>
 
 // minimum GL version we can reliably support is 2.0
-static const int MIN_REQUIRED_GL_VERSION = 12;
+static const int MIN_REQUIRED_GL_VERSION = 20;
 
 // minimum GLSL version we can reliably support is 110
 static const int MIN_REQUIRED_GLSL_VERSION = 110;
@@ -63,6 +63,8 @@ static ushort *GL_original_gamma_ramp = NULL;
 
 int Use_VBOs = 0;
 int Use_PBOs = 0;
+
+float GL_line_width = 1.0f;
 
 static ubyte *GL_saved_screen = NULL;
 static int GL_saved_screen_id = -1;
@@ -87,7 +89,8 @@ static int GL_minimized = 0;
 static GLenum GL_read_format = GL_BGRA;
 
 GLuint GL_vao = 0;
-SDL_GLContext GL_context = NULL;
+
+static std::unique_ptr<os::OpenGLContext> GL_context = nullptr;
 
 void opengl_go_fullscreen()
 {
@@ -95,7 +98,6 @@ void opengl_go_fullscreen()
 		return;
 
 	if ( (os_config_read_uint(NULL, NOX("Fullscreen"), 1) == 1) && (!os_get_window() || !(SDL_GetWindowFlags(os_get_window()) & SDL_WINDOW_FULLSCREEN)) ) {
-		os_suspend();
 		if(os_get_window())
 		{
 			SDL_SetWindowFullscreen(os_get_window(), SDL_WINDOW_FULLSCREEN);
@@ -116,7 +118,6 @@ void opengl_go_fullscreen()
 
 			os_set_window(window);
 		}
-		os_resume();
 	}
 
 	gr_opengl_set_gamma(FreeSpace_gamma);
@@ -132,7 +133,6 @@ void opengl_go_windowed()
 		return;
 
 	if (!os_get_window() || SDL_GetWindowFlags(os_get_window()) & SDL_WINDOW_FULLSCREEN) {
-		os_suspend();
 		if(os_get_window())
 		{
 			SDL_SetWindowFullscreen(os_get_window(), Cmdline_fullscreen_window ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0 );
@@ -147,8 +147,6 @@ void opengl_go_windowed()
 			}
 			os_set_window(new_window);
 		}
-
-		os_resume();
 	}
 
 	GL_windowed = 1;
@@ -166,14 +164,11 @@ void opengl_minimize()
 	if ( !(SDL_GetWindowFlags(os_get_window()) & SDL_WINDOW_FULLSCREEN) )
 		return;
 
-	os_suspend();
-
 	if (GL_original_gamma_ramp != NULL) {
 		SDL_SetWindowGammaRamp( os_get_window(), GL_original_gamma_ramp, (GL_original_gamma_ramp+256), (GL_original_gamma_ramp+512) );
 	}
 
 	SDL_MinimizeWindow(os_get_window());
-	os_resume();
 
 	GL_minimized = 1;
 	GL_windowed = 0;
@@ -224,7 +219,7 @@ void gr_opengl_flip()
 	if (Cmdline_gl_finish)
 		glFinish();
 
-	SDL_GL_SwapWindow(os_get_window());
+	GL_context->swapBuffers();
 
 	opengl_tcache_frame();
 	opengl_reset_immediate_buffer();
@@ -448,7 +443,38 @@ void gr_opengl_print_screen(const char *filename)
 	}
 }
 
-void gr_opengl_cleanup(bool closing, int minimize)
+void gr_opengl_shutdown(os::GraphicsOperations* graphicsOps)
+{
+	graphics::paths::PathRenderer::shutdown();
+
+	opengl_tcache_shutdown();
+	opengl_light_shutdown();
+	opengl_tnl_shutdown();
+	opengl_scene_texture_shutdown();
+	opengl_post_process_shutdown();
+	opengl_shader_shutdown();
+
+	GL_initted = false;
+
+	if ( GLAD_GL_ARB_vertex_array_object ) {
+		glDeleteVertexArrays(1, &GL_vao);
+		GL_vao = 0;
+	}
+
+	if (GL_original_gamma_ramp != NULL) {
+		SDL_SetWindowGammaRamp( os_get_window(), GL_original_gamma_ramp, (GL_original_gamma_ramp+256), (GL_original_gamma_ramp+512) );
+	}
+
+	if (GL_original_gamma_ramp != NULL) {
+		vm_free(GL_original_gamma_ramp);
+		GL_original_gamma_ramp = NULL;
+	}
+
+	graphicsOps->makeOpenGLContextCurrent(nullptr);
+	GL_context = nullptr;
+}
+
+void gr_opengl_cleanup(os::GraphicsOperations* graphicsOps, bool closing, int minimize)
 {
 	if ( !GL_initted ) {
 		return;
@@ -469,9 +495,7 @@ void gr_opengl_cleanup(bool closing, int minimize)
 
 	opengl_minimize();
 
-	if (minimize) {
-
-	}
+	gr_opengl_shutdown(graphicsOps);
 }
 
 void gr_opengl_fog_set(int fog_mode, int r, int g, int b, float fog_near, float fog_far)
@@ -983,6 +1007,7 @@ void gr_opengl_translate_texture_matrix(int unit, const vec3d *shift)
 void gr_opengl_set_line_width(float width)
 {
 	GL_state.SetLineWidth(width);
+	GL_line_width = width;
 }
 
 // Returns the human readable error string if there is an error or NULL if not
@@ -1029,7 +1054,7 @@ void opengl_set_vsync(int status)
 		return;
 	}
 
-	SDL_GL_SetSwapInterval(status);
+	GL_context->setSwapInterval(status);
 
 	GL_CHECK_FOR_ERRORS("end of set_vsync()");
 }
@@ -1071,54 +1096,11 @@ void opengl_setup_viewport()
 	}
 }
 
-// NOTE: This should only ever be called through os_cleanup(), or when switching video APIs
-void gr_opengl_shutdown()
-{
-	graphics::paths::PathRenderer::shutdown();
-
-	opengl_tcache_shutdown();
-	opengl_light_shutdown();
-	opengl_tnl_shutdown();
-	opengl_scene_texture_shutdown();
-	opengl_post_process_shutdown();
-	opengl_shader_shutdown();
-
-	if ( GLAD_GL_ARB_vertex_array_object ) {
-		glDeleteVertexArrays(1, &GL_vao);
-		GL_vao = 0;
-	}
-
-	GL_initted = false;
-
-	if (GL_original_gamma_ramp != NULL) {
-		SDL_SetWindowGammaRamp( os_get_window(), GL_original_gamma_ramp, (GL_original_gamma_ramp+256), (GL_original_gamma_ramp+512) );
-	}
-
-	if (GL_original_gamma_ramp != NULL) {
-		vm_free(GL_original_gamma_ramp);
-		GL_original_gamma_ramp = NULL;
-	}
-
-	SDL_GL_DeleteContext(GL_context);
-	GL_context = NULL;
-}
-
-// NOTE: This should only ever be called through atexit()!!!
-void opengl_close()
-{
-//	if ( !GL_initted )
-//		return;
-}
-
-int opengl_init_display_device()
+int opengl_init_display_device(os::GraphicsOperations* graphicsOps)
 {
 	int bpp = gr_screen.bits_per_pixel;
 
-	if ((bpp != 16) && (bpp != 32)) {
-		Int3();
-		return 1;
-	}
-
+	Assertion((bpp == 16) || (bpp == 32), "Invalid bits-per-pixel value %d!", bpp);
 
 	// screen format
 	switch (bpp) {
@@ -1223,91 +1205,33 @@ int opengl_init_display_device()
 		}
 	}
 
-	int r = 0, g = 0, b = 0, depth = 0, stencil = 1, db = 1;
+	os::OpenGLContextAttributes attrs;
+	attrs.red_size = Gr_red.bits;
+	attrs.green_size = Gr_green.bits;
+	attrs.blue_size = Gr_blue.bits;
+	attrs.alpha_size = (bpp == 32) ? Gr_alpha.bits : 0;
+	attrs.depth_size = (bpp == 32) ? 24 : 16;
+	attrs.stencil_size = (bpp == 32) ? 8 : 1;
 
-	mprintf(("  Initializing SDL video...\n"));
+	attrs.multi_samples = os_config_read_uint(NULL, "OGL_AntiAliasSamples", 0);
 
-#ifdef SCP_UNIX
-	// Slight hack to make Mesa advertise S3TC support without libtxc_dxtn
-	setenv("force_s3tc_enable", "true", 1);
+	attrs.major_version = 2;
+	attrs.minor_version = 0;
+
+	attrs.flags = os::OGL_NONE;
+#ifndef NDEBUG
+	attrs.flags |= os::OGL_DEBUG;
 #endif
 
-	if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0) {
-		fprintf(stderr, "Couldn't init SDL video: %s", SDL_GetError());
-		return 1;
-	}
+	attrs.profile = os::OpenGLProfile::Compatibility;
 
-	const int gl_versions[] = { 41, 40, 33, 32, 31, 30, 21, 20 };
-	const int num_gl_versions = sizeof(gl_versions) / sizeof(int);
-	int version_index = 0;
-
-	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, Gr_red.bits);
-	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, Gr_green.bits);
-	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, Gr_blue.bits);
-	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, (bpp == 32) ? 24 : 16);
-	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, (bpp == 32) ? 8 : 1);
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, db);
-
-	int fsaa_samples = os_config_read_uint(NULL, "OGL_AntiAliasSamples", 0);
-
-	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, (fsaa_samples == 0) ? 0 : 1);
-	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, fsaa_samples);
-
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, gl_versions[version_index] / 10);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, gl_versions[version_index] % 10);
-	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-
-	mprintf(("  Requested SDL Video values = R: %d, G: %d, B: %d, depth: %d, stencil: %d, double-buffer: %d, FSAA: %d\n", Gr_red.bits, Gr_green.bits, Gr_blue.bits, (bpp == 32) ? 24 : 16, (bpp == 32) ? 8 : 1, db, fsaa_samples));
-
-	int windowflags = SDL_WINDOW_OPENGL;
-	if (Cmdline_fullscreen_window)
-		windowflags |= SDL_WINDOW_BORDERLESS;
-
-	// This code also gets called in the FRED initialization, that means we possibly already have a window!
-
-	if (os_get_window() == NULL)
-	{
-		uint display = os_config_read_uint("Video", "Display", 0);
-		SDL_Window* window = SDL_CreateWindow(Osreg_title, SDL_WINDOWPOS_CENTERED_DISPLAY(display), SDL_WINDOWPOS_CENTERED_DISPLAY(display),
-			gr_screen.max_w, gr_screen.max_h, windowflags);
-		if (window == NULL)
-		{
-			mprintf(("Could not create window: %s\n", SDL_GetError()));
-			return 1;
-		}
-
-		os_set_window(window);
-	}
-
-	// find the latest and greatest OpenGL context
-	while ( (GL_context = SDL_GL_CreateContext(os_get_window())) == NULL ) {
-		++version_index;
-
-		if ( version_index >= num_gl_versions ) {
-			return 1;	
-		}
-		
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, gl_versions[version_index] / 10);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, gl_versions[version_index] % 10);
-	}
+	GL_context = graphicsOps->createOpenGLContext(attrs, (uint32_t) gr_screen.max_w, (uint32_t) gr_screen.max_h);
 
 	if (GL_context == nullptr) {
-		mprintf(("Error creating GL_context: %s\n", SDL_GetError()));
 		return 1;
 	}
 
-	SDL_GL_MakeCurrent(os_get_window(), GL_context);
-	//TODO: set up bpp settings
-
-	SDL_GL_GetAttribute(SDL_GL_RED_SIZE, &r);
-	SDL_GL_GetAttribute(SDL_GL_GREEN_SIZE, &g);
-	SDL_GL_GetAttribute(SDL_GL_BLUE_SIZE, &b);
-	SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &depth);
-	SDL_GL_GetAttribute(SDL_GL_DOUBLEBUFFER, &db);
-	SDL_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &stencil);
-	SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &fsaa_samples);
-
-	mprintf(("  Actual SDL Video values    = R: %d, G: %d, B: %d, depth: %d, stencil: %d, double-buffer: %d, FSAA: %d\n", r, g, b, depth, stencil, db, fsaa_samples));
+	graphicsOps->makeOpenGLContextCurrent(GL_context.get());
 
 	if (GL_original_gamma_ramp != NULL) {
 		SDL_GetWindowGammaRamp( os_get_window(), GL_original_gamma_ramp, (GL_original_gamma_ramp+256), (GL_original_gamma_ramp+512) );
@@ -1497,23 +1421,112 @@ void opengl_setup_function_pointers()
 }
 
 #ifndef NDEBUG
-static void post_gl_call(const char *name, void *funcptr, int len_args, ...) {
-	GLenum error_code;
-	error_code = glad_glGetError();
+static void debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity,
+						   GLsizei length, const GLchar *message, const void *userParam) {
+	const char* sourceStr;
+	const char* typeStr;
+	const char* severityStr;
 
-	if (error_code != GL_NO_ERROR) {
-		const char *error_str = NULL;
-
-		error_str = (const char *)gluErrorString(error_code);
-
-		if (error_str) {
-			nprintf(("OpenGL", "OpenGL Error in function %s: %s\n", name, error_str));
-			fprintf(stderr, "OpenGL ERROR %s in %s\n", error_str, name);
-		} else {
-			nprintf(("OpenGL", "OpenGL Error in function %s: %d\n", name, error_code));
-			fprintf(stderr, "OpenGL ERROR %d in %s\n", error_code, name);
-		}
+	switch(source) {
+		case GL_DEBUG_SOURCE_API_ARB:
+			sourceStr = "OpenGL";
+			break;
+		case GL_DEBUG_SOURCE_WINDOW_SYSTEM_ARB:
+			sourceStr = "WindowSys";
+			break;
+		case GL_DEBUG_SOURCE_SHADER_COMPILER_ARB:
+			sourceStr = "Shader Compiler";
+			break;
+		case GL_DEBUG_SOURCE_THIRD_PARTY_ARB:
+			sourceStr = "Third Party";
+			break;
+		case GL_DEBUG_SOURCE_APPLICATION_ARB:
+			sourceStr = "Application";
+			break;
+		case GL_DEBUG_SOURCE_OTHER_ARB:
+			sourceStr = "Other";
+			break;
+		default:
+			sourceStr = "Unknown";
+			break;
 	}
+
+	switch(type) {
+		case GL_DEBUG_TYPE_ERROR_ARB:
+			typeStr = "Error";
+			break;
+		case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB:
+			typeStr = "Deprecated behavior";
+			break;
+		case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB:
+			typeStr = "Undefined behavior";
+			break;
+		case GL_DEBUG_TYPE_PORTABILITY_ARB:
+			typeStr = "Portability";
+			break;
+		case GL_DEBUG_TYPE_PERFORMANCE_ARB:
+			typeStr = "Performance";
+			break;
+		case GL_DEBUG_TYPE_OTHER_ARB:
+			typeStr = "Other";
+			break;
+		default:
+			typeStr = "Unknown";
+			break;
+	}
+
+	switch(severity) {
+		case GL_DEBUG_SEVERITY_HIGH_ARB:
+			severityStr = "High";
+			break;
+		case GL_DEBUG_SEVERITY_MEDIUM_ARB:
+			severityStr = "Medium";
+			break;
+		case GL_DEBUG_SEVERITY_LOW_ARB:
+			severityStr = "Low";
+			break;
+		default:
+			severityStr = "Unknown";
+			break;
+	}
+
+	nprintf(("OpenGL Debug", "OpenGL Debug: Source:%s\tType:%s\tID:%d\tSeverity:%s\tMessage:%s\n",
+		sourceStr, typeStr, id, severityStr, message));
+}
+
+static bool hasPendingDebugMessage() {
+	GLint numMsgs = 0;
+	glGetIntegerv(GL_DEBUG_LOGGED_MESSAGES_ARB, &numMsgs);
+
+	return numMsgs > 0;
+}
+
+static bool printNextDebugMessage() {
+	if (!hasPendingDebugMessage()) {
+		return false;
+	}
+
+	GLint msgLen = 0;
+	glGetIntegerv(GL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH_ARB, &msgLen);
+
+	SCP_vector<GLchar> msg;
+	msg.resize(msgLen + 1); // Includes null character, needs to be removed later
+
+	GLenum source;
+	GLenum type;
+	GLenum severity;
+	GLuint id;
+	GLsizei length;
+
+	GLuint numFound = glGetDebugMessageLogARB(1, static_cast<GLsizei>(msg.size()), &source, &type, &id, &severity, &length, &msg[0]);
+
+	if (numFound < 1) {
+		return false;
+	}
+
+	debug_callback(source, type, id, severity, length, msg.data(), nullptr);
+
+	return true;
 }
 #endif
 
@@ -1602,13 +1615,10 @@ static void init_extensions() {
 	}
 }
 
-bool gr_opengl_init()
+bool gr_opengl_init(os::GraphicsOperations* graphicsOps)
 {
-	if ( !GL_initted )
-		atexit(opengl_close);
-
 	if (GL_initted) {
-		gr_opengl_cleanup(false);
+		gr_opengl_cleanup(graphicsOps, false);
 		GL_initted = false;
 	}
 
@@ -1617,41 +1627,47 @@ bool gr_opengl_init()
 		  gr_screen.max_h,
 		  gr_screen.bits_per_pixel ));
 
-	if ( opengl_init_display_device() ) {
+	if ( opengl_init_display_device(graphicsOps) ) {
 		Error(LOCATION, "Unable to initialize display device!\n");
 	}
 
 	// Initialize function pointers
-	if (!gladLoadGLLoader(SDL_GL_GetProcAddress)) {
+	if (!gladLoadGLLoader(GL_context->getLoaderFunction())) {
 		Error(LOCATION, "Failed to load OpenGL!");
 	}
 
-#ifndef NDEBUG
-	glad_set_post_callback(post_gl_call);
-#endif
-
 	// version check
-	opengl_check_for_errors("before glGetString(GL_VERSION) call");
-	auto ver = (const char *)glGetString(GL_VERSION);
-	opengl_check_for_errors("after glGetString(GL_VERSION) call");
-	Assertion(ver, "Failed to get glGetString(GL_VERSION)\n");
-	
-	int major, minor;
-	sscanf(ver, "%d.%d", &major, &minor);
-
-	GL_version = (major * 10) + minor;
+	GL_version = (GLVersion.major * 10) + GLVersion.minor;
 
 	if (GL_version < MIN_REQUIRED_GL_VERSION) {
 		Error(LOCATION, "Current GL Version of %d.%d is less than the "
 			"required version of %d.%d.\n"
 			"Switch video modes or update your drivers.",
-			major,
-			minor,
+			GLVersion.major,
+			GLVersion.minor,
 			(MIN_REQUIRED_GL_VERSION / 10),
 			(MIN_REQUIRED_GL_VERSION % 10));
 	}
 
 	GL_initted = true;
+
+#ifndef NDEBUG
+	// Set up the debug extension if present
+	if (GLAD_GL_ARB_debug_output) {
+		nprintf(("OpenGL Debug", "Using OpenGL debug extension\n"));
+		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
+		GLuint unusedIds = 0;
+		glDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, &unusedIds, true);
+
+		glDebugMessageCallbackARB((GLDEBUGPROCARB)debug_callback, nullptr);
+
+		// Now print all pending log messages
+		while (hasPendingDebugMessage()) {
+			printNextDebugMessage();
+		}
+	}
+#endif
+
 
 	// this MUST be done before any other gr_opengl_* or
 	// opengl_* function calls!!

@@ -238,7 +238,7 @@ void gr_stub_rect(int x, int y, int w, int h, int resize_mode)
 {
 }
 
-void gr_stub_render_buffer(int start, vertex_buffer *bufferp, int texi, int flags)
+void gr_stub_render_buffer(int start, vertex_buffer *bufferp, size_t texi, int flags)
 {
 }
 
@@ -270,17 +270,17 @@ void gr_stub_set_buffer(int idx)
 {
 }
 
-void gr_stub_update_buffer_data(int handle, uint size, void* data)
+void gr_stub_update_buffer_data(int handle, size_t size, void* data)
 {
 
 }
 
-void gr_stub_update_transform_buffer(void* data, uint size)
+void gr_stub_update_transform_buffer(void* data, size_t size)
 {
 
 }
 
-void gr_stub_set_transform_buffer_offset(int offset)
+void gr_stub_set_transform_buffer_offset(size_t offset)
 {
 
 }
@@ -290,7 +290,7 @@ int gr_stub_create_stream_buffer()
 	return -1;
 }
 
-void gr_stub_render_stream_buffer(int buffer_handle, int offset, int n_verts, int flags)
+void gr_stub_render_stream_buffer(int buffer_handle, size_t offset, size_t n_verts, int flags)
 {
 }
 

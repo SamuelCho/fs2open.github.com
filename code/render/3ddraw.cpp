@@ -1965,6 +1965,11 @@ void g3_draw_htl_sphere(color *clr, const vec3d* position, float radius)
 	g3_done_instance(true);
 }
 
+void g3_draw_htl_sphere(const vec3d* position, float radius)
+{
+	g3_draw_htl_sphere(&gr_screen.current_color, position, radius);
+}
+
 void g3_render_primitives_textured(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic)
 {
 	vertex_layout layout;
