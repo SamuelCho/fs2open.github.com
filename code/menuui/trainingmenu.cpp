@@ -15,6 +15,7 @@
 #include "menuui/trainingmenu.h"
 
 
+
 // global to this file
 static int trainingMenuBitmap;
 static int trainingMenuMask;

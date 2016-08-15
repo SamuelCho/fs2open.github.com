@@ -512,9 +512,8 @@ void generic_render_png_stream(generic_anim* ga)
  *
  * @param [in] *ga  animation data
  * @param [in] frametime  how long this frame took
- * @return bitmap ID to be used
  */
-int generic_anim_render_fixed_frame_delay(generic_anim* ga, float frametime)
+void generic_anim_render_fixed_frame_delay(generic_anim* ga, float frametime)
 {
 	float keytime = 0.0;
 
@@ -568,7 +567,6 @@ int generic_anim_render_fixed_frame_delay(generic_anim* ga, float frametime)
 		ga->current_frame += fl2i(ga->anim_time * ga->num_frames / ga->total_time);
 		//sanity check
 		CLAMP(ga->current_frame, 0, ga->num_frames - 1);
-
 		if(ga->streaming) {
 			//handle streaming - render one frame
 			if(ga->type == BM_TYPE_ANI) {
@@ -576,11 +574,10 @@ int generic_anim_render_fixed_frame_delay(generic_anim* ga, float frametime)
 			} else {
 				generic_render_eff_stream(ga);
 			}
-
-			return ga->bitmap_id;
+			gr_set_bitmap(ga->bitmap_id);
 		}
 		else {
-			return ga->first_frame + ga->current_frame;
+			gr_set_bitmap(ga->first_frame + ga->current_frame);
 		}
 	}
 }
@@ -591,19 +588,18 @@ int generic_anim_render_fixed_frame_delay(generic_anim* ga, float frametime)
  * @param [in] *ga  animation data
  * @param [in] frametime  how long this frame took
  * @param [in] alpha  transparency to draw frame with (0.0 - 1.0)
- * @return bitmap ID to be used
  *
  * @note
  * uses both time & frame counts to determine end state; so that if the anims playing
  * can't be processed fast enough, all frames will still play, rather than the end
  * frames being skipped
  */
-int generic_anim_render_variable_frame_delay(generic_anim* ga, float frametime, float alpha)
+void generic_anim_render_variable_frame_delay(generic_anim* ga, float frametime, float alpha)
 {
 	Assertion(ga->type == BM_TYPE_PNG, "only valid for apngs (currently); get a coder!");
 	if (ga->keyframe != 0) {
 		Warning(LOCATION, "apngs don't support keyframes");
-		return -1;
+		return;
 	}
 
 	// don't change the frame time if we're paused
@@ -672,7 +668,7 @@ int generic_anim_render_variable_frame_delay(generic_anim* ga, float frametime, 
 		// note: generic anims are not currently ever non-streaming in FSO
 		// I'm not even sure that the existing ani/eff code would allow non-streaming generic anims
 		generic_render_png_stream(ga);
-		return ga->bitmap_id;
+		gr_set_bitmap(ga->bitmap_id, GR_ALPHABLEND_NONE, GR_BITBLT_MODE_NORMAL, alpha);
 	}
 }
 
@@ -697,16 +693,12 @@ void generic_anim_render(generic_anim *ga, float frametime, int x, int y, bool m
 	if (ge != nullptr) {
 		a = ge->alpha;
 	}
-
-	int bitmap_id;
-
 	if (ga->type == BM_TYPE_PNG) {
-		bitmap_id = generic_anim_render_variable_frame_delay(ga, frametime, a);
-	} else {
-		bitmap_id = generic_anim_render_fixed_frame_delay(ga, frametime);
+		generic_anim_render_variable_frame_delay(ga, frametime, a);
 	}
-
-	gr_set_bitmap(bitmap_id);
+	else {
+		generic_anim_render_fixed_frame_delay(ga, frametime);
+	}
 
 	if(ga->num_frames > 0) {
 		ga->previous_frame = ga->current_frame;

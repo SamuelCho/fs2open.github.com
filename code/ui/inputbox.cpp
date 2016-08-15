@@ -18,6 +18,7 @@
 #include "ui/uidefs.h"
 
 
+
 #define INPUTBOX_PASSWD_CHAR        '*'   // the password protected char
 
 //	Retuen true if c is a letter, else return false.

@@ -64,7 +64,6 @@ void UI_SLIDER2::draw() {
 	Assert((currentPosition >= 0) && (currentPosition <= numberPositions));
 	if (uses_bmaps && !disabled_flag) {
 		gr_reset_clip();
-		int bitmap_id = -1;
 		switch (slider_mode) {
 		case S2M_ON_ME:
 			gr_set_bitmap(bmap_ids[S2_HIGHLIGHT]);  // draw slider level

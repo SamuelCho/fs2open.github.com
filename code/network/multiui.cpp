@@ -1400,7 +1400,6 @@ void multi_join_blit_game_status(active_game *game, int y)
 
 	// blit the proper icon
 	draw = 0;	
-	int bitmap_id = -1;
 	switch( game->flags & AG_FLAG_TYPE_MASK ){
 	// coop game
 	case AG_FLAG_COOP:
@@ -2077,7 +2076,7 @@ int multi_join_warn_pxo()
 void multi_join_blit_protocol()
 {
 	gr_set_color_fast(&Color_bright);
-	gr_string(5, 2, "TCP", GR_RESIZE_MENU);	
+	gr_string(5, 2, "TCP", GR_RESIZE_MENU);
 }
 
 
@@ -4688,7 +4687,7 @@ void multi_create_list_do()
 
 		// draw the max players if in mission mode		
 		sprintf(selected_name, "%d", (int)mcip->max_players);
-		gr_string(Mc_mission_count_x[gr_screen.res], y_start, selected_name, GR_RESIZE_MENU);	
+		gr_string(Mc_mission_count_x[gr_screen.res], y_start, selected_name, GR_RESIZE_MENU);		
 
 		// force fit the mission filename string
 		strcpy_s(selected_name, mcip->filename);
@@ -9234,7 +9233,7 @@ void multi_passwd_do(char *passwd)
 		gr_reset_clip();
 		gr_clear();
 		if(Multi_passwd_background >= 0){
-			gr_restore_screen(Multi_passwd_background);
+			gr_restore_screen(Multi_passwd_background);		
 		}
 		gr_set_bitmap(Multi_pwd_bitmap);
 		gr_bitmap(0,0,GR_RESIZE_MENU);

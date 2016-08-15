@@ -6181,9 +6181,8 @@ void render_all_ship_bay_paths(object *objp)
 
 			g3_draw_sphere( &v, 1.5f);
 
-			if ( j > 0 ) {
+			if ( j > 0 )
 				g3_draw_line(&v, &prev_vertex);
-			}
 
 			prev_vertex = v;
 	
@@ -6226,9 +6225,8 @@ void render_all_subsys_paths(object *objp)
 
 			g3_draw_sphere( &v, 1.5f);
 
-			if ( j > 0 ) {
+			if ( j > 0 )
 				g3_draw_line(&v, &prev_vertex);
-			}
 
 			prev_vertex = v;
 		}
@@ -6275,9 +6273,8 @@ void render_path_points(object *objp)
 			g3_rotate_vertex( &v0, &pp->pos );
 
 			gr_set_color(0, 128, 96);
-			if (i != 0) {
+			if (i != 0)
 				g3_draw_line(&v0, &prev_vertex);
-			}
 
 			if (pp-Path_points == aip->path_cur)
 				gr_set_color(255,255,0);

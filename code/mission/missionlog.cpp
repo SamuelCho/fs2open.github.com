@@ -25,6 +25,7 @@
 #include "ship/ship.h"
 
 
+
 #define MAX_LOG_ENTRIES		700
 #define MAX_LOG_LINES		1000
 

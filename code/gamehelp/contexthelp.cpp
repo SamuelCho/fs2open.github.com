@@ -33,6 +33,7 @@
 #include "parse/parselo.h"
 
 
+
 ////////////////////////////////////////////////////////////////////
 // private function prototypes / structs
 ////////////////////////////////////////////////////////////////////
@@ -534,10 +535,7 @@ void help_overlay_blit(int overlay_id, int resolution_index)
 
 	// this draws each 2d line for the help screen
 	//gr_set_color_fast(&Color_yellow);
-	//gr_set_color(255, 255, 0);
-	color pline_clr;
-	gr_init_color(&pline_clr, 255, 255, 0);
-	
+	gr_set_color(255, 255, 0);
 	for (idx = 0; idx<plinecount; idx++) {
 		gr_pline_special(&help_overlaylist[overlay_id].plinelist.at(resolution_index).at(idx).vtx, HELP_PLINE_THICKNESS, GR_RESIZE_MENU);
 	}

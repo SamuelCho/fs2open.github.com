@@ -21,6 +21,7 @@
 #include "ui/uidefs.h"
 
 
+
 // global xstr colors
 color *Xstr_colors[UI_NUM_XSTR_COLORS][3] = {
 	{	// UI_XSTR_COLOR_GREEN

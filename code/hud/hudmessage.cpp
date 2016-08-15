@@ -1156,9 +1156,8 @@ void hud_scrollback_do_frame(float frametime)
 
 					x = Hud_mission_log_list2_coords[gr_screen.res][0] + node_ptr->x;
 					gr_printf_menu(x, Hud_mission_log_list_coords[gr_screen.res][1] + y, "%s", node_ptr->text);
-					if (node_ptr->underline_width) {
+					if (node_ptr->underline_width)
 						gr_line(x, Hud_mission_log_list_coords[gr_screen.res][1] + y + font_height - 1, x + node_ptr->underline_width, Hud_mission_log_list_coords[gr_screen.res][1] + y + font_height - 1, GR_RESIZE_MENU);
-					}
 
 					if ((node_ptr->source == HUD_SOURCE_FAILED) || (node_ptr->source == HUD_SOURCE_SATISFIED)) {
 						// draw goal icon

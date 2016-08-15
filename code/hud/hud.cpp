@@ -779,7 +779,7 @@ void HudGauge::renderBitmapColor(int frame, int x, int y)
 	gr_reset_screen_scale();
 }
 
-void HudGauge::renderBitmap(int frame, int x, int y)
+void HudGauge::renderBitmap(int x, int y)
 {
 	int nx = 0, ny = 0;
 
@@ -804,10 +804,15 @@ void HudGauge::renderBitmap(int frame, int x, int y)
 		}
 	}
 	
-	gr_set_bitmap(frame);
 	gr_aabitmap(x + nx, y + ny);
 
 	gr_reset_screen_scale();
+}
+
+void HudGauge::renderBitmap(int frame, int x, int y)
+{
+	gr_set_bitmap(frame);
+	renderBitmap(x, y);
 }
 
 void HudGauge::renderBitmapEx(int frame, int x, int y, int w, int h, int sx, int sy)
@@ -820,7 +825,7 @@ void HudGauge::renderBitmapEx(int frame, int x, int y, int w, int h, int sx, int
 
 	emp_hud_jitter(&x, &y); 
 
-	//gr_set_bitmap(frame);
+	gr_set_bitmap(frame);
 
 	if( gr_screen.rendering_to_texture != -1 ) {
 		gr_set_screen_scale(canvas_w, canvas_h, -1, -1, target_w, target_h, target_w, target_h, true);
@@ -837,7 +842,6 @@ void HudGauge::renderBitmapEx(int frame, int x, int y, int w, int h, int sx, int
 		}
 	}
 
-	gr_set_bitmap(frame);
 	gr_aabitmap_ex(x + nx, y + ny, w, h, sx, sy);
 
 	gr_reset_screen_scale();

@@ -1283,7 +1283,7 @@ void multi_ts_blit_wing_callsigns()
 		} else {
 			gr_set_color_fast(&Color_normal);
 		}
-		gr_string(Multi_ts_slot_text_coords[idx][gr_screen.res][MULTI_TS_X_COORD] + ((Multi_ts_slot_text_coords[idx][gr_screen.res][MULTI_TS_W_COORD] - callsign_w)/2),Multi_ts_slot_text_coords[idx][gr_screen.res][MULTI_TS_Y_COORD],callsign,GR_RESIZE_MENU);	
+		gr_string(Multi_ts_slot_text_coords[idx][gr_screen.res][MULTI_TS_X_COORD] + ((Multi_ts_slot_text_coords[idx][gr_screen.res][MULTI_TS_W_COORD] - callsign_w)/2),Multi_ts_slot_text_coords[idx][gr_screen.res][MULTI_TS_Y_COORD],callsign,GR_RESIZE_MENU);								
 	}	
 }
 

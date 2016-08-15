@@ -3710,7 +3710,6 @@ ade_obj<int> l_Texture("texture", "Texture handle");
 
 static float lua_Opacity = 1.0f;
 static int lua_Opacity_type = GR_ALPHABLEND_NONE;
-static color lua_Color;
 
 ADE_FUNC(__gc, l_Texture, NULL, "Auto-deletes texture", NULL, NULL)
 {
@@ -13657,9 +13656,7 @@ ADE_FUNC(setColor, l_Graphics, "integer Red, number Green, number Blue, [integer
 
 	color ac;
 	gr_init_alphacolor(&ac,r,g,b,a);
-	gr_init_alphacolor(&lua_Color,r,g,b,a);
 	gr_set_color_fast(&ac);
-	
 
 	return ADE_RETURN_NIL;
 }
@@ -13836,10 +13833,10 @@ ADE_FUNC(drawRectangle, l_Graphics, "number X1, number Y1, number X2, number Y2,
 	}
 	else
 	{
- 		gr_line(x1,y1,x2,y1,GR_RESIZE_NONE);	//Top
- 		gr_line(x1,y2,x2,y2,GR_RESIZE_NONE); //Bottom
- 		gr_line(x1,y1,x1,y2,GR_RESIZE_NONE);	//Left
- 		gr_line(x2,y1,x2,y2,GR_RESIZE_NONE);	//Right
+		gr_line(x1,y1,x2,y1,GR_RESIZE_NONE);	//Top
+		gr_line(x1,y2,x2,y2,GR_RESIZE_NONE); //Bottom
+		gr_line(x1,y1,x1,y2,GR_RESIZE_NONE);	//Left
+		gr_line(x2,y1,x2,y2,GR_RESIZE_NONE);	//Right
 	}
 
 	return ADE_RETURN_NIL;
@@ -16027,15 +16024,15 @@ ADE_FUNC(avdTest, l_Testing, NULL, "Test the AVD Physics code", NULL, NULL)
 	{
 		float Pc, Vc;
 		avd.get((float)i/1000.0f, &Pc, &Vc);
- 		gr_set_color(0, 255, 0);
- 		gr_pixel(i/10, gr_screen.clip_bottom - (int)(Pc*10.0f), GR_RESIZE_NONE);
- 		gr_set_color(255, 0, 0);
- 		gr_pixel(i/10, gr_screen.clip_bottom - (int)(Vc*10.0f), GR_RESIZE_NONE);
+		gr_set_color(0, 255, 0);
+		gr_pixel(i/10, gr_screen.clip_bottom - (int)(Pc*10.0f), GR_RESIZE_NONE);
+		gr_set_color(255, 0, 0);
+		gr_pixel(i/10, gr_screen.clip_bottom - (int)(Vc*10.0f), GR_RESIZE_NONE);
 
 		avd.get(&Pc, &Vc);
- 		gr_set_color(255, 255, 255);
- 		gr_pixel((timestamp()%3000)/10, gr_screen.clip_bottom - (int)(Pc*10.0f), GR_RESIZE_NONE);
- 		gr_pixel((timestamp()%3000)/10, gr_screen.clip_bottom - (int)(Vc*10.0f), GR_RESIZE_NONE);
+		gr_set_color(255, 255, 255);
+		gr_pixel((timestamp()%3000)/10, gr_screen.clip_bottom - (int)(Pc*10.0f), GR_RESIZE_NONE);
+		gr_pixel((timestamp()%3000)/10, gr_screen.clip_bottom - (int)(Vc*10.0f), GR_RESIZE_NONE);
 	}
 
 	return ADE_RETURN_NIL;

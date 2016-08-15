@@ -805,7 +805,7 @@ void model_draw_debug_points( polymodel *pm, bsp_info * submodel, uint flags )
 			g3_draw_line( &pts[0], &pts[4] );
 			g3_draw_line( &pts[1], &pts[5] );
 			g3_draw_line( &pts[2], &pts[6] );
-			g3_draw_line( &pts[3], &pts[7] );	
+			g3_draw_line( &pts[3], &pts[7] );			
 		}		
 	}
 }
@@ -851,7 +851,7 @@ void model_draw_paths( int model_num, uint flags )
 
 				g3_draw_sphere( &tmp, 0.5f );
 
-				if (j) {
+				if (j){
 					g3_draw_line(&prev_pnt, &tmp);
 				}
 
@@ -1218,12 +1218,10 @@ void model_render_shields( polymodel * pm, uint flags )
 
 				g3_rotate_vertex(&tmp, &pm->shield.verts[tri->verts[j]].pos );
 
-				if (j) {
+				if (j)
 					g3_draw_line(&prev_pnt, &tmp);
-				} else {
+				else
 					pnt0 = tmp;
-				}
-
 				prev_pnt = tmp;
 			}
 

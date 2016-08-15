@@ -14,6 +14,7 @@
 #include "ui/ui.h"
 #include "ui/uidefs.h"
 
+
 #define KEY_BUFFER_TIMEOUT		1000		// time to clear buffer in milliseconds
 
 #define DEFAULT_LISTBOX_ITEM_LENGTH 128
@@ -189,9 +190,9 @@ void UI_LISTBOX::draw()
 			}
 
 			gr_string( x1+16, y1, list[i], GR_RESIZE_MENU );
-		} else {
+
+		} else
 			gr_string( x1+2, y1, list[i], GR_RESIZE_MENU );
-		}
 
 		if (i==current_item)
 			gr_set_color_fast( &CGRAY );

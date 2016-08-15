@@ -25,6 +25,7 @@
 #include "popup/popup.h"
 #include "ui/ui.h"
 
+
 #define POPUP_MAX_CHOICES			3					// max number of buttons allowed on popup
 
 #define POPUP_MAX_LINE_CHARS		256				// max chars of msg text allowed per line
@@ -861,6 +862,7 @@ int popup_do(popup_info *pi, int flags)
 
 		// don't draw anything 
 		if(!(flags & PF_RUN_STATE)){
+			//gr_clear();
 			gr_restore_screen(screen_id);
 		}
 

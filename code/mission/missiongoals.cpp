@@ -348,8 +348,8 @@ void goal_text::display(int n, int y)
 		y1 = y + h / 2 - 1;
 
 		// custom_size me
- 		gr_line(Goal_screen_icon_x, y1, Goal_screen_text_x - 2, y1, GR_RESIZE_MENU);
- 		gr_line(Goal_screen_text_x + w + 1, y1, Goal_screen_icon_x + Goal_screen_text_w, y1, GR_RESIZE_MENU);
+		gr_line(Goal_screen_icon_x, y1, Goal_screen_text_x - 2, y1, GR_RESIZE_MENU);
+		gr_line(Goal_screen_text_x + w + 1, y1, Goal_screen_icon_x + Goal_screen_text_w, y1, GR_RESIZE_MENU);
 
 	} else {
 		gr_set_color_fast(&Color_text_normal);
@@ -706,9 +706,9 @@ void ML_render_objectives_key()
 		gr_set_bitmap(Goal_failed_bitmap);
 		gr_bitmap(Objective_key_icon_coords_gr[gr_screen.res][2][0], Objective_key_icon_coords_gr[gr_screen.res][2][1], GR_RESIZE_MENU);
 
- 		gr_string(Objective_key_text_coords_gr[gr_screen.res][0][0], Objective_key_text_coords_gr[gr_screen.res][0][1] , XSTR("Complete",	1437), GR_RESIZE_MENU);
- 		gr_string(Objective_key_text_coords_gr[gr_screen.res][1][0], Objective_key_text_coords_gr[gr_screen.res][1][1] , XSTR("Incomplete", 1438), GR_RESIZE_MENU);
- 		gr_string(Objective_key_text_coords_gr[gr_screen.res][2][0], Objective_key_text_coords_gr[gr_screen.res][2][1] , XSTR("Failed",		1439), GR_RESIZE_MENU);
+		gr_string(Objective_key_text_coords_gr[gr_screen.res][0][0], Objective_key_text_coords_gr[gr_screen.res][0][1] , XSTR("Complete",	1437), GR_RESIZE_MENU);
+		gr_string(Objective_key_text_coords_gr[gr_screen.res][1][0], Objective_key_text_coords_gr[gr_screen.res][1][1] , XSTR("Incomplete", 1438), GR_RESIZE_MENU);
+		gr_string(Objective_key_text_coords_gr[gr_screen.res][2][0], Objective_key_text_coords_gr[gr_screen.res][2][1] , XSTR("Failed",		1439), GR_RESIZE_MENU);
 	} else {
 		gr_set_bitmap(Goal_complete_bitmap);
 		gr_bitmap(Objective_key_icon_coords[gr_screen.res][0][0], Objective_key_icon_coords[gr_screen.res][0][1], GR_RESIZE_MENU);
@@ -717,9 +717,9 @@ void ML_render_objectives_key()
 		gr_set_bitmap(Goal_failed_bitmap);
 		gr_bitmap(Objective_key_icon_coords[gr_screen.res][2][0], Objective_key_icon_coords[gr_screen.res][2][1], GR_RESIZE_MENU);
 
- 		gr_string(Objective_key_text_coords[gr_screen.res][0][0], Objective_key_text_coords[gr_screen.res][0][1] , XSTR("Complete",	1437), GR_RESIZE_MENU);
- 		gr_string(Objective_key_text_coords[gr_screen.res][1][0], Objective_key_text_coords[gr_screen.res][1][1] , XSTR("Incomplete", 1438), GR_RESIZE_MENU);
- 		gr_string(Objective_key_text_coords[gr_screen.res][2][0], Objective_key_text_coords[gr_screen.res][2][1] , XSTR("Failed",		1439), GR_RESIZE_MENU);
+		gr_string(Objective_key_text_coords[gr_screen.res][0][0], Objective_key_text_coords[gr_screen.res][0][1] , XSTR("Complete",	1437), GR_RESIZE_MENU);
+		gr_string(Objective_key_text_coords[gr_screen.res][1][0], Objective_key_text_coords[gr_screen.res][1][1] , XSTR("Incomplete", 1438), GR_RESIZE_MENU);
+		gr_string(Objective_key_text_coords[gr_screen.res][2][0], Objective_key_text_coords[gr_screen.res][2][1] , XSTR("Failed",		1439), GR_RESIZE_MENU);
 	}
 }
 

@@ -23,6 +23,7 @@
 #include "globalincs/alphacolors.h"
 
 
+
 // ---------------------------------------------------------------------------------------
 // MULTI PLAYER INFO DEFINES/VARS
 //
@@ -390,7 +391,7 @@ void multi_pinfo_popup_do()
 		// draw the background bitmap and the ui window over it
 		Assert(Multi_pinfo_screen_save != -1);
 		gr_reset_clip();
-		gr_restore_screen(Multi_pinfo_screen_save);
+		gr_restore_screen(Multi_pinfo_screen_save);		
 
 		// grey the screen
 		gr_set_shader(&Grey_shader);
@@ -398,7 +399,7 @@ void multi_pinfo_popup_do()
 		
 		// draw the background bitmap
 		gr_set_bitmap(Multi_pinfo_bitmap);
-		gr_bitmap(0,0,GR_RESIZE_MENU);			
+		gr_bitmap(0,0,GR_RESIZE_MENU);		
 
 		// blit the selected pilot image
 		multi_pinfo_blit_pilot_image();
@@ -498,9 +499,9 @@ void multi_pinfo_blit_pilot_image()
 		int bm_w, bm_h;
 		bm_get_info(Mp_pilot.bitmap, &bm_w, &bm_h, NULL, NULL, NULL);
 
- 		gr_bitmap(Multi_pinfo_pilot_coords[gr_screen.res][0] + ((Multi_pinfo_pilot_coords[gr_screen.res][2] - bm_w)/2), 
- 					 Multi_pinfo_pilot_coords[gr_screen.res][1] + ((Multi_pinfo_pilot_coords[gr_screen.res][3] - bm_h)/2),
- 					 GR_RESIZE_MENU);
+		gr_bitmap(Multi_pinfo_pilot_coords[gr_screen.res][0] + ((Multi_pinfo_pilot_coords[gr_screen.res][2] - bm_w)/2), 
+					 Multi_pinfo_pilot_coords[gr_screen.res][1] + ((Multi_pinfo_pilot_coords[gr_screen.res][3] - bm_h)/2),
+					 GR_RESIZE_MENU);
 		// g3_draw_2d_poly_bitmap(Multi_pinfo_pilot_coords[gr_screen.res][0], Multi_pinfo_pilot_coords[gr_screen.res][1], Multi_pinfo_pilot_coords[gr_screen.res][2], Multi_pinfo_pilot_coords[gr_screen.res][3]);
 	}
 }
@@ -546,9 +547,9 @@ void multi_pinfo_blit_squadron_logo()
 		int bm_w, bm_h;
 		bm_get_info(Mp_squad.bitmap, &bm_w, &bm_h, NULL, NULL, NULL);
 
- 		gr_bitmap(Multi_pinfo_squad_coords[gr_screen.res][0] + ((Multi_pinfo_squad_coords[gr_screen.res][2] - bm_w)/2), 
- 					 Multi_pinfo_squad_coords[gr_screen.res][1] + ((Multi_pinfo_squad_coords[gr_screen.res][3] - bm_h)/2),
- 					 GR_RESIZE_MENU);
+		gr_bitmap(Multi_pinfo_squad_coords[gr_screen.res][0] + ((Multi_pinfo_squad_coords[gr_screen.res][2] - bm_w)/2), 
+					 Multi_pinfo_squad_coords[gr_screen.res][1] + ((Multi_pinfo_squad_coords[gr_screen.res][3] - bm_h)/2),
+					 GR_RESIZE_MENU);
 		// g3_draw_2d_poly_bitmap(Multi_pinfo_squad_coords[gr_screen.res][0], Multi_pinfo_squad_coords[gr_screen.res][1], Multi_pinfo_squad_coords[gr_screen.res][2], Multi_pinfo_squad_coords[gr_screen.res][3]);
 	}
 }

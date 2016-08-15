@@ -1033,7 +1033,6 @@ void wl_render_overhead_view(float frametime)
 						} else {
 							lineendy = Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 12;
 						}
-
 						gr_curve(xc, lineendy, 5, curve, GR_RESIZE_MENU);
 						
 						if (curve == 1 || curve == 2) {
@@ -2361,12 +2360,12 @@ void wl_render_weapon_desc(float frametime)
 		// draw full version
 		// FIXME - change to use a for loop 
 		gr_set_color_fast(&Color_white);
- 		gr_string(weapon_title_coords[0], weapon_title_coords[1], Weapon_desc_lines[0], GR_RESIZE_MENU);
- 		gr_string(weapon_title_coords[0], weapon_title_coords[1] + line_height, Weapon_desc_lines[1], GR_RESIZE_MENU);
- 		gr_string(weapon_desc_coords[0], weapon_desc_coords[1], Weapon_desc_lines[2], GR_RESIZE_MENU);
- 		gr_string(weapon_desc_coords[0], weapon_desc_coords[1] + line_height, Weapon_desc_lines[3], GR_RESIZE_MENU);
- 		gr_string(weapon_desc_coords[0], weapon_desc_coords[1] + line_height * 2, Weapon_desc_lines[4], GR_RESIZE_MENU);
- 		gr_string(weapon_desc_coords[0], weapon_desc_coords[1] + line_height * 3, Weapon_desc_lines[5], GR_RESIZE_MENU);
+		gr_string(weapon_title_coords[0], weapon_title_coords[1], Weapon_desc_lines[0], GR_RESIZE_MENU);
+		gr_string(weapon_title_coords[0], weapon_title_coords[1] + line_height, Weapon_desc_lines[1], GR_RESIZE_MENU);
+		gr_string(weapon_desc_coords[0], weapon_desc_coords[1], Weapon_desc_lines[2], GR_RESIZE_MENU);
+		gr_string(weapon_desc_coords[0], weapon_desc_coords[1] + line_height, Weapon_desc_lines[3], GR_RESIZE_MENU);
+		gr_string(weapon_desc_coords[0], weapon_desc_coords[1] + line_height * 2, Weapon_desc_lines[4], GR_RESIZE_MENU);
+		gr_string(weapon_desc_coords[0], weapon_desc_coords[1] + line_height * 3, Weapon_desc_lines[5], GR_RESIZE_MENU);
 	}
 }
 

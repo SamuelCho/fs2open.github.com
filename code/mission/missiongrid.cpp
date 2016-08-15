@@ -15,6 +15,7 @@
 #include "mission/missiongrid.h"
 #include "render/3d.h"
 
+
 grid	Global_grid;
 grid	*The_grid;
 int	double_fine_gridlines = 0;

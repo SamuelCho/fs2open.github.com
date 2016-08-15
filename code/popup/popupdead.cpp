@@ -32,6 +32,7 @@
 #include "popup/popupdead.h"
 #include "ui/ui.h"
 
+
 UI_WINDOW	Popupdead_window;
 UI_BUTTON	Popupdead_buttons[POPUPDEAD_NUM_CHOICES_MAX];				// actual lit buttons
 UI_BUTTON	Popupdead_button_regions[POPUPDEAD_NUM_CHOICES_MAX];	// fake buttons used for mouse detection over text
