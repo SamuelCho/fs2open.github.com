@@ -215,7 +215,7 @@ struct vertex_format_data
 	};
 
 	vertex_format format_type;
-	uint stride;
+	size_t stride;
 	void *data_src;
 	int offset;
 
@@ -272,31 +272,6 @@ public:
 
 		Vertex_mask |= (1 << format_type);
 		Vertex_components.push_back(vertex_format_data(format_type, stride, offset));
-	}
-
-	void set_component_offset_for_type_vertex(vertex_format_data::vertex_format format_type)
-	{
-		int offset;
-
-		switch ( format_type ) {
-		case vertex_format_data::POSITION2:
-			offset = offsetof(vertex, screen);
-			break;
-		case vertex_format_data::POSITION3:
-			offset = offsetof(vertex, world);
-			break;
-		case vertex_format_data::TEX_COORD:
-			offset = offsetof(vertex, texture_position);
-			break;
-		case vertex_format_data::COLOR3:
-		case vertex_format_data::COLOR4:
-			offset = offsetof(vertex, r);
-			break;
-		default:
-			return;
-		}
-
-		add_vertex_component(format_type, sizeof(vertex), offset);
 	}
 };
 
