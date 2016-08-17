@@ -310,8 +310,7 @@ void shield_render_low_detail_bitmap(int texture, float alpha, gshield_tri *trip
 	}
 
 	material material_params;
-	material_set_unlit(&material_params, texture, alpha, true, true);
-	material_params.set_color_scale(2.0f);
+	material_set_unlit_emissive(&material_params, texture, alpha, 2.0f);
 	g3_render_primitives_colored_textured(&material_params, vertlist, 4, PRIM_TYPE_TRIFAN, false);
 }
 

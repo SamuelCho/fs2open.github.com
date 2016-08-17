@@ -872,8 +872,7 @@ void batching_render_batch_item(primitive_batch_item *item, vertex_layout *layou
 	} else {
 		material material_def;
 
-		material_set_unlit(&material_def, item->batch_item_info.texture, 1.0f, true, true);
-		material_def.set_color_scale(2.0f);
+		material_set_unlit_emissive(&material_def, item->batch_item_info.texture, 1.0f, 2.0f);
 		gr_render_primitives(&material_def, PRIM_TYPE_TRIS, layout, item->offset, item->n_verts, buffer_num);
 	}
 }

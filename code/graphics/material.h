@@ -545,6 +545,7 @@ gr_zbuffer_type material_determine_depth_mode(bool depth_testing, bool is_transp
 
 void material_set_interface(material* mat_info, int texture, bool blended, float alpha);
 void material_set_unlit(material* mat_info, int texture, float alpha, bool blending, bool depth_testing);
+void material_set_unlit_emissive(material* mat_info, int texture, float alpha, float color_scale);
 void material_set_unlit_color(material* mat_info, int texture, color *clr, bool blending, bool depth_testing);
 void material_set_unlit_color(material* mat_info, int texture, color *clr, float alpha, bool blending, bool depth_testing);
 void material_set_unlit_volume(particle_material* mat_info, int texture, bool point_sprites);

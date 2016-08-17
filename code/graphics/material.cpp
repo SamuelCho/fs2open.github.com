@@ -54,6 +54,13 @@ void material_set_unlit(material* mat_info, int texture, float alpha, bool blend
 	}
 }
 
+void material_set_unlit_emissive(material* mat_info, int texture, float alpha, float color_scale)
+{
+	material_set_unlit(mat_info, texture, alpha, true, true);
+
+	mat_info->set_color_scale(color_scale);
+}
+
 void material_set_unlit_color(material* mat_info, int texture, color *clr, bool blending, bool depth_testing)
 {
 	mat_info->set_texture_map(TM_BASE_TYPE, texture);

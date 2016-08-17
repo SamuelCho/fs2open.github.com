@@ -871,7 +871,7 @@ void nebl_render_section(bolt_type *bi, l_section *a, l_section *b)
 
 	material material_params;
 
-	material_set_unlit(&material_params, bi->texture, Nebl_alpha, true, true);
+	material_set_unlit_emissive(&material_params, bi->texture, Nebl_alpha, 2.0f);
 	
 	// draw some stuff
 	for(size_t idx=0; idx<2; idx++){		

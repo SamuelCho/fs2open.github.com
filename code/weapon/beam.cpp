@@ -1250,8 +1250,7 @@ void beam_render(beam *b, float u_offset)
 		}
 
 		material material_params;
-		material_set_unlit(&material_params, bwsi->texture.first_frame + framenum, 0.9999f, true, true);
-		material_params.set_color_scale(2.0f);
+		material_set_unlit_emissive(&material_params, bwsi->texture.first_frame + framenum, 0.9999f, 2.0f);
 		g3_render_primitives_colored_textured(&material_params, h1, 4, PRIM_TYPE_TRIFAN, false);
 	}		
 	
@@ -1471,8 +1470,7 @@ void beam_render_muzzle_glow(beam *b)
 		//g3_draw_poly(4, verts, TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT);
 
 		material material_info;
-		material_set_unlit(&material_info, bwi->beam_glow.first_frame + framenum, alpha * pct, true, true);
-		material_info.set_color_scale(2.0f);
+		material_set_unlit_emissive(&material_info, bwi->beam_glow.first_frame + framenum, alpha * pct, 2.0f);
 		g3_render_primitives_textured(&material_info, h1, 4, PRIM_TYPE_TRIFAN, false);
 
 	} else {
@@ -1493,8 +1491,7 @@ void beam_render_muzzle_glow(beam *b)
 		// draw 1 bitmap
 		//g3_draw_bitmap(&pt, 0, rad, tmap_flags);
 		material mat_params;
-		material_set_unlit(&mat_params, bwi->beam_glow.first_frame + framenum, alpha * pct, true, true);
-		mat_params.set_color_scale(2.0f);
+		material_set_unlit_emissive(&mat_params, bwi->beam_glow.first_frame + framenum, alpha * pct, 2.0f);
 		g3_render_rect_screen_aligned(&mat_params, &pt, 0, rad, 0.0f);
 
 		// maybe draw more
