@@ -226,7 +226,7 @@ void opengl_update_buffer_data_offset(int handle, uint offset, uint size, void* 
 
 	opengl_bind_buffer_object(handle);
 	
-	glBufferSubDataARB(buffer_obj.type, offset, size, data);
+	glBufferSubData(buffer_obj.type, offset, size, data);
 }
 
 void gr_opengl_delete_buffer(int handle)
@@ -238,10 +238,10 @@ void gr_opengl_delete_buffer(int handle)
 
 	// de-bind the buffer point so we can clear the recorded state.
 	switch ( buffer_obj.type ) {
-	case GL_ARRAY_BUFFER_ARB:
+	case GL_ARRAY_BUFFER:
 		GL_state.Array.BindArrayBuffer(0);
 		break;
-	case GL_ELEMENT_ARRAY_BUFFER_ARB:
+	case GL_ELEMENT_ARRAY_BUFFER:
 		GL_state.Array.BindElementBuffer(0);
 		break;
 	case GL_TEXTURE_BUFFER:
@@ -271,7 +271,7 @@ int gr_opengl_create_vertex_buffer(bool static_buffer)
 		return -1;
 	}
 
-	return opengl_create_buffer_object(GL_ARRAY_BUFFER_ARB, static_buffer ? GL_STATIC_DRAW_ARB : GL_STREAM_DRAW_ARB);
+	return opengl_create_buffer_object(GL_ARRAY_BUFFER, static_buffer ? GL_STATIC_DRAW : GL_STREAM_DRAW);
 }
 
 int gr_opengl_create_index_buffer(bool static_buffer)
@@ -280,7 +280,7 @@ int gr_opengl_create_index_buffer(bool static_buffer)
 		return -1;
 	}
 
-	return opengl_create_buffer_object(GL_ELEMENT_ARRAY_BUFFER_ARB, static_buffer ? GL_STATIC_DRAW_ARB : GL_STREAM_DRAW_ARB);
+	return opengl_create_buffer_object(GL_ELEMENT_ARRAY_BUFFER, static_buffer ? GL_STATIC_DRAW : GL_STREAM_DRAW);
 }
 
 int gr_opengl_create_stream_buffer_object()
@@ -295,7 +295,7 @@ int gr_opengl_create_stream_buffer_object()
 uint opengl_add_to_immediate_buffer(uint size, void *data)
 {
 	if ( GL_immediate_buffer_handle < 0 ) {
-		GL_immediate_buffer_handle = opengl_create_buffer_object(GL_ARRAY_BUFFER_ARB, GL_STREAM_DRAW_ARB);
+		GL_immediate_buffer_handle = opengl_create_buffer_object(GL_ARRAY_BUFFER, GL_STREAM_DRAW);
 	}
 
 	Assert(size > 0 && data != NULL);

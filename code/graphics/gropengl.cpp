@@ -456,7 +456,7 @@ void gr_opengl_shutdown(os::GraphicsOperations* graphicsOps)
 
 	GL_initted = false;
 
-	if ( GLAD_GL_ARB_vertex_array_object ) {
+	if ( GL_version >= 30 ) {
 		glDeleteVertexArrays(1, &GL_vao);
 		GL_vao = 0;
 	}
@@ -1703,7 +1703,7 @@ bool gr_opengl_init(os::GraphicsOperations* graphicsOps)
 	}
 
 	// create vertex array object to make OpenGL Core happy if we can
-	if ( GLAD_GL_ARB_vertex_array_object ) {
+	if ( GL_version >= 30 ) {
 		glGenVertexArrays(1, &GL_vao);
 		glBindVertexArray(GL_vao);
 	}
@@ -1812,10 +1812,6 @@ bool gr_opengl_is_capable(gr_capability capability)
 	}
 
 	if ( GL_version < 20 ) {
-		return false;
-	}
-
-	if ( !GLAD_GL_ARB_framebuffer_object ) {
 		return false;
 	}
 

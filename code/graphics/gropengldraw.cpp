@@ -2813,7 +2813,7 @@ void gr_opengl_copy_effect_texture()
 	}
 
 	glDrawBuffer(GL_COLOR_ATTACHMENT4_EXT);
-	glBlitFramebufferEXT(0, 0, gr_screen.max_w, gr_screen.max_h, 0, 0, gr_screen.max_w, gr_screen.max_h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+	glBlitFramebuffer(0, 0, gr_screen.max_w, gr_screen.max_h, 0, 0, gr_screen.max_w, gr_screen.max_h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 	glDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);
 }
 

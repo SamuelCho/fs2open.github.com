@@ -865,7 +865,7 @@ void opengl_shader_init_attribute(const opengl_vert_attrib *attrib_info)
 	}
 
 	// assign default value to vertex attribute
-	glVertexAttrib4fARB(
+	glVertexAttrib4f(
 		new_attribute.location,
 		attrib_info->default_value.xyzw.x,
 		attrib_info->default_value.xyzw.y,

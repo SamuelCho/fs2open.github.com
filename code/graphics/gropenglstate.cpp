@@ -1438,7 +1438,7 @@ void opengl_uniform_state::setUniform1iv(const SCP_string &name, const int count
 		uniform_lookup[name] = uniforms.size() - 1;
 	}
 
-	glUniform1ivARB(opengl_shader_get_uniform(name.c_str()), count, (const GLint*)val);
+	glUniform1iv(opengl_shader_get_uniform(name.c_str()), count, (const GLint*)val);
 }
 
 void opengl_uniform_state::setUniformf(const SCP_string &name, const float val)
@@ -1681,7 +1681,7 @@ void opengl_uniform_state::setUniform1fv(const SCP_string &name, const int count
 		uniform_lookup[name] = uniforms.size() - 1;
 	}
 
-	glUniform1fvARB(opengl_shader_get_uniform(name.c_str()), count, (const GLfloat*)val);
+	glUniform1fv(opengl_shader_get_uniform(name.c_str()), count, (const GLfloat*)val);
 }
 
 void opengl_uniform_state::setUniform3fv(const SCP_string &name, const int count, const vec3d *val)
@@ -1734,7 +1734,7 @@ void opengl_uniform_state::setUniform3fv(const SCP_string &name, const int count
 		uniform_lookup[name] = uniforms.size() - 1;
 	}
 
-	glUniform3fvARB(opengl_shader_get_uniform(name.c_str()), count, (const GLfloat*)val);
+	glUniform3fv(opengl_shader_get_uniform(name.c_str()), count, (const GLfloat*)val);
 }
 
 void opengl_uniform_state::setUniform4fv(const SCP_string &name, const int count, const vec4 *val)
@@ -1787,7 +1787,7 @@ void opengl_uniform_state::setUniform4fv(const SCP_string &name, const int count
 		uniform_lookup[name] = uniforms.size() - 1;
 	}
 
-	glUniform4fvARB(opengl_shader_get_uniform(name.c_str()), count, (const GLfloat*)val);
+	glUniform4fv(opengl_shader_get_uniform(name.c_str()), count, (const GLfloat*)val);
 }
 
 void opengl_uniform_state::setUniformMatrix4f(const SCP_string &name, const matrix4 &val)
@@ -2078,7 +2078,7 @@ void opengl_light_state::SetSpotCutoff(GLfloat val)
 
 void gr_opengl_clear_states()
 {
-	if ( GLAD_GL_ARB_vertex_array_object ) {
+	if ( GL_version >= 30 ) {
 		glBindVertexArray(GL_vao);
 	}
 

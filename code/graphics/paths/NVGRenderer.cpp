@@ -43,7 +43,7 @@ namespace
 		GL_state.Texture.SetTarget(0);
 		GL_state.Texture.DisableAll();
 
-		if ( GLAD_GL_ARB_vertex_array_object ) {
+		if ( GL_version >= 30 ) {
 			glBindVertexArray(GL_vao);
 		}
 
@@ -98,7 +98,7 @@ namespace graphics
 
 		void NVGRenderer::endFrame()
 		{
-			if ( GLAD_GL_ARB_vertex_array_object ) {
+			if ( GL_version >= 30 ) {
 				glBindVertexArray(0);
 			}
 
