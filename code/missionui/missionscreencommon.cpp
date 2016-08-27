@@ -11,6 +11,7 @@
 
 
 #include <limits.h>		// this is need even when not building debug!!
+#include <type_traits>
 
 #include "anim/animplay.h"
 #include "cmdline/cmdline.h"
@@ -42,6 +43,7 @@
 #include "parse/sexp.h"
 #include "popup/popup.h"
 #include "render/3d.h"
+#include "render/batching.h"
 #include "ship/ship.h"
 #include "ui/uidefs.h"
 #include "weapon/weapon.h"
@@ -429,10 +431,6 @@ void common_set_interface_palette(char *filename)
 		Error(LOCATION, "Could not load in \"%s\"!", filename);
 	}
 	*/
-
-#ifndef HARDWARE_ONLY
-	palette_use_bm_palette(InterfacePaletteBitmap);
-#endif
 }
 
 // release the interface palette .pcx file, and restore the game palette
@@ -1247,7 +1245,7 @@ void wss_direct_restore_loadout()
 
 					if ( slot->ship_class == -1 ) {
 						cleanup_ship_index[j] = wp->ship_index[j];
-						ship_add_exited_ship( shipp, SEF_PLAYER_DELETED );
+						ship_add_exited_ship( shipp, Ship::Exit_Flags::Player_deleted );
 						obj_delete(shipp->objnum);
 						hud_set_wingman_status_none( shipp->wing_status_wing_index, shipp->wing_status_wing_pos);
 						continue;
@@ -1527,7 +1525,7 @@ int restore_wss_data(ubyte *block)
 	return offset;
 }
 
-void draw_model_icon(int model_id, int flags, float closeup_zoom, int x, int y, int w, int h, const ship_info *sip, int resize_mode, const vec3d *closeup_pos)
+void draw_model_icon(int model_id, int flags, float closeup_zoom, int x, int y, int w, int h, ship_info *sip, int resize_mode, const vec3d *closeup_pos)
 {
 	matrix	object_orient	= IDENTITY_MATRIX;
 	angles rot_angles = {0.0f,0.0f,0.0f};
@@ -1543,11 +1541,11 @@ void draw_model_icon(int model_id, int flags, float closeup_zoom, int x, int y, 
 		// If non-zero model_icon_angles exists, always use that
 		rot_angles = sip->model_icon_angles;
 	}
-	else if(sip->flags & SIF_SMALL_SHIP)
+	else if(sip->is_small_ship())
 	{
 		rot_angles.p = -(PI_2);
 	}
-	else if((sip->max_speed <= 0.0f) && !(sip->flags & SIF_CARGO))
+	else if((sip->max_speed <= 0.0f) && !(sip->flags[Ship::Info_Flags::Cargo]))
 	{
 		//Probably an installation or Knossos
 		rot_angles.h = PI;
@@ -1727,7 +1725,8 @@ void draw_model_rotating(model_render_params *render_info, int model_id, int x1,
 			stop.xyz.x = -size*start_scale;
 			stop.xyz.y = 0.0f;
 			stop.xyz.z = -clip;
-			g3_draw_htl_line(&start,&stop);
+			//g3_draw_htl_line(&start,&stop);
+			g3_render_line_3d(true, &start, &stop);
 		}
 		g3_done_instance(true);
 
@@ -1748,7 +1747,8 @@ void draw_model_rotating(model_render_params *render_info, int model_id, int x1,
 
 			for (i = -3; i < 4; i++) {
 				start.xyz.x = stop.xyz.x = size*0.333f*i;
-				g3_draw_htl_line(&start,&stop);
+				//g3_draw_htl_line(&start,&stop);
+				g3_render_line_3d(false, &start, &stop);
 			}
 
 			start.xyz.x = size;
@@ -1758,7 +1758,8 @@ void draw_model_rotating(model_render_params *render_info, int model_id, int x1,
 				start.xyz.z = stop.xyz.z = size*0.333f*i+offset*0.5f;
 				if ((time < 1.5f) && (start.xyz.z <= -clip))
 					break;
-				g3_draw_htl_line(&start,&stop);
+				//g3_draw_htl_line(&start,&stop);
+				g3_render_line_3d(false, &start, &stop);
 			}
 
 			g3_done_instance(true);
@@ -1834,14 +1835,15 @@ void draw_model_rotating(model_render_params *render_info, int model_id, int x1,
 				stop.xyz.y = 0.0f;
 				stop.xyz.z = -clip;
 				g3_start_instance_angles(&vmd_zero_vector,&view_angles);
-				g3_draw_htl_line(&start,&stop);
+				//g3_draw_htl_line(&start,&stop);
+				g3_render_line_3d(false, &start, &stop);
 				g3_done_instance(true);
 			}
 		}
 
 		gr_zbuffer_set(GR_ZBUFF_FULL); // Turn off depthbuffer again
 
-		batch_render_all();
+		batching_render_all();
 		Glowpoint_use_depth_buffer = true; // Back to normal
 
 		gr_end_view_matrix();
@@ -1923,7 +1925,7 @@ void draw_model_rotating(model_render_params *render_info, int model_id, int x1,
 
 		model_render_immediate(render_info, model_id, &model_orient, &vmd_zero_vector);
 
-		batch_render_all();
+		batching_render_all();
 
 		gr_end_view_matrix();
 		gr_end_proj_matrix();

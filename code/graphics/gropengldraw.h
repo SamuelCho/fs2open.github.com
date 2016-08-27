@@ -15,10 +15,19 @@
 #include "graphics/gropenglstate.h"
 #include "graphics/gropenglshader.h"
 #include "graphics/shadows.h"
+#include <glad/glad.h>
+
+struct opengl_vertex_bind {
+	vertex_format_data::vertex_format format;
+	GLint size;
+	GLenum data_type;
+	GLboolean normalized;
+	opengl_vert_attrib::attrib_id attribute_id;
+};
 
 void gr_opengl_aabitmap_ex(int x, int y, int w, int h, int sx, int sy, int resize_mode, bool mirror);
 void gr_opengl_aabitmap(int x, int y, int resize_mode, bool mirror);
-void gr_opengl_string(int sx, int sy, const char *s, int resize_mode = GR_RESIZE_FULL);
+void gr_opengl_string(float sx, float sy, const char *s, int resize_mode, int length);
 void gr_opengl_line(int x1,int y1,int x2,int y2, int resize_mode);
 void gr_opengl_aaline(vertex *v1, vertex *v2);
 void gr_opengl_pixel(int x, int y, int resize_mode);
@@ -41,8 +50,9 @@ void gr_opengl_update_distortion();
 void opengl_set_spec_mapping(int tmap_type, float *u_scale, float *v_scale, int stage = 0);
 void opengl_reset_spec_mapping();
 
+void opengl_draw_sphere();
 void gr_opengl_line_htl(const vec3d *start, const vec3d *end);
-void gr_opengl_sphere_htl(float rad);
+void gr_opengl_sphere(material *material_def, float rad);
 void gr_opengl_deferred_light_sphere_init(int rings, int segments);
 void gr_opengl_draw_deferred_light_sphere(const vec3d *position, float rad, bool clearStencil);
 void gr_opengl_deferred_light_cylinder_init(int segments);
@@ -50,7 +60,7 @@ void gr_opengl_draw_deferred_light_cylinder(const vec3d *position, const matrix 
 
 void gr_opengl_draw_line_list(const colored_vector *lines, int num);
 
-void gr_opengl_shadow_map_start(const matrix4 *shadow_view_matrix, const matrix *light_orient);
+void gr_opengl_shadow_map_start(matrix4 *shadow_view_matrix, const matrix *light_orient);
 void gr_opengl_shadow_map_end();
 
 void gr_opengl_render_shield_impact(vec3d *verts, vec3d *norms, int n_verts, matrix *decal_orient, vec3d *decal_pos, float decal_radius);
@@ -66,7 +76,17 @@ void gr_opengl_deferred_lighting_begin();
 void gr_opengl_deferred_lighting_end();
 void gr_opengl_deferred_lighting_finish();
 
-void opengl_bind_vertex_layout(vertex_layout &layout);
+void opengl_render_primitives(primitive_type prim_type, vertex_layout* layout, int n_verts, int buffer_handle, size_t vert_offset, size_t byte_offset);
+void opengl_render_primitives_immediate(primitive_type prim_type, vertex_layout* layout, int n_verts, void* data, int size);
+
+void gr_opengl_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
+void gr_opengl_render_primitives_immediate(material* material_info, primitive_type prim_type, vertex_layout* layout, int n_verts, void* data, int size);
+void gr_opengl_render_primitives_2d(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
+void gr_opengl_render_primitives_2d_immediate(material* material_info, primitive_type prim_type, vertex_layout* layout, int n_verts, void* data, int size);
+void gr_opengl_render_primitives_particle(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
+void gr_opengl_render_primitives_distortion(distortion_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
+
+void opengl_bind_vertex_layout(vertex_layout &layout, uint base_vertex = 0, ubyte* base_ptr = NULL);
 
 inline void opengl_draw_textured_quad_instanced(
 	GLfloat x1, GLfloat y1, GLfloat u1, GLfloat v1,
@@ -90,7 +110,7 @@ inline void opengl_draw_textured_quad_instanced(
 	opengl_bind_vertex_layout(vert_def);
 
 	//glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-	vglDrawArraysInstancedARB(GL_TRIANGLE_STRIP, 0, 4, count);
+	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, count);
 }
 
 inline void opengl_draw_textured_quad(
@@ -104,21 +124,17 @@ inline void opengl_draw_textured_quad(
 		{ x2, y2, u2, v2 }
 	};
 
-	GL_state.Array.BindArrayBuffer(0);
-
 	vertex_layout vert_def;
 
-	vert_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(glVertices[0]), glVertices);
-	vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(glVertices[0]), &(glVertices[0][2]));
+	vert_def.add_vertex_component(vertex_format_data::POSITION2, sizeof(GLfloat) * 4, 0);
+	vert_def.add_vertex_component(vertex_format_data::TEX_COORD, sizeof(GLfloat) * 4, sizeof(GLfloat) * 2);
 
-	opengl_bind_vertex_layout(vert_def);
-
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	opengl_render_primitives_immediate(PRIM_TYPE_TRISTRIP, &vert_def, 4, glVertices, sizeof(GLfloat) * 4 * 4);
 }
 
 inline void opengl_draw_coloured_quad(
-	GLint x1, GLint y1, 
-	GLint x2, GLint y2 )
+	GLint x1, GLint y1,
+	GLint x2, GLint y2)
 {
 	GLint glVertices[8] = {
 		x1, y1,
@@ -129,12 +145,11 @@ inline void opengl_draw_coloured_quad(
 
 	vertex_layout vert_def;
 
-	vert_def.add_vertex_component(vertex_format_data::SCREEN_POS, 0, glVertices);
+	vert_def.add_vertex_component(vertex_format_data::SCREEN_POS, 0, 0);
 
 	opengl_bind_vertex_layout(vert_def);
-	opengl_shader_set_passthrough(false);
 
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	opengl_render_primitives_immediate(PRIM_TYPE_TRISTRIP, &vert_def, 4, glVertices, sizeof(GLint) * 8);
 }
 
 inline void opengl_draw_coloured_quad(
@@ -150,13 +165,14 @@ inline void opengl_draw_coloured_quad(
 
 	vertex_layout vert_def;
 
-	vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, glVertices);
+	vert_def.add_vertex_component(vertex_format_data::POSITION2, 0, 0);
 
 	opengl_bind_vertex_layout(vert_def);
-	opengl_shader_set_passthrough(false);
 
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	opengl_render_primitives_immediate(PRIM_TYPE_TRISTRIP, &vert_def, 4, glVertices, sizeof(GLfloat) * 8);
 }
+
+inline GLenum opengl_primitive_type(primitive_type prim_type);
 
 extern int Scene_texture_initialized;
 

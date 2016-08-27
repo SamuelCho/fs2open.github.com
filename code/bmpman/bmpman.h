@@ -103,8 +103,8 @@ struct bitmap
 	short	w;          //!< Width, in number of pixels
 	short	h;          //!< Height, in number of pixels
 	short	rowsize;    //!< What you need to add to go to next row
-	ubyte	bpp;        //!< Requested bitdepth of each pixel. ( 7, 8, 15, 16, 24, 32)
-	ubyte	true_bpp;   //!< The image's actual bitdepth
+	int	bpp;        //!< Requested bitdepth of each pixel. ( 7, 8, 15, 16, 24, 32)
+	int	true_bpp;   //!< The image's actual bitdepth
 	ubyte	flags;      //!< Various texture type flags. @see BMPMAN_CONSTANTS
 	ptr_u	data;       //!< Pointer to data, or maybe offset into VRAM.
 	ubyte *palette;     /**< @brief   Pointer to this bitmap's palette (if it has one).
@@ -112,7 +112,7 @@ struct bitmap
 	                     */
 };
 
-extern int bm_texture_ram;  //!< how many bytes of textures are used.
+extern size_t bm_texture_ram;  //!< how many bytes of textures are used.
 
 extern int Bm_paging;   //!< Bool type that indicates if BMPMAN is currently paging.
 
@@ -170,14 +170,14 @@ int bm_get_next_handle();
  * @note z64 - This function looks fishy. Not only is handle not used in release builds, but bm_bitmaps[handle].size
  *   and bm_texture_size aren't modified unless this is a debug build
  */
-void *bm_malloc(int handle, int size);
+void *bm_malloc(int handle, size_t size);
 
 /**
  * @brief (DEBUG) Similar to bm_malloc, but only updates how much memory is used
  *
  * @note z64 - Also fishy (see bm_malloc)
  */
-void bm_update_memory_used(int n, int size);
+void bm_update_memory_used(int n, size_t size);
 
 class bitmap_lookup {
 	ubyte *Bitmap_data;
@@ -335,7 +335,7 @@ int bm_load_either(const char *filename, int *nframes = NULL, int *fps = NULL, i
  * @returns A pointer to the bitmap that's valid until bm_unlock is called if successful, or
  * @returns NULL if unsuccessful
  */
-bitmap* bm_lock(int handle, ubyte bpp, ubyte flags, bool nodebug = false);
+bitmap* bm_lock(int handle, int bpp, ubyte flags, bool nodebug = false);
 
 /**
  * @brief Returns a unique signiature for the bitmap indexed by handle

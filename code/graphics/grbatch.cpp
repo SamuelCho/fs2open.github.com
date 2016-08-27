@@ -213,6 +213,7 @@ void geometry_batcher::draw_bitmap(vertex *pnt, int orient, float rad, float dep
 		P[5].texture_position.u = 1.0f;
 		P[4].texture_position.u = 0.0f;
 		P[3].texture_position.u = 0.0f;
+
 		// tri 2
 		P[2].texture_position.u = 1.0f;
 		P[1].texture_position.u = 0.0f;
@@ -222,6 +223,7 @@ void geometry_batcher::draw_bitmap(vertex *pnt, int orient, float rad, float dep
 		P[5].texture_position.u = 0.0f;
 		P[4].texture_position.u = 1.0f;
 		P[3].texture_position.u = 1.0f;
+
 		// tri 2
 		P[2].texture_position.u = 0.0f;
 		P[1].texture_position.u = 1.0f;
@@ -233,6 +235,7 @@ void geometry_batcher::draw_bitmap(vertex *pnt, int orient, float rad, float dep
 		P[5].texture_position.v = 1.0f;
 		P[4].texture_position.v = 1.0f;
 		P[3].texture_position.v = 0.0f;
+
 		// tri 2
 		P[2].texture_position.v = 1.0f;
 		P[1].texture_position.v = 0.0f;
@@ -242,6 +245,7 @@ void geometry_batcher::draw_bitmap(vertex *pnt, int orient, float rad, float dep
 		P[5].texture_position.v = 0.0f;
 		P[4].texture_position.v = 0.0f;
 		P[3].texture_position.v = 1.0f;
+
 		// tri 2
 		P[2].texture_position.v = 0.0f;
 		P[1].texture_position.v = 1.0f;
@@ -335,8 +339,9 @@ void geometry_batcher::draw_tri(vertex* verts)
 {
 	vertex *P = &vert[n_to_render *3 ];
 
-	for (int i = 0; i < 3; i++)
+	for ( int i = 0; i < 3; i++ ) {
 		P[i] = verts[i];
+	}
 
 	n_to_render += 1;
 	use_radius = false;
@@ -357,7 +362,6 @@ void geometry_batcher::draw_quad(vertex* verts)
 	n_to_render += 2;
 	use_radius = false;
 }
-
 
 void geometry_batcher::draw_beam(vec3d *start, vec3d *end, float width, float intensity, float offset)
 {
@@ -601,10 +605,10 @@ void geometry_shader_batcher::render_buffer(int buffer_handle, int flags)
 	buffer_offset = -1;
 }
 
-void geometry_shader_batcher::load_buffer(particle_pnt* buffer, int *n_verts)
+void geometry_shader_batcher::load_buffer(particle_pnt* buffer, size_t *n_verts)
 {
-	int verts_to_render = vertices.size();
-	int i;
+	size_t verts_to_render = vertices.size();
+	size_t i;
 
 	buffer_offset = *n_verts;
 
@@ -733,7 +737,7 @@ int batch_add_bitmap(int texture, int tmap_flags, vertex *pnt, int orient, float
 		tmap_flags &= ~(TMAP_FLAG_SOFT_QUAD);
 	}
 
-	if ( GLSL_version > 120 && Cmdline_softparticles && !Cmdline_no_geo_sdr_effects && Is_Extension_Enabled(OGL_EXT_GEOMETRY_SHADER4) && (tmap_flags & TMAP_FLAG_VERTEX_GEN) ) {
+	if ( GLSL_version > 120 && Cmdline_softparticles && !Cmdline_no_geo_sdr_effects && (tmap_flags & TMAP_FLAG_VERTEX_GEN) ) {
 		geometry_batch_add_bitmap(texture, tmap_flags, pnt, orient, rad, alpha, depth);
 		return 0;
 	} else if ( tmap_flags & TMAP_FLAG_VERTEX_GEN ) {
@@ -1081,7 +1085,7 @@ void batch_load_buffer_geometry_map_bitmaps(effect_vertex* buffer, int *n_verts)
 	}
 }
 
-void batch_load_buffer_geometry_shader_map_bitmaps(particle_pnt* buffer, int *n_verts)
+void batch_load_buffer_geometry_shader_map_bitmaps(particle_pnt* buffer, size_t *n_verts)
 {
 	for (SCP_map<int, g_sdr_batch_item>::iterator bi = geometry_shader_map.begin(); bi != geometry_shader_map.end(); ++bi) {
 
@@ -1102,8 +1106,8 @@ void geometry_batch_render(int stream_buffer)
 		return;
 	}
 
-	int n_to_render = geometry_batch_get_size();
-	int n_verts = 0;
+	size_t n_to_render = geometry_batch_get_size();
+	size_t n_verts = 0;
 
 	if ( Batch_geometry_buffer_size < (n_to_render * sizeof(particle_pnt)) ) {
 		if ( Batch_geometry_buffer != NULL ) {
@@ -1116,7 +1120,7 @@ void geometry_batch_render(int stream_buffer)
 
 	batch_load_buffer_geometry_shader_map_bitmaps((particle_pnt*)Batch_geometry_buffer, &n_verts);
 
-	gr_update_buffer_object(stream_buffer, Batch_geometry_buffer_size, Batch_geometry_buffer);
+	gr_update_buffer_data(stream_buffer, Batch_geometry_buffer_size, Batch_geometry_buffer);
 
 	batch_render_geometry_shader_map_bitmaps(stream_buffer);
 }
@@ -1140,7 +1144,7 @@ void batch_render_all(int stream_buffer)
 		batch_load_buffer_lasers((effect_vertex*)Batch_buffer, &n_verts);
 		batch_load_buffer_geometry_map_bitmaps((effect_vertex*)Batch_buffer, &n_verts);
 		batch_load_buffer_distortion_map_bitmaps((effect_vertex*)Batch_buffer, &n_verts);
-		gr_update_buffer_object(stream_buffer, Batch_buffer_size, Batch_buffer);
+		gr_update_buffer_data(stream_buffer, Batch_buffer_size, Batch_buffer);
 
 		Assert(n_verts <= n_to_render);
 
@@ -1179,7 +1183,7 @@ int distortion_add_bitmap_rotated(int texture, int tmap_flags, vertex *pnt, floa
 		return 1;
 	}
 
-	if ( GLSL_version < 120 || !Is_Extension_Enabled(OGL_EXT_FRAMEBUFFER_OBJECT) ) {
+	if ( GLSL_version < 120 ) {
 		// don't render distortions if we can't support them.
 		return 0;
 	}
@@ -1214,7 +1218,7 @@ int distortion_add_beam(int texture, int tmap_flags, vec3d *start, vec3d *end, f
 		return 1;
 	}
 
-	if ( GLSL_version < 120 || !Is_Extension_Enabled(OGL_EXT_FRAMEBUFFER_OBJECT) ) {
+	if ( GLSL_version < 120 ) {
 		// don't render distortions if we can't support them.
 		return 0;
 	}
@@ -1297,9 +1301,9 @@ int batch_get_size()
 	return n_to_render * 3;
 }
 
-int geometry_batch_get_size()
+size_t geometry_batch_get_size()
 {
-	int n_to_render = 0;
+	size_t n_to_render = 0;
 	SCP_map<int, g_sdr_batch_item>::iterator bi;
 
 	for (bi = geometry_shader_map.begin(); bi != geometry_shader_map.end(); ++bi) {

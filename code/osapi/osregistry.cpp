@@ -1,10 +1,10 @@
 /*
- * Copyright (C) Volition, Inc. 1999.  All rights reserved.
- *
- * All source code herein is the property of Volition, Inc. You may not sell 
- * or otherwise commercially exploit the source or things you created based on the 
- * source.
- *
+* Copyright (C) Volition, Inc. 1999.  All rights reserved.
+*
+* All source code herein is the property of Volition, Inc. You may not sell
+* or otherwise commercially exploit the source or things you created based on the
+* source.
+*
 */
 
 #include "globalincs/pstypes.h"
@@ -19,7 +19,11 @@
 
 #ifdef WIN32
 #include <Windows.h>
+// Stupid Microsoft is not able to fix a simple compile warning: https://connect.microsoft.com/VisualStudio/feedback/details/1342304/level-1-compiler-warnings-in-windows-sdk-shipped-with-visual-studio
+#pragma warning(push)
+#pragma warning(disable: 4091) // ignored on left of '' when no variable is declared
 #include <Shlobj.h>
+#pragma warning(pop)
 #include <Sddl.h>
 #endif
 
@@ -89,7 +93,7 @@ namespace
 
 	bool needsWOW64()
 	{
-#ifdef _WIN64
+#if IS_64BIT
 		// 64-bit application always use the Wow6432Node
 		return true;
 #else
@@ -202,7 +206,7 @@ namespace
 			NULL,					// DWORD reserved
 			REG_SZ,					// null terminated string
 			(CONST BYTE *)value,	// value to set
-			strlen(value) + 1);	// How many bytes to set
+			(DWORD)(strlen(value) + 1));	// How many bytes to set
 
 		if (lResult != ERROR_SUCCESS) {
 			goto Cleanup;
@@ -412,15 +416,15 @@ typedef struct Profile
 	struct Section *sections;
 } Profile;
 
+// For string config functions
+static char tmp_string_data[1024];
 
-// ------------------------------------------------------------------------------------------------------------
-// REGISTRY FUNCTIONS
-//
+// This code is needed for compatibility with the old windows registry
 
 static char *read_line_from_file(FILE *fp)
 {
 	char *buf, *buf_start;
-	int buflen, len, eol;
+	int buflen, eol;
 
 	buflen = 80;
 	buf = (char *)vm_malloc(buflen);
@@ -443,7 +447,7 @@ static char *read_line_from_file(FILE *fp)
 			}
 		}
 
-		len = strlen(buf_start);
+		auto len = strlen(buf_start);
 
 		if (buf_start[len - 1] == '\n') {
 			buf_start[len - 1] = 0;
@@ -465,7 +469,6 @@ static char *read_line_from_file(FILE *fp)
 static char *trim_string(char *str)
 {
 	char *ptr;
-	int len;
 
 	if (str == NULL)
 		return NULL;
@@ -479,7 +482,7 @@ static char *trim_string(char *str)
 		*ptr = 0;
 
 	ptr = str;
-	len = strlen(str);
+	auto len = strlen(str);
 	if (len > 0) {
 		ptr += len - 1;
 	}
@@ -707,7 +710,7 @@ static char *profile_get_value(Profile *profile, const char *section, const char
 	Section *sp = profile->sections;
 
 	while (sp != NULL) {
-		if (strcmp(section, sp->name) == 0) {
+		if (stricmp(section, sp->name) == 0) {
 			KeyValue *kvp = sp->pairs;
 
 			while (kvp != NULL) {
@@ -794,7 +797,6 @@ void os_init_registry_stuff(const char *company, const char *app, const char *ve
 	Os_reg_inited = 1;
 }
 
-static char tmp_string_data[1024];
 const char *os_config_read_string(const char *section, const char *name, const char *default_value)
 {
 	Profile *p = profile_read(Osreg_config_file_name);

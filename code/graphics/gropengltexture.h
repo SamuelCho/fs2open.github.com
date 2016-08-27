@@ -13,8 +13,8 @@
 
 #include "globalincs/pstypes.h"
 #include "graphics/gropengl.h"
-#include "graphics/gropenglextension.h"
 
+#include <glad/glad.h>
 
 typedef struct tcache_slot_opengl {
 	GLuint texture_id;
@@ -24,8 +24,8 @@ typedef struct tcache_slot_opengl {
 	int	bitmap_handle;
 	int	size;
 	ushort w, h;
-	ubyte bpp;
-	ubyte mipmap_levels;
+	int bpp;
+	int mipmap_levels;
 
 	tcache_slot_opengl() :
 		texture_id(0), texture_target(GL_TEXTURE_2D), wrap_mode(GL_REPEAT),
@@ -50,6 +50,8 @@ typedef struct tcache_slot_opengl {
 	}
 } tcache_slot_opengl;
 
+extern matrix4 GL_texture_matrix;
+
 extern int GL_min_texture_width;
 extern GLint GL_max_texture_width;
 extern int GL_min_texture_height;
@@ -73,7 +75,7 @@ void opengl_set_modulate_tex_env();
 void opengl_preload_init();
 GLfloat opengl_get_max_anisotropy();
 void opengl_kill_render_target(int slot);
-int opengl_make_render_target(int handle, int slot, int *w, int *h, ubyte *bpp, int *mm_lvl, int flags);
+int opengl_make_render_target(int handle, int slot, int *w, int *h, int *bpp, int *mm_lvl, int flags);
 int opengl_set_render_target(int slot, int face = -1, int is_static = 0);
 void gr_opengl_get_bitmap_from_texture(void* data_out, int bitmap_num);
 int opengl_get_texture(GLenum target, GLenum pixel_format, GLenum data_format, int num_mipmaps, int width, int height, int bytes_per_pixel, void* image_data, int offset);
@@ -87,5 +89,6 @@ void gr_opengl_set_texture_panning(float u, float v, bool enable);
 void gr_opengl_set_texture_addressing(int mode);
 GLuint opengl_get_rtt_framebuffer();
 void gr_opengl_bm_generate_mip_maps(int slot);
+void gr_opengl_get_texture_scale(int bitmap_handle, float *u_scale, float *v_scale);
 
 #endif	//_GROPENGLTEXTURE_H

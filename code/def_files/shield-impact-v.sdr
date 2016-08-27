@@ -1,0 +1,15 @@
+uniform vec3 hitnorm;
+uniform mat4 shield_mv_matrix;
+uniform mat4 shield_proj_matrix;
+varying vec4 shield_impact_uv;
+varying float dotprod;
+void main()
+{
+	gl_FrontColor = gl_Color;
+	gl_FrontSecondaryColor = vec4(0.0, 0.0, 0.0, 1.0);
+	gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * gl_Vertex;
+	dotprod = dot(hitnorm, gl_Normal);
+	shield_impact_uv = shield_proj_matrix * shield_mv_matrix * gl_Vertex;
+	shield_impact_uv += 1.0f;
+	shield_impact_uv *= 0.5f;
+}

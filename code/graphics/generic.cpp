@@ -159,7 +159,7 @@ int generic_anim_stream(generic_anim *ga, const bool cache)
 	CFILE *img_cfp = NULL;
 	int anim_fps = 0;
 	char full_path[MAX_PATH];
-	int size = 0, offset = 0;
+	size_t size = 0, offset = 0;
 	const int NUM_TYPES = 3;
 	const ubyte type_list[NUM_TYPES] = {BM_TYPE_EFF, BM_TYPE_ANI, BM_TYPE_PNG};
 	const char *ext_list[NUM_TYPES] = {".eff", ".ani", ".png"};
@@ -499,7 +499,7 @@ void generic_render_png_stream(generic_anim* ga)
 	}
 
 	bm_lock(ga->bitmap_id, ga->png.anim->bpp, BMP_TEX_NONCOMP, true);  // lock in 32 bpp for png
-	ubyte bpp = ga->png.anim->bpp;
+	int bpp = ga->png.anim->bpp;
 	if (ga->use_hud_color) {
 		bpp = 8;
 	}

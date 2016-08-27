@@ -76,9 +76,11 @@ extern int Cmdline_bloom_intensity;
 extern bool Cmdline_fxaa;
 extern int Cmdline_fxaa_preset;
 extern bool Cmdline_fb_explosions;
+extern bool Cmdline_fb_thrusters;
 extern bool Cmdline_no_batching;
 extern int Cmdline_shadow_quality;
 extern int Cmdline_no_deferred_lighting;
+extern int Cmdline_no_emissive;
 
 // Game Speed related
 extern int Cmdline_cache_bitmaps;
@@ -123,10 +125,8 @@ extern bool Cmdline_portable_mode;
 extern int Cmdline_load_all_weapons;
 extern int Cmdline_nomovies;	// WMC Toggles movie playing support
 extern int Cmdline_no_set_gamma;
-extern int Cmdline_novbo;
 extern int Cmdline_no_fbo;
 extern int Cmdline_no_pbo;
-extern int Cmdline_noglsl;
 extern int Cmdline_mipmap;
 extern int Cmdline_ati_color_swap;
 extern int Cmdline_no_3d_sound;
@@ -135,6 +135,7 @@ extern char* Cmdline_keyboard_layout;
 extern bool Cmdline_gl_finish;
 extern bool Cmdline_no_geo_sdr_effects;
 extern bool Cmdline_set_cpu_affinity;
+extern bool Cmdline_nograb;
 #ifdef WIN32
 extern bool Cmdline_alternate_registry_path;
 #endif
@@ -145,9 +146,6 @@ extern int Cmdline_old_collision_sys;
 extern int Cmdline_dis_collisions;
 extern int Cmdline_dis_weapons;
 extern int Cmdline_noparseerrors;
-#ifdef Allow_NoWarn
-extern int Cmdline_nowarn;
-#endif
 extern int Cmdline_extra_warn;
 extern int Cmdline_show_mem_usage;
 extern int Cmdline_show_pos;
@@ -159,5 +157,7 @@ extern bool Cmdline_frame_profile;
 extern bool Cmdline_profile_write_file;
 extern bool Cmdline_no_unfocus_pause;
 extern bool Cmdline_benchmark_mode;
+extern bool Cmdline_noninteractive;
+extern bool Cmdline_json_pilot;
 
 #endif

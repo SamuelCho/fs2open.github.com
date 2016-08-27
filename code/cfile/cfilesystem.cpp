@@ -43,7 +43,7 @@
 #define CF_ROOTTYPE_PACK 1
 
 // for a defined and specifically set location to get/send pilot/campaign files
-char *Pilot_file_path = NULL;
+SCP_string Pilot_file_path;
 
 //  Created by:
 //    specifying hard drive tree
@@ -178,7 +178,7 @@ int cf_get_packfile_count(cf_root *root)
 #if defined _WIN32
 		filespec += "*.vp";
 
-		int find_handle;
+		intptr_t find_handle;
 		_finddata_t find;
 		
 		find_handle = _findfirst( filespec.c_str( ), &find );
@@ -266,7 +266,7 @@ void cf_build_pack_list( cf_root *root )
 #if defined _WIN32
 		strcat_s( filespec, "*.vp" );
 
-		int find_handle;
+		intptr_t find_handle;
 		_finddata_t find;
 		
 		find_handle = _findfirst( filespec, &find );
@@ -359,6 +359,16 @@ void cf_build_pack_list( cf_root *root )
 	vm_free(temp_roots_sort);
 }
 
+static char normalize_directory_separator(char in)
+{
+	if (in == '/')
+	{
+		return DIR_SEPARATOR_CHAR;
+	}
+
+	return in;
+}
+
 static void cf_add_mod_roots(const char* rootDirectory)
 {
 	if (Cmdline_mod)
@@ -380,6 +390,9 @@ static void cf_add_mod_roots(const char* rootDirectory)
 				Error(LOCATION, "The length of mod directory path '%s' exceeds the maximum of %d!\n", rootPath.c_str(), CF_MAX_PATHNAME_LENGTH);
 			}
 
+			// normalize the path to the native path format
+			std::transform(rootPath.begin(), rootPath.end(), rootPath.begin(), normalize_directory_separator);
+
 			cf_root* root = cf_create_root();
 
 			strncpy(root->path, rootPath.c_str(),  CF_MAX_PATHNAME_LENGTH-1);
@@ -396,7 +409,6 @@ void cf_build_root_list(const char *cdrom_dir)
 	Num_path_roots = 0;
 
 	cf_root	*root = nullptr;
-	int path_len;
 
 	if (os_is_legacy_mode())
 	{
@@ -416,7 +428,7 @@ void cf_build_root_list(const char *cdrom_dir)
 		root->roottype = CF_ROOTTYPE_PATH;
 
 		// If it wasn't set before, set the pilot path
-		if (Pilot_file_path == NULL)
+		if (Pilot_file_path.empty())
 			Pilot_file_path = root->path;
 
 		// Next, check any VP files under the current directory.
@@ -443,7 +455,7 @@ void cf_build_root_list(const char *cdrom_dir)
 		root->roottype = CF_ROOTTYPE_PATH;
 
 		// set the default player location to here
-		if (Pilot_file_path == NULL)
+		if (Pilot_file_path.empty())
 			Pilot_file_path = root->path;
 
 		// Next, check any VP files under the current directory.
@@ -463,7 +475,7 @@ void cf_build_root_list(const char *cdrom_dir)
 	
 	strcpy_s(root->path, working_directory);
 
-	path_len = strlen(root->path);
+	size_t path_len = strlen(root->path);
 
 	// do we already have a slash? as in the case of a root directory install
 	if ( (path_len < (CF_MAX_PATHNAME_LENGTH-1)) && (root->path[path_len-1] != DIR_SEPARATOR_CHAR) ) {
@@ -473,7 +485,7 @@ void cf_build_root_list(const char *cdrom_dir)
 	root->roottype = CF_ROOTTYPE_PATH;
 
 	// If the path wasn't set before use the working directory
-	if ( Pilot_file_path == NULL )
+	if ( Pilot_file_path.empty() )
 		Pilot_file_path = root->path;
 
    //======================================================
@@ -542,7 +554,7 @@ void cf_search_root_path(int root_index)
 #if defined _WIN32
 		strcat_s( search_path, "*.*" );
 
-		int find_handle;
+		intptr_t find_handle;
 		_finddata_t find;
 		
 		find_handle = _findfirst( search_path, &find );
@@ -701,7 +713,7 @@ void cf_search_root_pack(int root_index)
 		find.filename[sizeof(find.filename)-1] = '\0';
 
 		if ( find.size == 0 )	{
-			int search_path_len = strlen(search_path);
+			size_t search_path_len = strlen(search_path);
 			if ( !stricmp( find.filename, ".." ))	{
 				char *p = &search_path[search_path_len-1];
 				while( (p > search_path) && (*p != DIR_SEPARATOR_CHAR) )	{
@@ -837,17 +849,12 @@ void cf_free_secondary_filelist()
  *
  * @return If not found returns 0.
  */
-int cf_find_file_location( const char *filespec, int pathtype, int max_out, char *pack_filename, int *size, int *offset, bool localize )
+int cf_find_file_location( const char *filespec, int pathtype, int max_out, char *pack_filename, size_t *size, size_t *offset, bool localize )
 {
 	int i;
     uint ui;
 	int cfs_slow_search = 0;
 	char longname[MAX_PATH_LEN];
-
-#if defined WIN32
-	long findhandle;
-	_finddata_t findstruct;
-#endif
 
 	Assert( (filespec != NULL) && (strlen(filespec) > 0) ); //-V805
 	Assert( (pack_filename == NULL) || (max_out > 1) );
@@ -917,7 +924,9 @@ int cf_find_file_location( const char *filespec, int pathtype, int max_out, char
 			cf_create_default_path_string( longname, sizeof(longname)-1, search_order[ui], filespec, localize );
 
 #if defined _WIN32
-			findhandle = _findfirst(longname, &findstruct);
+			_finddata_t findstruct;
+
+			intptr_t findhandle = _findfirst(longname, &findstruct);
 			if (findhandle != -1) {
 				if (size)
 					*size = findstruct.size;
@@ -973,7 +982,7 @@ int cf_find_file_location( const char *filespec, int pathtype, int max_out, char
 						*size = f->size;
 
 					if (offset)
-						*offset = f->pack_offset;
+						*offset = (size_t)f->pack_offset;
 
 					if (pack_filename) {
 						cf_root *r = cf_get_root(f->root_index);
@@ -1001,7 +1010,7 @@ int cf_find_file_location( const char *filespec, int pathtype, int max_out, char
 				*size = f->size;
 
 			if (offset)
-				*offset = f->pack_offset;
+				*offset = (size_t)f->pack_offset;
 
 			if (pack_filename) {
 				cf_root *r = cf_get_root(f->root_index);
@@ -1048,7 +1057,7 @@ extern char *stristr(char *str, const char *substr);
  *
  * @return If not found returns -1, else returns offset into ext_list.
  */
-int cf_find_file_location_ext( const char *filename, const int ext_num, const char **ext_list, int pathtype, int max_out, char *pack_filename, int *size, int *offset, bool localize )
+int cf_find_file_location_ext( const char *filename, const int ext_num, const char **ext_list, int pathtype, int max_out, char *pack_filename, size_t *size, size_t *offset, bool localize )
 {
 	int cur_ext, i;
     uint ui;
@@ -1056,12 +1065,7 @@ int cf_find_file_location_ext( const char *filename, const int ext_num, const ch
 	char longname[MAX_PATH_LEN];
 	char filespec[MAX_FILENAME_LEN];
 	char *p = NULL;
-
-#if defined WIN32
-	long findhandle;
-	_finddata_t findstruct;
-#endif
-
+	
 	Assert( (filename != NULL) && (strlen(filename) < MAX_FILENAME_LEN) );
 	Assert( (ext_list != NULL) && (ext_num > 1) );	// if we are searching for just one ext
 													// then this is the wrong function to use
@@ -1132,7 +1136,8 @@ int cf_find_file_location_ext( const char *filename, const int ext_num, const ch
 			cf_create_default_path_string( longname, sizeof(longname)-1, search_order[ui], filespec, localize );
 
 #if defined _WIN32
-			findhandle = _findfirst(longname, &findstruct);
+			_finddata_t findstruct;
+			intptr_t findhandle = _findfirst(longname, &findstruct);
 			if (findhandle != -1) {
 				if (size)
 					*size = findstruct.size;
@@ -1179,11 +1184,11 @@ int cf_find_file_location_ext( const char *filename, const int ext_num, const ch
 		(*p) = 0;
 
 	// go ahead and get our length, which is used to test with later
-	int filespec_len = strlen(filespec);
+	size_t filespec_len = strlen(filespec);
 
 	// get total legnth, with extension, which is iused to test with later
 	// (FIXME: this assumes that everything in ext_list[] is the same length!)
-	uint filespec_len_big = filespec_len + strlen(ext_list[0]);
+	size_t filespec_len_big = filespec_len + strlen(ext_list[0]);
 
 	SCP_vector< cf_file* > file_list_index;
 	int last_root_index = -1;
@@ -1419,7 +1424,8 @@ int cf_get_file_list( SCP_vector<SCP_string> &list, int pathtype, const char *fi
 {
 	char *ptr;
 	uint i;
-	int l, own_flag = 0;
+	int own_flag = 0;
+	size_t l;
 	SCP_vector<file_list_info> my_info;
 	file_list_info tinfo;
 
@@ -1447,7 +1453,7 @@ int cf_get_file_list( SCP_vector<SCP_string> &list, int pathtype, const char *fi
 	strcat_s(filespec, filter);
 
 	_finddata_t find;
-	int find_handle;
+	intptr_t find_handle;
 
 	find_handle = _findfirst( filespec, &find );
 	if (find_handle != -1) {
@@ -1463,7 +1469,7 @@ int cf_get_file_list( SCP_vector<SCP_string> &list, int pathtype, const char *fi
 
 					ptr = strrchr(find.name, '.');
 					if (ptr)
-						l = ptr - find.name;
+						l = (size_t)(ptr - find.name);
 					else
 						l = strlen(find.name);
 
@@ -1514,7 +1520,7 @@ int cf_get_file_list( SCP_vector<SCP_string> &list, int pathtype, const char *fi
 
 				ptr = strrchr(dir->d_name, '.');
 				if (ptr)
-					l = ptr - dir->d_name;
+					l = (size_t)(ptr - dir->d_name);
 				else
 					l = strlen(dir->d_name);
 
@@ -1562,7 +1568,7 @@ int cf_get_file_list( SCP_vector<SCP_string> &list, int pathtype, const char *fi
 
 				ptr = strrchr(f->name_ext, '.');
 				if (ptr)
-					l = ptr - f->name_ext;
+					l = (size_t)(ptr - f->name_ext);
 				else
 					l = strlen(f->name_ext);
 
@@ -1620,7 +1626,8 @@ int cf_get_file_list( int max, char **list, int pathtype, const char *filter, in
 {
 	char *ptr;
 	uint i;
-	int l, num_files = 0, own_flag = 0;
+	int num_files = 0, own_flag = 0;
+	size_t l;
 
 	if (max < 1) {
 		Get_file_list_filter = NULL;
@@ -1641,7 +1648,7 @@ int cf_get_file_list( int max, char **list, int pathtype, const char *filter, in
 	cf_create_default_path_string( filespec, sizeof(filespec)-1, pathtype, filter );
 
 	_finddata_t find;
-	int find_handle;
+	intptr_t find_handle;
 
 	find_handle = _findfirst( filespec, &find );
 	if (find_handle != -1) {
@@ -1846,7 +1853,7 @@ int cf_get_file_list_preallocated( int max, char arr[][MAX_FILENAME_LEN], char *
 #if defined _WIN32
 	cf_create_default_path_string( filespec, sizeof(filespec)-1, pathtype, filter );
 
-	int find_handle;
+	intptr_t find_handle;
 	_finddata_t find;
 	
 	find_handle = _findfirst( filespec, &find );
@@ -2025,7 +2032,7 @@ int cf_create_default_path_string(char *path, uint path_max, int pathtype, const
 
 		// force a specific directory to search for player files
 		if ( (pathtype == CF_TYPE_PLAYERS) || (pathtype == CF_TYPE_SINGLE_PLAYERS) || (pathtype == CF_TYPE_MULTI_PLAYERS) ) {
-			strncpy(path, Pilot_file_path, path_max);
+			strncpy(path, Pilot_file_path.c_str(), path_max);
 		} else {
 			strncpy(path, root->path, path_max);
 		}

@@ -12,6 +12,7 @@
 #include "globalincs/globals.h"
 #include "globalincs/pstypes.h"
 #include "globalincs/systemvars.h"
+#include "ai/ai_flags.h"
 
 // flag int defines
 #define AIP_FLAG		1
@@ -68,6 +69,7 @@
 #define AIPF2_STRICT_TURRET_TAGGED_ONLY_TARGETING					(1 << 14)
 #define AIPF2_ASPECT_INVULNERABILITY_FIX							(1 << 15)
 #define AIPF2_GLIDE_DECAY_REQUIRES_THRUST							(1 << 16)
+#define AIPF2_AI_CAN_SLOW_DOWN_ATTACKING_BIG_SHIPS					(1 << 17)
 
 // AI Path types
 #define	AI_PATH_MODE_NORMAL 0
@@ -75,12 +77,11 @@
 	
 #define MAX_AI_PROFILES	5
 
-typedef struct ai_profile_t {
-
+class ai_profile_t {
+public:
 	char profile_name[NAME_LENGTH];
 
-	int flags;
-	int flags2;
+    flagset<AI::Profile_Flags> flags;
 
 	// difficulty-related values
 	int max_incoming_asteroids[NUM_SKILL_LEVELS];			// max number of asteroids thrown at friendlies
@@ -158,13 +159,15 @@ typedef struct ai_profile_t {
 	float bay_arrive_speed_mult;
 	float bay_depart_speed_mult;
 
-} ai_profile_t;
+    void reset();
+};
 
 
 extern int Num_ai_profiles;
 extern int Default_ai_profile;
 extern ai_profile_t Ai_profiles[MAX_AI_PROFILES];
 
+#define AI_PROFILES_INDEX(ai_p) ((int)((ai_p) - Ai_profiles))
 
 void ai_profiles_init();
 

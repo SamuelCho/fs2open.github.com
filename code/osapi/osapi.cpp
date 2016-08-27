@@ -14,7 +14,7 @@
 
 #include "globalincs/pstypes.h"
 #include "gamesequence/gamesequence.h"
-#include "freespace2/freespace.h"
+#include "freespace.h"
 #include "osapi/osregistry.h"
 #include "cmdline/cmdline.h"
 #include "osapi/osapi.h"
@@ -33,6 +33,10 @@ namespace
 
 	bool checkedLegacyMode = false;
 	bool legacyMode = false;
+
+	SCP_vector<std::unique_ptr<os::Viewport>> viewports;
+	os::Viewport* mainViewPort = nullptr;
+	SDL_Window* mainSDLWindow = nullptr;
 
 	const char* getPreferencesPath()
 	{
@@ -57,7 +61,8 @@ namespace
 	bool fAppActive = false;
 	bool window_event_handler(const SDL_Event& e)
 	{
-		if (os::events::isWindowEvent(e, os_get_window())) {
+		Assertion(mainSDLWindow != nullptr, "This function may only be called with a valid SDL Window.");
+		if (os::events::isWindowEvent(e, mainSDLWindow)) {
 			switch (e.window.event) {
 			case SDL_WINDOWEVENT_MINIMIZED:
 			case SDL_WINDOWEVENT_FOCUS_LOST:
@@ -114,22 +119,10 @@ namespace
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-// For FRED
-void os_set_window_from_hwnd(HWND handle)
-{
-	SDL_InitSubSystem(SDL_INIT_VIDEO);
-
-	if (SDL_GL_LoadLibrary(NULL) < 0)
-		Error(LOCATION, "Failed to load OpenGL library: %s!", SDL_GetError());
-
-	SDL_Window* window = SDL_CreateWindowFrom((void*) handle);
-
-	os_set_window(window);
-}
-
 // go through all windows and try and find the one that matches the search string
-BOOL __stdcall os_enum_windows( HWND hwnd, char * search_string )
+BOOL __stdcall os_enum_windows( HWND hwnd, LPARAM param )
 {
+	const char* search_string = reinterpret_cast<const char*>(param);
 	char tmp[128];
 	int len;
 
@@ -177,13 +170,13 @@ void os_check_debugger()
 	sprintf( search_string, "[run] - %s -", p );
 
 	// ... and then search for it.
-	EnumWindows( (int (__stdcall *)(struct HWND__ *,long))os_enum_windows, (long)&search_string );
+	EnumWindows(os_enum_windows, reinterpret_cast<LPARAM>(&search_string));
 }
 
 void os_set_process_affinity()
 {
 	HANDLE pHandle = GetCurrentProcess();
-	DWORD pMaskProcess = 0, pMaskSystem = 0;
+	DWORD_PTR pMaskProcess = 0, pMaskSystem = 0;
 
 	if ( GetProcessAffinityMask(pHandle, &pMaskProcess, &pMaskSystem) ) {
 		// only do this if we have at least 2 procs
@@ -205,14 +198,10 @@ void os_set_process_affinity()
 // OSAPI DEFINES/VARS
 //
 
-static SDL_Window* main_window = NULL;
-
 // os-wide globals
 static char			szWinTitle[128];
 static char			szWinClass[128];
 static int			Os_inited = 0;
-
-static SDL_mutex* Os_lock;
 
 static SCP_vector<SDL_Event> buffered_events;
 
@@ -221,8 +210,6 @@ int Os_debugger_running = 0;
 // ----------------------------------------------------------------------------------------------------
 // OSAPI FORWARD DECLARATIONS
 //
-
-// called at shutdown. Makes sure all thread processing terminates.
 void os_deinit();
 
 // ----------------------------------------------------------------------------------------------------
@@ -239,8 +226,6 @@ void os_init(const char * wclass, const char * title, const char *app_name, cons
 
 	strcpy_s( szWinTitle, title );
 	strcpy_s( szWinClass, wclass );
-
-	Os_lock = SDL_CreateMutex();
 
 	mprintf(("  Initializing SDL...\n"));
 
@@ -273,27 +258,25 @@ void os_init(const char * wclass, const char * title, const char *app_name, cons
 
 	os::events::addEventListener(SDL_WINDOWEVENT, os::events::DEFAULT_LISTENER_WEIGHT, window_event_handler);
 	os::events::addEventListener(SDL_QUIT, os::events::DEFAULT_LISTENER_WEIGHT, quit_handler);
-
-	atexit(os_deinit);
 }
 
 // set the main window title
 void os_set_title( const char * title )
 {
+	Assertion(mainSDLWindow != nullptr, "This function may only be called with a valid SDL Window.");
 	strcpy_s( szWinTitle, title );
 
-	SDL_SetWindowTitle(main_window, szWinTitle);
+	SDL_SetWindowTitle(mainSDLWindow, szWinTitle);
 }
 
-extern void gr_opengl_shutdown();
 // call at program end
 void os_cleanup()
 {
-	gr_opengl_shutdown();
-
 #ifndef NDEBUG
 	outwnd_close();
 #endif
+
+	os_deinit();
 }
 
 // window management -----------------------------------------------------------------
@@ -302,19 +285,6 @@ void os_cleanup()
 int os_foreground()
 {
 	return fAppActive;
-}
-
-// Returns the handle to the main window
-SDL_Window* os_get_window()
-{
-	return main_window;
-}
-
-// Returns the handle to the main window
-void os_set_window(SDL_Window* new_handle)
-{
-	main_window = new_handle;
-	fAppActive = true;
 }
 
 // process management -----------------------------------------------------------------
@@ -332,18 +302,6 @@ void os_sleep(uint ms)
 #else
 	SDL_Delay(ms);
 #endif
-}
-
-// Used to stop message processing
-void os_suspend()
-{
-	SDL_LockMutex( Os_lock );
-}
-
-// resume message processing
-void os_resume()
-{
-	SDL_UnlockMutex( Os_lock );
 }
 
 bool os_is_legacy_mode()
@@ -380,7 +338,7 @@ bool os_is_legacy_mode()
 	if (legacyMode) {
 		// Print a message for the people running it from the terminal
 		fprintf(stdout, "FSO is running in legacy config mode. Please either update your launcher or"
-			" copy the configuration and pilot files to '%s' for better future compatibility.", getPreferencesPath());
+			" copy the configuration and pilot files to '%s' for better future compatibility.\n", getPreferencesPath());
 	}
 
 	checkedLegacyMode = true;
@@ -394,12 +352,13 @@ bool os_is_legacy_mode()
 // called at shutdown. Makes sure all thread processing terminates.
 void os_deinit()
 {
+	// Free the view ports 
+	viewports.clear();
+
 	if (preferencesPath) {
 		SDL_free(preferencesPath);
 		preferencesPath = nullptr;
 	}
-
-	SDL_DestroyMutex(Os_lock);
 
 	SDL_Quit();
 }
@@ -426,6 +385,22 @@ void debug_int3(char *file, int line)
 
 namespace os
 {
+	Viewport* addViewport(std::unique_ptr<Viewport>&& viewport) {
+		auto port = viewport.get();
+		viewports.push_back(std::move(viewport));
+		return port;
+	}
+	void setMainViewPort(Viewport* mainView) {
+		mainViewPort = mainView;
+		mainSDLWindow = mainView->toSDLWindow();
+	}
+	SDL_Window* getSDLMainWindow() {
+		return mainSDLWindow;
+	}
+	Viewport* getMainViewport() {
+		return mainViewPort;
+	}
+
 	namespace events
 	{
 		namespace

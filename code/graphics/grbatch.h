@@ -9,7 +9,6 @@
 #ifndef	__GRBATCH_H__
 #define	__GRBATCH_H__
 
-
 class geometry_batcher
 {
 private:
@@ -27,7 +26,6 @@ private:
 	void allocate_internal(int n_verts);
 
 	void clone(const geometry_batcher &geo);
-
 public:
 	geometry_batcher(): n_to_render(0), n_allocated(0), vert(NULL), use_radius(true), radius_list(NULL), buffer_offset(-1) {}
 	~geometry_batcher();
@@ -78,7 +76,7 @@ class geometry_shader_batcher
 {
 	SCP_vector<particle_pnt> vertices;
 
-	int buffer_offset;
+	ptrdiff_t buffer_offset;
 public:
 	// draw a bitmap into the geometry batcher
 	void draw_bitmap(vertex *position, int orient, float rad, float depth = 0);
@@ -86,13 +84,12 @@ public:
 	// draw a rotated bitmap
 //	void draw_bitmap(vertex *position, float rad, float angle, float depth);
 
-	void load_buffer(particle_pnt* buffer, int *n_verts);
+	void load_buffer(particle_pnt* buffer, size_t *n_verts);
 
 	void render_buffer(int buffer_handle, int flags);
 
-	int need_to_render() { return vertices.size(); };
+	size_t need_to_render() { return vertices.size(); }
 };
-
 
 float batch_add_laser(int texture, vec3d *p0, float width1, vec3d *p1, float width2, int r = 255, int g = 255, int b = 255);
 int batch_add_bitmap(int texture, int tmap_flags, vertex *pnt, int orient, float rad, float alpha = 1.0f, float depth = 0.0f);
@@ -119,6 +116,6 @@ int geometry_batch_add_bitmap(int texture, int tmap_flags, vertex *pnt, int orie
 void batch_load_buffer_geometry_shader_map_bitmaps(particle_pnt* buffer, int *n_verts);
 void batch_render_geometry_shader_map_bitmaps();
 void geometry_batch_render(int stream_buffer);
-int geometry_batch_get_size();
+size_t geometry_batch_get_size();
 
 #endif

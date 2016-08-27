@@ -13,6 +13,8 @@
 
 #include "SDL.h"
 
+#include "platformChecks.h"
+
 #if defined(APPLE_APP)
 #include <CoreFoundation/CoreFoundation.h>
 #endif
@@ -21,9 +23,11 @@
 #include <malloc.h>
 #endif
 
-#ifdef __linux__
-// Hopefully both these headers are available...
+#ifdef HAVE_EXECINFO_H
 #include <execinfo.h>
+#endif
+
+#ifdef HAVE_CXXAPI_H
 #include <cxxabi.h>
 #endif
 
@@ -34,21 +38,6 @@
 
 bool env_enabled = false;
 bool cell_enabled = false;
-
-#ifndef NDEBUG
-#ifdef __APPLE__
-#include <malloc/malloc.h>
-#define MALLOC_USABLE(pointer) malloc_size(pointer)
-#elif defined(SCP_SOLARIS)
-#define MALLOC_USABLE(pointer) (*((size_t*)(pointer)-1))
-#else
-#ifdef SCP_BSD
-#include <stdlib.h>
-#include <malloc_np.h>
-#endif
-#define MALLOC_USABLE(pointer) malloc_usable_size(pointer)
-#endif // __APPLE__
-#endif // NDEBUG
 
 char *strnset( char* string, int fill, size_t count)
 {
@@ -79,7 +68,7 @@ int filelength(int fd)
 
 SCP_string dump_stacktrace()
 {
-#ifdef __linux__
+#ifdef HAVE_EXECINFO_H
 	// The following is adapted from here: https://panthema.net/2008/0901-stacktrace-demangled/
 	const int ADDR_SIZE = 64;
 	void *addresses[ADDR_SIZE];
@@ -101,7 +90,7 @@ SCP_string dump_stacktrace()
 	// Demangle c++ function names to a more readable format using the ABI functions
 	// TODO: Maybe add configure time checks to check if the required features are available
 	SCP_stringstream stackstream;
-	
+#ifdef HAVE_CXXAPI_H
 	size_t funcnamesize = 256;
 	char* funcname = reinterpret_cast<char*>(malloc(funcnamesize));
 	
@@ -154,8 +143,13 @@ SCP_string dump_stacktrace()
 			stackstream << "  " << symbollist[i] << "\n";
 		}
 	}
-
 	free(funcname);
+#else
+	for (auto i = 0; i < numstrings; ++i) {
+		stackstream << symbollist[i] << "\n";
+	}
+#endif
+
 	free(symbollist);
 
 	return stackstream.str();
@@ -177,22 +171,6 @@ char *clean_filename(char *name)
 
 	return p;
 }
-
-#ifndef NDEBUG
-int TotalRam = 0;
-#endif
-
-int Watch_malloc = 0;
-DCF_BOOL(watch_malloc, Watch_malloc )
-
-
-#ifndef NDEBUG
-void windebug_memwatch_init()
-{
-	//_CrtSetAllocHook(MyAllocHook);
-	TotalRam = 0;
-}
-#endif
 
 // retrieve the current working directory
 int _getcwd(char *out_buf, unsigned int len)
@@ -223,34 +201,9 @@ int _chdir(const char *path)
 // make specified directory
 int _mkdir(const char *path)
 {
-	int status = 1;		// if we don't ever call mkdir() to update this then assume we are in error
-	char *c, tmp_path[MAX_PATH];
-
-	memset(tmp_path, 0, MAX_PATH);
-	strncpy(tmp_path, path, MAX_PATH-1);
-
-	c = &tmp_path[1];
-
-	while (c++) {
-		c = strchr(c, '/');
-
-		if (c) {
-			*c = '\0';
-
-			status = mkdir(tmp_path, 0755);
-
-#ifndef NDEBUG
-			int m_error = errno;
-
-			if (status && (m_error != EEXIST) ) {
-				Warning(__FILE__, __LINE__, "Cannot mkdir %s: %s", tmp_path, strerror(m_error));
-			}
-#endif
-			*c = '/';
-		}
-	}
-
-	return status;
+	// Windows _mkdir does not take file permissions as a parameter.
+	// umask already deals with that, so 0777 should be fine.
+	return mkdir(path, 0777);
 }
 
 void _splitpath (char *path, char *drive, char *dir, char *fname, char *ext)
@@ -312,155 +265,6 @@ void strlwr(char *s)
 		*s = tolower(*s);
 		s++;
 	}
-}
-
-
-/* *************************************
- *
- * memory handling functions
- *
- * *************************************/
-
-// RamTable stuff replaced due to slow performance when freeing large amounts of memory
-
-int vm_init(int min_heap_size)
-{
-#ifndef NDEBUG
-	TotalRam = 0;
-#endif
-
-	return 1;
-}
-
-#ifndef NDEBUG
-void *_vm_malloc( int size, char *filename, int line, int quiet )
-#else
-void *_vm_malloc( int size, int quiet )
-#endif
-{
-	void *ptr = malloc( size );
-
-	if (!ptr)	{
-		if (quiet) {
-			return NULL;
-		}
-
-		Error(LOCATION, "Out of memory.");
-	}
-
-#ifndef NDEBUG
-	size_t used_size = MALLOC_USABLE(ptr);
-	if ( Watch_malloc )	{
-		// mprintf now uses SCP_strings = recursion! Whee!!
-		fprintf( stdout, "Malloc %zu bytes [%s(%d)]\n", used_size, clean_filename(filename), line );
-	}
-
-	TotalRam += used_size;
-#endif
-
-	return ptr;
-}
-
-#ifndef NDEBUG
-void *_vm_realloc( void *ptr, int size, char *filename, int line, int quiet )
-#else
-void *_vm_realloc( void *ptr, int size, int quiet )
-#endif
-{
-	if (ptr == NULL)
-		return vm_malloc(size);
-
-#ifndef NDEBUG
-	size_t old_size = MALLOC_USABLE(ptr);
-#endif
-
-	void *ret_ptr = realloc( ptr, size );
-
-	if (!ret_ptr)	{
-		if (quiet && (size > 0) && (ptr != NULL)) {
-			// realloc doesn't touch the original ptr in the case of failure so we could still use it
-			return NULL;
-		}
-
-		Error(LOCATION, "Out of memory.");
-	}
-
-#ifndef NDEBUG
-	size_t used_size = MALLOC_USABLE(ret_ptr);
-	if ( Watch_malloc )	{
-		// mprintf now uses SCP_strings = recursion! Whee!!
-		fprintf( stdout, "Realloc %zu bytes [%s(%d)]\n", used_size, clean_filename(filename), line );
-	}
-
-	TotalRam += (used_size - old_size);
-#endif
-
-	return ret_ptr;
-}
-
-#ifndef NDEBUG
-char *_vm_strdup( const char *ptr, char *filename, int line )
-#else
-char *_vm_strdup( const char *ptr )
-#endif
-{
-	char *dst;
-	int len = strlen(ptr);
-
-	dst = (char *)vm_malloc( len+1 );
-
-	if (!dst)
-		return NULL;
-
-	strcpy( dst, ptr );
-
-	return dst;
-}
-
-#ifndef NDEBUG
-char *_vm_strndup( const char *ptr, int size, char *filename, int line )
-#else
-char *_vm_strndup( const char *ptr, int size )
-#endif
-{
-	char *dst;
-
-	dst = (char *)vm_malloc( size+1 );
-
-	if (!dst)
-		return NULL;
-
-	strncpy( dst, ptr, size );
-	// make sure it has a NULL terminiator
-	dst[size] = '\0';
-
-	return dst;
-}
-
-#ifndef NDEBUG
-void _vm_free( void *ptr, char *filename, int line )
-#else
-void _vm_free( void *ptr )
-#endif
-{
-	if ( !ptr ) {
-#ifndef NDEBUG
-		mprintf(("Why are you trying to free a NULL pointer?  [%s(%d)]\n", clean_filename(filename), line));
-#else
-		mprintf(("Why are you trying to free a NULL pointer?\n"));
-#endif
-		return;
-	}
-
-#ifndef NDEBUG
-	TotalRam -= MALLOC_USABLE(ptr);
-#endif // !NDEBUG
-
-	free(ptr);
-}
-
-void vm_free_all()
-{
 }
 
 #endif // SCP_UNIX

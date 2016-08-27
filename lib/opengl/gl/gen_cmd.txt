@@ -1,0 +1,3 @@
+#!/bin/bash
+
+glad --api "gl=4.1" --generator c --profile core --no-loader --extensions extensions.txt --spec gl --out-path glad
