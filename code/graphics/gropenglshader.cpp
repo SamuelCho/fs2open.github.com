@@ -114,7 +114,8 @@ static opengl_shader_type_t GL_shader_types[] = {
 		3, { opengl_vert_attrib::POSITION, opengl_vert_attrib::TEXCOORD, opengl_vert_attrib::COLOR }, "Passthrough" },
 
 	{ SDR_TYPE_SHIELD_DECAL, "shield-impact-v.sdr",	"shield-impact-f.sdr", 0,{ 0, 0, 0 },
-		5, { "shieldMap", "shield_mv_matrix", "shield_proj_matrix", "hitnorm", "srgb" }, 0, { NULL }, "Shield Decals" }
+		8, { "modelViewMatrix", "projMatrix", "shieldMap", "shieldModelViewMatrix", "shieldProjMatrix", "hitNormal", "srgb", "color" }, 
+		2, { opengl_vert_attrib::POSITION, opengl_vert_attrib::NORMAL }, "Shield Decals" }
 };
 
 /**, 
@@ -1050,7 +1051,7 @@ void opengl_shader_compile_passthrough_shader()
 	opengl_shader_set_current();
 }
 
-void opengl_shader_set_passthrough(bool textured, bool alpha, color *clr, float color_scale)
+void opengl_shader_set_passthrough(bool textured, bool alpha, vec4 *clr, float color_scale)
 {
 	if ( !is_minimum_GLSL_version() ) {
 		opengl_shader_set_current();
@@ -1082,11 +1083,18 @@ void opengl_shader_set_passthrough(bool textured, bool alpha, color *clr, float 
 	GL_state.Uniform.setUniformf("alphaThreshold", GL_alpha_threshold);
 
 	if ( clr != NULL ) {
-		GL_state.Uniform.setUniform4f("color", i2fl(clr->red) / 255.0f, i2fl(clr->green) / 255.0f, i2fl(clr->blue) / 255.0f, i2fl(clr->alpha) / 255.0f);
+		GL_state.Uniform.setUniform4f("color", *clr);
 	} else {
 		GL_state.Uniform.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
 	}
 
 	GL_state.Uniform.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
 	GL_state.Uniform.setUniformMatrix4f("projMatrix", GL_projection_matrix);
+}
+
+void opengl_shader_set_passthrough(bool textured, bool alpha, color *clr)
+{
+	vec4 normalized_clr = { i2fl(clr->red) / 255.0f, i2fl(clr->green) / 255.0f, i2fl(clr->blue) / 255.0f, clr->is_alphacolor ? i2fl(clr->alpha) / 255.0f : 1.0f };
+
+	opengl_shader_set_passthrough(textured, alpha, &normalized_clr, 1.0f);
 }

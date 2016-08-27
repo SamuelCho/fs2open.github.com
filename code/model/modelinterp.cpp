@@ -2938,17 +2938,14 @@ void interp_create_transparency_index_buffer(polymodel *pm, int mn)
 	}
 }
 
-void interp_process_shield_mesh(polymodel * pm)
+void model_interp_process_shield_mesh(polymodel * pm)
 {
 	SCP_vector<vec3d> buffer;
-	SCP_vector<vec3d> normals;
 
 	if ( pm->shield.nverts <= 0 ) {
 		return;
 	}
-
-	float dot = 1.0f;
-
+	
 	for ( int i = 0; i < pm->shield.ntris; i++ ) {
 		shield_tri *tri = &pm->shield.tris[i];
 
@@ -2966,28 +2963,23 @@ void interp_process_shield_mesh(polymodel * pm)
 		vm_vec_normalize_safe(&tri->norm);
 
 		buffer.push_back(a);
+		buffer.push_back(tri->norm);
+
 		buffer.push_back(b);
+		buffer.push_back(tri->norm);
+
 		buffer.push_back(c);
-
-		normals.push_back(tri->norm);
-		normals.push_back(tri->norm);
-		normals.push_back(tri->norm);
+		buffer.push_back(tri->norm);
 	}
-
+	
 	if ( buffer.size() > 0 ) {
-		pm->shield_mesh = (vec3d*)vm_malloc(buffer.size() * sizeof(vec3d));
-		memcpy(pm->shield_mesh, &buffer[0], buffer.size() * sizeof(vec3d));
+		pm->shield_buffer_id = gr_create_vertex_buffer(true);
+		gr_update_buffer_data(pm->shield_buffer_id, buffer.size() * sizeof(vec3d), &buffer[0]);
 
-		pm->shield_norms = (vec3d*)vm_malloc(normals.size() * sizeof(vec3d));
-		memcpy(pm->shield_norms, &normals[0], normals.size() * sizeof(vec3d));
-
-		pm->shield_mesh_num_verts = buffer.size();
-		pm->shield_mesh_num_norms = normals.size();
+		pm->shield_layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vec3d) * 2, 0);
+		pm->shield_layout.add_vertex_component(vertex_format_data::NORMAL, sizeof(vec3d) * 2, sizeof(vec3d));
 	} else {
-		pm->shield_mesh = NULL;
-		pm->shield_mesh_num_verts = 0;
-		pm->shield_norms = NULL;
-		pm->shield_mesh_num_norms = 0;
+		pm->shield_buffer_id = -1;
 	}
 }
 

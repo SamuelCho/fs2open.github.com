@@ -36,6 +36,7 @@ class material;
 class model_material;
 class particle_material;
 class distortion_material;
+class shield_material;
 
 struct transform
 {
@@ -866,10 +867,9 @@ typedef struct screen {
 	void (*gf_shadow_map_start)(matrix4 *shadow_view_matrix, const matrix *light_matrix);
 	void (*gf_shadow_map_end)();
 
-	void (*gf_render_shield_impact)(vec3d *verts, vec3d *norms, int n_verts, matrix *decal_orient, vec3d* decal_pos, float decal_radius);
-
 	// new drawing functions
 	void (*gf_render_model)(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer* bufferp, size_t texi);
+	void (*gf_render_shield_impact)(shield_material *material_info, primitive_type prim_type, vertex_layout *layout, int buffer_handle, int n_verts);
 	void (*gf_render_primitives)(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
 	void (*gf_render_primitives_immediate)(material* material_info, primitive_type prim_type, vertex_layout* layout, int n_verts, void* data, int size);
 	void (*gf_render_primitives_particle)(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);

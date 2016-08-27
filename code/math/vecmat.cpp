@@ -2717,6 +2717,22 @@ void vm_matrix4_set_orthographic(matrix4* out, vec3d *max, vec3d *min)
 	out->a1d[15] = 1.0f;
 }
 
+void vm_matrix4_set_inverse_transform(matrix4 *out, matrix *m, vec3d *v)
+{
+	// this is basically the same function as the opengl view matrix construction
+	// except we don't invert the Z-axis
+	vec3d scaled_pos;
+	vec3d inv_pos;
+	matrix inv_orient;
+
+	vm_vec_copy_scale(&scaled_pos, v, -1.0f);
+
+	vm_copy_transpose(&inv_orient, m);
+	vm_vec_rotate(&inv_pos, &scaled_pos, m);
+
+	vm_matrix4_set_transform(out, &inv_orient, &inv_pos);
+}
+
 void vm_matrix4_set_identity(matrix4 *out)
 {
 	out->a2d[0][0] = 1.0f;

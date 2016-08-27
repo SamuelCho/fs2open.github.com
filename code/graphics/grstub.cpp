@@ -545,7 +545,7 @@ void gr_stub_shadow_map_end()
 {
 }
 
-void gr_stub_render_shield_impact(vec3d *verts, vec3d *norms, int n_verts, matrix *decal_orient, vec3d* decal_pos, float decal_radius)
+void gr_stub_render_shield_impact(shield_material *material_info, primitive_type prim_type, vertex_layout *layout, int buffer_handle, int n_verts)
 {
 
 }
