@@ -301,9 +301,10 @@ void model_unload(int modelnum, int force)
 		vm_free(pm->shield_collision_tree);
 	}
 
-	if ( pm->shield_buffer_id > -1 ) {
-		gr_delete_buffer(pm->shield_buffer_id);
-		pm->shield_buffer_id = -1;
+	if ( pm->shield.buffer_id > -1 ) {
+		gr_delete_buffer(pm->shield.buffer_id);
+		pm->shield.buffer_id = -1;
+		pm->shield.buffer_n_verts = 0;
 	}
 
 	if ( pm->vert_source.Vbuffer_handle > -1 ) {

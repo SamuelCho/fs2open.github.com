@@ -388,7 +388,7 @@ void shield_render_triangle(int texture, float alpha, gshield_tri *trip, matrix 
 
 void shield_render_decal(polymodel *pm, matrix *orient, vec3d *pos, matrix* hit_orient, vec3d *hit_pos, float hit_radius, int bitmap_id, color *clr)
 {
-	if ( pm->shield_buffer_id < 0 ) {
+	if ( pm->shield.buffer_id < 0 || pm->shield.buffer_n_verts < 3 ) {
 		return;
 	}
 
@@ -402,8 +402,9 @@ void shield_render_decal(polymodel *pm, matrix *orient, vec3d *pos, matrix* hit_
 	material_info.set_depth_mode(ZBUFFER_TYPE_READ);
 	material_info.set_impact_radius(hit_radius);
 	material_info.set_impact_transform(*hit_orient, *hit_pos);
+	material_info.set_cull_mode(false);
 
-	gr_render_shield_impact(&material_info, PRIM_TYPE_TRIS, &pm->shield_layout, pm->shield_buffer_id, pm->shield.nverts);
+	gr_render_shield_impact(&material_info, PRIM_TYPE_TRIS, &pm->shield.layout, pm->shield.buffer_id, pm->shield.buffer_n_verts);
 
 	g3_done_instance(true);
 }

@@ -727,6 +727,10 @@ shield_material::shield_material() :
 	material()
 {
 	set_shader_type(SDR_TYPE_SHIELD_DECAL);
+
+	vm_set_identity(&Impact_orient);
+	Impact_pos = { 0.0f, 0.0f, 0.0f };
+	Impact_radius = 1.0f;
 }
 
 int shield_material::get_shader_handle()

@@ -1,5 +1,5 @@
-int vec4 fragImpactUV;
-int float fragNormOffset;
+in vec4 fragImpactUV;
+in float fragNormOffset;
 uniform vec4 color;
 uniform sampler2D shieldMap;
 uniform int srgb;

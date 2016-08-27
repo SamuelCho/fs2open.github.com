@@ -2945,6 +2945,8 @@ void model_interp_process_shield_mesh(polymodel * pm)
 	if ( pm->shield.nverts <= 0 ) {
 		return;
 	}
+
+	int n_verts = 0;
 	
 	for ( int i = 0; i < pm->shield.ntris; i++ ) {
 		shield_tri *tri = &pm->shield.tris[i];
@@ -2970,16 +2972,19 @@ void model_interp_process_shield_mesh(polymodel * pm)
 
 		buffer.push_back(c);
 		buffer.push_back(tri->norm);
+
+		n_verts += 3;
 	}
 	
 	if ( buffer.size() > 0 ) {
-		pm->shield_buffer_id = gr_create_vertex_buffer(true);
-		gr_update_buffer_data(pm->shield_buffer_id, buffer.size() * sizeof(vec3d), &buffer[0]);
+		pm->shield.buffer_id = gr_create_vertex_buffer(true);
+		pm->shield.buffer_n_verts = n_verts;
+		gr_update_buffer_data(pm->shield.buffer_id, buffer.size() * sizeof(vec3d), &buffer[0]);
 
-		pm->shield_layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vec3d) * 2, 0);
-		pm->shield_layout.add_vertex_component(vertex_format_data::NORMAL, sizeof(vec3d) * 2, sizeof(vec3d));
+		pm->shield.layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vec3d) * 2, 0);
+		pm->shield.layout.add_vertex_component(vertex_format_data::NORMAL, sizeof(vec3d) * 2, sizeof(vec3d));
 	} else {
-		pm->shield_buffer_id = -1;
+		pm->shield.buffer_id = -1;
 	}
 }
 
