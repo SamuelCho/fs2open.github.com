@@ -491,23 +491,25 @@ void render_shield(int shield_num)
 			alpha *= 0.85f;
 		}
 
+		if ( bitmap_id <= -1 ) {
+			return;
+		}
+
 		if ( (Detail.shield_effects == 1) || (Detail.shield_effects == 2) ) {
-			if ( bitmap_id != - 1 ) {
-				//render_low_detail_shield_bitmap(&Global_tris[Shield_hits[shield_num].tri_list[0]], orient, centerp, Shield_hits[shield_num].rgb[0], Shield_hits[shield_num].rgb[1], Shield_hits[shield_num].rgb[2]);
-				shield_render_low_detail_bitmap(bitmap_id, alpha, &Global_tris[Shield_hits[shield_num].tri_list[0]], orient, centerp, Shield_hits[shield_num].rgb[0], Shield_hits[shield_num].rgb[1], Shield_hits[shield_num].rgb[2]);
+			shield_render_low_detail_bitmap(bitmap_id, alpha, &Global_tris[Shield_hits[shield_num].tri_list[0]], orient, centerp, Shield_hits[shield_num].rgb[0], Shield_hits[shield_num].rgb[1], Shield_hits[shield_num].rgb[2]);
+		} else if ( Detail.shield_effects <= 4 ) {
+			for ( int i = 0; i < Shield_hits[shield_num].num_tris; i++ ) {
+				shield_render_triangle(bitmap_id, alpha, &Global_tris[Shield_hits[shield_num].tri_list[i]], orient, centerp, Shield_hits[shield_num].rgb[0], Shield_hits[shield_num].rgb[1], Shield_hits[shield_num].rgb[2]);
 			}
 		} else {
-			if ( bitmap_id != - 1 ) {
-				float hit_radius = pm->core_radius;
-				if ( si->is_big_or_huge() ) {
-					hit_radius = pm->core_radius * 0.5f;
-				}
-
-				color clr;
-				gr_init_alphacolor(&clr, Shield_hits[shield_num].rgb[0], Shield_hits[shield_num].rgb[1], Shield_hits[shield_num].rgb[2], fl2i(alpha * 255.0f));
-
-				shield_render_decal(pm, orient, centerp, &Shield_hits[shield_num].hit_orient, &Shield_hits[shield_num].hit_pos, hit_radius, bitmap_id, &clr);
+			float hit_radius = pm->core_radius;
+			if ( si->is_big_or_huge() ) {
+				hit_radius = pm->core_radius * 0.5f;
 			}
+
+			color clr;
+			gr_init_alphacolor(&clr, Shield_hits[shield_num].rgb[0], Shield_hits[shield_num].rgb[1], Shield_hits[shield_num].rgb[2], fl2i(alpha * 255.0f));
+			shield_render_decal(pm, orient, centerp, &Shield_hits[shield_num].hit_orient, &Shield_hits[shield_num].hit_pos, hit_radius, bitmap_id, &clr);
 		}
 	}
 }
