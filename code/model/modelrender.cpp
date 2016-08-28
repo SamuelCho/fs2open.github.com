@@ -494,7 +494,7 @@ void draw_list::add_buffer_draw(model_material *render_material, indexed_vertex_
 	draw_data.lights = Current_lights_set;
 
 	Render_elements.push_back(draw_data);
-	Render_keys.push_back(Render_elements.size() - 1);
+	Render_keys.push_back((int) (Render_elements.size() - 1));
 }
 
 void draw_list::render_buffer(queued_buffer_draw &render_elements)
@@ -965,13 +965,8 @@ void model_render_buffers(draw_list* scene, model_material *rendering_material, 
 		scale.xyz.x = 1.0f;
 		scale.xyz.y = 1.0f;
 
-		if ( is_minimum_GLSL_version() ) {
-			scale.xyz.z = 1.0f;
-			rendering_material->set_thrust_scale(interp->get_thruster_info().length.xyz.z);
-		} else {
-			scale.xyz.z = interp->get_thruster_info().length.xyz.z;
-			rendering_material->set_thrust_scale();
-		}
+		scale.xyz.z = 1.0f;
+		rendering_material->set_thrust_scale(interp->get_thruster_info().length.xyz.z);
 	} else {
 		scale = interp->get_warp_scale();
 		rendering_material->set_thrust_scale();
@@ -1023,7 +1018,6 @@ void model_render_buffers(draw_list* scene, model_material *rendering_material, 
 		texture_map *tmap = &pm->maps[tmap_num];
 		int rt_begin_index = tmap_num*TM_NUM_TYPES;
 		float alpha = 1.0f;
-		int blend_filter = GR_ALPHABLEND_NONE;
 
 		texture_maps[TM_BASE_TYPE] = -1;
 		texture_maps[TM_GLOW_TYPE] = -1;
@@ -1414,7 +1408,7 @@ bool model_render_determine_autocenter(vec3d *auto_back, polymodel *pm, int deta
 
 void model_render_determine_color(color *clr, float alpha, gr_alpha_blend blend_mode, bool no_texturing, bool desaturate)
 {
-	clr->alpha = fl2i(alpha * 255.0f);
+	clr->alpha = static_cast<ubyte>((alpha * 255.0f));
 
 	if ( no_texturing || desaturate ) {
 		// don't override the given color if we're not texturing or we're desaturating
@@ -2322,10 +2316,8 @@ void model_render_insignias(insignia_draw_data *insignia_data)
 
 	int idx, s_idx;
 	vertex vecs[3];
-	vertex *vlist[3] = { &vecs[0], &vecs[1], &vecs[2] };
 	vec3d t1, t2, t3;
 	int i1, i2, i3;
-	int tmap_flags = TMAP_FLAG_TEXTURED | TMAP_FLAG_CORRECT | TMAP_HTL_3D_UNLIT;
 
 	material insignia_material;
 	insignia_material.set_depth_bias(1);

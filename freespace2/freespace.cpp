@@ -1220,10 +1220,10 @@ void game_loading_callback(int count)
 				short_name++;
 
 			sprintf(mem_buffer,"%s:\t" SIZE_T_ARG " K", short_name, size);
-			gr_string( 20, 220 + (i*line_height), mem_buffer, GR_RESIZE_MENU);
+			gr_string( 20, 220 + (int)(i*line_height), mem_buffer, GR_RESIZE_MENU);
 		}
 		sprintf(mem_buffer,"Total RAM:\t" SIZE_T_ARG " K", memory::get_used_memory() / 1024);
-		gr_string( 20, 230 + (i*line_height), mem_buffer, GR_RESIZE_MENU);
+		gr_string( 20, 230 + (int)(i*line_height), mem_buffer, GR_RESIZE_MENU);
 	}
 #endif	// !NDEBUG
 
@@ -1788,7 +1788,7 @@ void game_init()
 
 	memset(whee, 0, sizeof(whee));
 
-	GetCurrentDirectory(MAX_PATH_LEN-1, whee);
+	_getcwd(whee, MAX_PATH_LEN-1);
 
 	strcat_s(whee, DIR_SEPARATOR_STR);
 	strcat_s(whee, EXE_FNAME);
@@ -1888,7 +1888,7 @@ void game_init()
 		SDL_VERSION(&info.version); // initialize info structure with SDL version info
 
 		bool voiceRectOn = false;
-		if(SDL_GetWindowWMInfo(os_get_window(), &info)) { // the call returns true on success
+		if(SDL_GetWindowWMInfo(os::getSDLMainWindow(), &info)) { // the call returns true on success
 			// success
 			voiceRectOn = VOICEREC_init(info.info.win.window, WM_RECOEVENT, GRAMMARID1, IDR_CMD_CFG);
 		} else {
@@ -2345,10 +2345,10 @@ void game_show_framerate()
 				short_name++;
 
 			sprintf(mem_buffer,"%s:\t" SIZE_T_ARG " K", short_name, size);
-			gr_string( 20, 220 + (i*line_height), mem_buffer, GR_RESIZE_MENU);
+			gr_string( 20, 220 + (int)(i*line_height), mem_buffer, GR_RESIZE_MENU);
 		}
 		sprintf(mem_buffer,"Total RAM:\t" SIZE_T_ARG " K", memory::get_used_memory() / 1024);
-		gr_string( 20, 230 + (i*line_height), mem_buffer, GR_RESIZE_MENU);
+		gr_string( 20, 230 + (int)(i*line_height), mem_buffer, GR_RESIZE_MENU);
 	}
 
 	MONITOR_INC(NumPolys, modelstats_num_polys);
@@ -5364,7 +5364,7 @@ void game_process_event( int current_state, int event )
 				shipfx_warpout_start( Player_obj );
 				Player->control_mode = PCM_WARPOUT_STAGE2;
 
-				if (!(The_mission.ai_profile->flags2 & AIPF2_NO_WARP_CAMERA)) {
+				if (!(The_mission.ai_profile->flags[AI::Profile_Flags::No_warp_camera])) {
 					Player->saved_viewer_mode = Viewer_mode;
 					Viewer_mode |= VM_WARP_CHASE;
 					Warp_camera = warp_camera(Player_obj);
@@ -7441,7 +7441,7 @@ void Time_model( int modelnum )
 
 	polymodel *pm = model_get( modelnum );
 
-	int l = strlen(pm->filename);
+	size_t l = strlen(pm->filename);
 	while( (l>0) )	{
 		if ( (l == '/') || (l=='\\') || (l==':'))	{
 			l++;
@@ -7805,7 +7805,6 @@ int find_freespace_cd(char *volume_name)
 	int cdrom_drive=-1;
 	int volume_match = 0;
 	_finddata_t find;
-	int find_handle;
 
 	GetCurrentDirectory(MAX_PATH-1, oldpath);
 
@@ -7831,7 +7830,7 @@ int find_freespace_cd(char *volume_name)
 				// look for setup.exe
 				strcpy_s(full_check, path);
 				strcat_s(full_check, "setup.exe");				
-				find_handle = _findfirst(full_check, &find);
+				auto find_handle = _findfirst(full_check, &find);
 				if(find_handle != -1){
 					volume1_present = 1;				
 					_findclose(find_handle);				

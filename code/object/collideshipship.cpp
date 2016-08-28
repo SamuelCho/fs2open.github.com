@@ -376,10 +376,10 @@ int ship_ship_check_collision(collision_info_struct *ship_ship_hit_info, vec3d *
 
 		// Update ai to deal with collisions
 		if (heavy_obj-Objects == Ai_info[light_shipp->ai_index].target_objnum) {
-			Ai_info[light_shipp->ai_index].ai_flags |= AIF_TARGET_COLLISION;
+			Ai_info[light_shipp->ai_index].ai_flags.set(AI::AI_Flags::Target_collision);
 		}
 		if (light_obj-Objects == Ai_info[heavy_shipp->ai_index].target_objnum) {
-			Ai_info[heavy_shipp->ai_index].ai_flags |= AIF_TARGET_COLLISION;
+			Ai_info[heavy_shipp->ai_index].ai_flags.set(AI::AI_Flags::Target_collision);
 		}
 
 		// SET PHYSICS PARAMETERS
@@ -509,7 +509,7 @@ bool check_subsystem_landing_allowed(ship_info *heavy_sip, collision_info_struct
 		return false;
 
 	for (int i = 0; i < heavy_sip->n_subsystems; i++) {
-		if (heavy_sip->subsystems[i].flags & MSS_FLAG_ALLOW_LANDING &&
+		if (heavy_sip->subsystems[i].flags[Model::Subsystem_Flags::Allow_landing] &&
 			heavy_sip->subsystems[i].subobj_num == ship_ship_hit_info->submodel_num) 
 		{
 			return true;
@@ -1007,12 +1007,12 @@ void do_kamikaze_crash(object *obj1, object *obj2)
 	aip2 = &Ai_info[ship2->ai_index];
 
 	if (ship1->team != ship2->team) {
-		if (aip1->ai_flags & AIF_KAMIKAZE) {
+		if (aip1->ai_flags[AI::AI_Flags::Kamikaze]) {
 			if (Ship_info[ship2->ship_info_index].is_big_or_huge()) {
 				obj1->hull_strength = KAMIKAZE_HULL_ON_DEATH;
 				shield_set_strength(obj1, 0.0f);
 			}
-		} if (aip2->ai_flags & AIF_KAMIKAZE) {
+		} if (aip2->ai_flags[AI::AI_Flags::Kamikaze]) {
             if (Ship_info[ship1->ship_info_index].is_big_or_huge()) {
 				obj2->hull_strength = KAMIKAZE_HULL_ON_DEATH;
 				shield_set_strength(obj2, 0.0f);

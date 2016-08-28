@@ -1992,7 +1992,6 @@ void g3_render_primitives_textured(material* mat, vertex* verts, int n_verts, pr
 void g3_render_primitives_colored(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic)
 {
 	vertex_layout layout;
-	uint mask = 0;
 
 	if ( orthographic ) {
 		layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), (int)offsetof(vertex, screen));
@@ -2579,7 +2578,6 @@ void g3_render_laser_2d(material *mat_params, vec3d *headp, float head_width, ve
 	ca = (float)cos(a);
 
 	vertex v[4];
-	vertex *vertlist[4] = { &v[3], &v[2], &v[1], &v[0] };
 	memset(v, 0, sizeof(vertex) * 4);
 
 	if ( depth < 0.0f ) depth = 0.0f;
@@ -2693,7 +2691,6 @@ void g3_render_rod(color *clr, int num_points, vec3d *pvecs, float width)
 void g3_render_shield_icon(color *clr, coord2d coords[6], int resize_mode)
 {
 	vertex v[6];
-	vertex *verts[6] = { &v[0], &v[1], &v[2], &v[3], &v[4], &v[5] };
 
 	memset(v, 0, sizeof(vertex) * 6);
 
@@ -2833,6 +2830,9 @@ void g3_render_sphere(color *clr, vec3d* position, float radius)
 {
 	g3_start_instance_matrix(position, &vmd_identity_matrix, true);
 
+	vec3d scale = { radius, radius, radius };
+	gr_push_scale_matrix(&scale);
+
 	material material_def;
 
 	material_def.set_texture_source(TEXTURE_SOURCE_NONE);
@@ -2842,6 +2842,7 @@ void g3_render_sphere(color *clr, vec3d* position, float radius)
 
 	gr_sphere(&material_def, radius);
 
+	gr_pop_scale_matrix();
 	g3_done_instance(true);
 }
 

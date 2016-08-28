@@ -213,7 +213,7 @@ void shipfx_subsystem_maybe_create_live_debris(object *ship_objp, ship *ship_p, 
 	}
 }
 
-void set_ship_submodel_as_blown_off(ship *shipp, char *name)
+void set_ship_submodel_as_blown_off(ship *shipp, const char *name)
 {
 	int found =	FALSE;
 
@@ -1682,7 +1682,7 @@ static int get_split_ship()
 
 	Split_ships.push_back(addition);
 
-	return (Split_ships.size() - 1);
+	return (int)(Split_ships.size() - 1);
 }
 
 static void maybe_fireball_wipe(clip_ship* half_ship, int* sound_handle);

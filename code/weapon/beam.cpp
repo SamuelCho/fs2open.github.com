@@ -1075,7 +1075,7 @@ void beam_move_all_post()
 		}		
 
 		// add tube light for the beam
-		if(is_minimum_GLSL_version() && moveup->objp != NULL)
+		if(moveup->objp != NULL)
 			beam_add_light(moveup, OBJ_INDEX(moveup->objp), 1, NULL);
 
 		// stop shooting?
@@ -1367,7 +1367,6 @@ void beam_render_muzzle_glow(beam *b)
 	weapon_info *wip = &Weapon_info[b->weapon_info_index];
 	beam_weapon_info *bwi = &wip->b_info;
 	float rad, pct, rand_val;
-	int tmap_flags = TMAP_FLAG_TEXTURED | TMAP_HTL_3D_UNLIT | TMAP_FLAG_EMISSIVE;
 	pt.flags = 0;    // avoid potential read of uninit var
 
 	// if we don't have a glow bitmap
@@ -1687,20 +1686,7 @@ void beam_add_light_large(beam *bm, object *objp, vec3d *pt0, vec3d *pt1)
 	float fg = (float)wip->laser_color_1.green / 255.0f;
 	float fb = (float)wip->laser_color_1.blue / 255.0f;
 
-	if ( is_minimum_GLSL_version() )
-		light_add_tube(pt0, pt1, 1.0f, light_rad, 1.0f * noise, fr, fg, fb, OBJ_INDEX(objp)); 
-	else {
-		vec3d near_pt, a;
-		float dist,max_dist;
-		vm_vec_sub(&a, pt1, pt0);
-		vm_vec_normalize_quick(&a);
-		vm_vec_dist_squared_to_line(&objp->pos, pt0, pt1, &near_pt, &dist); // Calculate nearest point for fallback fake tube pointlight
-		max_dist = light_rad + objp->radius;
-		max_dist *= max_dist;
-		if ( dist > max_dist)
-			return; // Too far away
-		light_add_tube(pt0, &near_pt, 1.0f, light_rad, 1.0f * noise, fr, fg, fb, OBJ_INDEX(objp));
-	}
+	light_add_tube(pt0, pt1, 1.0f, light_rad, 1.0f * noise, fr, fg, fb, OBJ_INDEX(objp));
 }
 
 // mark an object as being lit
@@ -1773,15 +1759,6 @@ void beam_apply_lighting()
 		// from a collision
 		case 2:
 			// Valathil: Dont render impact lights for shaders, handled by tube lighting
-			if ( is_minimum_GLSL_version() ) {
-				break;
-			}
-			// a few meters from the collision point			
-			vm_vec_sub(&dir, &l->bm->last_start, &l->c_point);
-			vm_vec_normalize_quick(&dir);
-			vm_vec_scale_add(&pt, &l->c_point, &dir, bwi->beam_muzzle_radius * 5.0f);
-
-			beam_add_light_small(l->bm, &Objects[l->objnum], &pt);
 			break;
 		}
 	}	
@@ -2155,7 +2132,7 @@ void beam_aim(beam *b)
 		if (!(b->flags & BF_IS_FIGHTER_BEAM))
 			b->subsys->turret_next_fire_pos = b->firingpoint;
 
-		if (b->subsys->system_info->flags2 & MSS_FLAG2_SHARE_FIRE_DIRECTION) {
+		if (b->subsys->system_info->flags[Model::Subsystem_Flags::Share_fire_direction]) {
 			beam_get_global_turret_gun_info(b->objp, b->subsys, &b->last_start, &temp, 0, nullptr, (b->flags & BF_IS_FIGHTER_BEAM) != 0);
 		} else {
 			// where the shot is originating from (b->last_start gets filled in)
@@ -2173,7 +2150,7 @@ void beam_aim(beam *b)
 			vm_vec_unrotate(&b->last_shot, &b->target_subsys->system_info->pnt, &b->target->orient);
 			vm_vec_add2(&b->last_shot, &b->target->pos);
 
-			if ((b->subsys != nullptr) && (b->subsys->system_info->flags2 & MSS_FLAG2_SHARE_FIRE_DIRECTION)) {
+			if ((b->subsys != nullptr) && (b->subsys->system_info->flags[Model::Subsystem_Flags::Share_fire_direction])) {
 				float dist = vm_vec_dist(&b->last_shot,&b->last_start);
 				vm_vec_scale(&temp, dist);
 			} else {
@@ -2186,7 +2163,7 @@ void beam_aim(beam *b)
 
 		// if we're shooting at a big ship - shoot directly at the model
 		if((b->target != nullptr) && (b->target->type == OBJ_SHIP) && (Ship_info[Ships[b->target->instance].ship_info_index].is_big_or_huge())){
-			if ((b->subsys != nullptr) && (b->subsys->system_info->flags2 & MSS_FLAG2_SHARE_FIRE_DIRECTION)) {
+			if ((b->subsys != nullptr) && (b->subsys->system_info->flags[Model::Subsystem_Flags::Share_fire_direction])) {
 				vec3d pnt;
 				vm_vec_unrotate(&pnt, &b->binfo.dir_a, &b->target->orient);
 				vm_vec_add2(&pnt, &b->target->pos);
@@ -2208,7 +2185,7 @@ void beam_aim(beam *b)
 
 		// point at the center of the target...
 		if (b->flags & BF_TARGETING_COORDS) {
-			if ((b->subsys != nullptr) && (b->subsys->system_info->flags2 & MSS_FLAG2_SHARE_FIRE_DIRECTION)) {
+			if ((b->subsys != nullptr) && (b->subsys->system_info->flags[Model::Subsystem_Flags::Share_fire_direction])) {
 				beam_get_global_turret_gun_info(b->objp, b->subsys, &b->last_start, &temp, 0, &b->target_pos1, (b->flags & BF_IS_FIGHTER_BEAM) != 0);
 				float dist = vm_vec_dist(&b->target_pos1, &b->last_start);
 				vm_vec_scale_add(&b->last_shot, &b->last_start, &temp, dist);
@@ -2216,7 +2193,7 @@ void beam_aim(beam *b)
 				b->last_shot = b->target_pos1;
 			}
 		} else {
-			if ((b->subsys != nullptr) && (b->subsys->system_info->flags2 & MSS_FLAG2_SHARE_FIRE_DIRECTION)) {
+			if ((b->subsys != nullptr) && (b->subsys->system_info->flags[Model::Subsystem_Flags::Share_fire_direction])) {
 				beam_get_global_turret_gun_info(b->objp, b->subsys, &b->last_start, &temp, 0, &b->target->pos, (b->flags & BF_IS_FIGHTER_BEAM) != 0);
 				float dist = vm_vec_dist(&b->target->pos, &b->last_start);
 				vm_vec_scale_add(&b->last_shot, &b->last_start, &temp, dist);
@@ -2229,7 +2206,7 @@ void beam_aim(beam *b)
 		break;
 
 	case BEAM_TYPE_B:
-		if ((b->subsys != nullptr) && (b->subsys->system_info->flags2 & MSS_FLAG2_SHARE_FIRE_DIRECTION)) {
+		if ((b->subsys != nullptr) && (b->subsys->system_info->flags[Model::Subsystem_Flags::Share_fire_direction])) {
 			vm_vec_scale(&b->binfo.dir_a, b->range);
 			beam_get_global_turret_gun_info(b->objp, b->subsys, &b->last_start, &temp, 0, &b->binfo.dir_a, (b->flags & BF_IS_FIGHTER_BEAM) != 0);
 			vm_vec_add(&b->last_shot, &b->last_start, &temp);
@@ -2251,7 +2228,7 @@ void beam_aim(beam *b)
 	case BEAM_TYPE_D:
 		// point at the center of the target...
 		if (b->flags & BF_TARGETING_COORDS) {
-			if ((b->subsys != nullptr) && (b->subsys->system_info->flags2 & MSS_FLAG2_SHARE_FIRE_DIRECTION)) {
+			if ((b->subsys != nullptr) && (b->subsys->system_info->flags[Model::Subsystem_Flags::Share_fire_direction])) {
 				beam_get_global_turret_gun_info(b->objp, b->subsys, &b->last_start, &temp, 0, &b->target_pos1, (b->flags & BF_IS_FIGHTER_BEAM) != 0);
 				float dist = vm_vec_dist(&b->target_pos1, &b->last_start);
 				vm_vec_scale_add(&b->last_shot, &b->last_start, &temp, dist);
@@ -2259,7 +2236,7 @@ void beam_aim(beam *b)
 				b->last_shot = b->target_pos1;
 			}
 		} else {
-			if ((b->subsys != nullptr) && (b->subsys->system_info->flags2 & MSS_FLAG2_SHARE_FIRE_DIRECTION)) {
+			if ((b->subsys != nullptr) && (b->subsys->system_info->flags[Model::Subsystem_Flags::Share_fire_direction])) {
 				beam_get_global_turret_gun_info(b->objp, b->subsys, &b->last_start, &temp, 0, &b->target->pos, (b->flags & BF_IS_FIGHTER_BEAM) != 0);
 				float dist = vm_vec_dist(&b->target->pos, &b->last_start);
 				vm_vec_scale_add(&b->last_shot, &b->last_start, &temp, dist);
@@ -2566,10 +2543,6 @@ int beam_collide_ship(obj_pair *pair)
 			beam_add_collision(b, ship_objp, &mc_hull_exit, quadrant_num, 1);
 	}
 
-	// add this guy to the lighting list
-	if(!is_minimum_GLSL_version())
-		beam_add_light(b, OBJ_INDEX(ship_objp), 1, NULL);
-
 	// reset timestamp to timeout immediately
 	pair->next_check_time = timestamp(0);
 		
@@ -2662,10 +2635,6 @@ int beam_collide_asteroid(obj_pair *pair)
 
 
 	}
-
-	// add this guy to the lighting list
-	if(!is_minimum_GLSL_version())
-		beam_add_light(b, OBJ_INDEX(pair->b), 1, NULL);
 
 	// reset timestamp to timeout immediately
 	pair->next_check_time = timestamp(0);
@@ -2848,10 +2817,6 @@ int beam_collide_debris(obj_pair *pair)
 
 	}
 
-	// add this guy to the lighting list
-	if(!is_minimum_GLSL_version())
-		beam_add_light(b, OBJ_INDEX(pair->b), 1, NULL);
-
 	// reset timestamp to timeout immediately
 	pair->next_check_time = timestamp(0);
 
@@ -2920,7 +2885,7 @@ int beam_collide_early_out(object *a, object *b)
 /*		if(bwi->b_info.beam_type == BEAM_TYPE_C){
 			return 1;
 		}*/
-		if(The_mission.ai_profile->flags2 & AIPF2_BEAMS_DAMAGE_WEAPONS) {
+		if(The_mission.ai_profile->flags[AI::Profile_Flags::Beams_damage_weapons]) {
 			if((Weapon_info[Weapons[b->instance].weapon_info_index].weapon_hitpoints <= 0) && (Weapon_info[Weapons[b->instance].weapon_info_index].subtype == WP_LASER)) {
 				return 1;
 			}
@@ -3052,10 +3017,6 @@ void beam_handle_collisions(beam *b)
 		//Don't draw effects if we're in the cockpit of the hit ship
 		if (Viewer_obj == &Objects[target])
 			draw_effects = 0;
-
-		// add lighting
-		if(!is_minimum_GLSL_version())
-			beam_add_light(b, target, 2, &b->f_collisions[idx].cinfo.hit_point_world);
 
 		// add to the recent collision list
 		r_coll[r_coll_count].c_objnum = target;
@@ -3206,7 +3167,7 @@ void beam_handle_collisions(beam *b)
 				break;
 
 			case OBJ_WEAPON:
-				if (The_mission.ai_profile->flags2 & AIPF2_BEAMS_DAMAGE_WEAPONS) {
+				if (The_mission.ai_profile->flags[AI::Profile_Flags::Beams_damage_weapons]) {
 					if (!(Game_mode & GM_MULTIPLAYER) || MULTIPLAYER_MASTER) {
 						object *trgt = &Objects[target];
 
@@ -3408,12 +3369,12 @@ int beam_ok_to_fire(beam *b)
 		vm_vec_sub(&aim_dir, &b->last_shot, &b->last_start);
 		vm_vec_normalize(&aim_dir);
 
-		if (The_mission.ai_profile->flags & AIPF_FORCE_BEAM_TURRET_FOV) {
+		if (The_mission.ai_profile->flags[AI::Profile_Flags::Force_beam_turret_fov]) {
 			vec3d turret_normal;
 
 			if (b->flags & BF_IS_FIGHTER_BEAM) {
 				turret_normal = b->objp->orient.vec.fvec;
-				b->subsys->system_info->flags &= ~MSS_FLAG_TURRET_ALT_MATH;
+                b->subsys->system_info->flags.remove(Model::Subsystem_Flags::Turret_alt_math);
 			} else {
 				vm_vec_unrotate(&turret_normal, &b->subsys->system_info->turret_norm, &b->objp->orient);
 			}

@@ -547,7 +547,7 @@ int opengl_create_texture_sub(int bitmap_handle, int bitmap_type, int bmap_w, in
 				}
 			}
 
-			GLenum aa_format = is_minimum_GLSL_version() ? GL_RED : GL_ALPHA;
+			GLenum aa_format = GL_RED;
 
 			if ( !reload ) {
 				glTexImage2D (t->texture_target, 0, aa_format, tex_w, tex_h, 0, aa_format, GL_UNSIGNED_BYTE, texmem);
@@ -1086,8 +1086,6 @@ int gr_opengl_preload(int bitmap_num, int is_aabitmap)
 static int GL_texture_panning_enabled = 0;
 void gr_opengl_set_texture_panning(float u, float v, bool enable)
 {
-	GLint current_matrix;
-
 	if (enable) {
 		vm_matrix4_set_identity(&GL_texture_matrix);
 		GL_texture_matrix.vec.pos.xyzw.x = u;
@@ -1380,7 +1378,7 @@ void gr_opengl_update_texture(int bitmap_handle, int bpp, const ubyte* data, int
 	}
 	if (byte_mult == 1) {
 		texFormat = GL_UNSIGNED_BYTE;
-		glFormat = is_minimum_GLSL_version() ? GL_RED : GL_ALPHA;
+		glFormat = GL_RED;
 		texmem = (ubyte *) vm_malloc (width*height*byte_mult);
 		ubyte* texmemp = texmem;
 

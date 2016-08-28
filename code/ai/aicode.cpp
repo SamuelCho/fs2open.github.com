@@ -199,10 +199,10 @@ int	AI_FrameCount = 0;
 int	AI_watch_object = 0; // Debugging, object to spew debug info for.
 int	Mission_all_attack = 0;					//	!0 means all teams attack all teams.
 
-//	Constant for flag,				Name of flag,				In flags or flags2
+//	Constant for flag,				Name of flag
 ai_flag_name Ai_flag_names[] = {
-	{AIF_NO_DYNAMIC,				"no-dynamic",					1,	},
-	{AIF_FREE_AFTERBURNER_USE,		"free-afterburner-use",			1,	},
+	{AI::AI_Flags::No_dynamic,				"no-dynamic",			},
+	{AI::AI_Flags::Free_afterburner_use,	"free-afterburner-use",	},
 };
 
 const char *Skill_level_names(int level, int translate)
@@ -555,10 +555,8 @@ void init_ai_class(ai_class *aicp)
 		aicp->ai_max_aim_update_delay[i] = FLT_MIN;
 		aicp->ai_turret_max_aim_update_delay[i] = FLT_MIN;
 	}
-	aicp->ai_profile_flags = 0;
-	aicp->ai_profile_flags_set = 0;
-	aicp->ai_profile_flags2 = 0;
-	aicp->ai_profile_flags2_set = 0;
+    aicp->ai_profile_flags.reset();
+    aicp->ai_profile_flags_set.reset();
 
 	//AI Class autoscale overrides
 	//INT_MIN and FLT_MIN represent the "not set" state
@@ -572,25 +570,22 @@ void init_ai_class(ai_class *aicp)
 	aicp->ai_class_autoscale = true;	//Retail behavior is to do the stupid autoscaling
 }
 
-void set_aic_flag(ai_class *aicp, char *name, int flag, int type)
+void set_aic_flag(ai_class *aicp, char *name, AI::Profile_Flags flag)
 {
-	int* flags = (type == AIP_FLAG) ? &(aicp->ai_profile_flags) : &(aicp->ai_profile_flags2);
-	int* set = (type == AIP_FLAG) ? &(aicp->ai_profile_flags_set) : &(aicp->ai_profile_flags2_set);
+    auto flags = &(aicp->ai_profile_flags);
+    auto set = &(aicp->ai_profile_flags_set);
 
 	if (optional_string(name))
 	{
 		bool val;
 		stuff_boolean(&val);
 
-		if (val)
-			*flags |= flag;
-		else
-			*flags &= ~flag;
+        flags->set(flag, val);
 
-		*set |= flag;
-	}
+        set->set(flag);
+    }
 	else
-		*set &= ~flag;
+		set->remove(flag);
 }
 
 void parse_ai_class()
@@ -740,35 +735,35 @@ void parse_ai_class()
 	if (optional_string("$Turret Max Aim Update Delay:"))
 		parse_float_list(aicp->ai_turret_max_aim_update_delay, NUM_SKILL_LEVELS);
 
-	set_aic_flag(aicp, "$big ships can attack beam turrets on untargeted ships:", AIPF_BIG_SHIPS_CAN_ATTACK_BEAM_TURRETS_ON_UNTARGETED_SHIPS, AIP_FLAG);
+	set_aic_flag(aicp, "$big ships can attack beam turrets on untargeted ships:", AI::Profile_Flags::Big_ships_can_attack_beam_turrets_on_untargeted_ships);
 
-	set_aic_flag(aicp, "$smart primary weapon selection:", AIPF_SMART_PRIMARY_WEAPON_SELECTION, AIP_FLAG);
+	set_aic_flag(aicp, "$smart primary weapon selection:", AI::Profile_Flags::Smart_primary_weapon_selection);
 
-	set_aic_flag(aicp, "$smart secondary weapon selection:", AIPF_SMART_SECONDARY_WEAPON_SELECTION, AIP_FLAG);
+	set_aic_flag(aicp, "$smart secondary weapon selection:", AI::Profile_Flags::Smart_secondary_weapon_selection);
 
-	set_aic_flag(aicp, "$smart shield management:", AIPF_SMART_SHIELD_MANAGEMENT, AIP_FLAG);
+	set_aic_flag(aicp, "$smart shield management:", AI::Profile_Flags::Smart_shield_management);
 
-	set_aic_flag(aicp, "$smart afterburner management:", AIPF_SMART_AFTERBURNER_MANAGEMENT, AIP_FLAG);
+	set_aic_flag(aicp, "$smart afterburner management:", AI::Profile_Flags::Smart_afterburner_management);
 
-	set_aic_flag(aicp, "$allow rapid secondary dumbfire:", AIPF_ALLOW_RAPID_SECONDARY_DUMBFIRE, AIP_FLAG);
+	set_aic_flag(aicp, "$allow rapid secondary dumbfire:", AI::Profile_Flags::Allow_rapid_secondary_dumbfire);
 	
-	set_aic_flag(aicp, "$huge turret weapons ignore bombs:", AIPF_HUGE_TURRET_WEAPONS_IGNORE_BOMBS, AIP_FLAG);
+	set_aic_flag(aicp, "$huge turret weapons ignore bombs:", AI::Profile_Flags::Huge_turret_weapons_ignore_bombs);
 
-	set_aic_flag(aicp, "$don't insert random turret fire delay:", AIPF_DONT_INSERT_RANDOM_TURRET_FIRE_DELAY, AIP_FLAG);
+	set_aic_flag(aicp, "$don't insert random turret fire delay:", AI::Profile_Flags::Dont_insert_random_turret_fire_delay);
 
-	set_aic_flag(aicp, "$prevent turrets targeting too distant bombs:", AIPF_PREVENT_TARGETING_BOMBS_BEYOND_RANGE, AIP_FLAG);
+	set_aic_flag(aicp, "$prevent turrets targeting too distant bombs:", AI::Profile_Flags::Prevent_targeting_bombs_beyond_range);
 
-	set_aic_flag(aicp, "$smart subsystem targeting for turrets:", AIPF_SMART_SUBSYSTEM_TARGETING_FOR_TURRETS, AIP_FLAG);
+	set_aic_flag(aicp, "$smart subsystem targeting for turrets:", AI::Profile_Flags::Smart_subsystem_targeting_for_turrets);
 
-	set_aic_flag(aicp, "$allow turrets target weapons freely:", AIPF_ALLOW_TURRETS_TARGET_WEAPONS_FREELY, AIP_FLAG);
+	set_aic_flag(aicp, "$allow turrets target weapons freely:", AI::Profile_Flags::Allow_turrets_target_weapons_freely);
 
-	set_aic_flag(aicp, "$allow vertical dodge:", AIPF_ALLOW_VERTICAL_DODGE, AIP_FLAG);
+	set_aic_flag(aicp, "$allow vertical dodge:", AI::Profile_Flags::Allow_vertical_dodge);
 
-	set_aic_flag(aicp, "$no extra collision avoidance vs player:", AIPF2_NO_SPECIAL_PLAYER_AVOID, AIP_FLAG2);
+	set_aic_flag(aicp, "$no extra collision avoidance vs player:", AI::Profile_Flags::No_special_player_avoid);
 
-	set_aic_flag(aicp, "$all ships manage shields:", AIPF2_ALL_SHIPS_MANAGE_SHIELDS, AIP_FLAG2);
+	set_aic_flag(aicp, "$all ships manage shields:", AI::Profile_Flags::All_ships_manage_shields);
 
-	set_aic_flag(aicp, "$ai can slow down when attacking big ships:", AIPF2_AI_CAN_SLOW_DOWN_ATTACKING_BIG_SHIPS, AIP_FLAG2);
+	set_aic_flag(aicp, "$ai can slow down when attacking big ships:", AI::Profile_Flags::Ai_can_slow_down_attacking_big_ships);
 }
 
 void reset_ai_class_names()
@@ -1354,7 +1349,7 @@ void adjust_accel_for_docking(ai_info *aip)
 		float ratio = objp->phys_info.mass / dock_calc_total_docked_mass(objp);
 
 		// put cap on how much ship can slow down
-		if ( (ratio < 0.8f) && !(The_mission.ai_profile->flags & AIPF_NO_MIN_DOCK_SPEED_CAP) ) {
+		if ( (ratio < 0.8f) && !(The_mission.ai_profile->flags[AI::Profile_Flags::No_min_dock_speed_cap]) ) {
 			ratio = 0.8f;
 		}
 
@@ -1496,7 +1491,7 @@ void turn_towards_point(object *objp, vec3d *point, vec3d *slide_vec, float bank
 	aip = &Ai_info[Ships[Pl_objp->instance].ai_index];
 	
 	// check if in formation and if not leader, don't change rotvel.z (bank to match leader elsewhere)
-	if (aip->ai_flags & AIF_FORMATION) {
+	if (aip->ai_flags[AI::AI_Flags::Formation_object, AI::AI_Flags::Formation_wing]) {
 		if (&Objects[aip->goal_objnum] != objp) {
 			float rotvel_z = objp->phys_info.rotvel.xyz.z;
 			ai_turn_towards_vector(point, objp, flFrametime, Ship_info[Ships[objp->instance].ship_info_index].srotation_time, slide_vec, NULL, bank_override, 0);
@@ -1788,7 +1783,7 @@ float get_wing_lowest_av_ab_speed(object *objp)
 
 	wingnum = aip->wing;
 
-	if (((shipp->flags[Ship::Ship_Flags::Afterburner_locked]) || !(sip->flags[Ship::Info_Flags::Afterburner])) || (shipp->current_max_speed < 5.0f) || (objp->phys_info.afterburner_max_vel.xyz.z <= shipp->current_max_speed) || !(aip->ai_flags & AIF_FREE_AFTERBURNER_USE))	{
+	if (((shipp->flags[Ship::Ship_Flags::Afterburner_locked]) || !(sip->flags[Ship::Info_Flags::Afterburner])) || (shipp->current_max_speed < 5.0f) || (objp->phys_info.afterburner_max_vel.xyz.z <= shipp->current_max_speed) || !(aip->ai_flags[AI::AI_Flags::Free_afterburner_use]))	{
 		lowest_max_av_ab_speed = shipp->current_max_speed;
 	}
 	else
@@ -1810,10 +1805,10 @@ float get_wing_lowest_av_ab_speed(object *objp)
 		ai_info	*oaip = &Ai_info[oshipp->ai_index];
 		ship_info *osip = &Ship_info[oshipp->ship_info_index];
 
-		if ((oaip->mode == AIM_WAYPOINTS) && (oaip->wing == wingnum) && (oaip->ai_flags & AIF_FORMATION)) {
+		if ((oaip->mode == AIM_WAYPOINTS) && (oaip->wing == wingnum) && (oaip->ai_flags[AI::AI_Flags::Formation_object, AI::AI_Flags::Formation_wing])) {
 			
 			float cur_max;
-			if ((oshipp->flags[Ship::Ship_Flags::Afterburner_locked]) || !(osip->flags[Ship::Info_Flags::Afterburner]) || (o->phys_info.afterburner_max_vel.xyz.z <= oshipp->current_max_speed) || !(oaip->ai_flags & AIF_FREE_AFTERBURNER_USE)) {
+			if ((oshipp->flags[Ship::Ship_Flags::Afterburner_locked]) || !(osip->flags[Ship::Info_Flags::Afterburner]) || (o->phys_info.afterburner_max_vel.xyz.z <= oshipp->current_max_speed) || !(oaip->ai_flags[AI::AI_Flags::Free_afterburner_use])) {
 				cur_max = oshipp->current_max_speed;
 			}
 			else
@@ -2232,7 +2227,7 @@ int find_enemy(int objnum, float range, int max_attackers)
  */
 void ai_set_goal_maybe_abort_dock(object *objp, ai_info *aip)
 {
-	if (aip->ai_flags & AIF_AWAITING_REPAIR) {
+	if (aip->ai_flags[AI::AI_Flags::Awaiting_repair]) {
 		object	*repair_obj;
 
 		if (aip->support_ship_objnum == -1) {
@@ -2478,7 +2473,7 @@ void ai_ignore_object(object *ignorer, object *ignored, int ignore_new)
 	{
 		aip->ignore_objnum = OBJ_INDEX(ignored);
 		aip->ignore_signature = ignored->signature;
-		aip->ai_flags &= ~AIF_TEMPORARY_IGNORE;
+		aip->ai_flags.remove(AI::AI_Flags::Temporary_ignore);
 		ignored->flags.set(Object::Object_Flags::Protected);					// set protected bit of ignored ship.
 	}
 }
@@ -2498,7 +2493,7 @@ void ai_ignore_wing(object *ignorer, int wingnum)
 	aip = &Ai_info[Ships[ignorer->instance].ai_index];
 
 	aip->ignore_objnum = -(wingnum +1);
-	aip->ai_flags &= ~AIF_TEMPORARY_IGNORE;
+	aip->ai_flags.remove(AI::AI_Flags::Temporary_ignore);
 }
 
 
@@ -2792,7 +2787,7 @@ void create_model_path(object *pl_objp, object *mobjp, int path_num, int subsys_
 		vm_vec_zero(&aip->path_depart_orient);
 	}
 
-	aip->ai_flags &= ~AIF_USE_EXIT_PATH;			// ensure this flag is cleared
+	aip->ai_flags.remove(AI::AI_Flags::Use_exit_path);	// ensure this flag is cleared
 }
 
 /**
@@ -2836,7 +2831,7 @@ void create_model_exit_path(object *pl_objp, object *mobjp, int path_num, int co
 	aip->path_length = (int)(Ppfp - ppfp_start);
 	aip->path_next_check_time = timestamp(1);
 
-	aip->ai_flags |= AIF_USE_EXIT_PATH;		// mark as exit path, referenced in maybe
+	aip->ai_flags.set(AI::AI_Flags::Use_exit_path); // mark as exit path, referenced in maybe
 }
 
 /**
@@ -2950,7 +2945,7 @@ int maybe_avoid_player(object *objp, vec3d *goal_pos)
 	}
 
 	if (vector_object_collision(&objp->pos, &new_goal_pos, player_objp, 1.5f)) {
-		aip->ai_flags |= AIF_AVOIDING_SMALL_SHIP;
+		aip->ai_flags.set(AI::AI_Flags::Avoiding_small_ship);
 
 		vec3d	avoid_vec;
 
@@ -2974,7 +2969,7 @@ int maybe_avoid_player(object *objp, vec3d *goal_pos)
 
 		return 1;
 	} else {
-		aip->ai_flags &= ~AIF_AVOIDING_SMALL_SHIP;
+		aip->ai_flags.remove(AI::AI_Flags::Avoiding_small_ship);
 		aip->avoid_check_timestamp = timestamp((int) (obj_obj_dist/200.0f) + 500);
 
 		return 0;
@@ -3078,8 +3073,8 @@ void ai_do_objects_undocked_stuff( object *docker, object *dockee )
 		ai_info *dockee_aip = &Ai_info[Ships[dockee->instance].ai_index];
 
 		// clear stuff for both objects
-		docker_aip->ai_flags &= ~AIF_BEING_REPAIRED;
-		dockee_aip->ai_flags &= ~AIF_BEING_REPAIRED;
+		docker_aip->ai_flags.remove(AI::AI_Flags::Being_repaired);
+		dockee_aip->ai_flags.remove(AI::AI_Flags::Being_repaired);
 		docker_aip->support_ship_objnum = -1;
 		dockee_aip->support_ship_objnum = -1;
 		docker_aip->support_ship_signature = -1;
@@ -3195,14 +3190,13 @@ void ai_start_fly_to_ship(object *objp, int shipnum)
 
 	if (The_mission.flags[Mission::Mission_Flags::Use_ap_cinematics] && AutoPilotEngaged)
 	{
-		aip->ai_flags &= ~AIF_FORMATION_WING;
-		aip->ai_flags &= ~AIF_FORMATION_OBJECT;
+		aip->ai_flags.remove(AI::AI_Flags::Formation_wing); 
 	}
 	else
 	{
-		aip->ai_flags |= AIF_FORMATION_WING;
-		aip->ai_flags &= ~AIF_FORMATION_OBJECT;
+		aip->ai_flags.set(AI::AI_Flags::Formation_wing); 
 	}
+	aip->ai_flags.remove(AI::AI_Flags::Formation_object);
 
 	aip->mode = AIM_FLY_TO_SHIP;
 	aip->submode_start_time = Missiontime;
@@ -3235,14 +3229,13 @@ void ai_start_waypoints(object *objp, waypoint_list *wp_list, int wp_flags)
 
 	if (The_mission.flags[Mission::Mission_Flags::Use_ap_cinematics] && AutoPilotEngaged)
 	{
-		aip->ai_flags &= ~AIF_FORMATION_WING;
-		aip->ai_flags &= ~AIF_FORMATION_OBJECT;
+		aip->ai_flags.remove(AI::AI_Flags::Formation_wing);
 	}
 	else
 	{
-		aip->ai_flags |= AIF_FORMATION_WING;
-		aip->ai_flags &= ~AIF_FORMATION_OBJECT;
+		aip->ai_flags.set(AI::AI_Flags::Formation_wing);
 	}
+	aip->ai_flags.remove(AI::AI_Flags::Formation_object);
 
 	aip->wp_list = wp_list;
 	aip->wp_index = 0;
@@ -3319,8 +3312,8 @@ void ai_form_on_wing(object *objp, object *goal_objp)
 
 	aip = &Ai_info[Ships[objp->instance].ai_index];
 
-	aip->ai_flags &= ~AIF_FORMATION_WING;
-	aip->ai_flags |= AIF_FORMATION_OBJECT;
+	aip->ai_flags.remove(AI::AI_Flags::Formation_wing);
+	aip->ai_flags.set(AI::AI_Flags::Formation_object);
 
 	aip->goal_objnum = OBJ_INDEX(goal_objp);
 	ai_set_goal_maybe_abort_dock(objp, aip);
@@ -3342,7 +3335,7 @@ int ai_formation_object_get_slotnum(int objnum, object *objp)
 		if (objp == o)
 			break;
 		else if (o->type == OBJ_SHIP)
-			if (Ai_info[Ships[o->instance].ai_index].ai_flags & AIF_FORMATION_OBJECT)
+			if (Ai_info[Ships[o->instance].ai_index].ai_flags[AI::AI_Flags::Formation_object])
 				if (Ai_info[Ships[o->instance].ai_index].goal_objnum == objnum)
 					slotnum++;
 	}
@@ -3554,7 +3547,7 @@ void modify_model_path_points(object *objp)
 	Assert(pnp->path_index != -1);	//	If this is -1, that means we never found the model path points
 
 	dir = 1;
-	if ( aip->ai_flags & AIF_USE_EXIT_PATH ) {
+	if ( aip->ai_flags[AI::AI_Flags::Use_exit_path] ) {
 		dir = -1;
 	}
 
@@ -3597,7 +3590,7 @@ float maybe_recreate_path(object *objp, ai_info *aip, int force_recreate_flag, i
 	// AL 11-12-97: If AIF_USE_STATIC_PATH is set, don't try to recreate.  This is needed when ships
 	//				    emerge from fighter bays.  We don't need to recreate the path.. and in case the 
 	//              parent ship dies, we still want to be able to continue on the path
-	if ( aip->ai_flags & AIF_USE_STATIC_PATH ) 
+	if ( aip->ai_flags[AI::AI_Flags::Use_static_path] ) 
 		return 0.0f;
 
 	if (force_recreate_flag || timestamp_elapsed(aip->path_next_create_time)) {
@@ -4345,7 +4338,7 @@ void ai_fly_to_target_position(vec3d* target_pos, bool* pl_done_p=NULL, bool* pl
 
 				if (wing_leader != Pl_objp) {
 					// not wing leader.. get my position relative to wing leader
-					get_absolute_wing_pos_autopilot(&goal_point, wing_leader, wing_index, aip->ai_flags & AIF_FORMATION_OBJECT);
+					get_absolute_wing_pos_autopilot(&goal_point, wing_leader, wing_index, aip->ai_flags[AI::AI_Flags::Formation_object]);
 				} else {
 					// Am wing leader.. get the wings position relative to the flight leader
 					j = 1+int( (float)floor(double(autopilot_wings[aip->wing]-1)/2.0) );
@@ -4432,7 +4425,7 @@ void ai_fly_to_target_position(vec3d* target_pos, bool* pl_done_p=NULL, bool* pl
 			ab_allowed = false;
 	}
 
-	if (!(sip->flags[Ship::Info_Flags::Afterburner]) || (shipp->flags[Ship::Ship_Flags::Afterburner_locked]) || !(aip->ai_flags & AIF_FREE_AFTERBURNER_USE)) {
+	if (!(sip->flags[Ship::Info_Flags::Afterburner]) || (shipp->flags[Ship::Ship_Flags::Afterburner_locked]) || !(aip->ai_flags[AI::AI_Flags::Free_afterburner_use])) {
 		ab_allowed = false;
 	}
 
@@ -4995,7 +4988,7 @@ void evade_weapon()
 			rdot = vm_vec_dot(&Pl_objp->orient.vec.rvec, &vec_from_enemy);
 			udot = vm_vec_dot(&Pl_objp->orient.vec.uvec, &vec_from_enemy);
 
-			if (aip->ai_profile_flags & AIPF_ALLOW_VERTICAL_DODGE && fl_abs(udot) > fl_abs(rdot))
+			if (aip->ai_profile_flags[AI::Profile_Flags::Allow_vertical_dodge] && fl_abs(udot) > fl_abs(rdot))
 			{
 				if ((udot < -0.5f) || (udot > 0.5f))
 					vm_vec_scale_add(&goal_point, &Pl_objp->pos, &Pl_objp->orient.vec.uvec, -200.0f);
@@ -5119,7 +5112,7 @@ void evade_ship()
 		if (percent_left > 30.0f + ((OBJ_INDEX(Pl_objp)) & 0x0f)) {
 			afterburners_start(Pl_objp);
 		
-			if (aip->ai_profile_flags & AIPF_SMART_AFTERBURNER_MANAGEMENT) {
+			if (aip->ai_profile_flags[AI::Profile_Flags::Smart_afterburner_management]) {
 				aip->afterburner_stop_time = (fix) (Missiontime + F1_0 + static_randf(OBJ_INDEX(Pl_objp)) * F1_0 / 4);
 			} else {				
 				aip->afterburner_stop_time = Missiontime + F1_0 + static_rand(OBJ_INDEX(Pl_objp))/4;
@@ -5315,7 +5308,7 @@ int ai_select_primary_weapon(object *objp, object *other_objp, Weapon::Info_Flag
 	}
 
 	//not using the new AI, use the old version of this function instead.
-	if (!(Ai_info[shipp->ai_index].ai_profile_flags & AIPF_SMART_PRIMARY_WEAPON_SELECTION))
+	if (!(Ai_info[shipp->ai_index].ai_profile_flags[AI::Profile_Flags::Smart_primary_weapon_selection]))
 	{
 		return ai_select_primary_weapon_OLD(objp, other_objp, flags);
 	}
@@ -5506,11 +5499,6 @@ void set_primary_weapon_linkage(object *objp)
 	ai_info	*aip;
 	ship_weapon	*swp;
 	weapon_info *wip;
-	
-	int total_ammo;
-	int current_ammo;
-	float ammo_pct;
-	int i;
 
 	shipp = &Ships[objp->instance];
 	sip = &Ship_info[shipp->ship_info_index];
@@ -5555,7 +5543,7 @@ void set_primary_weapon_linkage(object *objp)
 	}
 
 	//	Don't want all ships always linking weapons at start, so asynchronize.
-	if (!(The_mission.ai_profile->flags2 & AIPF2_ALLOW_PRIMARY_LINK_AT_START))
+	if (!(The_mission.ai_profile->flags[AI::Profile_Flags::Allow_primary_link_at_start]))
 	{
 		if (Missiontime < i2f(30))
 			return;
@@ -5569,7 +5557,7 @@ void set_primary_weapon_linkage(object *objp)
 
 	// get energy level
 	float energy;
-	if (The_mission.ai_profile->flags & AIPF_FIX_LINKED_PRIMARY_BUG) {
+	if (The_mission.ai_profile->flags[AI::Profile_Flags::Fix_linked_primary_bug]) {
 		energy = shipp->weapon_energy / sip->max_weapon_reserve * 100.0f;
 	} else {
 		energy = shipp->weapon_energy;
@@ -5585,29 +5573,31 @@ void set_primary_weapon_linkage(object *objp)
 	}
 
 	// also check ballistics - Goober5000
-	if (sip->flags[Ship::Info_Flags::Ballistic_primaries])
+	int total_ammo = 0;
+	int current_ammo = 0;
+	bool all_ballistic = true;
+
+	// count ammo, and do not continue unless all weapons are ballistic
+	for (int i = 0; i < swp->num_primary_banks; i++)
 	{
-		total_ammo = 0;
-		current_ammo = 0;
+		wip = &Weapon_info[swp->primary_bank_weapons[i]];
 
-		// count ammo, and do not continue unless all weapons are ballistic
-		for (i = 0; i < swp->num_primary_banks; i++)
+		if (wip->wi_flags[Weapon::Info_Flags::Ballistic])
 		{
-			wip = &Weapon_info[swp->primary_bank_weapons[i]];
-
-			if (wip->wi_flags[Weapon::Info_Flags::Ballistic])
-			{
-				total_ammo += swp->primary_bank_start_ammo[i];
-				current_ammo += swp->primary_bank_ammo[i];
-			}
-			else
-			{
-				return;
-			}
+			total_ammo += swp->primary_bank_start_ammo[i];
+			current_ammo += swp->primary_bank_ammo[i];
 		}
+		else
+		{
+			all_ballistic = false;
+			break;
+		}
+	}
 
+	if (all_ballistic)
+	{
 		Assert(total_ammo);	// Goober5000: div-0 check
-		ammo_pct = float (current_ammo) / float (total_ammo) * 100.0f;
+		float ammo_pct = float (current_ammo) / float (total_ammo) * 100.0f;
 
 		// link according to defined levels
 		if (ammo_pct > aip->ai_link_ammo_levels_always)
@@ -5616,7 +5606,7 @@ void set_primary_weapon_linkage(object *objp)
 		}
 		else if (ammo_pct > aip->ai_link_ammo_levels_maybe)
 		{
-			if (objp->hull_strength < shipp->ship_max_hull_strength/3.0f)
+			if (objp->hull_strength < shipp->ship_max_hull_strength / 3.0f)
 			{
 				shipp->flags.set(Ship::Ship_Flags::Primary_linked);
 			}
@@ -5850,7 +5840,7 @@ void ai_select_secondary_weapon(object *objp, ship_weapon *swp, flagset<Weapon::
 	num_weapon_types = get_available_secondary_weapons(objp, weapon_id_list, weapon_bank_list);
 
 	// Ignore homing weapons if we didn't specify a flag - for priority 1
-	if ((aip->ai_profile_flags & AIPF_SMART_SECONDARY_WEAPON_SELECTION) && (prio1.none_set())) {
+	if ((aip->ai_profile_flags[AI::Profile_Flags::Smart_secondary_weapon_selection]) && (prio1.none_set())) {
 		ignore_mask.set(Weapon::Info_Flags::Homing_aspect).set(Weapon::Info_Flags::Homing_heat).set(Weapon::Info_Flags::Homing_javelin);
 	}
 
@@ -5858,7 +5848,7 @@ void ai_select_secondary_weapon(object *objp, ship_weapon *swp, flagset<Weapon::
 
 	for (i=0; i<num_weapon_types; i++) {
 		auto wi_flags = Weapon_info[swp->secondary_bank_weapons[weapon_bank_list[i]]].wi_flags;
-		auto ignore_mask_to_use = ((aip->ai_profile_flags & AIPF_SMART_SECONDARY_WEAPON_SELECTION) && (wi_flags[Weapon::Info_Flags::Bomber_plus])) ? (ignore_mask - Weapon::Info_Flags::Huge) : ignore_mask;
+		auto ignore_mask_to_use = ((aip->ai_profile_flags[AI::Profile_Flags::Smart_secondary_weapon_selection]) && (wi_flags[Weapon::Info_Flags::Bomber_plus])) ? (ignore_mask - Weapon::Info_Flags::Huge) : ignore_mask;
 
 		if (!(wi_flags & ignore_mask_to_use).any_set()) {					//	Maybe bombs are illegal.
 			if ((wi_flags & prio1).any_set()) {
@@ -5870,7 +5860,7 @@ void ai_select_secondary_weapon(object *objp, ship_weapon *swp, flagset<Weapon::
 	}
 
 	// Ignore homing weapons if we didn't specify a flag - for priority 2
-	if ((aip->ai_profile_flags & AIPF_SMART_SECONDARY_WEAPON_SELECTION) && (prio2.none_set())) {
+	if ((aip->ai_profile_flags[AI::Profile_Flags::Smart_secondary_weapon_selection]) && (prio2.none_set())) {
         ignore_mask.set(Weapon::Info_Flags::Homing_aspect).set(Weapon::Info_Flags::Homing_heat).set(Weapon::Info_Flags::Homing_javelin);
 	}
 
@@ -5880,7 +5870,7 @@ void ai_select_secondary_weapon(object *objp, ship_weapon *swp, flagset<Weapon::
 		if (priority2_index == -1) {
 			for (i=0; i<num_weapon_types; i++) {
 				auto wi_flags = Weapon_info[swp->secondary_bank_weapons[weapon_bank_list[i]]].wi_flags;
-				auto ignore_mask_to_use = ((aip->ai_profile_flags & AIPF_SMART_SECONDARY_WEAPON_SELECTION) && (wi_flags[Weapon::Info_Flags::Bomber_plus])) ? (ignore_mask - Weapon::Info_Flags::Huge) : ignore_mask;
+				auto ignore_mask_to_use = ((aip->ai_profile_flags[AI::Profile_Flags::Smart_secondary_weapon_selection]) && (wi_flags[Weapon::Info_Flags::Bomber_plus])) ? (ignore_mask - Weapon::Info_Flags::Huge) : ignore_mask;
 
 				if (!(wi_flags & ignore_mask_to_use).any_set()) {					//	Maybe bombs are illegal.
 					if (swp->secondary_bank_ammo[weapon_bank_list[i]] > 0) {
@@ -5904,9 +5894,9 @@ void ai_select_secondary_weapon(object *objp, ship_weapon *swp, flagset<Weapon::
 		weapon_info *wip=&Weapon_info[swp->secondary_bank_weapons[swp->current_secondary_bank]];
 	
 		// phreak -- rapid dumbfire? let it rip!
-		if ((aip->ai_profile_flags & AIPF_ALLOW_RAPID_SECONDARY_DUMBFIRE) && !(wip->is_homing()) && (wip->fire_wait < .5f))
+		if ((aip->ai_profile_flags[AI::Profile_Flags::Allow_rapid_secondary_dumbfire]) && !(wip->is_homing()) && (wip->fire_wait < .5f))
 		{	
-			aip->ai_flags |= AIF_UNLOAD_SECONDARIES;
+			aip->ai_flags.set(AI::AI_Flags::Unload_secondaries);
 		}
 	}
 
@@ -5952,8 +5942,8 @@ void ai_maybe_announce_shockwave_weapon(object *firing_objp, int weapon_index)
 				ai_info	*aip = &Ai_info[Ships[A->instance].ai_index];
 
 				// AL 1-5-98: only avoid shockwave if not docked or repairing
-				if ( !object_is_docked(A) && !(aip->ai_flags & (AIF_REPAIRING|AIF_BEING_REPAIRED)) ) {
-					aip->ai_flags |= AIF_AVOID_SHOCKWAVE_WEAPON;
+				if ( !object_is_docked(A) && !(aip->ai_flags[AI::AI_Flags::Repairing, AI::AI_Flags::Being_repaired]) ) {
+					aip->ai_flags.set(AI::AI_Flags::Avoid_shockwave_weapon);
 				}
 			}
 		}
@@ -6407,7 +6397,7 @@ void set_predicted_enemy_pos(vec3d *predicted_enemy_pos, object *pobjp, vec3d *e
 	wip = ai_get_weapon(&shipp->weapons);
 	target_moving_direction = *enemy_vel;
 
-	if (wip != NULL && The_mission.ai_profile->flags & AIPF_USE_ADDITIVE_WEAPON_VELOCITY)
+	if (wip != NULL && The_mission.ai_profile->flags[AI::Profile_Flags::Use_additive_weapon_velocity])
 		vm_vec_scale_sub2(&target_moving_direction, &pobjp->phys_info.vel, wip->vel_inherit_amount);
 
 	if (wip != NULL)
@@ -6439,7 +6429,7 @@ void set_predicted_enemy_pos(vec3d *predicted_enemy_pos, object *pobjp, vec3d *e
 
 		//	Compute position of gun in absolute space and use that as fire position 
 		//  ...unless we want to just use the ship center
-		if(pm->gun_banks != NULL && !(The_mission.ai_profile->flags2 & AIPF2_AI_AIMS_FROM_SHIP_CENTER)){
+		if(pm->gun_banks != NULL && !(The_mission.ai_profile->flags[AI::Profile_Flags::Ai_aims_from_ship_center])){
 			pnt = pm->gun_banks[0].pnt[0];
 		} else {
 			//Use the convergence offset, if there is one
@@ -6480,7 +6470,7 @@ void set_predicted_enemy_pos(vec3d *predicted_enemy_pos, object *pobjp, vec3d *e
 	}
 
 	// if stealthy ship, throw his aim off, more when farther away and when dot is small
-	if ( aip->ai_flags & AIF_STEALTH_PURSUIT ) {
+	if ( aip->ai_flags[AI::AI_Flags::Stealth_pursuit] ) {
 		float dist = vm_vec_dist_quick(&pobjp->pos, enemy_pos);
 		vec3d temp;
 		vm_vec_sub(&temp, enemy_pos, &pobjp->pos);
@@ -6644,14 +6634,15 @@ void attack_set_accel(ai_info *aip, ship_info *sip, float dist_to_enemy, float d
 		speed_ratio = 5.0f;
 
 	//	Sometimes, told to attack slowly.  Allows to get in more hits.
-	if (aip->ai_flags & AIF_ATTACK_SLOWLY) {
+	if (aip->ai_flags[AI::AI_Flags::Attack_slowly]) {
 		if ((dist_to_enemy > 200.0f) && (dist_to_enemy < 800.0f)) {
 			if ((dot_from_enemy < 0.9f) || ai_near_full_strength(Pl_objp)) {
 				accelerate_ship(aip, MAX(1.0f - (dist_to_enemy-200.0f)/600.0f, 0.1f));
 				return;
 			}
-		} else
-			aip->ai_flags &= ~AIF_ATTACK_SLOWLY;
+		}
+		else
+			aip->ai_flags.remove(AI::AI_Flags::Attack_slowly);
 	}
 
 	//Glide attack: we turn on glide to maintain current vector while aiming at the enemy
@@ -6697,7 +6688,7 @@ void attack_set_accel(ai_info *aip, ship_info *sip, float dist_to_enemy, float d
 						percent_left = 100.0f * shipp->afterburner_fuel / sip_local->afterburner_fuel_capacity;
 						if (percent_left > 30.0f + ((OBJ_INDEX(Pl_objp)) & 0x0f)) {
 							afterburners_start(Pl_objp);							
-							if (aip->ai_profile_flags & AIPF_SMART_AFTERBURNER_MANAGEMENT) {
+							if (aip->ai_profile_flags[AI::Profile_Flags::Smart_afterburner_management]) {
 								float max_ab_vel;
 								float time_to_exhaust_25pct_fuel;
 								float time_to_fly_75pct_of_distance;
@@ -6774,14 +6765,12 @@ int avoid_player(object *objp, vec3d *goal_pos)
 	maybe_avoid_player(Pl_objp, goal_pos);
 	ai_info	*aip = &Ai_info[Ships[objp->instance].ai_index];
 
-	if (aip->ai_flags & AIF_AVOIDING_SMALL_SHIP) {
+	if (aip->ai_flags[AI::AI_Flags::Avoiding_small_ship]) {
 		ship_info *sip = &Ship_info[Ships[objp->instance].ship_info_index];
-
-		if (aip->ai_flags & AIF_AVOIDING_SMALL_SHIP) {
-			ai_turn_towards_vector(&aip->avoid_goal_point, objp, flFrametime, sip->srotation_time, NULL, NULL, 0.0f, 0);
-			accelerate_ship(aip, 0.5f);
-			return 1;
-		}
+		
+		ai_turn_towards_vector(&aip->avoid_goal_point, objp, flFrametime, sip->srotation_time, NULL, NULL, 0.0f, 0);
+		accelerate_ship(aip, 0.5f);
+		return 1;
 	}
 
 	return 0;
@@ -6959,20 +6948,20 @@ int maybe_avoid_big_ship(object *objp, object *ignore_objp, ai_info *aip, vec3d 
 		vec3d	collision_point;
 		int		ship_num;
 		if ((ship_num = will_collide_with_big_ship_all(Pl_objp, ignore_objp, goal_point, &collision_point, &distance, delta_time)) != -1) {
-			aip->ai_flags |= AIF_AVOIDING_BIG_SHIP;
+			aip->ai_flags.set(AI::AI_Flags::Avoiding_big_ship);
 			mabs_pick_goal_point(objp, &Objects[ship_num], &collision_point, &aip->avoid_goal_point);
 			float dist = vm_vec_dist_quick(&aip->avoid_goal_point, &objp->pos);
 			aip->avoid_check_timestamp = timestamp(2000 + MIN(1000, (int) (dist * 2.0f)));	//	Delay until check again is based on distance to avoid point.
 			aip->avoid_ship_num = ship_num;
 		} else {
-			aip->ai_flags &= ~AIF_AVOIDING_BIG_SHIP;
-			aip->ai_flags &= ~AIF_AVOIDING_SMALL_SHIP;
+			aip->ai_flags.remove(AI::AI_Flags::Avoiding_big_ship);
+			aip->ai_flags.remove(AI::AI_Flags::Avoiding_small_ship);
 			aip->avoid_ship_num = -1;
 			aip->avoid_check_timestamp = timestamp(1500);
 		}
 	}
 	
-	if (aip->ai_flags & AIF_AVOIDING_BIG_SHIP) {
+	if (aip->ai_flags[AI::AI_Flags::Avoiding_big_ship]) {
 		ship_info *sip = &Ship_info[Ships[Pl_objp->instance].ship_info_index];
 
 		vec3d	v2g;
@@ -7230,7 +7219,7 @@ void ai_chase_attack(ai_info *aip, ship_info *sip, vec3d *predicted_enemy_pos, f
 	float		dot_to_enemy, dot_from_enemy;
 	float		bank_override = 0.0f;
 
-	if (!(aip->ai_profile_flags2 & AIPF2_NO_SPECIAL_PLAYER_AVOID) && avoid_player(Pl_objp, predicted_enemy_pos))
+	if (!(aip->ai_profile_flags[AI::Profile_Flags::No_special_player_avoid]) && avoid_player(Pl_objp, predicted_enemy_pos))
 		return;
 
 	compute_dots(Pl_objp, En_objp, &dot_to_enemy, &dot_from_enemy);
@@ -7548,7 +7537,7 @@ void ai_set_guard_object(object *objp, object *other_objp)
 
 	//	If ship to guard is in a wing, guard that whole wing, unless the appropriate flag has been set
 	ai_info	*other_aip = &Ai_info[Ships[other_objp->instance].ai_index];
-	if ((other_aip->wing != -1) && (other_aip->wing != aip->wing) && !(The_mission.ai_profile->flags2 & AIPF2_AI_GUARDS_SPECIFIC_SHIP_IN_WING)) {
+	if ((other_aip->wing != -1) && (other_aip->wing != aip->wing) && !(The_mission.ai_profile->flags[AI::Profile_Flags::Ai_guards_specific_ship_in_wing])) {
 		ai_set_guard_wing(objp, Ai_info[Ships[other_objp->instance].ai_index].wing);
 	} else {
 
@@ -7604,10 +7593,7 @@ void update_aspect_lock_information(ai_info *aip, vec3d *vec_to_enemy, float dis
 	wip = &Weapon_info[swp->secondary_bank_weapons[swp->current_secondary_bank]];
 
 	if (num_weapon_types && (wip->is_locked_homing()) && !(shipp->flags[Ship::Ship_Flags::No_secondary_lockon])) {
-		if (dist_to_enemy > 300.0f - MIN(enemy_radius, 100.0f))
-			aip->ai_flags |= AIF_SEEK_LOCK;
-		else
-			aip->ai_flags &= ~AIF_SEEK_LOCK;
+		aip->ai_flags.set(AI::AI_Flags::Seek_lock, dist_to_enemy > 300.0f - MIN(enemy_radius, 100.0f));
 
 		//	Update locking information for aspect seeking missiles.
 		aip->current_target_is_locked = 0;
@@ -7633,7 +7619,7 @@ void update_aspect_lock_information(ai_info *aip, vec3d *vec_to_enemy, float dis
 	} else {
 		aip->current_target_is_locked = 0;
 		aip->aspect_locked_time = 0.0f; // Used to be this, why?: wip->min_lock_time;
-		aip->ai_flags &= ~AIF_SEEK_LOCK;
+		aip->ai_flags.remove(AI::AI_Flags::Seek_lock);
 	}
 
 }
@@ -7644,8 +7630,8 @@ void ai_chase_fly_away(object *objp, ai_info *aip)
 {
 	int	abort_flag = 0;
 
-	if (aip->ai_flags & AIF_TARGET_COLLISION) {
-		aip->ai_flags &= ~AIF_TARGET_COLLISION;	//	Don't process this hit again next frame.
+	if (aip->ai_flags[AI::AI_Flags::Target_collision]) {
+		aip->ai_flags.remove(AI::AI_Flags::Target_collision);	//	Don't process this hit again next frame.
 		aip->submode = SM_FLY_AWAY;					//	Focus on avoiding target
 		aip->submode_start_time = Missiontime;
 	}
@@ -7727,9 +7713,9 @@ void ai_choose_secondary_weapon(object *objp, ai_info *aip, object *en_objp)
 			aip->aspect_locked_time = 0.0f;
 			swp->current_secondary_bank = preferred_secondary;
 		}
-		aip->ai_flags |= AIF_UNLOAD_SECONDARIES;
+		aip->ai_flags.set(AI::AI_Flags::Unload_secondaries);
 	} else {
-		aip->ai_flags &= ~AIF_UNLOAD_SECONDARIES;
+		aip->ai_flags.remove(AI::AI_Flags::Unload_secondaries);
 		if (aip->targeted_subsys) {
 			subsystem_strength = aip->targeted_subsys->current_hits;
 		}
@@ -7743,7 +7729,7 @@ void ai_choose_secondary_weapon(object *objp, ai_info *aip, object *en_objp)
 		if (is_big_ship)
 		{
             wif_priority1.set(Weapon::Info_Flags::Huge);
-            if (aip->ai_profile_flags & AIPF_SMART_SECONDARY_WEAPON_SELECTION) {
+            if (aip->ai_profile_flags[AI::Profile_Flags::Smart_secondary_weapon_selection]) {
                 wif_priority2.set(Weapon::Info_Flags::Bomber_plus);
             }
             else {
@@ -7760,7 +7746,7 @@ void ai_choose_secondary_weapon(object *objp, ai_info *aip, object *en_objp)
             wif_priority1.set(Weapon::Info_Flags::Puncture);
 			wif_priority2.set(Weapon::Info_Flags::Homing_aspect).set(Weapon::Info_Flags::Homing_heat).set(Weapon::Info_Flags::Homing_javelin);
 		}
-		else if ((aip->ai_profile_flags & AIPF_SMART_SECONDARY_WEAPON_SELECTION) && (en_objp->type == OBJ_ASTEROID))	//prefer dumbfires if its an asteroid	
+		else if ((aip->ai_profile_flags[AI::Profile_Flags::Smart_secondary_weapon_selection]) && (en_objp->type == OBJ_ASTEROID))	//prefer dumbfires if its an asteroid	
 		{	
 			wif_priority1.reset();								
 			wif_priority2.reset();
@@ -7999,7 +7985,7 @@ void ai_cruiser_chase()
 	float turn_time = Ship_info[Ships[Pl_objp->instance].ship_info_index].srotation_time;
 
 	// kamikaze - ram and explode
-	if (aip->ai_flags & AIF_KAMIKAZE) {
+	if (aip->ai_flags[AI::AI_Flags::Kamikaze]) {
 		ai_turn_towards_vector(&En_objp->pos, Pl_objp, flFrametime, turn_time, NULL, NULL, 0.0f, 0);
 		accelerate_ship(aip, 1.0f);
 	} 
@@ -8220,7 +8206,7 @@ void ai_chase()
 	//	If collided with target_objnum last frame, avoid that ship.
 	//	This should prevent the embarrassing behavior of ships getting stuck on each other
 	//	as if they were magnetically attracted. -- MK, 11/13/97.
-	if ((aip->ai_flags & AIF_TARGET_COLLISION) || (aip->submode == SM_FLY_AWAY)) {
+	if ((aip->ai_flags[AI::AI_Flags::Target_collision]) || (aip->submode == SM_FLY_AWAY)) {
 		ai_chase_fly_away(Pl_objp, aip);
 		return;
 	}
@@ -8248,14 +8234,14 @@ void ai_chase()
 		update_aspect_lock_information(aip, &real_vec_to_enemy, dist_to_enemy, En_objp->radius);
 	} else {
 		aip->current_target_is_locked = 0;
-		aip->ai_flags &= ~AIF_SEEK_LOCK;
+		aip->ai_flags.remove(AI::AI_Flags::Seek_lock);
 	}
 
 	//	If seeking lock, try to point directly at ship, else predict position so lasers can hit it.
 	//	If just acquired target, or target is not in reasonable cone, don't refine believed enemy position.
 	if ((real_dot_to_enemy < 0.25f) || (aip->target_time < 1.0f)) {
 		predicted_enemy_pos = enemy_pos;
-	} else if (aip->ai_flags & AIF_SEEK_LOCK) {
+	} else if (aip->ai_flags[AI::AI_Flags::Seek_lock]) {
 		set_predicted_enemy_pos(&predicted_enemy_pos, Pl_objp, &aip->last_aim_enemy_pos, &aip->last_aim_enemy_vel, aip);	// Set G_fire_pos
 		predicted_enemy_pos = enemy_pos;
 		G_predicted_pos = predicted_enemy_pos;
@@ -8373,7 +8359,7 @@ void ai_chase()
 	if ( (aip->submode != SM_AVOID) && (aip->submode != SM_ATTACK_FOREVER) ) {
 		//	If a very long time since attacked, attack no matter what!
 		if (Missiontime - aip->last_attack_time > i2f(6)) {
-			if ( (aip->submode != SM_SUPER_ATTACK) && (aip->submode != SM_GET_AWAY) && !(aip->ai_flags & AIF_STEALTH_PURSUIT) ) {
+			if ( (aip->submode != SM_SUPER_ATTACK) && (aip->submode != SM_GET_AWAY) && !(aip->ai_flags[AI::AI_Flags::Stealth_pursuit]) ) {
 				aip->submode = SM_SUPER_ATTACK;
 				aip->submode_start_time = Missiontime;
 				aip->last_attack_time = Missiontime;
@@ -8434,7 +8420,7 @@ void ai_chase()
 
 	case SM_ATTACK:
 		// if target is stealth and stealth not visible, then enter stealth find mode
-		if ( (aip->ai_flags & AIF_STEALTH_PURSUIT) && (ai_is_stealth_visible(Pl_objp, En_objp) == STEALTH_NOT_IN_FRUSTUM) ) {
+		if ( (aip->ai_flags[AI::AI_Flags::Stealth_pursuit]) && (ai_is_stealth_visible(Pl_objp, En_objp) == STEALTH_NOT_IN_FRUSTUM) ) {
 			aip->submode = SM_STEALTH_FIND;
 			aip->submode_start_time = Missiontime;
 			aip->submode_parm0 = SM_SF_AHEAD;
@@ -8549,7 +8535,7 @@ void ai_chase()
 
 	case SM_SUPER_ATTACK:
 		// if stealth and invisible, enter stealth find mode
-		if ( (aip->ai_flags & AIF_STEALTH_PURSUIT) && (ai_is_stealth_visible(Pl_objp, En_objp) == STEALTH_NOT_IN_FRUSTUM) ) {
+		if ( (aip->ai_flags[AI::AI_Flags::Stealth_pursuit]) && (ai_is_stealth_visible(Pl_objp, En_objp) == STEALTH_NOT_IN_FRUSTUM) ) {
 			aip->submode = SM_STEALTH_FIND;
 			aip->submode_start_time = Missiontime;
 			aip->submode_parm0 = SM_SF_AHEAD;
@@ -8560,7 +8546,7 @@ void ai_chase()
 			aip->submode_start_time = Missiontime;
 			aip->last_attack_time = Missiontime;		
 		} else if ((dist_to_enemy < 100.0f) && (dot_to_enemy < 0.8f) && (enemy_sip->is_small_ship()) && (Missiontime - aip->submode_start_time > i2f(5) )) {
-			aip->ai_flags &= ~AIF_ATTACK_SLOWLY;	//	Just in case, clear here.
+			aip->ai_flags.remove(AI::AI_Flags::Attack_slowly);	//	Just in case, clear here.
 
 			float get_away_chance = (aip->ai_get_away_chance == FLT_MIN)
 				? (float)(aip->ai_class + Game_skill_level)/(Num_ai_classes + NUM_SKILL_LEVELS)
@@ -8635,7 +8621,7 @@ void ai_chase()
 					aip->submode = AIS_CHASE_GLIDEATTACK;
 				}
 				else {
-					aip->ai_flags |= AIF_ATTACK_SLOWLY;
+					aip->ai_flags.set(AI::AI_Flags::Attack_slowly);
 					aip->submode = SM_ATTACK;
 				}
 
@@ -8657,7 +8643,7 @@ void ai_chase()
 	// Either change to SM_ATTACK or AIM_FIND_STEALTH
 	case SM_STEALTH_FIND:
 		// if time > 5 sec change mode to sweep
-		if ( !(aip->ai_flags & AIF_STEALTH_PURSUIT) || (ai_is_stealth_visible(Pl_objp, En_objp) == STEALTH_IN_FRUSTUM) ) {
+		if ( !(aip->ai_flags[AI::AI_Flags::Stealth_pursuit]) || (ai_is_stealth_visible(Pl_objp, En_objp) == STEALTH_IN_FRUSTUM) ) {
 			aip->submode = SM_ATTACK;
 			aip->submode_start_time = Missiontime;
 			aip->last_attack_time = Missiontime;
@@ -8672,7 +8658,7 @@ void ai_chase()
 		break;
 
 	case SM_STEALTH_SWEEP:
-		if ( !(aip->ai_flags & AIF_STEALTH_PURSUIT) || (ai_is_stealth_visible(Pl_objp, En_objp) == STEALTH_IN_FRUSTUM) ) {
+		if ( !(aip->ai_flags[AI::AI_Flags::Stealth_pursuit]) || (ai_is_stealth_visible(Pl_objp, En_objp) == STEALTH_IN_FRUSTUM) ) {
 			aip->submode = SM_ATTACK;
 			aip->submode_start_time = Missiontime;
 			aip->last_attack_time = Missiontime;
@@ -8731,7 +8717,7 @@ void ai_chase()
 	if (aip->ai_stalemate_dist_thresh > 0.0f &&
 			dist_to_enemy < aip->ai_stalemate_dist_thresh && 
 			aip->submode != SM_GET_AWAY && aip->submode != AIS_CHASE_GLIDEATTACK && aip->submode != SM_FLY_AWAY && 
-			(!(aip->ai_flags & AIF_STEALTH_PURSUIT) || (ai_is_stealth_visible(Pl_objp, En_objp) == STEALTH_IN_FRUSTUM)))
+			(!(aip->ai_flags[AI::AI_Flags::Stealth_pursuit]) || (ai_is_stealth_visible(Pl_objp, En_objp) == STEALTH_IN_FRUSTUM)))
 	{
 		aip->time_enemy_near += flFrametime;
 	}
@@ -8785,7 +8771,7 @@ void ai_chase()
 
 						if (current_bank > -1) {
 							weapon_info	*swip = &Weapon_info[tswp->secondary_bank_weapons[current_bank]];
-							if (aip->ai_flags & AIF_UNLOAD_SECONDARIES) {
+							if (aip->ai_flags[AI::AI_Flags::Unload_secondaries]) {
 								if (timestamp_until(swp->next_secondary_fire_stamp[current_bank]) > swip->fire_wait*1000.0f) {
 									swp->next_secondary_fire_stamp[current_bank] = timestamp((int) (swip->fire_wait*1000.0f));
 								}
@@ -8842,7 +8828,7 @@ void ai_chase()
 											float t;
 											int current_bank_adjusted = MAX_SHIP_PRIMARY_BANKS + current_bank;
 											
-											if ((aip->ai_flags & AIF_UNLOAD_SECONDARIES) || (swip->burst_flags[Weapon::Burst_Flags::Fast_firing])) {
+											if ((aip->ai_flags[AI::AI_Flags::Unload_secondaries]) || (swip->burst_flags[Weapon::Burst_Flags::Fast_firing])) {
 												if (swip->burst_shots > swp->burst_counter[current_bank_adjusted]) {
 													t = swip->burst_delay;
 													swp->burst_counter[current_bank_adjusted]++;
@@ -9425,11 +9411,11 @@ void remove_farthest_attacker(int objnum)
 		if (!maybe_resume_previous_mode(Pl_objp, aip))
 		{
 			//	If already ignoring something under player's orders, don't ignore current target.
-			if ((aip->ignore_objnum == UNUSED_OBJNUM) || (aip->ai_flags & AIF_TEMPORARY_IGNORE))
+			if ((aip->ignore_objnum == UNUSED_OBJNUM) || (aip->ai_flags[AI::AI_Flags::Temporary_ignore]))
 			{
 				aip->ignore_objnum = aip->target_objnum;
 				aip->ignore_signature = Objects[aip->target_objnum].signature;
-				aip->ai_flags |= AIF_TEMPORARY_IGNORE;
+				aip->ai_flags.set(AI::AI_Flags::Temporary_ignore);
 				aip->ignore_expire_timestamp = timestamp(((myrand() % 10) + 20) * 1000);	//	OK to attack again in 20 to 24 seconds.
 			}
 			aip->target_objnum = -1;
@@ -9481,7 +9467,7 @@ void guard_object_was_hit(object *guard_objp, object *hitter_objp)
 	if (guard_objp->type == OBJ_GHOST || hitter_objp->type == OBJ_GHOST)
 		return;
 
-	if (aip->ai_flags & AIF_NO_DYNAMIC)	//	Not allowed to pursue dynamic goals.  So, why are we guarding?
+	if (aip->ai_flags[AI::AI_Flags::No_dynamic])	//	Not allowed to pursue dynamic goals.  So, why are we guarding?
 		return;
 
 	Assert( (hitter_objp->type == OBJ_SHIP) || (hitter_objp->type == OBJ_ASTEROID) || (hitter_objp->type == OBJ_WEAPON) );
@@ -9940,7 +9926,7 @@ void ai_big_guard()
 		ai_turn_towards_vector(&goal_pt, Pl_objp, flFrametime, Ship_info[Ships[Pl_objp->instance].ship_info_index].srotation_time, NULL, NULL, 0.0f, 0);
 		accelerate_ship(aip, 1.0f);
 
-		if ((aip->ai_flags & AIF_FREE_AFTERBURNER_USE) && !(shipp->flags[Ship::Ship_Flags::Afterburner_locked]) && (cur_guard_rad > 1.1f * max_guard_dist)) {
+		if ((aip->ai_flags[AI::AI_Flags::Free_afterburner_use]) && !(shipp->flags[Ship::Ship_Flags::Afterburner_locked]) && (cur_guard_rad > 1.1f * max_guard_dist)) {
 			vec3d	v2g;
 			float	dot_to_goal_point;
 
@@ -10063,7 +10049,7 @@ void ai_guard()
 			compute_desired_rvec(&rvec, &goal_point, &Pl_objp->pos);
 			ai_turn_towards_vector(&goal_point, Pl_objp, flFrametime, Ship_info[shipp->ship_info_index].srotation_time, NULL, NULL, 0.0f, 0, &rvec);
 
-			if ((aip->ai_flags & AIF_FREE_AFTERBURNER_USE) && !(shipp->flags[Ship::Ship_Flags::Afterburner_locked]) && (accel_scale * (0.25f + dist_to_goal_point/700.0f) > 0.8f)) {
+			if ((aip->ai_flags[AI::AI_Flags::Free_afterburner_use]) && !(shipp->flags[Ship::Ship_Flags::Afterburner_locked]) && (accel_scale * (0.25f + dist_to_goal_point/700.0f) > 0.8f)) {
 				if (ai_maybe_fire_afterburner(Pl_objp, aip)) {
 					afterburners_start(Pl_objp);
 					aip->afterburner_stop_time = Missiontime + 3*F1_0;
@@ -10212,8 +10198,8 @@ void ai_do_objects_repairing_stuff( object *repaired_objp, object *repair_objp, 
 
 	switch( how ) {
 	case REPAIR_INFO_BEGIN:
-		aip->ai_flags |= AIF_BEING_REPAIRED;
-		aip->ai_flags &= ~AIF_AWAITING_REPAIR;
+		aip->ai_flags.set(AI::AI_Flags::Being_repaired);
+		aip->ai_flags.remove(AI::AI_Flags::Awaiting_repair);
 		stamp = timestamp(-1);
 
 		// if this is a player ship, then subtract the repair penalty from this player's score
@@ -10225,22 +10211,23 @@ void ai_do_objects_repairing_stuff( object *repaired_objp, object *repair_objp, 
 		break;
 
 	case REPAIR_INFO_BROKEN:
-		aip->ai_flags &= ~AIF_BEING_REPAIRED;
-		aip->ai_flags |= AIF_AWAITING_REPAIR;
+		aip->ai_flags.remove(AI::AI_Flags::Being_repaired);
+		aip->ai_flags.set(AI::AI_Flags::Awaiting_repair);
 		stamp = timestamp((int) ((30 + 10*frand()) * 1000));
 		break;
 
 	case REPAIR_INFO_END:
 		// when only awaiting repair, and the repair is ended, then set support to -1.
-		if ( aip->ai_flags & AIF_AWAITING_REPAIR ){
+		if ( aip->ai_flags[AI::AI_Flags::Awaiting_repair] ){
 			aip->support_ship_objnum = -1;
 		}
-		aip->ai_flags &= ~(AIF_AWAITING_REPAIR | AIF_BEING_REPAIRED );
+		aip->ai_flags.remove(AI::AI_Flags::Being_repaired);
+		aip->ai_flags.remove(AI::AI_Flags::Awaiting_repair);
 		stamp = timestamp((int) ((30 + 10*frand()) * 1000));
 		break;
 
 	case REPAIR_INFO_QUEUE:
-		aip->ai_flags |= AIF_AWAITING_REPAIR;
+		aip->ai_flags.set(AI::AI_Flags::Awaiting_repair);
 		if ( aip == Player_ai ){
 			hud_support_view_start();
 		}
@@ -10258,11 +10245,13 @@ void ai_do_objects_repairing_stuff( object *repaired_objp, object *repair_objp, 
 		// 5/4/98 -- MWA -- Need to set support objnum to -1 to let code know this guy who was getting
 		// repaired (or queued for repair), isn't really going to be docked with anyone anymore.
 		aip->support_ship_objnum = -1;
-		aip->ai_flags &= ~(AIF_AWAITING_REPAIR | AIF_BEING_REPAIRED );
+		aip->ai_flags.remove(AI::AI_Flags::Being_repaired);
+		aip->ai_flags.remove(AI::AI_Flags::Awaiting_repair);
 
 		if (repair_objp != NULL) {
 			repair_aip = &Ai_info[Ships[repair_objp->instance].ai_index];
-			repair_aip->ai_flags &= ~(AIF_AWAITING_REPAIR | AIF_BEING_REPAIRED );
+			repair_aip->ai_flags.remove(AI::AI_Flags::Being_repaired);
+			repair_aip->ai_flags.remove(AI::AI_Flags::Awaiting_repair);
 		}		
 
 		if ( p_index >= 0 ) {
@@ -10324,7 +10313,7 @@ void ai_do_objects_repairing_stuff( object *repaired_objp, object *repair_objp, 
 		case REPAIR_INFO_ONWAY:
 			Assert( repaired_objp != NULL );
 			aip->goal_objnum = OBJ_INDEX(repaired_objp);
-			aip->ai_flags |= AIF_REPAIRING;
+			aip->ai_flags.set(AI::AI_Flags::Repairing);
 			break;
 
 		case REPAIR_INFO_BROKEN:
@@ -10336,7 +10325,7 @@ void ai_do_objects_repairing_stuff( object *repaired_objp, object *repair_objp, 
 			if ( how == REPAIR_INFO_ABORT )
 				aip->goal_objnum = -1;
 
-			aip->ai_flags &= ~AIF_REPAIRING;
+			aip->ai_flags.remove(AI::AI_Flags::Repairing);
 			break;
 			
 		case REPAIR_INFO_QUEUE:
@@ -10491,14 +10480,14 @@ void ai_cleanup_rearm_mode(object *objp)
 {
 	ai_info *aip = &Ai_info[Ships[objp->instance].ai_index];
 
-	if (aip->ai_flags & AIF_REPAIRING) {
+	if (aip->ai_flags[AI::AI_Flags::Repairing]) {
 		Assert( aip->goal_objnum != -1 );
 		ai_do_objects_repairing_stuff( &Objects[aip->goal_objnum], objp, REPAIR_INFO_KILLED );
-	} else if ( aip->ai_flags & AIF_BEING_REPAIRED ) {
+	} else if ( aip->ai_flags[AI::AI_Flags::Being_repaired] ) {
 		// MWA/Goober5000 -- note that we have to use support object here instead of goal_objnum.
 		Assert( aip->support_ship_objnum != -1 );
 		ai_do_objects_repairing_stuff( objp, &Objects[aip->support_ship_objnum], REPAIR_INFO_ABORT );
-	} else if ( aip->ai_flags & AIF_AWAITING_REPAIR ) {
+	} else if ( aip->ai_flags[AI::AI_Flags::Awaiting_repair] ) {
 		// MWA/Goober5000 -- note that we have to use support object here instead of goal_objnum.
 		// MWA -- 3/38/98  Check to see if this guy is queued for a support ship, or there is already
 		// one in the mission
@@ -10589,7 +10578,7 @@ int maybe_dock_obstructed(object *cur_objp, object *goal_objp, int big_only_flag
 
 	aip = &Ai_info[Ships[cur_objp->instance].ai_index];
 
-	Ai_info[Ships[goal_objp->instance].ai_index].ai_flags &= ~AIF_REPAIR_OBSTRUCTED;
+	Ai_info[Ships[goal_objp->instance].ai_index].ai_flags.remove(AI::AI_Flags::Repair_obstructed);
 
 	if (goal_objp != Player_obj)
 		return -1;
@@ -10600,7 +10589,7 @@ int maybe_dock_obstructed(object *cur_objp, object *goal_objp, int big_only_flag
 	collide_objnum = pp_collide_any(curpos, goalpos, radius, cur_objp, goal_objp, big_only_flag);
 
 	if (collide_objnum != -1)
-		Ai_info[Ships[goal_objp->instance].ai_index].ai_flags |= AIF_REPAIR_OBSTRUCTED;
+		Ai_info[Ships[goal_objp->instance].ai_index].ai_flags.set(AI::AI_Flags::Repair_obstructed);
 
 	return collide_objnum;
 }
@@ -10814,7 +10803,7 @@ void ai_dock()
 				}
 
 				//	If this ship is repairing another ship...
-				if (aip->ai_flags & AIF_REPAIRING) {
+				if (aip->ai_flags[AI::AI_Flags::Repairing]) {
 					aip->submode = AIS_DOCK_4;			//	Special rearming only dock mode.
 					aip->submode_start_time = Missiontime;
 				} else {
@@ -10866,7 +10855,7 @@ void ai_dock()
 		//	Make sure repair has not broken off.
 		else if (dist > 5.0f)	//	Oops, too far away!
 		{
-			if ( goal_aip->ai_flags & AIF_BEING_REPAIRED ) {
+			if ( goal_aip->ai_flags[AI::AI_Flags::Being_repaired] ) {
 				ai_do_objects_repairing_stuff( goal_objp, Pl_objp, REPAIR_INFO_BROKEN);
 				// Goober5000 - add missionlog for support ships, per Mantis #2999
 				mission_log_add_entry(LOG_SHIP_UNDOCKED, shipp->ship_name, goal_shipp->ship_name);
@@ -10884,7 +10873,7 @@ void ai_dock()
 		}
 		else
 		{
-			if ( goal_aip->ai_flags & AIF_AWAITING_REPAIR ) {
+			if ( goal_aip->ai_flags[AI::AI_Flags::Awaiting_repair] ) {
 				ai_do_objects_repairing_stuff( goal_objp, Pl_objp, REPAIR_INFO_BEGIN );
 				// Goober5000 - add missionlog for support ships, per Mantis #2999
 				mission_log_add_entry(LOG_SHIP_DOCKED, shipp->ship_name, goal_shipp->ship_name);
@@ -11035,7 +11024,7 @@ void ai_dock()
 
 			// possible that this flag hasn't been cleared yet.  When aborting a rearm, this submode might
 			// be entered directly.
-			if ( (sip->flags[Ship::Info_Flags::Support]) && (aip->ai_flags & AIF_REPAIRING) ) {
+			if ( (sip->flags[Ship::Info_Flags::Support]) && (aip->ai_flags[AI::AI_Flags::Repairing]) ) {
 				ai_do_objects_repairing_stuff( goal_objp, Pl_objp, REPAIR_INFO_ABORT );
 			}
 		}
@@ -11132,7 +11121,7 @@ void process_subobjects(int objnum)
 		psub = pss->system_info;
 
 		// Don't process destroyed objects (but allow subobjects with hitpoints disabled -nuke) (but also process subobjects that are allowed to rotate)
-		if (pss->max_hits > 0 && pss->current_hits <= 0.0f && !(psub->flags2 & MSS_FLAG2_DESTROYED_ROTATION))
+		if (pss->max_hits > 0 && pss->current_hits <= 0.0f && !(psub->flags[Model::Subsystem_Flags::Destroyed_rotation]))
 			continue;
 
 		switch (psub->type) {
@@ -11542,8 +11531,8 @@ void ai_fly_in_formation(int wingnum)
 		Assert((shipp->ai_index >= 0) && (shipp->ai_index < MAX_AI_INFO));
 
 		if (Ai_info[shipp->ai_index].wing == wingnum) {
-			Ai_info[shipp->ai_index].ai_flags |= AIF_FORMATION_WING;
-			Ai_info[shipp->ai_index].ai_flags &= ~AIF_FORMATION_OBJECT;
+			Ai_info[shipp->ai_index].ai_flags.set(AI::AI_Flags::Formation_wing);
+			Ai_info[shipp->ai_index].ai_flags.remove(AI::AI_Flags::Formation_object);
 		}
 	}
 }
@@ -11566,7 +11555,7 @@ void ai_disband_formation(int wingnum)
 		Assert((shipp->ai_index >= 0) && (shipp->ai_index < MAX_AI_INFO));
 
 		if (Ai_info[shipp->ai_index].wing == wingnum) {
-			Ai_info[shipp->ai_index].ai_flags &= ~AIF_FORMATION_WING;
+			Ai_info[shipp->ai_index].ai_flags.remove(AI::AI_Flags::Formation_wing);
 		}
 	}
 }
@@ -11654,23 +11643,23 @@ int ai_formation()
 
 	aip = &Ai_info[shipp->ai_index];
 
-	Assert((aip->ai_flags & AIF_FORMATION) != AIF_FORMATION);	//	Make sure not both types of formation flying in effect.
+	Assert(!(aip->ai_flags[AI::AI_Flags::Formation_wing] && aip->ai_flags[AI::AI_Flags::Formation_object]));	//	Make sure not both types of formation flying in effect.
 
 	//	Determine which kind of formation flying.
 	//	If tracking an object, not in waypoint mode:
-	if (aip->ai_flags & AIF_FORMATION_OBJECT) {
+	if (aip->ai_flags[AI::AI_Flags::Formation_object]) {
 		if ((aip->goal_objnum < 0) || (aip->goal_objnum >= MAX_OBJECTS) || (aip->mode == AIM_BAY_DEPART)) {
-			aip->ai_flags &= ~AIF_FORMATION_OBJECT;
+			aip->ai_flags.remove(AI::AI_Flags::Formation_object);
 			return 1;
 		}
 		
 		wing_index = ai_formation_object_get_slotnum(aip->goal_objnum, Pl_objp);
 		leader_objp = &Objects[aip->goal_objnum];
 	} else {	//	Formation flying in waypoint mode.
-		Assert(aip->ai_flags & AIF_FORMATION_WING);
+		Assert(aip->ai_flags[AI::AI_Flags::Formation_wing]);
 
 		if ( (aip->mode != AIM_WAYPOINTS) && (aip->mode != AIM_FLY_TO_SHIP) ) {
-			aip->ai_flags &= ~AIF_FORMATION_WING;
+			aip->ai_flags.remove(AI::AI_Flags::Formation_wing);
 			return 1;
 		}
 
@@ -11727,7 +11716,7 @@ int ai_formation()
 	
 	if (aip->mode == AIM_WAYPOINTS) {
 
-		if (The_mission.ai_profile->flags2 & AIPF2_FIX_AI_PATH_ORDER_BUG){
+		if (The_mission.ai_profile->flags[AI::Profile_Flags::Fix_ai_path_order_bug]){
 			// skip if wing leader has no waypoint order or a different waypoint list
 			if ((laip->mode != AIM_WAYPOINTS) || !(aip->wp_list == laip->wp_list)){
 				return 1;
@@ -11749,7 +11738,7 @@ int ai_formation()
 	leader_speed = leader_objp->phys_info.speed;
 	vec3d leader_vec = leader_objp->phys_info.vel;
 
-	get_absolute_wing_pos(&goal_point, leader_objp, wing_index, aip->ai_flags & AIF_FORMATION_OBJECT);
+	get_absolute_wing_pos(&goal_point, leader_objp, wing_index, aip->ai_flags[AI::AI_Flags::Formation_object]);
 	vm_vec_scale_add(&future_goal_point_5, &goal_point, &leader_vec, 10.0f);
 	vm_vec_scale_add(&future_goal_point_2, &goal_point, &leader_vec, 5.0f);
 	vm_vec_scale_add(&future_goal_point_x, &goal_point, &leader_objp->orient.vec.fvec, 10.0f);	//	used when very close to destination
@@ -11772,7 +11761,7 @@ int ai_formation()
 
 	ship_info *sip = &Ship_info[shipp->ship_info_index];
 	bool ab_allowed = false;
-	if ((sip->flags[Ship::Info_Flags::Afterburner]) && !(shipp->flags[Ship::Ship_Flags::Afterburner_locked]) && (aip->ai_flags & AIF_FREE_AFTERBURNER_USE)) {
+	if ((sip->flags[Ship::Info_Flags::Afterburner]) && !(shipp->flags[Ship::Ship_Flags::Afterburner_locked]) && (aip->ai_flags[AI::AI_Flags::Free_afterburner_use])) {
 		ab_allowed = true;
 	} else {
 		if (Pl_objp->phys_info.flags & PF_AFTERBURNER_ON)
@@ -12001,7 +11990,7 @@ void ai_do_repair_frame(object *objp, ai_info *aip, float frametime)
 		return;
 	}
 
-	if (aip->ai_flags & (AIF_BEING_REPAIRED | AIF_AWAITING_REPAIR)) {
+	if (aip->ai_flags[AI::AI_Flags::Being_repaired, AI::AI_Flags::Awaiting_repair]) {
 		int	support_objnum;
 		
 		ai_info	*repair_aip;
@@ -12017,7 +12006,7 @@ void ai_do_repair_frame(object *objp, ai_info *aip, float frametime)
 	
 		repair_aip = &Ai_info[Ships[Objects[support_objnum].instance].ai_index];
 
-		if (aip->ai_flags & AIF_BEING_REPAIRED) {
+		if (aip->ai_flags[AI::AI_Flags::Being_repaired]) {
 
 			//	Wait awhile into the mode to synchronize with sound effect.
 			if (Missiontime - repair_aip->submode_start_time > REARM_SOUND_DELAY) {
@@ -12043,7 +12032,7 @@ void ai_do_repair_frame(object *objp, ai_info *aip, float frametime)
 					}
 				}
 			}
-		} else if (aip->ai_flags & AIF_AWAITING_REPAIR) {
+		} else if (aip->ai_flags[AI::AI_Flags::Awaiting_repair]) {
 			//	If this ship has been awaiting repair for 90+ seconds, abort.
 			if ( !MULTIPLAYER_CLIENT ) {
 				if ((Game_mode & GM_MULTIPLAYER) || (objp != Player_obj)) {
@@ -12157,7 +12146,7 @@ void ai_maybe_launch_cmeasure(object *objp, ai_info *aip)
 //	--------------------------------------------------------------------------
 void ai_preprocess_ignore_objnum(object *objp, ai_info *aip)
 {
-	if (aip->ai_flags & AIF_TEMPORARY_IGNORE)
+	if (aip->ai_flags[AI::AI_Flags::Temporary_ignore])
 	{
 		if (timestamp_elapsed(aip->ignore_expire_timestamp))
 			aip->ignore_objnum = UNUSED_OBJNUM;
@@ -12285,7 +12274,7 @@ void ai_balance_shield(object *objp)
 	for (i=0; i<objp->n_quadrants; i++) {
 		if (objp->shield_quadrant[i] < shield_strength_avg) {
 			// only do it the retail way if using smart shields (since that's a bigger thing) - taylor
-			if (Ai_info[Ships[objp->instance].ai_index].ai_profile_flags & AIPF_SMART_SHIELD_MANAGEMENT)
+			if (Ai_info[Ships[objp->instance].ai_index].ai_profile_flags[AI::Profile_Flags::Smart_shield_management])
 				shield_add_strength(objp, delta);
 			else
 				objp->shield_quadrant[i] += delta/objp->n_quadrants;
@@ -12295,7 +12284,7 @@ void ai_balance_shield(object *objp)
 
 		} else {
 			// only do it the retail way if using smart shields (since that's a bigger thing) - taylor
-			if (Ai_info[Ships[objp->instance].ai_index].ai_profile_flags & AIPF_SMART_SHIELD_MANAGEMENT)
+			if (Ai_info[Ships[objp->instance].ai_index].ai_profile_flags[AI::Profile_Flags::Smart_shield_management])
 				shield_add_strength(objp, -delta);
 			else
 				objp->shield_quadrant[i] -= delta/objp->n_quadrants;
@@ -12335,7 +12324,7 @@ void ai_manage_shield(object *objp, ai_info *aip)
 		// set timestamp
 		aip->shield_manage_timestamp = timestamp((int) (delay * 1000.0f));
 
-		if (sip->is_small_ship() || (aip->ai_profile_flags2 & AIPF2_ALL_SHIPS_MANAGE_SHIELDS)) {
+		if (sip->is_small_ship() || (aip->ai_profile_flags[AI::Profile_Flags::All_ships_manage_shields])) {
 			if (Missiontime - aip->last_hit_time < F1_0*10)
 				ai_transfer_shield(objp, aip->last_hit_quadrant);
 			else
@@ -12361,7 +12350,7 @@ void ai_maybe_evade_locked_missile(object *objp, ai_info *aip)
 		return;
 	}
 
-	if (aip->ai_flags & (AIF_NO_DYNAMIC | AIF_KAMIKAZE)) {	//	If not allowed to pursue dynamic objectives, don't evade.  Dumb?  Maybe change. -- MK, 3/15/98
+	if (aip->ai_flags[AI::AI_Flags::No_dynamic, AI::AI_Flags::Kamikaze]) {	//	If not allowed to pursue dynamic objectives, don't evade.  Dumb?  Maybe change. -- MK, 3/15/98
 		return;
 	}
 
@@ -12402,7 +12391,7 @@ void ai_maybe_evade_locked_missile(object *objp, ai_info *aip)
 					}
 					break;
 				case AIM_DOCK:	//	Ships in dock mode can evade iif they are not currently repairing or docked.
-					if (object_is_docked(objp) || (aip->ai_flags & (AIF_REPAIRING|AIF_BEING_REPAIRED)))
+					if (object_is_docked(objp) || (aip->ai_flags[AI::AI_Flags::Repairing, AI::AI_Flags::Being_repaired]))
 						break;
 				case AIM_GUARD:
 					//	If in guard mode and far away from guard object, don't pursue guy that hit me.
@@ -12510,7 +12499,7 @@ void maybe_evade_dumbfire_weapon(ai_info *aip)
 	float t = ai_endangered_by_weapon(aip);
 	if ((t > 0.0f) && (t < 1.0f)) {
 	// Check if this weapon is from a large ship Pl_objp is attacking... if so, enter strafe mode
-		if ( !(aip->ai_flags & AIF_NO_DYNAMIC) ) {
+		if ( !(aip->ai_flags[AI::AI_Flags::No_dynamic]) ) {
 			if ( ai_big_maybe_enter_strafe_mode(Pl_objp, aip->danger_weapon_objnum) ) {
 				return;
 			}
@@ -12548,7 +12537,7 @@ void maybe_evade_dumbfire_weapon(ai_info *aip)
 		case AIM_WAYPOINTS:	
 		case AIM_FLY_TO_SHIP:
 		case AIM_SAFETY:
-			if (!(aip->ai_flags & (AIF_NO_DYNAMIC | AIF_KAMIKAZE)) && Ship_info[Ships[aip->shipnum].ship_info_index].is_small_ship()) {
+			if (!(aip->ai_flags[AI::AI_Flags::No_dynamic, AI::AI_Flags::Kamikaze]) && Ship_info[Ships[aip->shipnum].ship_info_index].is_small_ship()) {
 				aip->active_goal = AI_ACTIVE_GOAL_DYNAMIC;
 				aip->previous_mode = aip->mode;
 				aip->previous_submode = aip->submode;
@@ -12939,7 +12928,7 @@ int ai_acquire_depart_path(object *pl_objp, int parent_objnum, int allowed_path_
 
 	// Set this flag, so we don't bother recreating the path... we won't need to update the path
 	// that has just been created.
-	aip->ai_flags &= ~AIF_USE_STATIC_PATH;
+	aip->ai_flags.remove(AI::AI_Flags::Use_static_path);
 
 	aip->goal_objnum = parent_objnum;
 	aip->goal_signature = parent_objp->signature;
@@ -13166,7 +13155,7 @@ int num_allies_rearming(object *objp)
 		A = &Objects[so->objnum];
 
 		if (Ships[A->instance].team == team) {
-			if (Ai_info[Ships[A->instance].ai_index].ai_flags & (AIF_REPAIRING | AIF_AWAITING_REPAIR)) {
+			if (Ai_info[Ships[A->instance].ai_index].ai_flags[AI::AI_Flags::Repairing, AI::AI_Flags::Awaiting_repair]) {
 				count++;
 			}
 		}
@@ -13198,7 +13187,7 @@ int maybe_request_support(object *objp)
 		return 0;
 
 	//	A ship that is currently awaiting does not need support!
-	if (aip->ai_flags & (AIF_AWAITING_REPAIR | AIF_BEING_REPAIRED))
+	if (aip->ai_flags[AI::AI_Flags::Being_repaired, AI::AI_Flags::Awaiting_repair])
 		return 0;
 
 	if (!timestamp_elapsed(aip->next_rearm_request_timestamp))
@@ -13234,30 +13223,29 @@ int maybe_request_support(object *objp)
 	desire += mrs_subsystem(shipp, SUBSYSTEM_SENSORS);
 
 
-	//	Set desire based on percentage of secondary weapons.
 	ship_weapon *swp = &shipp->weapons;
 
-	for ( i = 0; i < swp->num_secondary_banks; i++ ) {
-		if (swp->secondary_bank_start_ammo[i] > 0) {
-			r = (float) swp->secondary_bank_ammo[i]/swp->secondary_bank_start_ammo[i];
-			desire += (int) ((1.0f - r) * 3.0f);
+	//	Set desire based on percentage of secondary weapons.
+	for (i = 0; i < swp->num_secondary_banks; ++i)
+	{
+		if (swp->secondary_bank_start_ammo[i] > 0)
+		{
+			r = (float)swp->secondary_bank_ammo[i] / swp->secondary_bank_start_ammo[i];
+			desire += (int)((1.0f - r) * 3.0f);
 		}
 	}
 
 	// Set desire based on ballistic weapons - Goober5000
-	if (sip->flags[Ship::Info_Flags::Ballistic_primaries])
+	for (i = 0; i < swp->num_primary_banks; ++i)
 	{
-		for (i = 0; i < swp->num_primary_banks; i++)
+		wip = &Weapon_info[swp->primary_bank_weapons[i]];
+
+		if (wip->wi_flags[Weapon::Info_Flags::Ballistic] && swp->primary_bank_start_ammo[i] > 0)
 		{
-			wip = &Weapon_info[swp->primary_bank_weapons[i]];
+			r = (float) swp->primary_bank_ammo[i] / swp->primary_bank_start_ammo[i];
 
-			if (wip->wi_flags[Weapon::Info_Flags::Ballistic])
-			{
-				r = (float) swp->primary_bank_ammo[i] / swp->primary_bank_start_ammo[i];
-
-				// cube ammo level for better behavior, and adjust for number of banks
-				desire += (int) ((1.0f - r)*(1.0f - r)*(1.0f - r) * (5.0f / swp->num_primary_banks));
-			}
+			// cube ammo level for better behavior, and adjust for number of banks
+			desire += (int) ((1.0f - r)*(1.0f - r)*(1.0f - r) * (5.0f / swp->num_primary_banks));
 		}
 	}
 
@@ -13386,13 +13374,13 @@ void ai_warp_out(object *objp)
 		if (aip->mode != AIM_WARP_OUT) 
 			aip->mode = AIM_WARP_OUT;
 		aip->submode = AIS_WARP_1;
-		aip->ai_flags |= AIF_TRYING_UNSUCCESSFULLY_TO_WARP;
+		aip->ai_flags.set(AI::AI_Flags::Trying_unsuccessfully_to_warp);
 
 		return;
 	}
 
 	// Goober5000 - make sure the flag is clear (if it was previously set)
-	aip->ai_flags &= ~AIF_TRYING_UNSUCCESSFULLY_TO_WARP;
+	aip->ai_flags.remove(AI::AI_Flags::Trying_unsuccessfully_to_warp);
 
 	switch (aip->submode) {
 	case AIS_WARP_1:
@@ -13517,8 +13505,8 @@ void ai_announce_ship_dying(object *dying_objp)
 				ai_info	*aip = &Ai_info[Ships[A->instance].ai_index];
 
 				// AL 1-5-98: only avoid shockwave if not docked or repairing
-				if ( !object_is_docked(A) && !(aip->ai_flags & (AIF_REPAIRING|AIF_BEING_REPAIRED)) ) {
-					aip->ai_flags |= AIF_AVOID_SHOCKWAVE_SHIP;
+				if ( !object_is_docked(A) && !(aip->ai_flags[AI::AI_Flags::Repairing, AI::AI_Flags::Being_repaired]) ) {
+					aip->ai_flags.set(AI::AI_Flags::Avoid_shockwave_ship);
 				}
 			}
 		}
@@ -13567,13 +13555,13 @@ int ai_find_shockwave_ship(object *objp, ai_info *aip)
 int aas_1(object *objp, ai_info *aip, vec3d *safe_pos)
 {
 	// MAKE SURE safe_pos DOES NOT TAKE US TOWARD THE A SHIP WE'RE ATTACKING.
-	if (aip->ai_flags & AIF_AVOID_SHOCKWAVE_WEAPON) {
+	if (aip->ai_flags[AI::AI_Flags::Avoid_shockwave_weapon]) {
 		//	If we don't currently know of a weapon to avoid, try to find one.
 		//	If we can't find one, then clear the bit so we don't keep coming here.
 		if (aip->shockwave_object == -1) {
 			int shockwave_weapon = ai_find_shockwave_weapon(objp, aip);
 			if (shockwave_weapon == -1) {
-				aip->ai_flags &= ~AIF_AVOID_SHOCKWAVE_WEAPON;
+				aip->ai_flags.remove(AI::AI_Flags::Avoid_shockwave_weapon);
 				return 0;
 			} else {
 				aip->shockwave_object = shockwave_weapon;
@@ -13584,7 +13572,7 @@ int aas_1(object *objp, ai_info *aip, vec3d *safe_pos)
 		Assert(aip->shockwave_object > -1);
 		object	*weapon_objp = &Objects[aip->shockwave_object];
 		if (weapon_objp->type != OBJ_WEAPON) {
-			aip->ai_flags &= ~AIF_AVOID_SHOCKWAVE_WEAPON;
+			aip->ai_flags.remove(AI::AI_Flags::Avoid_shockwave_weapon);
 			aip->shockwave_object = -1;
 			return 0;
 		}
@@ -13594,7 +13582,7 @@ int aas_1(object *objp, ai_info *aip, vec3d *safe_pos)
 		object *target_ship_obj = NULL;
 
 		if (wip->shockwave.speed == 0.0f) {
-			aip->ai_flags &= ~AIF_AVOID_SHOCKWAVE_WEAPON;
+			aip->ai_flags.remove(AI::AI_Flags::Avoid_shockwave_weapon);
 			aip->shockwave_object = -1;
 			return 0;
 		}
@@ -13658,11 +13646,11 @@ int aas_1(object *objp, ai_info *aip, vec3d *safe_pos)
 
 			return 1;
 		}
-	} else if (aip->ai_flags & AIF_AVOID_SHOCKWAVE_SHIP) {
+	} else if (aip->ai_flags[AI::AI_Flags::Avoid_shockwave_ship]) {
 		if (aip->shockwave_object == -1) {
 			int shockwave_ship = ai_find_shockwave_ship(objp, aip);
 			if (shockwave_ship == -1) {
-				aip->ai_flags &= ~AIF_AVOID_SHOCKWAVE_SHIP;
+				aip->ai_flags.remove(AI::AI_Flags::Avoid_shockwave_ship);
 				return 0;
 			} else {
 				aip->shockwave_object = shockwave_ship;
@@ -13677,7 +13665,7 @@ int aas_1(object *objp, ai_info *aip, vec3d *safe_pos)
 		}
 
 		if (ship_objp->type != OBJ_SHIP) {
-			aip->ai_flags &= ~AIF_AVOID_SHOCKWAVE_SHIP;
+			aip->ai_flags.remove(AI::AI_Flags::Avoid_shockwave_ship);
 			return 0;
 		}
 
@@ -13690,7 +13678,7 @@ int aas_1(object *objp, ai_info *aip, vec3d *safe_pos)
 		float outer_rad = ship_get_exp_outer_rad(ship_objp);
 
 		if (vm_vec_dist_quick(&objp->pos, &ship_objp->pos) > outer_rad*1.5f) {
-			aip->ai_flags &= ~AIF_AVOID_SHOCKWAVE_WEAPON;
+			aip->ai_flags.remove(AI::AI_Flags::Avoid_shockwave_ship);
 			return 0;
 		}
 
@@ -13715,12 +13703,13 @@ int ai_avoid_shockwave(object *objp, ai_info *aip)
 	// Goober5000 - let's treat shockwave response the same way whether from weapon or ship
     if (!Ship_info[Ships[objp->instance].ship_info_index].avoids_shockwaves()) {
 		// don't come here again
-		aip->ai_flags &= ~AIF_AVOID_SHOCKWAVE;
+		aip->ai_flags.remove(AI::AI_Flags::Avoid_shockwave_ship);
+		aip->ai_flags.remove(AI::AI_Flags::Avoid_shockwave_weapon);
 		return 0;
 	}
 
 	//	Don't all react right away.
-	if (!(aip->ai_flags & AIF_AVOID_SHOCKWAVE_STARTED)) {
+	if (!(aip->ai_flags[AI::AI_Flags::Avoid_shockwave_started])) {
 		float evadeChance = (aip->ai_shockwave_evade_chance == FLT_MIN) 
 			? ((float) aip->ai_class/4.0f + 0.25f)
 			: aip->ai_shockwave_evade_chance;
@@ -13729,11 +13718,11 @@ int ai_avoid_shockwave(object *objp, ai_info *aip)
 	}
 
 	if (!aas_1(objp, aip, &safe_pos)) {
-		aip->ai_flags |= AIF_AVOID_SHOCKWAVE_STARTED;
+		aip->ai_flags.set(AI::AI_Flags::Avoid_shockwave_started);
 		return 0;
 	}
 
-	aip->ai_flags |= AIF_AVOID_SHOCKWAVE_STARTED;
+	aip->ai_flags.set(AI::AI_Flags::Avoid_shockwave_started);
 
 	//	OK, evade the shockwave!
 	turn_towards_point(objp, &safe_pos, NULL, 0.0f);
@@ -13763,7 +13752,7 @@ int ai_avoid_shockwave(object *objp, ai_info *aip)
 //	Return true if this ship is close to being repaired, else return false.
 int ai_await_repair_frame(object *objp, ai_info *aip)
 {
-	if (!(aip->ai_flags & (AIF_AWAITING_REPAIR | AIF_BEING_REPAIRED)))
+	if (!(aip->ai_flags[AI::AI_Flags::Being_repaired, AI::AI_Flags::Awaiting_repair]))
 		return 0;
 
 	if (aip->support_ship_objnum == -1)
@@ -13775,7 +13764,7 @@ int ai_await_repair_frame(object *objp, ai_info *aip)
 	shipp = &Ships[Objects[aip->support_ship_objnum].instance];
 	sip = &Ship_info[shipp->ship_info_index];
 
-	aip->ai_flags &= ~AIF_FORMATION_OBJECT;	//	Prevents endless rotation.
+	aip->ai_flags.remove(AI::AI_Flags::Formation_object);	//	Prevents endless rotation.
 
 	if (!(sip->flags[Ship::Info_Flags::Support]))
 		return 0;
@@ -13888,7 +13877,7 @@ int maybe_big_ship_collide_recover_frame(object *objp, ai_info *aip)
 	float	dot, dist;
 	vec3d	v2g;
 	
-	if (aip->ai_flags & AIF_BIG_SHIP_COLLIDE_RECOVER_1) {
+	if (aip->ai_flags[AI::AI_Flags::Big_ship_collide_recover_1]) {
 		ai_turn_towards_vector(&aip->big_recover_pos_1, objp, flFrametime, Ship_info[Ships[objp->instance].ship_info_index].srotation_time, NULL, NULL, 0.0f, 0, NULL);
 		dist = vm_vec_normalized_dir(&v2g, &aip->big_recover_pos_1, &objp->pos);
 		dot = vm_vec_dot(&objp->orient.vec.fvec, &v2g);
@@ -13896,13 +13885,13 @@ int maybe_big_ship_collide_recover_frame(object *objp, ai_info *aip)
 
 		//	If close to desired point, or 15+ seconds since entered this mode, continue to next mode.
 		if ((timestamp_until(aip->big_recover_timestamp) < -15*1000) || (dist < (0.5f + flFrametime) * objp->phys_info.speed)) {
-			aip->ai_flags &= ~AIF_BIG_SHIP_COLLIDE_RECOVER_1;
-			aip->ai_flags |= AIF_BIG_SHIP_COLLIDE_RECOVER_2;
+			aip->ai_flags.remove(AI::AI_Flags::Big_ship_collide_recover_1);
+			aip->ai_flags.set(AI::AI_Flags::Big_ship_collide_recover_2);
 		}
 
 		return 1;
 
-	} else if (aip->ai_flags & AIF_BIG_SHIP_COLLIDE_RECOVER_2) {
+	} else if (aip->ai_flags[AI::AI_Flags::Big_ship_collide_recover_2]) {
 		ai_turn_towards_vector(&aip->big_recover_pos_2, objp, flFrametime, Ship_info[Ships[objp->instance].ship_info_index].srotation_time, NULL, NULL, 0.0f, 0, NULL);
 		dist = vm_vec_normalized_dir(&v2g, &aip->big_recover_pos_2, &objp->pos);
 		dot = vm_vec_dot(&objp->orient.vec.fvec, &v2g);
@@ -13910,15 +13899,15 @@ int maybe_big_ship_collide_recover_frame(object *objp, ai_info *aip)
 
 		//	If close to desired point, or 30+ seconds since started avoiding collision, done avoiding.
 		if ((timestamp_until(aip->big_recover_timestamp) < -30*1000) || (dist < (0.5f + flFrametime) * objp->phys_info.speed)) {
-			aip->ai_flags &= ~AIF_BIG_SHIP_COLLIDE_RECOVER_2;
-			aip->ai_flags &= ~AIF_TARGET_COLLISION;
+			aip->ai_flags.remove(AI::AI_Flags::Big_ship_collide_recover_2);
+			aip->ai_flags.remove(AI::AI_Flags::Target_collision);
 		}
 
 		return 1;
 	}
 
-	if (aip->ai_flags & AIF_TARGET_COLLISION) {
-		aip->ai_flags &= ~AIF_TARGET_COLLISION;
+	if (aip->ai_flags[AI::AI_Flags::Target_collision]) {
+		aip->ai_flags.remove(AI::AI_Flags::Target_collision);
 	}
 	return 0;
 }
@@ -13981,13 +13970,13 @@ void ai_frame(int objnum)
 	Pl_objp->phys_info.flags &= ~PF_GLIDING;
 
 	// warping out?
-	if ((aip->mode == AIM_WARP_OUT) || (aip->ai_flags & AIF_TRYING_UNSUCCESSFULLY_TO_WARP))
+	if ((aip->mode == AIM_WARP_OUT) || (aip->ai_flags[AI::AI_Flags::Trying_unsuccessfully_to_warp]))
 	{
 		ai_warp_out(Pl_objp);
 
 		// Goober5000 - either we were never trying unsuccessfully, or we were but now
 		// we're successful... in either case, since we're actually warping we simply return
-		if (!(aip->ai_flags & AIF_TRYING_UNSUCCESSFULLY_TO_WARP))
+		if (!(aip->ai_flags[AI::AI_Flags::Trying_unsuccessfully_to_warp]))
 			return;
 	}
 
@@ -13995,22 +13984,23 @@ void ai_frame(int objnum)
 	ai_process_mission_orders( objnum, aip );
 
 	//	Avoid a shockwave, if necessary.  If a shockwave and rearming, stop rearming.
-	if (aip->ai_flags & AIF_AVOID_SHOCKWAVE) {
+	if (aip->ai_flags[AI::AI_Flags::Avoid_shockwave_ship, AI::AI_Flags::Avoid_shockwave_weapon]) {
 		if (ai_avoid_shockwave(Pl_objp, aip)) {
-			aip->ai_flags &= ~(AIF_BIG_SHIP_COLLIDE_RECOVER_1 | AIF_BIG_SHIP_COLLIDE_RECOVER_2);
-			if (aip->ai_flags & (AIF_AWAITING_REPAIR | AIF_BEING_REPAIRED))
+			aip->ai_flags.remove(AI::AI_Flags::Big_ship_collide_recover_1);
+			aip->ai_flags.remove(AI::AI_Flags::Big_ship_collide_recover_2);
+			if (aip->ai_flags[AI::AI_Flags::Being_repaired, AI::AI_Flags::Awaiting_repair])
 				ai_abort_rearm_request(Pl_objp);
 			return;
 		}
 	} else {
-		aip->ai_flags &= ~AIF_AVOID_SHOCKWAVE_STARTED;
+		aip->ai_flags.remove(AI::AI_Flags::Avoid_shockwave_started);
 	}
 
 	// moved call to ai_do_repair frame here from below because of the subsequent if statment returning
 	// if the ship is getting repaired
 	//	If waiting to be repaired, just stop and sit.
 	ai_do_repair_frame(Pl_objp, aip, flFrametime);
-	if ((aip->ai_flags & AIF_AWAITING_REPAIR) || (aip->ai_flags & AIF_BEING_REPAIRED)) {
+	if ((aip->ai_flags[AI::AI_Flags::Awaiting_repair]) || (aip->ai_flags[AI::AI_Flags::Being_repaired])) {
 		if (ai_await_repair_frame(Pl_objp, aip))
 			return;
 	}
@@ -14067,14 +14057,14 @@ void ai_frame(int objnum)
 	}
 
 	// set base stealth info each frame
-	aip->ai_flags &= ~AIF_STEALTH_PURSUIT;
+	aip->ai_flags.remove(AI::AI_Flags::Stealth_pursuit);
 	if (En_objp && En_objp->type == OBJ_SHIP) {
 		if (Ships[En_objp->instance].flags[Ship::Ship_Flags::Stealth]) {
 			int stealth_state = ai_is_stealth_visible(Pl_objp, En_objp);
 			float dist = vm_vec_dist_quick(&En_objp->pos, &Pl_objp->pos);
 
 			if (stealth_state != STEALTH_FULLY_TARGETABLE) {
-				aip->ai_flags |= AIF_STEALTH_PURSUIT;
+				aip->ai_flags.set(AI::AI_Flags::Stealth_pursuit);
 			}
 
 			if ( (stealth_state == STEALTH_FULLY_TARGETABLE) || (stealth_state == STEALTH_IN_FRUSTUM) ) {
@@ -14159,7 +14149,7 @@ void ai_frame(int objnum)
 	aip->target_time += flFrametime;
 
 	int in_formation = 0;
-	if (aip->ai_flags & AIF_FORMATION) {
+	if (aip->ai_flags[AI::AI_Flags::Formation_object, AI::AI_Flags::Formation_wing]) {
 		in_formation = !ai_formation();
 	}
 
@@ -14282,7 +14272,7 @@ void ai_process( object * obj, int ai_index, float frametime )
 		vec3d copy_desired_rotvel = obj->phys_info.rotvel;
 		physics_read_flying_controls( &obj->orient, &obj->phys_info, &AI_ci, frametime);
 		// if obj is in formation and not flight leader, don't update rotvel
-		if (aip->ai_flags & AIF_FORMATION) {
+		if (aip->ai_flags[AI::AI_Flags::Formation_object, AI::AI_Flags::Formation_wing]) {
 			if (&Objects[aip->goal_objnum] != obj) {
 				obj->phys_info.desired_rotvel = copy_desired_rotvel;
 				obj->phys_info.rotvel = copy_desired_rotvel;
@@ -14316,7 +14306,7 @@ void init_ai_object(int objnum)
 	vm_vec_scale_add2(&near_vec, &objp->orient.vec.rvec, 10.0f);
 
 	// Things that shouldn't have to get initialized, but initialize them just in case!
-	aip->ai_flags = 0;
+	aip->ai_flags.reset();
 	aip->previous_mode = AIM_NONE;
 	aip->mode_time = -1;
 	aip->target_objnum = -1;
@@ -14459,28 +14449,6 @@ void init_ai_system()
 	Ppfp = Path_points;
 }
 
-int combine_flags(int base_flags, int override_flags, int override_set)
-{
-	int result = 0;
-	//Scan through every bit in the flag int
-	for (int i = 0; i < 31; i++)
-	{
-		int flag = (1 << i);
-		//If this flag is marked in the override as set, copy it from the override
-		if (override_set & flag)
-		{
-			if (override_flags & flag)
-				result |= flag;
-		}
-		else	//Otherwise, copy it from the base flag
-		{
-			if (base_flags & flag)
-				result |= flag;
-		}
-	}
-	return result;
-}
-
 //Sets the ai_info stuff based on what is in the ai class and the current ai profile
 //Stuff in the ai class will override what is in the ai profile, but only if it is set.
 //Unset per-difficulty-level values are marked with FLT_MIN or INT_MIN
@@ -14556,8 +14524,7 @@ void init_aip_from_class_and_profile(ai_info *aip, ai_class *aicp, ai_profile_t 
 		profile->turret_max_aim_update_delay[Game_skill_level] : aicp->ai_turret_max_aim_update_delay[Game_skill_level];
 
 	//Combine AI profile and AI class flags
-	aip->ai_profile_flags = combine_flags(profile->flags, aicp->ai_profile_flags, aicp->ai_profile_flags_set);
-	aip->ai_profile_flags2 = combine_flags(profile->flags2, aicp->ai_profile_flags2, aicp->ai_profile_flags2_set);
+    aip->ai_profile_flags = profile->flags | (aicp->ai_profile_flags & aicp->ai_profile_flags_set);
 }
 
 void ai_do_default_behavior(object *obj)
@@ -14590,7 +14557,7 @@ void ai_do_default_behavior(object *obj)
         {
             aip->mode = AIM_SAFETY;
             aip->submode = AISS_1;
-            aip->ai_flags &= ~AIF_REPAIRING;
+			aip->ai_flags.remove(AI::AI_Flags::Repairing);
         }
         // sentry guns... do their thing
         else if (sip->flags[Ship::Info_Flags::Sentrygun])
@@ -14847,7 +14814,7 @@ void big_ship_collide_recover_start(object *objp, object *big_objp, vec3d *colli
 
 	aip = &Ai_info[Ships[objp->instance].ai_index];
 
-	if (!timestamp_elapsed(aip->big_recover_timestamp) && (aip->ai_flags & AIF_BIG_SHIP_COLLIDE_RECOVER_1))
+	if (!timestamp_elapsed(aip->big_recover_timestamp) && (aip->ai_flags[AI::AI_Flags::Big_ship_collide_recover_1]))
 		return;
 
 	if (collision_normal) {
@@ -14857,8 +14824,8 @@ void big_ship_collide_recover_start(object *objp, object *big_objp, vec3d *colli
 		aip->big_recover_timestamp = timestamp(500);
 	}
 
-	aip->ai_flags &= ~AIF_BIG_SHIP_COLLIDE_RECOVER_2;
-	aip->ai_flags |= AIF_BIG_SHIP_COLLIDE_RECOVER_1;
+	aip->ai_flags.remove(AI::AI_Flags::Big_ship_collide_recover_2);
+	aip->ai_flags.set(AI::AI_Flags::Big_ship_collide_recover_1);
 
 	// big_recover_pos_1 is 100 m out along normal
 	vec3d direction;
@@ -15049,11 +15016,11 @@ void ai_ship_hit(object *objp_ship, object *hit_objp, vec3d *hitpos, int shield_
 
 	aip->last_hit_time = Missiontime;
 
-	if (aip->ai_flags & (AIF_NO_DYNAMIC | AIF_KAMIKAZE))	//	If not allowed to pursue dynamic objectives, don't evade.  Dumb?  Maybe change. -- MK, 3/15/98
+	if (aip->ai_flags[AI::AI_Flags::No_dynamic, AI::AI_Flags::Kamikaze])	//	If not allowed to pursue dynamic objectives, don't evade.  Dumb?  Maybe change. -- MK, 3/15/98
 		return;
 
 	//	If this ship is awaiting repair, abort!
-	if (aip->ai_flags & (AIF_AWAITING_REPAIR | AIF_BEING_REPAIRED)) {
+	if (aip->ai_flags[AI::AI_Flags::Being_repaired, AI::AI_Flags::Awaiting_repair]) {
 		if (get_hull_pct(objp_ship) < 0.3f) {
 			//	Note, only abort if hull below a certain level.
 			aip->next_rearm_request_timestamp = timestamp(NEXT_REARM_TIMESTAMP/2);	//	Might request again after 15 seconds.
@@ -15065,7 +15032,7 @@ void ai_ship_hit(object *objp_ship, object *hit_objp, vec3d *hitpos, int shield_
 	//	If firing a bomb, ignore enemy fire so we can gain lock drop the bomb.
 	//	Only ignore fire if aspect_locked_time > 0.5f, as this means we're in range.
 	if (firing_aspect_seeking_bomb(objp_ship)) {
-		if ((aip->ai_flags & AIF_SEEK_LOCK) && (aip->aspect_locked_time > 0.1f))
+		if ((aip->ai_flags[AI::AI_Flags::Seek_lock]) && (aip->aspect_locked_time > 0.1f))
 			return;
 	}
 
@@ -15108,7 +15075,7 @@ void ai_ship_hit(object *objp_ship, object *hit_objp, vec3d *hitpos, int shield_
 		if (aip->submode == SM_ATTACK_FOREVER)
 			return;
 
-		if ( (hit_objp->type == OBJ_WEAPON) && !(aip->ai_flags & AIF_NO_DYNAMIC) ) {
+		if ( (hit_objp->type == OBJ_WEAPON) && !(aip->ai_flags[AI::AI_Flags::No_dynamic]) ) {
 			if ( ai_big_maybe_enter_strafe_mode(objp_ship, OBJ_INDEX(hit_objp), 1) )
 				return;
 		}
@@ -15162,8 +15129,10 @@ void ai_ship_hit(object *objp_ship, object *hit_objp, vec3d *hitpos, int shield_
 		Int3();	//	Bogus mode!
 	}
 
-	if (timestamp_elapsed(aip->ok_to_target_timestamp))
-		aip->ai_flags &= ~AIF_FORMATION;			//	If flying in formation, bug out!
+	if (timestamp_elapsed(aip->ok_to_target_timestamp)) {
+		aip->ai_flags.remove(AI::AI_Flags::Formation_object);			//	If flying in formation, bug out!
+		aip->ai_flags.remove(AI::AI_Flags::Formation_wing);
+	}
 
 	aip->hitter_objnum = hitter_objnum;
 	aip->hitter_signature = Objects[hitter_objnum].signature;
@@ -15245,7 +15214,7 @@ void ai_ship_destroy(int shipnum, Ship::Exit_Flags method)
 
 	// if I was getting repaired, or awaiting repair, then cleanup the repair mode.  When awaiting repair, the support objnum
 	// is -1.  When the support ship is on the way, the suppoort objnum >= 0 (points to support ship).
-	if ( dead_aip->ai_flags & (AIF_AWAITING_REPAIR | AIF_BEING_REPAIRED) ) {
+	if ( dead_aip->ai_flags[AI::AI_Flags::Being_repaired, AI::AI_Flags::Awaiting_repair] ) {
 		if ( dead_aip->support_ship_objnum >= 0 )
 			ai_do_objects_repairing_stuff( &Objects[objnum], &Objects[dead_aip->support_ship_objnum], REPAIR_INFO_END);
 		else
@@ -15354,7 +15323,7 @@ int ai_abort_rearm_request(object *requester_objp)
 	}	
 	requester_aip = &Ai_info[requester_shipp->ai_index];
 	
-	if (requester_aip->ai_flags & (AIF_AWAITING_REPAIR | AIF_BEING_REPAIRED)){
+	if (requester_aip->ai_flags[AI::AI_Flags::Being_repaired, AI::AI_Flags::Awaiting_repair]){
 
 		// support objnum is always valid once a rearm repair has been requested.  It points to the
 		// ship that is coming to repair me.
@@ -15400,7 +15369,7 @@ int ai_abort_rearm_request(object *requester_objp)
 		}
 
 		return 1;
-	} else if ( requester_aip->ai_flags & AIF_REPAIRING ) {
+	} else if ( requester_aip->ai_flags[AI::AI_Flags::Repairing] ) {
 		// a support ship can request to abort when he is told to do something else (like warp out).
 		// see if this support ships goal_objnum is valid.  If so, then issue this ai_abort comment
 		// for the ship that he is enroute to repair
@@ -15431,7 +15400,7 @@ void ai_add_rearm_goal( object *requester_objp, object *support_objp )
 
 	// if the requester is a player object, issue the order as the squadmate messaging code does.  Doing so
 	// ensures that the player get a higher priority!
-	requester_aip->ai_flags |= AIF_AWAITING_REPAIR;	//	Tell that I'm awaiting repair.
+	requester_aip->ai_flags.set(AI::AI_Flags::Awaiting_repair);	//	Tell that I'm awaiting repair.
 	if ( requester_objp->flags[Object::Object_Flags::Player_ship] )
 		ai_add_ship_goal_player( AIG_TYPE_PLAYER_SHIP, AI_GOAL_REARM_REPAIR, -1, requester_shipp->ship_name, support_aip );
 	else
@@ -15456,7 +15425,7 @@ int ai_issue_rearm_request(object *requester_objp)
 	requester_aip = &Ai_info[requester_shipp->ai_index];
 	
 	// these should have already been caught by the time we get here!
-	Assert(!(requester_aip->ai_flags & AIF_AWAITING_REPAIR));
+	Assert(!(requester_aip->ai_flags[AI::AI_Flags::Awaiting_repair]));
 	Assert(is_support_allowed(requester_objp));
 
 	requester_aip->next_rearm_request_timestamp = timestamp(NEXT_REARM_TIMESTAMP);	//	Might request again after this much time.
@@ -15497,7 +15466,7 @@ void ai_rearm_repair( object *objp, int docker_index, object *goal_objp, int doc
 	aip->goal_objnum = OBJ_INDEX(goal_objp);
 
 	ai_dock_with_object(objp, docker_index, goal_objp, dockee_index, AIDO_DOCK);
-	aip->ai_flags |= AIF_REPAIRING;						//	Tell that repair guy is busy trying to repair someone.
+	aip->ai_flags.set(AI::AI_Flags::Repairing);		//	Tell that repair guy is busy trying to repair someone.
 
 	goal_aip = &Ai_info[Ships[goal_objp->instance].ai_index];
 

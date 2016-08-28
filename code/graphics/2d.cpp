@@ -1092,8 +1092,6 @@ bool gr_init(os::GraphicsOperations* graphicsOps, int d_mode, int d_width, int d
 
 	gr_set_shader(NULL);
 
-	os_set_title(Osreg_title);
-
 	Gr_inited = 1;
 
 	return true;
@@ -1130,6 +1128,16 @@ void gr_activate(int active)
 
 	if ( !Gr_inited ) { 
 		return;
+	}
+
+	if (active) {
+		if (Cmdline_fullscreen_window||Cmdline_window) {
+			os::getMainViewport()->restore();
+		} else {
+			os::getMainViewport()->setState(os::ViewportState::Fullscreen);
+		}
+	} else {
+		os::getMainViewport()->minimize();
 	}
 
 	switch( gr_screen.mode ) {
@@ -1481,8 +1489,6 @@ void gr_pline_special(SCP_vector<vec3d> *pts, int thickness, int resize_mode)
 	vec3d s1, s2, e1, e2, dir;
 	vec3d last_e1, last_e2;
 	vertex v[4];
-	vertex *verts[4] = {&v[0], &v[1], &v[2], &v[3]};
-	int saved_zbuffer_mode;
 	int started_frame = 0;
 
 	size_t num_pts = pts->size();
