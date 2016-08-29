@@ -1968,6 +1968,7 @@ void opengl_tnl_set_material_particle(particle_material * material_info)
 	GL_state.Uniform.setUniformf("farZ", Max_draw_distance);
 	GL_state.Uniform.setUniformi("srgb", High_dynamic_range ? 1 : 0);
 	GL_state.Uniform.setUniformi("blend_alpha", material_info->get_blend_mode() != ALPHA_BLEND_ADDITIVE);
+	GL_state.Uniform.setUniformi("sphere", material_info->get_attenuation() == particle_material::ATTENUATE_SPHERE ? 1 : 0);
 
 	if ( Cmdline_no_deferred_lighting ) {
 		GL_state.Uniform.setUniformi("linear_depth", 0);

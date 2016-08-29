@@ -184,12 +184,22 @@ public:
 
 class particle_material : public material
 {
+public:
+	enum attenuation_type {
+		ATTENUATE_LINEAR,
+		ATTENUATE_SPHERE
+	};
+private:
+	attenuation_type Attenuation;
 	bool Point_sprite;
 public:
 	particle_material();
 
 	void set_point_sprite_mode(bool enabled);
 	bool get_point_sprite_mode();
+
+	void set_attenuation(attenuation_type mode);
+	attenuation_type get_attenuation();
 
 	virtual int get_shader_handle();
 };

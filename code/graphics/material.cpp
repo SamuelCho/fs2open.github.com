@@ -638,7 +638,9 @@ int model_material::get_shader_handle()
 }
 
 particle_material::particle_material(): 
-material()  
+material(),
+Attenuation(ATTENUATE_SPHERE),
+Point_sprite(false),
 {
 	set_shader_type(SDR_TYPE_EFFECT_PARTICLE);
 }
@@ -651,6 +653,16 @@ void particle_material::set_point_sprite_mode(bool enabled)
 bool particle_material::get_point_sprite_mode()
 {
 	return Point_sprite;
+}
+
+void particle_material::set_attenuation(attenuation_type mode)
+{
+	Attenuation = mode;
+}
+
+particle_material::attenuation_type particle_material::get_attenuation()
+{
+	return Attenuation;
 }
 
 int particle_material::get_shader_handle()

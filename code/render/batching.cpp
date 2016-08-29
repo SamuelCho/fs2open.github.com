@@ -132,7 +132,7 @@ uint batching_determine_vertex_layout(batch_info *info)
 			| vertex_format_data::mask(vertex_format_data::UVEC);
 	}
 
-	if ( info->mat_type == batch_info::VOLUME_EMISSIVE || info->mat_type == batch_info::DISTORTION ) {
+	if ( info->mat_type == batch_info::VOLUME_EMISSIVE_SPHERE || info->mat_type == batch_info::DISTORTION ) {
 		return vertex_format_data::mask(vertex_format_data::POSITION3) 
 			| vertex_format_data::mask(vertex_format_data::COLOR4) 
 			| vertex_format_data::mask(vertex_format_data::TEX_COORD)
@@ -719,7 +719,7 @@ void batching_add_volume_bitmap(int texture, vertex *pnt, int orient, float rad,
 	primitive_batch *batch;
 	
 	if ( gr_is_capable(CAPABILITY_SOFT_PARTICLES) ) {
-		batch = batching_find_batch(texture, batch_info::VOLUME_EMISSIVE);
+		batch = batching_find_batch(texture, batch_info::VOLUME_EMISSIVE_SPHERE);
 	} else {
 		batch = batching_find_batch(texture, batch_info::FLAT_EMISSIVE);
 	}
@@ -740,7 +740,7 @@ void batching_add_volume_bitmap_rotated(int texture, vertex *pnt, float angle, f
 	primitive_batch *batch;
 
 	if ( gr_is_capable(CAPABILITY_SOFT_PARTICLES) ) {
-		batch = batching_find_batch(texture, batch_info::VOLUME_EMISSIVE);
+		batch = batching_find_batch(texture, batch_info::VOLUME_EMISSIVE_SPHERE);
 	} else {
 		batch = batching_find_batch(texture, batch_info::FLAT_EMISSIVE);
 	}
@@ -856,7 +856,7 @@ void batching_add_tri(int texture, vertex *verts)
 
 void batching_render_batch_item(primitive_batch_item *item, vertex_layout *layout, primitive_type prim_type, int buffer_num)
 {
-	if ( item->batch_item_info.mat_type == batch_info::VOLUME_EMISSIVE ) { // Cmdline_softparticles
+	if ( item->batch_item_info.mat_type == batch_info::VOLUME_EMISSIVE_SPHERE ) { // Cmdline_softparticles
 		particle_material material_def;
 
 		material_set_unlit_volume(&material_def, item->batch_item_info.texture, prim_type == PRIM_TYPE_POINTS);

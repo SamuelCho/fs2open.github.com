@@ -1672,12 +1672,12 @@ bool gr_opengl_is_capable(gr_capability capability)
 
 void gr_opengl_push_debug_group(const char* name) {
 	if (GLAD_GL_KHR_debug) {
-		glPushDebugGroupKHR(GL_DEBUG_SOURCE_APPLICATION_KHR, 0, -1, name);
+		glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION_KHR, 0, -1, name);
 	}
 }
 void gr_opengl_pop_debug_group() {
 	if (GLAD_GL_KHR_debug) {
-		glPopDebugGroupKHR();
+		glPopDebugGroup();
 	}
 }
 
