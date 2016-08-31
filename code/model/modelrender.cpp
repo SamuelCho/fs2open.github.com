@@ -12,8 +12,8 @@
 #include "asteroid/asteroid.h"
 #include "cmdline/cmdline.h"
 #include "gamesequence/gamesequence.h"
-#include "graphics/gropengldraw.h"
-#include "graphics/gropenglshader.h"
+#include "graphics/opengl/gropengldraw.h"
+#include "graphics/opengl/gropenglshader.h"
 #include "graphics/tmapper.h"
 #include "io/timer.h"
 #include "math/staticrand.h"
@@ -639,7 +639,7 @@ void draw_list::render_all(gr_zbuffer_type depth_mode)
 		int render_index = Render_keys[i];
 
 		if ( depth_mode == ZBUFFER_TYPE_DEFAULT || Render_elements[render_index].render_material.get_depth_mode() == depth_mode ) {
-			render_buffer(Render_elements[render_index]);
+			PROFILE("Render buffer", render_buffer(Render_elements[render_index]));
 		}
 	}
 
@@ -739,7 +739,7 @@ void draw_list::render_outline(outline_draw &outline_info)
 	material_instance.set_blend_mode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
 	material_instance.set_color(outline_info.clr);
 
-	g3_render_primitives_colored(&material_instance, outline_info.vert_array, outline_info.n_verts, PRIM_TYPE_LINES, false);
+	g3_render_primitives(&material_instance, outline_info.vert_array, outline_info.n_verts, PRIM_TYPE_LINES, false);
 
 	g3_done_instance(true);
 }

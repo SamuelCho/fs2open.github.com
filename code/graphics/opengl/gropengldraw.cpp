@@ -14,14 +14,14 @@
 #include "globalincs/pstypes.h"
 #include "globalincs/systemvars.h"
 #include "graphics/grinternal.h"
-#include "graphics/gropengl.h"
-#include "graphics/gropenglbmpman.h"
-#include "graphics/gropengldraw.h"
-#include "graphics/gropengllight.h"
-#include "graphics/gropenglpostprocessing.h"
-#include "graphics/gropenglshader.h"
-#include "graphics/gropengltexture.h"
-#include "graphics/gropengltnl.h"
+#include "gropengl.h"
+#include "gropenglbmpman.h"
+#include "gropengldraw.h"
+#include "gropengllight.h"
+#include "gropenglpostprocessing.h"
+#include "gropenglshader.h"
+#include "gropengltexture.h"
+#include "gropengltnl.h"
 #include "graphics/paths/PathRenderer.h"
 #include "graphics/software/font_internal.h"
 #include "graphics/software/FSFont.h"
@@ -847,38 +847,6 @@ void gr_opengl_line(int x1, int y1, int x2, int y2, int resize_mode)
     gr_opengl_line(i2fl(x1), i2fl(y1), i2fl(x2), i2fl(y2), resize_mode);
 }
 
-void gr_opengl_line_htl(const vec3d *start, const vec3d *end)
-{
-	gr_zbuffer_type zbuffer_state = (gr_zbuffering) ? ZBUFFER_TYPE_FULL : ZBUFFER_TYPE_NONE;
-	GL_state.SetZbufferType(zbuffer_state);
-
-
-    if (gr_screen.current_color.is_alphacolor) {
-        GL_state.SetAlphaBlendMode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
-	} else {
-        GL_state.SetAlphaBlendMode(ALPHA_BLEND_NONE);
-    }
-
-	GLfloat line[6] = {
-		start->xyz.x,	start->xyz.y,	start->xyz.z,
-		end->xyz.x,		end->xyz.y,		end->xyz.z
-	};
-
-	GL_state.Array.BindArrayBuffer(0);
-	opengl_shader_set_current();
-
-	vertex_layout vert_def;
-
-	vert_def.add_vertex_component(vertex_format_data::POSITION3, 0, line);
-
-	opengl_bind_vertex_layout(vert_def);
-	opengl_shader_set_passthrough(false);
-
-	glDrawArrays(GL_LINES, 0, 2);
-
-	GL_CHECK_FOR_ERRORS("end of opengl_line_htl()");
-}
-
 void gr_opengl_aaline(vertex *v1, vertex *v2)
 {
 	float x1 = v1->screen.xyw.x;
@@ -1432,9 +1400,9 @@ void gr_opengl_draw_deferred_light_sphere(vec3d *position, float rad, bool clear
 {
 	g3_start_instance_matrix(position, &vmd_identity_matrix, true);
 	
-	GL_state.Uniform.setUniform3f("scale", rad, rad, rad);
-	GL_state.Uniform.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
-	GL_state.Uniform.setUniformMatrix4f("projMatrix", GL_projection_matrix);
+	Current_shader->program->Uniforms.setUniform3f("scale", rad, rad, rad);
+	Current_shader->program->Uniforms.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
+	Current_shader->program->Uniforms.setUniformMatrix4f("projMatrix", GL_projection_matrix);
 
 	opengl_draw_sphere();
 
@@ -1553,9 +1521,9 @@ void gr_opengl_draw_deferred_light_cylinder(vec3d *position,matrix *orient, floa
 {
 	g3_start_instance_matrix(position, orient, true);
 
-	GL_state.Uniform.setUniform3f("scale", rad, rad, length);
-	GL_state.Uniform.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
-	GL_state.Uniform.setUniformMatrix4f("projMatrix", GL_projection_matrix);
+	Current_shader->program->Uniforms.setUniform3f("scale", rad, rad, length);
+	Current_shader->program->Uniforms.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
+	Current_shader->program->Uniforms.setUniformMatrix4f("projMatrix", GL_projection_matrix);
 
 	GL_state.Array.BindArrayBuffer(deferred_light_cylinder_vbo);
 	GL_state.Array.BindElementBuffer(deferred_light_cylinder_ibo);
@@ -2138,19 +2106,19 @@ void gr_opengl_deferred_lighting_finish()
 	for(int i = 0; i < Num_lights; ++i)
 	{
 		light *l = &lights_copy[i];
-		GL_state.Uniform.setUniformi( "lightType", 0 );
+		Current_shader->program->Uniforms.setUniformi( "lightType", 0 );
 		switch(l->type)
 		{
 			case LT_CONE:
-				GL_state.Uniform.setUniformi( "lightType", 2 );
-				GL_state.Uniform.setUniformi( "dualCone", l->dual_cone );
-				GL_state.Uniform.setUniformf( "coneAngle", l->cone_angle );
-				GL_state.Uniform.setUniformf( "coneInnerAngle", l->cone_inner_angle );
-				GL_state.Uniform.setUniform3f( "coneDir", l->vec2.xyz.x, l->vec2.xyz.y, l->vec2.xyz.z); 
+				Current_shader->program->Uniforms.setUniformi( "lightType", 2 );
+				Current_shader->program->Uniforms.setUniformi( "dualCone", l->dual_cone );
+				Current_shader->program->Uniforms.setUniformf( "coneAngle", l->cone_angle );
+				Current_shader->program->Uniforms.setUniformf( "coneInnerAngle", l->cone_inner_angle );
+				Current_shader->program->Uniforms.setUniform3f( "coneDir", l->vec2.xyz.x, l->vec2.xyz.y, l->vec2.xyz.z);
 			case LT_POINT:
-				GL_state.Uniform.setUniform3f( "diffuseLightColor", l->r * l->intensity * static_point_factor, l->g * l->intensity * static_point_factor, l->b * l->intensity * static_point_factor );
-				GL_state.Uniform.setUniform3f( "specLightColor", l->spec_r * l->intensity * static_point_factor, l->spec_g * l->intensity * static_point_factor, l->spec_b * l->intensity * static_point_factor );
-				GL_state.Uniform.setUniformf( "lightRadius", MAX(l->rada, l->radb) * 1.25f );
+				Current_shader->program->Uniforms.setUniform3f( "diffuseLightColor", l->r * l->intensity * static_point_factor, l->g * l->intensity * static_point_factor, l->b * l->intensity * static_point_factor );
+				Current_shader->program->Uniforms.setUniform3f( "specLightColor", l->spec_r * l->intensity * static_point_factor, l->spec_g * l->intensity * static_point_factor, l->spec_b * l->intensity * static_point_factor );
+				Current_shader->program->Uniforms.setUniformf( "lightRadius", MAX(l->rada, l->radb) * 1.25f );
 
 				/*float dist;
 				vec3d a;
@@ -2161,10 +2129,10 @@ void gr_opengl_deferred_lighting_finish()
 				gr_opengl_draw_deferred_light_sphere(&l->vec, MAX(l->rada, l->radb) * 1.28f);
 				break;
 			case LT_TUBE:
-				GL_state.Uniform.setUniform3f( "diffuseLightColor", l->r * l->intensity * static_tube_factor, l->g * l->intensity * static_tube_factor, l->b * l->intensity * static_tube_factor );
-				GL_state.Uniform.setUniform3f( "specLightColor", l->spec_r * l->intensity * static_tube_factor, l->spec_g * l->intensity * static_tube_factor, l->spec_b * l->intensity * static_tube_factor );
-				GL_state.Uniform.setUniformf( "lightRadius", l->radb * 1.5f );
-				GL_state.Uniform.setUniformi( "lightType", 1 );
+				Current_shader->program->Uniforms.setUniform3f( "diffuseLightColor", l->r * l->intensity * static_tube_factor, l->g * l->intensity * static_tube_factor, l->b * l->intensity * static_tube_factor );
+				Current_shader->program->Uniforms.setUniform3f( "specLightColor", l->spec_r * l->intensity * static_tube_factor, l->spec_g * l->intensity * static_tube_factor, l->spec_b * l->intensity * static_tube_factor );
+				Current_shader->program->Uniforms.setUniformf( "lightRadius", l->radb * 1.5f );
+				Current_shader->program->Uniforms.setUniformi( "lightType", 1 );
 			
 				vec3d a, b;
 				matrix orient;
@@ -2187,7 +2155,7 @@ void gr_opengl_deferred_lighting_finish()
 
 				glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 				gr_opengl_draw_deferred_light_cylinder(&l->vec2, &orient, l->radb * 1.53f, length);
-				GL_state.Uniform.setUniformi( "lightType", 0 );
+				Current_shader->program->Uniforms.setUniformi( "lightType", 0 );
 				gr_opengl_draw_deferred_light_sphere(&l->vec, l->radb * 1.53f, false);
 				gr_opengl_draw_deferred_light_sphere(&l->vec2, l->radb * 1.53f, false);
 				glStencilOp(GL_ZERO, GL_ZERO, GL_ZERO);

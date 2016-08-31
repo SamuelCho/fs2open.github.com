@@ -11,15 +11,15 @@
 #include "globalincs/systemvars.h"
 #include "graphics/2d.h"
 #include "graphics/paths/PathRenderer.h"
-#include "graphics/gropengl.h"
-#include "graphics/gropenglbmpman.h"
-#include "graphics/gropengldraw.h"
-#include "graphics/gropengllight.h"
-#include "graphics/gropenglpostprocessing.h"
-#include "graphics/gropenglshader.h"
-#include "graphics/gropenglstate.h"
-#include "graphics/gropengltexture.h"
-#include "graphics/gropengltnl.h"
+#include "gropengl.h"
+#include "gropenglbmpman.h"
+#include "gropengldraw.h"
+#include "gropengllight.h"
+#include "gropenglpostprocessing.h"
+#include "gropenglshader.h"
+#include "gropenglstate.h"
+#include "gropengltexture.h"
+#include "gropengltnl.h"
 #include "graphics/line.h"
 #include "io/mouse.h"
 #include "io/timer.h"
@@ -1249,7 +1249,6 @@ void opengl_setup_function_pointers()
 	
 	gr_screen.gf_set_line_width		= gr_opengl_set_line_width;
 
-	gr_screen.gf_line_htl			= gr_opengl_line_htl;
 	gr_screen.gf_sphere				= gr_opengl_sphere;
 	
 	gr_screen.gf_maybe_create_shader = gr_opengl_maybe_create_shader;

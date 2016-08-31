@@ -353,8 +353,6 @@ void g3_draw_htl_sphere(color *clr, const vec3d* position, float radius)
 {
 	g3_start_instance_matrix(position, &vmd_identity_matrix, true);
 
-	gr_sphere_htl(radius);
-
 	material material_def;
 
 	material_def.set_blend_mode(ALPHA_BLEND_NONE);
@@ -369,6 +367,23 @@ void g3_draw_htl_sphere(color *clr, const vec3d* position, float radius)
 void g3_draw_htl_sphere(const vec3d* position, float radius)
 {
 	g3_draw_htl_sphere(&gr_screen.current_color, position, radius);
+}
+
+void g3_render_primitives(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic)
+{
+	vertex_layout layout;
+
+	if ( orthographic ) {
+		layout.add_vertex_component(vertex_format_data::POSITION2, sizeof(vertex), (int)offsetof(vertex, screen));
+	} else {
+		layout.add_vertex_component(vertex_format_data::POSITION3, sizeof(vertex), (int)offsetof(vertex, world));
+	}
+
+	if ( orthographic ) {
+		gr_render_primitives_2d_immediate(mat, prim_type, &layout, n_verts, verts, n_verts * sizeof(vertex));
+	} else {
+		gr_render_primitives_immediate(mat, prim_type, &layout, n_verts, verts, n_verts * sizeof(vertex));
+	}
 }
 
 void g3_render_primitives_textured(material* mat, vertex* verts, int n_verts, primitive_type prim_type, bool orthographic)

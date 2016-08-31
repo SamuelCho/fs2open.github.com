@@ -19,7 +19,7 @@
 #include "globalincs/alphacolors.h"
 #include "globalincs/linklist.h"
 #include "graphics/2d.h"
-#include "graphics/gropengllight.h"
+#include "graphics/opengl/gropengllight.h"
 #include "io/key.h"
 #include "io/timer.h"
 #include "math/fvi.h"
@@ -2356,7 +2356,7 @@ void interp_configure_vertex_buffers(polymodel *pm, int mn)
 
 	int time_elapsed = timer_get_milliseconds() - milliseconds;
 
-	mprintf(("BSP Parse took %d milliseconds.", time_elapsed));
+	nprintf(("Model", "BSP Parse took %d milliseconds.\n", time_elapsed));
 
 	if (total_verts < 1) {
 		return;
