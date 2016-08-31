@@ -499,11 +499,11 @@ void draw_list::add_buffer_draw(model_material *render_material, indexed_vertex_
 
 void draw_list::render_buffer(queued_buffer_draw &render_elements)
 {
+	GR_DEBUG_SCOPE(render_scope, "Render buffer");
+
 	gr_set_transform_buffer_offset(render_elements.transform_buffer_offset);
 
 	if ( render_elements.render_material.is_lit() ) {
-		gr_set_light_factor(render_elements.render_material.get_light_factor());
-
 		Scene_light_handler.setLights(&render_elements.lights);
 	} else {
 		gr_set_lighting(false, false);
@@ -631,6 +631,8 @@ void draw_list::init_render(bool sort)
 
 void draw_list::render_all(gr_zbuffer_type depth_mode)
 {
+	GR_DEBUG_SCOPE(render_scope, "Render draw list");
+
 	Scene_light_handler.resetLightState();
 
 	for ( size_t i = 0; i < Render_keys.size(); ++i ) {
@@ -649,7 +651,6 @@ void draw_list::render_arc(arc_effect &arc)
 	g3_start_instance_matrix(&arc.transformation.origin, &arc.transformation.basis);	
 
 	model_render_arc(&arc.v1, &arc.v2, &arc.primary, &arc.secondary, arc.width);
-	//interp_render_arc(&arc.v1, &arc.v2, &arc.primary, &arc.secondary, arc.width);
 
 	g3_done_instance(true);
 }
@@ -942,10 +943,6 @@ int model_render_determine_detail(float depth, int obj_num, int model_num, matri
 
 void model_render_buffers(draw_list* scene, model_material *rendering_material, model_render_params* interp, vertex_buffer *buffer, polymodel *pm, int mn, int detail_level, uint tmap_flags)
 {
-	if ( pm->vertex_buffer_id < 0 ) {
-		return;
-	}
-
 	bsp_info *model = NULL;
 	const uint model_flags = interp->get_model_flags();
 	const int obj_num = interp->get_object_number();
@@ -1497,7 +1494,6 @@ void submodel_render_immediate(model_render_params *render_info, int model_num, 
 	gr_set_fill_mode(GR_FILL_MODE_SOLID);
 
 	gr_clear_states();
-	gr_set_buffer(-1);
 
 	gr_reset_lighting();
 	gr_set_lighting(false, false);
@@ -2550,12 +2546,9 @@ void model_render_immediate(model_render_params *render_info, int model_num, mat
 	gr_set_fill_mode(GR_FILL_MODE_SOLID);
 
 	gr_clear_states();
-	gr_set_buffer(-1);
 
 	gr_reset_lighting();
 	gr_set_lighting(false, false);
-
-	GL_state.Texture.DisableAll();
 
 	if ( render_info->get_debug_flags() ) {
 		model_render_debug(model_num, orient, pos, render_info->get_model_flags(), render_info->get_debug_flags(), render_info->get_object_number(), render_info->get_detail_level_lock());
