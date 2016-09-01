@@ -1023,7 +1023,6 @@ void model_render_buffers(draw_list* scene, model_material *rendering_material, 
 		texture_maps[TM_HEIGHT_TYPE] = -1;
 		texture_maps[TM_MISC_TYPE] = -1;
 		texture_maps[TM_SPEC_GLOSS_TYPE] = -1;
-		texture_maps[TM_UNLIT_TYPE] = -1;
 		texture_maps[TM_AMBIENT_TYPE] = -1;
 
 		if (forced_texture != -2) {
@@ -1049,18 +1048,6 @@ void model_render_buffers(draw_list* scene, model_material *rendering_material, 
 			}
 
 			if ( texture_maps[TM_BASE_TYPE] < 0 ) {
-				continue;
-			}
-
-			if (replacement_textures != NULL && replacement_textures[rt_begin_index + TM_UNLIT_TYPE] >= 0) {
-				tex_replace[TM_UNLIT_TYPE] = texture_info(replacement_textures[rt_begin_index + TM_UNLIT_TYPE]);
-				texture_maps[TM_UNLIT_TYPE] = model_interp_get_texture(&tex_replace[TM_UNLIT_TYPE], base_frametime);
-			} else {
-				texture_maps[TM_UNLIT_TYPE] = model_interp_get_texture(&tmap->textures[TM_UNLIT_TYPE], base_frametime);
-			}
-
-			if ( (texture_maps[TM_UNLIT_TYPE] >= 0) && (model_flags & MR_NO_LIGHTING) && (buffer->flags & VB_FLAG_TRANS) ) {
-				// don't render transparent buffers for unlit textures in no lighting mode.
 				continue;
 			}
 
@@ -1190,10 +1177,8 @@ void model_render_buffers(draw_list* scene, model_material *rendering_material, 
 
 		if ( (tmap_flags & TMAP_FLAG_TEXTURED) && (buffer->flags & VB_FLAG_UV1) ) {
 			rendering_material->set_texture_map(TM_BASE_TYPE,	texture_maps[TM_BASE_TYPE]);
-			rendering_material->set_texture_map(TM_UNLIT_TYPE, texture_maps[TM_UNLIT_TYPE]);
 
-			if ( ( texture_maps[TM_BASE_TYPE] >= 0 && bm_has_alpha_channel(texture_maps[TM_BASE_TYPE]) ) || 
-				(texture_maps[TM_UNLIT_TYPE] >= 0 && bm_has_alpha_channel(texture_maps[TM_UNLIT_TYPE])) ) {
+			if ( texture_maps[TM_BASE_TYPE] >= 0 && bm_has_alpha_channel(texture_maps[TM_BASE_TYPE]) ) {
 				rendering_material->set_texture_type(material::TEX_TYPE_XPARENT);
 			}
 
