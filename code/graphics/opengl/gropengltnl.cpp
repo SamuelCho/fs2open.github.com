@@ -73,6 +73,7 @@ GLint saved_fb = 0;
 bool Rendering_to_shadow_map = false;
 
 int Transform_buffer_handle = -1;
+int Uniform_buffer_handle = -1;
 
 transform_stack GL_model_matrix_stack;
 matrix4 GL_view_matrix;
@@ -335,6 +336,7 @@ void opengl_tnl_init()
 	gr_opengl_deferred_light_sphere_init(16, 16);
 
 	Transform_buffer_handle = opengl_create_texture_buffer_object();
+	Uniform_buffer_handle = opengl_create_buffer_object(GL_UNIFORM_BUFFER, GL_STREAM_DRAW);
 
 	if ( Transform_buffer_handle < 0 ) {
 		Cmdline_no_batching = true;
@@ -942,11 +944,27 @@ void opengl_tnl_set_model_material(model_material *material_info)
 
 	GL_state.Texture.SetShaderMode(GL_TRUE);
 	
-	Current_shader->program->Uniforms.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
-	Current_shader->program->Uniforms.setUniformMatrix4f("modelMatrix", GL_model_matrix_stack.get_transform());
-	Current_shader->program->Uniforms.setUniformMatrix4f("viewMatrix", GL_view_matrix);
-	Current_shader->program->Uniforms.setUniformMatrix4f("projMatrix", GL_projection_matrix);
-	Current_shader->program->Uniforms.setUniformMatrix4f("textureMatrix", GL_texture_matrix);
+// 	Current_shader->program->Uniforms.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
+// 	Current_shader->program->Uniforms.setUniformMatrix4f("modelMatrix", GL_model_matrix_stack.get_transform());
+// 	Current_shader->program->Uniforms.setUniformMatrix4f("viewMatrix", GL_view_matrix);
+// 	Current_shader->program->Uniforms.setUniformMatrix4f("projMatrix", GL_projection_matrix);
+// 	Current_shader->program->Uniforms.setUniformMatrix4f("textureMatrix", GL_texture_matrix);
+
+	transform_uniform_block transform_block;
+
+	transform_block.modelViewMatrix = GL_model_view_matrix;
+	transform_block.modelMatrix = GL_model_matrix_stack.get_transform();
+	transform_block.viewMatrix = GL_view_matrix;
+	transform_block.projMatrix = GL_projection_matrix;
+	transform_block.textureMatrix = GL_texture_matrix;
+
+	GLuint block_index = glGetUniformBlockIndex(Current_shader->program->getShaderHandle(), "transform");
+	glUniformBlockBinding(Current_shader->program->getShaderHandle(), block_index, 0);
+
+	opengl_bind_buffer_object(Uniform_buffer_handle);
+
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(transform_uniform_block), &transform_block, GL_STREAM_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 0, GL_buffer_objects[Uniform_buffer_handle].buffer_id);
 
 	vec4 clr = material_info->get_color();
 	Current_shader->program->Uniforms.setUniform4f("color", clr);

@@ -143,6 +143,14 @@ typedef struct opengl_shader_t {
 	opengl_shader_t& operator=(const opengl_shader_t&) = delete;
 } opengl_shader_t;
 
+struct transform_uniform_block {
+	matrix4 modelViewMatrix;
+	matrix4 modelMatrix;
+	matrix4 viewMatrix;
+	matrix4 projMatrix;
+	matrix4 textureMatrix;
+};
+
 extern SCP_vector<opengl_shader_t> GL_shader;
 
 extern opengl_shader_t *Current_shader;

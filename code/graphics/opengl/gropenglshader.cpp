@@ -623,6 +623,34 @@ int opengl_compile_shader(shader_type sdr, uint flags)
 		opengl_post_init_uniforms(flags);
 	}
 
+	// get some uniform block data
+	if ( new_shader.shader == SDR_TYPE_MODEL ) {
+		GLuint block_index = glGetUniformBlockIndex(new_shader.program->getShaderHandle(), "transform");
+
+		GLint active_uniforms_in_block;
+		glGetActiveUniformBlockiv(new_shader.program->getShaderHandle(), block_index, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &active_uniforms_in_block);
+
+		int *indices = new int[active_uniforms_in_block];
+		glGetActiveUniformBlockiv(new_shader.program->getShaderHandle(), block_index, GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES, indices);
+
+		mprintf(("Parsing uniform block...\n"));
+
+		for ( uint i = 0; i < active_uniforms_in_block; i++ ) {
+			GLuint uniform_index = indices[i];
+
+			char uniform_name[256];
+			glGetActiveUniformName(new_shader.program->getShaderHandle(), uniform_index, 256, 0, uniform_name);
+
+			GLint uniform_size;
+			glGetActiveUniformsiv(new_shader.program->getShaderHandle(), 1, &uniform_index, GL_UNIFORM_SIZE, &uniform_size);
+
+			GLint uniform_offset;
+			glGetActiveUniformsiv(new_shader.program->getShaderHandle(), 1, &uniform_index, GL_UNIFORM_OFFSET, &uniform_offset);
+
+			mprintf(("%s is at offset %d and consumes %d bytes\n", uniform_name, uniform_offset, uniform_size));
+		}
+	}
+
 	mprintf(("Shader Variant Features:\n"));
 
 	// initialize all uniforms and attributes that are specific to this variant

@@ -3,11 +3,18 @@ in vec4 vertTexCoord;
 in vec3 vertNormal;
 in vec4 vertTangent;
 in float vertModelID;
-uniform mat4 modelViewMatrix;
-uniform mat4 modelMatrix;
-uniform mat4 viewMatrix;
-uniform mat4 projMatrix;
-uniform mat4 textureMatrix;
+layout(std140) uniform transform {
+	mat4 modelViewMatrix;
+	mat4 modelMatrix;
+	mat4 viewMatrix;
+	mat4 projMatrix;
+	mat4 textureMatrix;
+	vec2 someTwoVec;
+	float pad0;
+	float pad1;
+	vec3 someThreeVec;
+	float pad2;
+};
 uniform vec4 color;
 #ifdef FLAG_NORMAL_EXTRUDE
 uniform float extrudeWidth;
