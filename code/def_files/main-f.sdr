@@ -2,7 +2,57 @@
 #define LT_DIRECTIONAL		0
 #define LT_POINT			1
 #define LT_TUBE			2
-uniform vec4 color;
+
+layout(std140) uniform model_data {
+	mat4 modelViewMatrix;
+	mat4 modelMatrix;
+	mat4 viewMatrix;
+	mat4 projMatrix;
+	mat4 textureMatrix;
+	mat4 envMatrix;
+	vec4 color;
+	vec4 fogColor;
+	float fogStart;
+	float fogScale;
+	int buffer_matrix_offset;
+	mat4 shadow_proj_matrix[4];
+	mat4 shadow_mv_matrix;
+	float znear;
+	float zfar;
+	float veryneardist;
+	float neardist;
+	float middist;
+	float fardist;
+	float thruster_scale;
+	int use_clip_plane;
+	vec3 clip_normal;
+	vec3 clip_position;
+	vec2 normalAlphaMinMax;
+	float extrudeWidth;
+	float defaultGloss;
+	vec3 ambientFactor;
+	vec3 diffuseFactor;
+	vec3 emissionFactor;
+	int desaturate;
+	int blend_alpha;
+	bool overrideDiffuse;
+	vec3 diffuseClr;
+	bool overrideGlow;
+	vec3 glowClr;
+	bool overrideSpec;
+	vec3 specClr;
+	bool alphaGloss;
+	bool gammaSpec;
+	bool envGloss;
+	bool alpha_spec;
+	int effect_num;
+	float anim_timer;
+	float vpwidth;
+	float vpheight;
+	vec3 base_color;
+	vec3 stripe_color;
+	bool team_glow_enabled;
+};
 #ifdef FLAG_LIGHT
 uniform vec4 lightPosition[MAX_LIGHTS];
 uniform vec3 lightDirection[MAX_LIGHTS];
@@ -11,34 +61,18 @@ uniform vec3 lightSpecColor[MAX_LIGHTS];
 uniform int lightType[MAX_LIGHTS];
 uniform float lightAttenuation[MAX_LIGHTS];
 uniform int n_lights;
-uniform float defaultGloss;
-uniform vec3 ambientFactor;
-uniform vec3 diffuseFactor;
-uniform vec3 emissionFactor;
 #endif
 #ifdef FLAG_DIFFUSE_MAP
 uniform sampler2D sBasemap;
-uniform int desaturate;
-uniform int blend_alpha;
-uniform bool overrideDiffuse;
-uniform vec3 diffuseClr;
 #endif
 #ifdef FLAG_GLOW_MAP
 uniform sampler2D sGlowmap;
-uniform bool overrideGlow;
-uniform vec3 glowClr;
 #endif
 #ifdef FLAG_SPEC_MAP
 uniform sampler2D sSpecmap;
-uniform bool overrideSpec;
-uniform vec3 specClr;
-uniform bool alphaGloss;
-uniform bool gammaSpec;
 #endif
 #ifdef FLAG_ENV_MAP
 uniform samplerCube sEnvmap;
-uniform bool envGloss;
-uniform bool alpha_spec;
 varying vec3 envReflect;
 in vec3 fragEnvReflect;
 #endif
@@ -50,23 +84,15 @@ in mat3 fragTangentMatrix;
 uniform sampler2D sAmbientmap;
 #endif
 #ifdef FLAG_FOG
-uniform vec4 fogColor;
 in float fragFogDist;
 #endif
 #ifdef FLAG_ANIMATED
 uniform sampler2D sFramebuffer;
-uniform int effect_num;
-uniform float anim_timer;
-uniform float vpwidth;
-uniform float vpheight;
 #endif
 #ifdef FLAG_TRANSFORM
 in float fragNotVisible;
 #endif
 #ifdef FLAG_TEAMCOLOR
-uniform vec3 base_color;
-uniform vec3 stripe_color;
-uniform bool team_glow_enabled;
 vec2 teamMask = vec2(0.0, 0.0);
 #endif
 #ifdef FLAG_MISC_MAP
@@ -76,19 +102,11 @@ uniform sampler2D sMiscmap;
 in vec4 fragShadowUV[4];
 in vec4 fragShadowPos;
 uniform sampler2DArray shadow_map;
-uniform float znear;
-uniform float zfar;
-uniform float veryneardist;
-uniform float neardist;
-uniform float middist;
-uniform float fardist;
 #endif
 #ifdef FLAG_CLIP
-uniform int use_clip_plane;
 in float fragClipDistance;
 #endif
 #ifdef FLAG_NORMAL_ALPHA
-uniform vec2 normalAlphaMinMax;
 #endif
 #define SPEC_INTENSITY_POINT      5.3 // Point light
 #define SPEC_INTENSITY_DIRECTIONAL   3.0 // Directional light

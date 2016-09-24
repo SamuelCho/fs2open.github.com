@@ -91,6 +91,17 @@ struct opengl_buffer_object {
 	GLuint texture;	// for texture buffer objects
 };
 
+struct opengl_immediate_buffer {
+	GLenum usage;
+	int buffer_handle;
+	uint offset;
+	uint size;
+	uint resize_block_size;
+	uint offset_alignment;
+
+	opengl_immediate_buffer(GLenum _usage = GL_ARRAY_BUFFER): usage(_usage), buffer_handle(-1), offset(0), size(0), resize_block_size(2048), offset_alignment(0) {}
+};
+
 static SCP_vector<opengl_buffer_object> GL_buffer_objects;
 static int GL_vertex_buffers_in_use = 0;
 
@@ -98,6 +109,9 @@ int GL_immediate_buffer_handle = -1;
 static uint GL_immediate_buffer_offset = 0;
 static uint GL_immediate_buffer_size = 0;
 static const int IMMEDIATE_BUFFER_RESIZE_BLOCK_SIZE = 2048;
+
+opengl_immediate_buffer GL_immediate_draw_buffer;
+opengl_immediate_buffer GL_immediate_uniform_buffer(GL_UNIFORM_BUFFER);
 
 int opengl_create_buffer_object(GLenum type, GLenum usage)
 {
@@ -225,6 +239,37 @@ int gr_opengl_create_index_buffer(bool static_buffer)
 	return opengl_create_buffer_object(GL_ELEMENT_ARRAY_BUFFER, static_buffer ? GL_STATIC_DRAW : GL_STREAM_DRAW);
 }
 
+uint opengl_add_to_immediate_buffer(opengl_immediate_buffer *buffer_info, uint size, void *data)
+{
+	if ( buffer_info->buffer_handle < 0 ) {
+		buffer_info->buffer_handle = opengl_create_buffer_object(buffer_info->usage, GL_STREAM_DRAW);
+	}
+
+	Assert(size > 0 && data != NULL);
+		
+	if ( buffer_info->offset + size > buffer_info->size ) {
+		// incoming data won't fit the immediate buffer. time to reallocate.
+		buffer_info->offset = 0;
+		buffer_info->size += MAX(buffer_info->resize_block_size, size);
+
+		gr_opengl_update_buffer_data(buffer_info->buffer_handle, buffer_info->size, NULL);
+	}
+
+	// only update a section of the immediate vertex buffer
+	opengl_update_buffer_data_offset(buffer_info->buffer_handle, buffer_info->offset, size, data);
+
+	uint old_offset = buffer_info->offset;
+
+	buffer_info->offset += size;
+
+	// bump offset to the next alignment boundary
+	if ( buffer_info->offset_alignment > 0 && buffer_info->offset % buffer_info->offset_alignment != 0 ) {
+		buffer_info->offset = ((buffer_info->offset / buffer_info->offset_alignment) + 1) * buffer_info->offset_alignment;
+	}
+	
+	return old_offset;
+}
+
 uint opengl_add_to_immediate_buffer(uint size, void *data)
 {
 	if ( GL_immediate_buffer_handle < 0 ) {
@@ -251,8 +296,24 @@ uint opengl_add_to_immediate_buffer(uint size, void *data)
 	return old_offset;
 }
 
+void opengl_reset_immediate_buffer(opengl_immediate_buffer *buffer_info)
+{
+	if ( buffer_info->buffer_handle < 0 ) {
+		// we haven't used the immediate buffer yet
+		return;
+	}
+
+	// orphan the immediate buffer so we can start fresh in a new frame
+	gr_opengl_update_buffer_data(buffer_info->buffer_handle, buffer_info->size, NULL);
+
+	// bring our offset to the beginning of the immediate buffer
+	buffer_info->offset = 0;
+}
+
 void opengl_reset_immediate_buffer()
 {
+	opengl_reset_immediate_buffer(&GL_immediate_uniform_buffer);
+
 	if ( GL_immediate_buffer_handle < 0 ) {
 		// we haven't used the immediate buffer yet
 		return;
@@ -341,6 +402,8 @@ void opengl_tnl_init()
 	if ( Transform_buffer_handle < 0 ) {
 		Cmdline_no_batching = true;
 	}
+
+	GL_immediate_uniform_buffer.offset_alignment = GL_uniform_buffer_offset_alignment;
 
 	if(Cmdline_shadow_quality)
 	{
@@ -877,6 +940,18 @@ void gr_opengl_shadow_map_end()
 		glScissor(gr_screen.offset_x, (gr_screen.max_h - gr_screen.offset_y - gr_screen.clip_height), gr_screen.clip_width, gr_screen.clip_height);
 }
 
+void opengl_tnl_set_uniform_buffer(void* data, uint size, const char *block_name, GLuint block_binding)
+{
+	Current_shader->program->Uniforms.BindUniformBlockPoint(block_name, block_binding);
+
+	opengl_bind_buffer_object(Uniform_buffer_handle);
+	glBufferData(GL_UNIFORM_BUFFER, size, data, GL_STREAM_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, block_binding, GL_buffer_objects[Uniform_buffer_handle].buffer_id);
+	//uint offset = opengl_add_to_immediate_buffer(&GL_immediate_uniform_buffer, size, data);
+
+	//glBindBufferRange(GL_UNIFORM_BUFFER, block_binding, GL_buffer_objects[GL_immediate_uniform_buffer.buffer_handle].buffer_id, offset, size);
+}
+
 void opengl_tnl_set_material(material* material_info, bool set_base_map)
 {
 	int shader_handle = material_info->get_shader_handle();
@@ -937,43 +1012,40 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	if ( GL_state.CullFace() ) {
 		GL_state.FrontFaceValue(GL_CW);
 	}
-	
+
 	gr_opengl_set_center_alpha(material_info->get_center_alpha());
 
-	Assert( Current_shader->shader == SDR_TYPE_MODEL );
+	Assert(Current_shader->shader == SDR_TYPE_MODEL);
 
 	GL_state.Texture.SetShaderMode(GL_TRUE);
-	
-// 	Current_shader->program->Uniforms.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
-// 	Current_shader->program->Uniforms.setUniformMatrix4f("modelMatrix", GL_model_matrix_stack.get_transform());
-// 	Current_shader->program->Uniforms.setUniformMatrix4f("viewMatrix", GL_view_matrix);
-// 	Current_shader->program->Uniforms.setUniformMatrix4f("projMatrix", GL_projection_matrix);
-// 	Current_shader->program->Uniforms.setUniformMatrix4f("textureMatrix", GL_texture_matrix);
 
-	transform_uniform_block transform_block;
+	// 	Current_shader->program->Uniforms.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
+	// 	Current_shader->program->Uniforms.setUniformMatrix4f("modelMatrix", GL_model_matrix_stack.get_transform());
+	// 	Current_shader->program->Uniforms.setUniformMatrix4f("viewMatrix", GL_view_matrix);
+	// 	Current_shader->program->Uniforms.setUniformMatrix4f("projMatrix", GL_projection_matrix);
+	// 	Current_shader->program->Uniforms.setUniformMatrix4f("textureMatrix", GL_texture_matrix);
 
-	transform_block.modelViewMatrix = GL_model_view_matrix;
-	transform_block.modelMatrix = GL_model_matrix_stack.get_transform();
-	transform_block.viewMatrix = GL_view_matrix;
-	transform_block.projMatrix = GL_projection_matrix;
-	transform_block.textureMatrix = GL_texture_matrix;
+	GL_model_uniform_block uniform_block;
 
-	GLuint block_index = glGetUniformBlockIndex(Current_shader->program->getShaderHandle(), "transform");
-	glUniformBlockBinding(Current_shader->program->getShaderHandle(), block_index, 0);
-
-	opengl_bind_buffer_object(Uniform_buffer_handle);
-
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(transform_uniform_block), &transform_block, GL_STREAM_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, 0, GL_buffer_objects[Uniform_buffer_handle].buffer_id);
+	uniform_block.modelViewMatrix = GL_model_view_matrix;
+	uniform_block.modelMatrix = GL_model_matrix_stack.get_transform();
+	uniform_block.viewMatrix = GL_view_matrix;
+	uniform_block.projMatrix = GL_projection_matrix;
+	uniform_block.textureMatrix = GL_texture_matrix;
 
 	vec4 clr = material_info->get_color();
-	Current_shader->program->Uniforms.setUniform4f("color", clr);
+	uniform_block.color = material_info->get_color();
+	//Current_shader->program->Uniforms.setUniform4f("color", clr);
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_ANIMATED ) {
-		Current_shader->program->Uniforms.setUniformf("anim_timer", material_info->get_animated_effect_time());
-		Current_shader->program->Uniforms.setUniformi("effect_num", material_info->get_animated_effect());
-		Current_shader->program->Uniforms.setUniformf("vpwidth", 1.0f / gr_screen.max_w);
-		Current_shader->program->Uniforms.setUniformf("vpheight", 1.0f / gr_screen.max_h);
+		uniform_block.anim_timer = material_info->get_animated_effect_time();
+		uniform_block.effect_num = material_info->get_animated_effect();
+		uniform_block.vpwidth = 1.0f / gr_screen.max_w;
+		uniform_block.vpheight = 1.0f / gr_screen.max_h;
+// 		Current_shader->program->Uniforms.setUniformf("anim_timer", material_info->get_animated_effect_time());
+// 		Current_shader->program->Uniforms.setUniformi("effect_num", material_info->get_animated_effect());
+// 		Current_shader->program->Uniforms.setUniformf("vpwidth", 1.0f / gr_screen.max_w);
+// 		Current_shader->program->Uniforms.setUniformf("vpheight", 1.0f / gr_screen.max_h);
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_CLIP ) {
@@ -982,17 +1054,33 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		if ( clip ) {
 			material::clip_plane &clip_info = material_info->get_clip_plane();
 			
-			Current_shader->program->Uniforms.setUniformi("use_clip_plane", 1);
-			Current_shader->program->Uniforms.setUniform3f("clip_normal", clip_info.normal);
-			Current_shader->program->Uniforms.setUniform3f("clip_position", clip_info.position);
+			uniform_block.use_clip_plane = 1;
+			uniform_block.clip_normal = clip_info.normal;
+			uniform_block.clip_position = clip_info.position;
+// 			Current_shader->program->Uniforms.setUniformi("use_clip_plane", 1);
+// 			Current_shader->program->Uniforms.setUniform3f("clip_normal", clip_info.normal);
+// 			Current_shader->program->Uniforms.setUniform3f("clip_position", clip_info.position);
 		} else {
-			Current_shader->program->Uniforms.setUniformi("use_clip_plane", 0);
+			uniform_block.use_clip_plane = 0;
+//			Current_shader->program->Uniforms.setUniformi("use_clip_plane", 0);
 		}
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_LIGHT ) {
 		int num_lights = MIN(Num_active_gl_lights, GL_max_lights) - 1;
 		float light_factor = material_info->get_light_factor();
+
+// 		for ( size_t i = 0; i < GL_max_lights; ++i ) {
+// 			uniform_block.lightPosition[i] = opengl_light_uniforms.Position[i];
+// 
+// 			vm_vec_copy_vec4(&uniform_block.lightDirection[i], &opengl_light_uniforms.Direction[i]);
+// 			vm_vec_copy_vec4(&uniform_block.lightDiffuseColor[i], &opengl_light_uniforms.Diffuse_color[i]);
+// 			vm_vec_copy_vec4(&uniform_block.lightSpecColor[i], &opengl_light_uniforms.Spec_color[i]);
+// 			
+// 			uniform_block.lightType[i][0] = opengl_light_uniforms.Light_type[i];
+// 			uniform_block.lightAttenuation[i][0] = opengl_light_uniforms.Attenuation[i];
+// 		}
+
 		Current_shader->program->Uniforms.setUniformi("n_lights", num_lights);
 		Current_shader->program->Uniforms.setUniform4fv("lightPosition", GL_max_lights, opengl_light_uniforms.Position);
 		Current_shader->program->Uniforms.setUniform3fv("lightDirection", GL_max_lights, opengl_light_uniforms.Direction);
@@ -1001,28 +1089,41 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		Current_shader->program->Uniforms.setUniform1iv("lightType", GL_max_lights, opengl_light_uniforms.Light_type);
 		Current_shader->program->Uniforms.setUniform1fv("lightAttenuation", GL_max_lights, opengl_light_uniforms.Attenuation);
 
-		if ( !material_info->get_center_alpha() ) {
-			Current_shader->program->Uniforms.setUniform3f("diffuseFactor", GL_light_color[0] * light_factor, GL_light_color[1] * light_factor, GL_light_color[2] * light_factor);
-			Current_shader->program->Uniforms.setUniform3f("ambientFactor", GL_light_ambient[0], GL_light_ambient[1], GL_light_ambient[2]);
-		} else {
-			//Current_shader->program->Uniforms.setUniform3f("diffuseFactor", GL_light_true_zero[0], GL_light_true_zero[1], GL_light_true_zero[2]);
-			//Current_shader->program->Uniforms.setUniform3f("ambientFactor", GL_light_true_zero[0], GL_light_true_zero[1], GL_light_true_zero[2]);
-			Current_shader->program->Uniforms.setUniform3f("diffuseFactor", GL_light_color[0] * light_factor, GL_light_color[1] * light_factor, GL_light_color[2] * light_factor);
-			Current_shader->program->Uniforms.setUniform3f("ambientFactor", GL_light_ambient[0], GL_light_ambient[1], GL_light_ambient[2]);
-		}
+		uniform_block.diffuseFactor.xyz.x = GL_light_color[0] * light_factor;
+		uniform_block.diffuseFactor.xyz.y = GL_light_color[1] * light_factor;
+		uniform_block.diffuseFactor.xyz.z = GL_light_color[2] * light_factor;
+		uniform_block.ambientFactor.xyz.x = GL_light_ambient[0];
+		uniform_block.ambientFactor.xyz.y = GL_light_ambient[1];
+		uniform_block.ambientFactor.xyz.z = GL_light_ambient[2];
+
+// 		if ( !material_info->get_center_alpha() ) {
+// 			Current_shader->program->Uniforms.setUniform3f("diffuseFactor", GL_light_color[0] * light_factor, GL_light_color[1] * light_factor, GL_light_color[2] * light_factor);
+// 			Current_shader->program->Uniforms.setUniform3f("ambientFactor", GL_light_ambient[0], GL_light_ambient[1], GL_light_ambient[2]);
+// 		} else {
+// 			//Current_shader->program->Uniforms.setUniform3f("diffuseFactor", GL_light_true_zero[0], GL_light_true_zero[1], GL_light_true_zero[2]);
+// 			//Current_shader->program->Uniforms.setUniform3f("ambientFactor", GL_light_true_zero[0], GL_light_true_zero[1], GL_light_true_zero[2]);
+// 			Current_shader->program->Uniforms.setUniform3f("diffuseFactor", GL_light_color[0] * light_factor, GL_light_color[1] * light_factor, GL_light_color[2] * light_factor);
+// 			Current_shader->program->Uniforms.setUniform3f("ambientFactor", GL_light_ambient[0], GL_light_ambient[1], GL_light_ambient[2]);
+// 		}
 
 		if ( material_info->get_light_factor() > 0.25f && !Cmdline_no_emissive ) {
-			Current_shader->program->Uniforms.setUniform3f("emissionFactor", GL_light_emission[0], GL_light_emission[1], GL_light_emission[2]);
+			uniform_block.emissionFactor.xyz.x = GL_light_emission[0];
+			uniform_block.emissionFactor.xyz.y = GL_light_emission[1];
+			uniform_block.emissionFactor.xyz.z = GL_light_emission[2];
+//			Current_shader->program->Uniforms.setUniform3f("emissionFactor", GL_light_emission[0], GL_light_emission[1], GL_light_emission[2]);
 		} else {
-			Current_shader->program->Uniforms.setUniform3f("emissionFactor", GL_light_zero[0], GL_light_zero[1], GL_light_zero[2]);
+			uniform_block.emissionFactor.xyz.x = GL_light_zero[0];
+			uniform_block.emissionFactor.xyz.y = GL_light_zero[1];
+			uniform_block.emissionFactor.xyz.z = GL_light_zero[2];
+//			Current_shader->program->Uniforms.setUniform3f("emissionFactor", GL_light_zero[0], GL_light_zero[1], GL_light_zero[2]);
 		}
 
-		Current_shader->program->Uniforms.setUniformf("specPower", Cmdline_ogl_spec);
-
 		if ( Gloss_override_set ) {
-			Current_shader->program->Uniforms.setUniformf("defaultGloss", Gloss_override);
+			uniform_block.defaultGloss = Gloss_override;
+//			Current_shader->program->Uniforms.setUniformf("defaultGloss", Gloss_override);
 		} else {
-			Current_shader->program->Uniforms.setUniformf("defaultGloss", 0.6f); // add user configurable default gloss in the command line later
+			uniform_block.defaultGloss = 0.6f;
+//			Current_shader->program->Uniforms.setUniformf("defaultGloss", 0.6f); // add user configurable default gloss in the command line later
 		}
 	}
 
@@ -1030,27 +1131,37 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		Current_shader->program->Uniforms.setUniformi("sBasemap", render_pass);
 
 		if ( material_info->is_desaturated() ) {
-			Current_shader->program->Uniforms.setUniformi("desaturate", 1);
+			uniform_block.desaturate = 1;
+//			Current_shader->program->Uniforms.setUniformi("desaturate", 1);
 		} else {
-			Current_shader->program->Uniforms.setUniformi("desaturate", 0);
+			uniform_block.desaturate = 0;
+//			Current_shader->program->Uniforms.setUniformi("desaturate", 0);
 		}
 
 		if ( Basemap_color_override_set ) {
-			Current_shader->program->Uniforms.setUniformi("overrideDiffuse", 1);
-			Current_shader->program->Uniforms.setUniform3f("diffuseClr", Basemap_color_override[0], Basemap_color_override[1], Basemap_color_override[2]);
+			uniform_block.overrideDiffuse = 1;
+			uniform_block.diffuseClr.xyz.x = Basemap_color_override[0];
+			uniform_block.diffuseClr.xyz.y = Basemap_color_override[1];
+			uniform_block.diffuseClr.xyz.z = Basemap_color_override[2];
+// 			Current_shader->program->Uniforms.setUniformi("overrideDiffuse", 1);
+// 			Current_shader->program->Uniforms.setUniform3f("diffuseClr", Basemap_color_override[0], Basemap_color_override[1], Basemap_color_override[2]);
 		} else {
-			Current_shader->program->Uniforms.setUniformi("overrideDiffuse", 0);
+			uniform_block.overrideDiffuse = 0;
+//			Current_shader->program->Uniforms.setUniformi("overrideDiffuse", 0);
 		}
 
 		switch ( material_info->get_blend_mode() ) {
 		case ALPHA_BLEND_PREMULTIPLIED:
-			Current_shader->program->Uniforms.setUniformi("blend_alpha", 1);
+			uniform_block.blend_alpha = 1;
+//			Current_shader->program->Uniforms.setUniformi("blend_alpha", 1);
 			break;
 		case ALPHA_BLEND_ADDITIVE:
-			Current_shader->program->Uniforms.setUniformi("blend_alpha", 2);
+			uniform_block.blend_alpha = 2;
+//			Current_shader->program->Uniforms.setUniformi("blend_alpha", 2);
 			break;
 		default:
-			Current_shader->program->Uniforms.setUniformi("blend_alpha", 0);
+			uniform_block.blend_alpha = 0;
+//			Current_shader->program->Uniforms.setUniformi("blend_alpha", 0);
 			break;
 		}
 
@@ -1067,10 +1178,15 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		Current_shader->program->Uniforms.setUniformi("sGlowmap", render_pass);
 
 		if ( Glowmap_color_override_set ) {
-			Current_shader->program->Uniforms.setUniformi("overrideGlow", 1);
-			Current_shader->program->Uniforms.setUniform3f("glowClr", Glowmap_color_override[0], Glowmap_color_override[1], Glowmap_color_override[2]);
+			uniform_block.overrideGlow = 1;
+			uniform_block.glowClr.xyz.x = Glowmap_color_override[0];
+			uniform_block.glowClr.xyz.y = Glowmap_color_override[1];
+			uniform_block.glowClr.xyz.z = Glowmap_color_override[2];
+// 			Current_shader->program->Uniforms.setUniformi("overrideGlow", 1);
+// 			Current_shader->program->Uniforms.setUniform3f("glowClr", Glowmap_color_override[0], Glowmap_color_override[1], Glowmap_color_override[2]);
 		} else {
-			Current_shader->program->Uniforms.setUniformi("overrideGlow", 0);
+			uniform_block.overrideGlow = 0;
+//			Current_shader->program->Uniforms.setUniformi("overrideGlow", 0);
 		}
 
 		gr_opengl_tcache_set(material_info->get_texture_map(TM_GLOW_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
@@ -1082,27 +1198,37 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		Current_shader->program->Uniforms.setUniformi("sSpecmap", render_pass);
 
 		if ( Specmap_color_override_set ) {
-			Current_shader->program->Uniforms.setUniformi("overrideSpec", 1);
-			Current_shader->program->Uniforms.setUniform3f("specClr", Specmap_color_override[0], Specmap_color_override[1], Specmap_color_override[2]);
+			uniform_block.overrideSpec = 1;
+			uniform_block.specClr.xyz.x = Specmap_color_override[0];
+			uniform_block.specClr.xyz.y = Specmap_color_override[1];
+			uniform_block.specClr.xyz.z = Specmap_color_override[2];
+// 			Current_shader->program->Uniforms.setUniformi("overrideSpec", 1);
+// 			Current_shader->program->Uniforms.setUniform3f("specClr", Specmap_color_override[0], Specmap_color_override[1], Specmap_color_override[2]);
 		} else {
-			Current_shader->program->Uniforms.setUniformi("overrideSpec", 0);
+			uniform_block.overrideSpec = 0;
+//			Current_shader->program->Uniforms.setUniformi("overrideSpec", 0);
 		}
 
 		if ( material_info->get_texture_map(TM_SPEC_GLOSS_TYPE) > 0 ) {
 			gr_opengl_tcache_set(material_info->get_texture_map(TM_SPEC_GLOSS_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
 
-			Current_shader->program->Uniforms.setUniformi("gammaSpec", 1);
+			uniform_block.gammaSpec = 1;
+//			Current_shader->program->Uniforms.setUniformi("gammaSpec", 1);
 
 			if ( Gloss_override_set ) {
-				Current_shader->program->Uniforms.setUniformi("alphaGloss", 0);
+				uniform_block.alphaGloss = 0;
+//				Current_shader->program->Uniforms.setUniformi("alphaGloss", 0);
 			} else {
-				Current_shader->program->Uniforms.setUniformi("alphaGloss", 1);
+				uniform_block.alphaGloss = 1;
+//				Current_shader->program->Uniforms.setUniformi("alphaGloss", 1);
 			}
 		} else {
 			gr_opengl_tcache_set(material_info->get_texture_map(TM_SPECULAR_TYPE), TCACHE_TYPE_NORMAL, &u_scale, &v_scale, render_pass);
 
-			Current_shader->program->Uniforms.setUniformi("gammaSpec", 0);
-			Current_shader->program->Uniforms.setUniformi("alphaGloss", 0);
+			uniform_block.gammaSpec = 0;
+			uniform_block.alphaGloss = 0;
+// 			Current_shader->program->Uniforms.setUniformi("gammaSpec", 0);
+// 			Current_shader->program->Uniforms.setUniformi("alphaGloss", 0);
 		}
 		
 		++render_pass;
@@ -1115,12 +1241,15 @@ void opengl_tnl_set_model_material(model_material *material_info)
 			}
 
 			if ( material_info->get_texture_map(TM_SPEC_GLOSS_TYPE) > 0 || Gloss_override_set ) {
-				Current_shader->program->Uniforms.setUniformi("envGloss", 1);
+				uniform_block.envGloss = 1;
+//				Current_shader->program->Uniforms.setUniformi("envGloss", 1);
 			} else {
-				Current_shader->program->Uniforms.setUniformi("envGloss", 0);
+				uniform_block.envGloss = 0;
+//				Current_shader->program->Uniforms.setUniformi("envGloss", 0);
 			}
 
-			Current_shader->program->Uniforms.setUniformMatrix4f("envMatrix", texture_mat);
+			uniform_block.envMatrix = texture_mat;
+//			Current_shader->program->Uniforms.setUniformMatrix4f("envMatrix", texture_mat);
 			Current_shader->program->Uniforms.setUniformi("sEnvmap", render_pass);
 
 			gr_opengl_tcache_set(ENVMAP, TCACHE_TYPE_CUBEMAP, &u_scale, &v_scale, render_pass);
@@ -1154,12 +1283,23 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_SHADOWS ) {
-		Current_shader->program->Uniforms.setUniformMatrix4f("shadow_mv_matrix", Shadow_view_matrix);
-		Current_shader->program->Uniforms.setUniformMatrix4fv("shadow_proj_matrix", MAX_SHADOW_CASCADES, Shadow_proj_matrix);
-		Current_shader->program->Uniforms.setUniformf("veryneardist", Shadow_cascade_distances[0]);
-		Current_shader->program->Uniforms.setUniformf("neardist", Shadow_cascade_distances[1]);
-		Current_shader->program->Uniforms.setUniformf("middist", Shadow_cascade_distances[2]);
-		Current_shader->program->Uniforms.setUniformf("fardist", Shadow_cascade_distances[3]);
+		uniform_block.shadow_mv_matrix = Shadow_view_matrix;
+
+		for ( size_t i = 0; i < MAX_SHADOW_CASCADES; ++i ) {
+			uniform_block.shadow_proj_matrix[i] = Shadow_proj_matrix[i];
+		}
+		
+		uniform_block.veryneardist = Shadow_cascade_distances[0];
+		uniform_block.neardist = Shadow_cascade_distances[1];
+		uniform_block.middist = Shadow_cascade_distances[2];
+		uniform_block.fardist = Shadow_cascade_distances[3];
+
+// 		Current_shader->program->Uniforms.setUniformMatrix4f("shadow_mv_matrix", Shadow_view_matrix);
+// 		Current_shader->program->Uniforms.setUniformMatrix4fv("shadow_proj_matrix", MAX_SHADOW_CASCADES, Shadow_proj_matrix);
+// 		Current_shader->program->Uniforms.setUniformf("veryneardist", Shadow_cascade_distances[0]);
+// 		Current_shader->program->Uniforms.setUniformf("neardist", Shadow_cascade_distances[1]);
+// 		Current_shader->program->Uniforms.setUniformf("middist", Shadow_cascade_distances[2]);
+// 		Current_shader->program->Uniforms.setUniformf("fardist", Shadow_cascade_distances[3]);
 		Current_shader->program->Uniforms.setUniformi("shadow_map", render_pass);
 
 		GL_state.Texture.SetActiveUnit(render_pass);
@@ -1170,7 +1310,10 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_SHADOW_MAP ) {
-		Current_shader->program->Uniforms.setUniformMatrix4fv("shadow_proj_matrix", MAX_SHADOW_CASCADES, Shadow_proj_matrix);
+		for ( size_t i = 0; i < MAX_SHADOW_CASCADES; ++i ) {
+			uniform_block.shadow_proj_matrix[i] = Shadow_proj_matrix[i];
+		}
+//		Current_shader->program->Uniforms.setUniformMatrix4fv("shadow_proj_matrix", MAX_SHADOW_CASCADES, Shadow_proj_matrix);
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_ANIMATED ) {
@@ -1191,7 +1334,8 @@ void opengl_tnl_set_model_material(model_material *material_info)
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_TRANSFORM ) {
 		Current_shader->program->Uniforms.setUniformi("transform_tex", render_pass);
-		Current_shader->program->Uniforms.setUniformi("buffer_matrix_offset", (int)GL_transform_buffer_offset);
+//		Current_shader->program->Uniforms.setUniformi("buffer_matrix_offset", (int)GL_transform_buffer_offset);
+		uniform_block.buffer_matrix_offset = (int)GL_transform_buffer_offset;
 		
 		GL_state.Texture.SetActiveUnit(render_pass);
 		GL_state.Texture.SetTarget(GL_TEXTURE_BUFFER);
@@ -1216,12 +1360,15 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		base_color.xyz.y = tm_clr.base.g;
 		base_color.xyz.z = tm_clr.base.b;
 
-		Current_shader->program->Uniforms.setUniform3f("stripe_color", stripe_color);
-		Current_shader->program->Uniforms.setUniform3f("base_color", base_color);
+		uniform_block.stripe_color = stripe_color;
+		uniform_block.base_color = base_color;
+// 		Current_shader->program->Uniforms.setUniform3f("stripe_color", stripe_color);
+// 		Current_shader->program->Uniforms.setUniform3f("base_color", base_color);
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_THRUSTER ) {
-		Current_shader->program->Uniforms.setUniformf("thruster_scale", material_info->get_thrust_scale());
+		uniform_block.thruster_scale = material_info->get_thrust_scale();
+//		Current_shader->program->Uniforms.setUniformf("thruster_scale", material_info->get_thrust_scale());
 	}
 
 	
@@ -1229,19 +1376,30 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		material::fog fog_params = material_info->get_fog();
 
 		if ( fog_params.enabled ) {
-			Current_shader->program->Uniforms.setUniformf("fogStart", fog_params.dist_near);
-			Current_shader->program->Uniforms.setUniformf("fogScale", 1.0f / (fog_params.dist_far - fog_params.dist_near));
-			Current_shader->program->Uniforms.setUniform4f("fogColor", i2fl(fog_params.r) / 255.0f, i2fl(fog_params.g) / 255.0f, i2fl(fog_params.b) / 255.0f, 1.0f);
+			uniform_block.fogStart = fog_params.dist_near;
+			uniform_block.fogScale = 1.0f / (fog_params.dist_far - fog_params.dist_near);
+			uniform_block.fogColor.xyzw.x = i2fl(fog_params.r) / 255.0f;
+			uniform_block.fogColor.xyzw.y = i2fl(fog_params.g) / 255.0f;
+			uniform_block.fogColor.xyzw.z = i2fl(fog_params.b) / 255.0f;
+			uniform_block.fogColor.xyzw.w = 1.0f;
+// 			Current_shader->program->Uniforms.setUniformf("fogStart", fog_params.dist_near);
+// 			Current_shader->program->Uniforms.setUniformf("fogScale", 1.0f / (fog_params.dist_far - fog_params.dist_near));
+// 			Current_shader->program->Uniforms.setUniform4f("fogColor", i2fl(fog_params.r) / 255.0f, i2fl(fog_params.g) / 255.0f, i2fl(fog_params.b) / 255.0f, 1.0f);
 		}
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_NORMAL_ALPHA ) {
-		Current_shader->program->Uniforms.setUniform2f("normalAlphaMinMax", material_info->get_normal_alpha_min(), material_info->get_normal_alpha_max());
+		uniform_block.normalAlphaMinMax.x = material_info->get_normal_alpha_min();
+		uniform_block.normalAlphaMinMax.y = material_info->get_normal_alpha_max();
+//		Current_shader->program->Uniforms.setUniform2f("normalAlphaMinMax", material_info->get_normal_alpha_min(), material_info->get_normal_alpha_max());
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_NORMAL_EXTRUDE ) {
-		Current_shader->program->Uniforms.setUniformf("extrudeWidth", material_info->get_normal_extrude_width());
+		uniform_block.extrudeWidth = material_info->get_normal_extrude_width();
+//		Current_shader->program->Uniforms.setUniformf("extrudeWidth", material_info->get_normal_extrude_width());
 	}
+
+	opengl_tnl_set_uniform_buffer(&uniform_block, sizeof(GL_model_uniform_block), "model_data", 0);
 
 	if ( Deferred_lighting ) {
 		// don't blend if we're drawing to the g-buffers

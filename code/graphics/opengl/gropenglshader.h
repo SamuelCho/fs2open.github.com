@@ -60,6 +60,7 @@ struct opengl_shader_type_t {
 	const char *geo;
 
 	SCP_vector<const char*> uniforms;
+	SCP_vector<const char*> uniform_blocks;
 
 	SCP_vector<opengl_vert_attrib::attrib_id> attributes;
 
@@ -143,12 +144,66 @@ typedef struct opengl_shader_t {
 	opengl_shader_t& operator=(const opengl_shader_t&) = delete;
 } opengl_shader_t;
 
-struct transform_uniform_block {
-	matrix4 modelViewMatrix;
-	matrix4 modelMatrix;
-	matrix4 viewMatrix;
-	matrix4 projMatrix;
-	matrix4 textureMatrix;
+extern GLint GL_uniform_buffer_offset_alignment;
+
+struct GL_model_uniform_block {
+	matrix4 modelViewMatrix;			// 0
+	matrix4 modelMatrix;				// 64
+	matrix4 viewMatrix;					// 128
+	matrix4 projMatrix;					// 192
+	matrix4 textureMatrix;				// 256
+	matrix4 envMatrix;					// 320
+	vec4 color;							// 384
+	vec4 fogColor;						// 400
+	float fogStart;						// 416
+	float fogScale;						// 420
+	int buffer_matrix_offset;			// 424
+	int pad0;							// 428
+	matrix4 shadow_proj_matrix[4];		// 432
+	matrix4 shadow_mv_matrix;			// 688
+	float znear;						// 752
+	float zfar;							// 756
+	float veryneardist;					// 760
+	float neardist;						// 764
+	float middist;						// 768
+	float fardist;						// 772
+	float thruster_scale;				// 776
+	int use_clip_plane;					// 780
+	vec3d clip_normal;					// 784
+	int pad1;							// 796
+	vec3d clip_position;				// 800
+	int pad2;							// 812
+	vec2d normalAlphaMinMax;			// 816
+	float extrudeWidth;					// 824
+	float defaultGloss;					// 1604
+	vec3d ambientFactor;				// 1616
+	int pad6;							// 1628
+	vec3d diffuseFactor;				// 1632
+	int pad7;							// 1644
+	vec3d emissionFactor;				// 1648
+	int desaturate;						// 1660
+	int blend_alpha;
+	int overrideDiffuse;
+	int pad8;
+	int pad9;
+	vec3d diffuseClr;
+	int overrideGlow;
+	vec3d glowClr;
+	int overrideSpec;
+	vec3d specClr;
+	int alphaGloss;
+	int gammaSpec;
+	int envGloss;
+	int alpha_spec;
+	int effect_num;
+	float anim_timer;
+	float vpwidth;
+	float vpheight;
+	int pad10;
+	vec3d base_color;
+	int pad11;
+	vec3d stripe_color;
+	int team_glow_enabled;
 };
 
 extern SCP_vector<opengl_shader_t> GL_shader;

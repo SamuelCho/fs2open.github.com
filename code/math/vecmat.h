@@ -451,6 +451,8 @@ void vm_matrix4_x_matrix4(matrix4 *dest, const matrix4 *src0, const matrix4 *src
 
 float vm_vec4_dot4(float x, float y, float z, float w, const vec4 *v);
 
+void vm_vec_copy_vec4(vec4 *dest, vec3d *src);
+
 #endif
 
 

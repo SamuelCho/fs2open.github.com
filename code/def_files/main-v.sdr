@@ -1,39 +1,72 @@
+#define MAX_LIGHTS 8
 in vec4 vertPosition;
 in vec4 vertTexCoord;
 in vec3 vertNormal;
 in vec4 vertTangent;
 in float vertModelID;
-layout(std140) uniform transform {
+
+layout(std140) uniform model_data {
 	mat4 modelViewMatrix;
 	mat4 modelMatrix;
 	mat4 viewMatrix;
 	mat4 projMatrix;
 	mat4 textureMatrix;
-	vec2 someTwoVec;
-	float pad0;
-	float pad1;
-	vec3 someThreeVec;
-	float pad2;
+	mat4 envMatrix;
+	vec4 color;
+	vec4 fogColor;
+	float fogStart;
+	float fogScale;
+	int buffer_matrix_offset;
+	mat4 shadow_proj_matrix[4];
+	mat4 shadow_mv_matrix;
+	float znear;
+	float zfar;
+	float veryneardist;
+	float neardist;
+	float middist;
+	float fardist;
+	float thruster_scale;
+	int use_clip_plane;
+	vec3 clip_normal;
+	vec3 clip_position;
+	vec2 normalAlphaMinMax;
+	float extrudeWidth;
+	float defaultGloss;
+	vec3 ambientFactor;
+	vec3 diffuseFactor;
+	vec3 emissionFactor;
+	int desaturate;
+	int blend_alpha;
+	bool overrideDiffuse;
+	vec3 diffuseClr;
+	bool overrideGlow;
+	vec3 glowClr;
+	bool overrideSpec;
+	vec3 specClr;
+	bool alphaGloss;
+	bool gammaSpec;
+	bool envGloss;
+	bool alpha_spec;
+	int effect_num;
+	float anim_timer;
+	float vpwidth;
+	float vpheight;
+	vec3 base_color;
+	vec3 stripe_color;
+	bool team_glow_enabled;
 };
-uniform vec4 color;
-#ifdef FLAG_NORMAL_EXTRUDE
-uniform float extrudeWidth;
-#endif
+
 #ifdef FLAG_ENV_MAP
-uniform mat4 envMatrix;
 out vec3 fragEnvReflect;
 #endif
 #ifdef FLAG_NORMAL_MAP
 out mat3 fragTangentMatrix;
 #endif
 #ifdef FLAG_FOG
-uniform float fogStart;
-uniform float fogScale;
 out float fragFogDist;
 #endif
 #ifdef FLAG_TRANSFORM
 uniform samplerBuffer transform_tex;
-uniform int buffer_matrix_offset;
 #ifdef FLAG_SHADOW_MAP
 out float geoNotVisible;
 #else
@@ -42,7 +75,6 @@ out float fragNotVisible;
 #endif
 #ifdef FLAG_SHADOW_MAP
 out float geoInstance;
-uniform mat4 shadow_proj_matrix[4];
 out vec3 geoNormal;
 out vec4 geoTexCoord;
 #else
@@ -51,18 +83,10 @@ out vec3 fragNormal;
 out vec4 fragTexCoord;
 #endif
 #ifdef FLAG_SHADOWS
-uniform mat4 shadow_mv_matrix;
-uniform mat4 shadow_proj_matrix[4];
 out vec4 fragShadowUV[4];
 out vec4 fragShadowPos;
 #endif
-#ifdef FLAG_THRUSTER
-uniform float thruster_scale;
-#endif
 #ifdef FLAG_CLIP
-uniform int use_clip_plane;
-uniform vec3 clip_normal;
-uniform vec3 clip_position;
 #ifdef FLAG_SHADOW_MAP
 out float geoClipDistance;
 #else

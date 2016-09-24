@@ -2846,3 +2846,10 @@ void vm_vec_transform(vec3d *dest, vec3d *src, matrix4 *m, bool pos)
 	dest->xyz.y = temp_dest.xyzw.y;
 	dest->xyz.z = temp_dest.xyzw.z;
 }
+
+void vm_vec_copy_vec4(vec4 *dest, vec3d *src)
+{
+	dest->xyzw.x = src->xyz.x;
+	dest->xyzw.y = src->xyz.y;
+	dest->xyzw.z = src->xyz.z;
+}

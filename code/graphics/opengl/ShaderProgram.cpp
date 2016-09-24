@@ -240,6 +240,53 @@ void opengl::ShaderUniforms::initUniform(const SCP_string& name)
 	_uniform_locations.insert(std::make_pair(name, location));
 }
 
+void opengl::ShaderUniforms::initUniformBlock(const SCP_string& name)
+{
+	auto location = glGetUniformBlockIndex(_program->getShaderHandle(), name.c_str());
+
+	if ( location == -1 ) {
+		// This can happen if the uniform has been optimized out by the driver
+		mprintf(("WARNING: Failed to find uniform block '%s'.\n", name.c_str()));
+		return;
+	}
+	
+	GLint active_uniforms_in_block;
+	glGetActiveUniformBlockiv(_program->getShaderHandle(), location, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &active_uniforms_in_block);
+
+	int *indices = new int[active_uniforms_in_block];
+	glGetActiveUniformBlockiv(_program->getShaderHandle(), location, GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES, indices);
+
+	int block_size = 0;
+	glGetActiveUniformBlockiv(_program->getShaderHandle(), location, GL_UNIFORM_BLOCK_DATA_SIZE, &block_size);
+	
+	mprintf(("Parsing uniform block of %d bytes...\n", block_size));
+
+	for ( uint i = 0; i < active_uniforms_in_block; i++ ) {
+		GLuint uniform_index = indices[i];
+
+		char uniform_name[64];
+		glGetActiveUniformName(_program->getShaderHandle(), uniform_index, 64, 0, uniform_name);
+
+		GLint uniform_offset;
+		glGetActiveUniformsiv(_program->getShaderHandle(), 1, &uniform_index, GL_UNIFORM_OFFSET, &uniform_offset);
+
+		mprintf(("%s is at offset %d\n", uniform_name, uniform_offset));
+	}
+
+	_uniform_block_locations.insert(std::make_pair(name, location));
+}
+
+void opengl::ShaderUniforms::BindUniformBlockPoint(const SCP_string& name, GLuint bindingPoint)
+{
+	auto iter = _uniform_block_locations.find(name);
+
+	if ( iter == _uniform_block_locations.end() ) {
+		return;
+	}
+
+	glUniformBlockBinding(Current_shader->program->getShaderHandle(), iter->second, bindingPoint);
+}
+
 size_t opengl::ShaderUniforms::findUniform(const SCP_string& name)
 {
 	auto iter = _uniform_lookup.find(name);

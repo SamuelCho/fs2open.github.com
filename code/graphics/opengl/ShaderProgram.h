@@ -45,6 +45,7 @@ class ShaderUniforms {
 	SCP_unordered_map<SCP_string, size_t> _uniform_lookup;
 
 	SCP_unordered_map<SCP_string, GLint> _uniform_locations;
+	SCP_unordered_map<SCP_string, GLuint> _uniform_block_locations;
 
 	size_t findUniform(const SCP_string &name);
 	GLint findUniformLocation(const SCP_string& name);
@@ -52,6 +53,9 @@ class ShaderUniforms {
 	explicit ShaderUniforms(ShaderProgram* shaderProgram);
 
 	void initUniform(const SCP_string& name);
+	void initUniformBlock(const SCP_string& name);
+
+	void BindUniformBlockPoint(const SCP_string& name, GLuint bindingPoint);
 
 	void setUniformi(const SCP_string &name, const int value);
 	void setUniform1iv(const SCP_string &name, const int count, const int *val);
