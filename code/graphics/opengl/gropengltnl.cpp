@@ -1683,9 +1683,9 @@ void opengl_tnl_set_model_material(model_material *material_info)
 //		Current_shader->program->Uniforms.setUniformf("extrudeWidth", material_info->get_normal_extrude_width());
 	}
 
-	Current_shader->program->Uniforms.BindUniformBlockPoint("model_data", 0);
-	//opengl_tnl_set_uniform_buffer(&uniform_block, sizeof(GL_model_uniform_block), "model_data", 0);
-	glBindBufferRange(GL_UNIFORM_BUFFER, 0, GL_buffer_objects[Uniform_buffer_handle].buffer_id, Uniform_buffer_draw_offset, sizeof(GL_model_uniform_block));
+	//Current_shader->program->Uniforms.BindUniformBlockPoint("model_data", 0);
+	opengl_tnl_set_uniform_buffer(&uniform_block, sizeof(GL_model_uniform_block), "model_data", 0);
+	//glBindBufferRange(GL_UNIFORM_BUFFER, 0, GL_buffer_objects[Uniform_buffer_handle].buffer_id, Uniform_buffer_draw_offset, sizeof(GL_model_uniform_block));
 
 	if ( Deferred_lighting ) {
 		// don't blend if we're drawing to the g-buffers
