@@ -195,6 +195,7 @@ struct insignia_draw_data
 struct queued_buffer_draw
 {
 	size_t transform_buffer_offset;
+	size_t uniform_buffer_offset;
 
 	model_material render_material;
 
@@ -270,6 +271,7 @@ class draw_list
 	static draw_list *Target;
 	static bool sort_draw_pair(const int a, const int b);
 	void sort_draws();
+
 public:
 	draw_list();
 	void init();

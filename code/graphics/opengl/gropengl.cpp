@@ -1522,6 +1522,10 @@ bool gr_opengl_init(os::GraphicsOperations* graphicsOps)
 	// ready the texture system
 	opengl_tcache_init();
 
+	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &GL_uniform_buffer_offset_alignment);
+	glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &GL_max_uniform_block_size);
+	glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &GL_max_uniform_buffer_bindings);
+
 	opengl_tnl_init();
 
 	// setup default shaders, and shader related items
@@ -1582,6 +1586,10 @@ bool gr_opengl_init(os::GraphicsOperations* graphicsOps)
 
 	mprintf(( "  OpenGL Shader Version: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION) ));
 	
+	mprintf(("  Max uniform block size: %d\n", GL_max_uniform_block_size));
+	mprintf(("  Max uniform buffer bindings: %d\n", GL_max_uniform_buffer_bindings));
+	mprintf(("  Uniform buffer byte offset alignment: %d\n", GL_uniform_buffer_offset_alignment));
+
 	// This stops fred crashing if no textures are set
 	gr_screen.current_bitmap = -1;
 

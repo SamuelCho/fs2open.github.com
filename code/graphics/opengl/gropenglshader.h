@@ -19,6 +19,10 @@
 #include <string>
 #include <glad/glad.h>
 
+extern GLint GL_max_uniform_buffer_bindings;		// MAX_UNIFORM_BUFFER_BINDINGS
+extern GLint GL_max_uniform_block_size;			// MAX_UNIFORM_BLOCK_SIZE
+extern GLint GL_uniform_buffer_offset_alignment;	// UNIFORM_BUFFER_OFFSET_ALIGNMENT
+
 enum shader_stage {
 	SDR_STAGE_VERTEX,
 	SDR_STAGE_FRAGMENT,
@@ -144,44 +148,42 @@ typedef struct opengl_shader_t {
 	opengl_shader_t& operator=(const opengl_shader_t&) = delete;
 } opengl_shader_t;
 
-extern GLint GL_uniform_buffer_offset_alignment;
-
 struct GL_model_uniform_block {
-	matrix4 modelViewMatrix;			// 0
-	matrix4 modelMatrix;				// 64
-	matrix4 viewMatrix;					// 128
-	matrix4 projMatrix;					// 192
-	matrix4 textureMatrix;				// 256
-	matrix4 envMatrix;					// 320
-	vec4 color;							// 384
-	vec4 fogColor;						// 400
-	float fogStart;						// 416
-	float fogScale;						// 420
-	int buffer_matrix_offset;			// 424
-	int pad0;							// 428
-	matrix4 shadow_proj_matrix[4];		// 432
-	matrix4 shadow_mv_matrix;			// 688
-	float znear;						// 752
-	float zfar;							// 756
-	float veryneardist;					// 760
-	float neardist;						// 764
-	float middist;						// 768
-	float fardist;						// 772
-	float thruster_scale;				// 776
-	int use_clip_plane;					// 780
-	vec3d clip_normal;					// 784
-	int pad1;							// 796
-	vec3d clip_position;				// 800
-	int pad2;							// 812
-	vec2d normalAlphaMinMax;			// 816
-	float extrudeWidth;					// 824
-	float defaultGloss;					// 1604
-	vec3d ambientFactor;				// 1616
-	int pad6;							// 1628
-	vec3d diffuseFactor;				// 1632
-	int pad7;							// 1644
-	vec3d emissionFactor;				// 1648
-	int desaturate;						// 1660
+	matrix4 modelViewMatrix;
+	matrix4 modelMatrix;
+	matrix4 viewMatrix;
+	matrix4 projMatrix;
+	matrix4 textureMatrix;
+	matrix4 envMatrix;
+	vec4 color;
+	vec4 fogColor;
+	float fogStart;
+	float fogScale;
+	int buffer_matrix_offset;
+	int pad0;
+	matrix4 shadow_proj_matrix[4];
+	matrix4 shadow_mv_matrix;
+	float znear;
+	float zfar;
+	float veryneardist;
+	float neardist;
+	float middist;
+	float fardist;
+	float thruster_scale;
+	int use_clip_plane;
+	vec3d clip_normal;
+	int pad1;
+	vec3d clip_position;
+	int pad2;
+	vec2d normalAlphaMinMax;
+	float extrudeWidth;
+	float defaultGloss;
+	vec3d ambientFactor;
+	int pad6;
+	vec3d diffuseFactor;
+	int pad7;
+	vec3d emissionFactor;
+	int desaturate;
 	int blend_alpha;
 	int overrideDiffuse;
 	int pad8;

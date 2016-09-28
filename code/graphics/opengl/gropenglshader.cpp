@@ -684,8 +684,6 @@ int opengl_compile_shader(shader_type sdr, uint flags)
  */
 void opengl_shader_init()
 {
-	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &GL_uniform_buffer_offset_alignment);
-
 	glGenTextures(1,&Framebuffer_fallback_texture_id);
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);

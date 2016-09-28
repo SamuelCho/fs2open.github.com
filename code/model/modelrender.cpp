@@ -459,6 +459,7 @@ void draw_list::set_light_filter(int objnum, vec3d *pos, float rad)
 	Current_lights_set = Scene_light_handler.bufferLights();
 }
 
+extern uint gr_opengl_add_to_model_uniform_buffer(model_material *material_info);
 void draw_list::add_buffer_draw(model_material *render_material, indexed_vertex_source *vert_src, vertex_buffer *buffer, size_t texi, uint tmap_flags)
 {
 	queued_buffer_draw draw_data;
@@ -493,15 +494,25 @@ void draw_list::add_buffer_draw(model_material *render_material, indexed_vertex_
 	draw_data.render_material = *render_material;
 	draw_data.lights = Current_lights_set;
 
+	g3_start_instance_matrix(&draw_data.transformation.origin, &draw_data.transformation.basis);
+	gr_push_scale_matrix(&draw_data.scale);
+
+	draw_data.uniform_buffer_offset = gr_opengl_add_to_model_uniform_buffer(render_material);
+
+	gr_pop_scale_matrix();
+	g3_done_instance(true);
+
 	Render_elements.push_back(draw_data);
 	Render_keys.push_back((int) (Render_elements.size() - 1));
 }
 
+extern void gr_opengl_set_uniform_buffer_model_draw_offset(uint offset);
 void draw_list::render_buffer(queued_buffer_draw &render_elements)
 {
 	GR_DEBUG_SCOPE("Render buffer");
 
 	gr_set_transform_buffer_offset(render_elements.transform_buffer_offset);
+	gr_opengl_set_uniform_buffer_model_draw_offset(render_elements.uniform_buffer_offset);
 
 	if ( render_elements.render_material.is_lit() ) {
 		Scene_light_handler.setLights(&render_elements.lights);
@@ -607,6 +618,7 @@ void draw_list::set_scale(vec3d *scale)
 	Current_scale = *scale;
 }
 
+extern void gr_opengl_reset_model_uniform_buffer();
 void draw_list::init()
 {
 	reset();
@@ -617,15 +629,18 @@ void draw_list::init()
 		}	
 	}
 
+	gr_opengl_reset_model_uniform_buffer();
 	TransformBufferHandler.reset();
 }
 
+extern void gr_opengl_submit_model_uniform_buffer();
 void draw_list::init_render(bool sort)
 {
 	if ( sort ) {
 		sort_draws();
 	}
-
+	
+	gr_opengl_submit_model_uniform_buffer();
 	TransformBufferHandler.submit_buffer_data();
 }
 

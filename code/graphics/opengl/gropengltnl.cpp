@@ -73,7 +73,13 @@ GLint saved_fb = 0;
 bool Rendering_to_shadow_map = false;
 
 int Transform_buffer_handle = -1;
+
 int Uniform_buffer_handle = -1;
+uint Uniform_buffer_data_size = 0;
+uint Uniform_buffer_data_offset = 0;
+uint Uniform_buffer_draw_offset = 0;
+ubyte *Uniform_buffer_data = NULL;
+static const uint UNIFORM_BUFFER_RESIZE_BLOCK_SIZE = 32768;
 
 transform_stack GL_model_matrix_stack;
 matrix4 GL_view_matrix;
@@ -99,7 +105,8 @@ struct opengl_immediate_buffer {
 	uint resize_block_size;
 	uint offset_alignment;
 
-	opengl_immediate_buffer(GLenum _usage = GL_ARRAY_BUFFER): usage(_usage), buffer_handle(-1), offset(0), size(0), resize_block_size(2048), offset_alignment(0) {}
+	opengl_immediate_buffer(GLenum _usage = GL_ARRAY_BUFFER, uint _offset_alignment = 0): 
+		usage(_usage), buffer_handle(-1), offset(0), size(0), resize_block_size(2048), offset_alignment(_offset_alignment) {}
 };
 
 static SCP_vector<opengl_buffer_object> GL_buffer_objects;
@@ -111,7 +118,7 @@ static uint GL_immediate_buffer_size = 0;
 static const int IMMEDIATE_BUFFER_RESIZE_BLOCK_SIZE = 2048;
 
 opengl_immediate_buffer GL_immediate_draw_buffer;
-opengl_immediate_buffer GL_immediate_uniform_buffer(GL_UNIFORM_BUFFER);
+opengl_immediate_buffer GL_immediate_uniform_buffer;
 
 int opengl_create_buffer_object(GLenum type, GLenum usage)
 {
@@ -249,8 +256,8 @@ uint opengl_add_to_immediate_buffer(opengl_immediate_buffer *buffer_info, uint s
 		
 	if ( buffer_info->offset + size > buffer_info->size ) {
 		// incoming data won't fit the immediate buffer. time to reallocate.
+		buffer_info->size = MAX(buffer_info->offset + buffer_info->resize_block_size, buffer_info->offset + size);
 		buffer_info->offset = 0;
-		buffer_info->size += MAX(buffer_info->resize_block_size, size);
 
 		gr_opengl_update_buffer_data(buffer_info->buffer_handle, buffer_info->size, NULL);
 	}
@@ -263,8 +270,8 @@ uint opengl_add_to_immediate_buffer(opengl_immediate_buffer *buffer_info, uint s
 	buffer_info->offset += size;
 
 	// bump offset to the next alignment boundary
-	if ( buffer_info->offset_alignment > 0 && buffer_info->offset % buffer_info->offset_alignment != 0 ) {
-		buffer_info->offset = ((buffer_info->offset / buffer_info->offset_alignment) + 1) * buffer_info->offset_alignment;
+	if ( buffer_info->offset_alignment > 0 ) {
+		buffer_info->offset += buffer_info->offset_alignment - (buffer_info->offset % buffer_info->offset_alignment);
 	}
 	
 	return old_offset;
@@ -382,6 +389,284 @@ void gr_opengl_set_transform_buffer_offset(size_t offset)
 	GL_transform_buffer_offset = offset;
 }
 
+void gr_opengl_set_uniform_buffer_model_draw_offset(uint offset)
+{
+	Uniform_buffer_draw_offset = offset;
+}
+
+void gr_opengl_reset_model_uniform_buffer()
+{
+	Uniform_buffer_data_offset = 0;
+}
+
+void gr_opengl_submit_model_uniform_buffer()
+{
+	opengl_bind_buffer_object(Uniform_buffer_handle);
+	glBufferData(GL_UNIFORM_BUFFER, Uniform_buffer_data_size, Uniform_buffer_data, GL_STREAM_DRAW);
+}
+
+uint gr_opengl_add_to_model_uniform_buffer(model_material *material_info)
+{
+	float u_scale, v_scale;
+	int render_pass = 0;
+
+	uint shader_flags = material_info->get_shader_flags();
+
+	GL_model_uniform_block uniform_block;
+
+	uniform_block.modelViewMatrix = GL_model_view_matrix;
+	uniform_block.modelMatrix = GL_model_matrix_stack.get_transform();
+	uniform_block.viewMatrix = GL_view_matrix;
+	uniform_block.projMatrix = GL_projection_matrix;
+	uniform_block.textureMatrix = GL_texture_matrix;
+
+	uniform_block.color = material_info->get_color();
+
+	if ( shader_flags & SDR_FLAG_MODEL_ANIMATED ) {
+		uniform_block.anim_timer = material_info->get_animated_effect_time();
+		uniform_block.effect_num = material_info->get_animated_effect();
+		uniform_block.vpwidth = 1.0f / gr_screen.max_w;
+		uniform_block.vpheight = 1.0f / gr_screen.max_h;
+	}
+
+	if ( shader_flags & SDR_FLAG_MODEL_CLIP ) {
+		bool clip = material_info->is_clipped();
+
+		if ( clip ) {
+			material::clip_plane &clip_info = material_info->get_clip_plane();
+
+			uniform_block.use_clip_plane = 1;
+			uniform_block.clip_normal = clip_info.normal;
+			uniform_block.clip_position = clip_info.position;
+		} else {
+			uniform_block.use_clip_plane = 0;
+		}
+	}
+
+	if ( shader_flags & SDR_FLAG_MODEL_LIGHT ) {
+		int num_lights = MIN(Num_active_gl_lights, GL_max_lights) - 1;
+		float light_factor = material_info->get_light_factor();
+
+		// 		for ( size_t i = 0; i < GL_max_lights; ++i ) {
+		// 			uniform_block.lightPosition[i] = opengl_light_uniforms.Position[i];
+		// 
+		// 			vm_vec_copy_vec4(&uniform_block.lightDirection[i], &opengl_light_uniforms.Direction[i]);
+		// 			vm_vec_copy_vec4(&uniform_block.lightDiffuseColor[i], &opengl_light_uniforms.Diffuse_color[i]);
+		// 			vm_vec_copy_vec4(&uniform_block.lightSpecColor[i], &opengl_light_uniforms.Spec_color[i]);
+		// 			
+		// 			uniform_block.lightType[i][0] = opengl_light_uniforms.Light_type[i];
+		// 			uniform_block.lightAttenuation[i][0] = opengl_light_uniforms.Attenuation[i];
+		// 		}
+		
+		uniform_block.diffuseFactor.xyz.x = GL_light_color[0] * light_factor;
+		uniform_block.diffuseFactor.xyz.y = GL_light_color[1] * light_factor;
+		uniform_block.diffuseFactor.xyz.z = GL_light_color[2] * light_factor;
+		uniform_block.ambientFactor.xyz.x = GL_light_ambient[0];
+		uniform_block.ambientFactor.xyz.y = GL_light_ambient[1];
+		uniform_block.ambientFactor.xyz.z = GL_light_ambient[2];
+		
+		if ( material_info->get_light_factor() > 0.25f && !Cmdline_no_emissive ) {
+			uniform_block.emissionFactor.xyz.x = GL_light_emission[0];
+			uniform_block.emissionFactor.xyz.y = GL_light_emission[1];
+			uniform_block.emissionFactor.xyz.z = GL_light_emission[2];
+		} else {
+			uniform_block.emissionFactor.xyz.x = GL_light_zero[0];
+			uniform_block.emissionFactor.xyz.y = GL_light_zero[1];
+			uniform_block.emissionFactor.xyz.z = GL_light_zero[2];
+		}
+
+		if ( Gloss_override_set ) {
+			uniform_block.defaultGloss = Gloss_override;
+		} else {
+			uniform_block.defaultGloss = 0.6f;
+		}
+	}
+
+	if ( shader_flags & SDR_FLAG_MODEL_DIFFUSE_MAP ) {
+		if ( material_info->is_desaturated() ) {
+			uniform_block.desaturate = 1;
+		} else {
+			uniform_block.desaturate = 0;
+		}
+
+		if ( Basemap_color_override_set ) {
+			uniform_block.overrideDiffuse = 1;
+			uniform_block.diffuseClr.xyz.x = Basemap_color_override[0];
+			uniform_block.diffuseClr.xyz.y = Basemap_color_override[1];
+			uniform_block.diffuseClr.xyz.z = Basemap_color_override[2];
+		} else {
+			uniform_block.overrideDiffuse = 0;
+		}
+
+		switch ( material_info->get_blend_mode() ) {
+		case ALPHA_BLEND_PREMULTIPLIED:
+			uniform_block.blend_alpha = 1;
+			break;
+		case ALPHA_BLEND_ADDITIVE:
+			uniform_block.blend_alpha = 2;
+			break;
+		default:
+			uniform_block.blend_alpha = 0;
+			break;
+		}
+	}
+
+	if ( shader_flags & SDR_FLAG_MODEL_GLOW_MAP ) {
+		if ( Glowmap_color_override_set ) {
+			uniform_block.overrideGlow = 1;
+			uniform_block.glowClr.xyz.x = Glowmap_color_override[0];
+			uniform_block.glowClr.xyz.y = Glowmap_color_override[1];
+			uniform_block.glowClr.xyz.z = Glowmap_color_override[2];
+		} else {
+			uniform_block.overrideGlow = 0;
+		}
+	}
+
+	if ( shader_flags & SDR_FLAG_MODEL_SPEC_MAP ) {
+		if ( Specmap_color_override_set ) {
+			uniform_block.overrideSpec = 1;
+			uniform_block.specClr.xyz.x = Specmap_color_override[0];
+			uniform_block.specClr.xyz.y = Specmap_color_override[1];
+			uniform_block.specClr.xyz.z = Specmap_color_override[2];
+		} else {
+			uniform_block.overrideSpec = 0;
+		}
+
+		if ( material_info->get_texture_map(TM_SPEC_GLOSS_TYPE) > 0 ) {
+			uniform_block.gammaSpec = 1;
+
+			if ( Gloss_override_set ) {
+				uniform_block.alphaGloss = 0;
+			} else {
+				uniform_block.alphaGloss = 1;
+			}
+		} else {
+			uniform_block.gammaSpec = 0;
+			uniform_block.alphaGloss = 0;
+		}
+
+		if ( shader_flags & SDR_FLAG_MODEL_ENV_MAP ) {
+			matrix4 texture_mat;
+
+			for ( int i = 0; i < 16; ++i ) {
+				texture_mat.a1d[i] = GL_env_texture_matrix[i];
+			}
+
+			if ( material_info->get_texture_map(TM_SPEC_GLOSS_TYPE) > 0 || Gloss_override_set ) {
+				uniform_block.envGloss = 1;
+			} else {
+				uniform_block.envGloss = 0;
+			}
+
+			uniform_block.envMatrix = texture_mat;
+		}
+	}
+
+	if ( shader_flags & SDR_FLAG_MODEL_SHADOWS ) {
+		uniform_block.shadow_mv_matrix = Shadow_view_matrix;
+
+		for ( size_t i = 0; i < MAX_SHADOW_CASCADES; ++i ) {
+			uniform_block.shadow_proj_matrix[i] = Shadow_proj_matrix[i];
+		}
+
+		uniform_block.veryneardist = Shadow_cascade_distances[0];
+		uniform_block.neardist = Shadow_cascade_distances[1];
+		uniform_block.middist = Shadow_cascade_distances[2];
+		uniform_block.fardist = Shadow_cascade_distances[3];
+	}
+
+	if ( shader_flags & SDR_FLAG_MODEL_SHADOW_MAP ) {
+		for ( size_t i = 0; i < MAX_SHADOW_CASCADES; ++i ) {
+			uniform_block.shadow_proj_matrix[i] = Shadow_proj_matrix[i];
+		}
+		//		Current_shader->program->Uniforms.setUniformMatrix4fv("shadow_proj_matrix", MAX_SHADOW_CASCADES, Shadow_proj_matrix);
+	}
+	
+	if ( shader_flags & SDR_FLAG_MODEL_TRANSFORM ) {
+		uniform_block.buffer_matrix_offset = (int)GL_transform_buffer_offset;
+	}
+
+	// Team colors are passed to the shader here, but the shader needs to handle their application.
+	// By default, this is handled through the r and g channels of the misc map, but this can be changed
+	// in the shader; test versions of this used the normal map r and b channels
+	if ( shader_flags & SDR_FLAG_MODEL_TEAMCOLOR ) {
+		team_color &tm_clr = material_info->get_team_color();
+		vec3d stripe_color;
+		vec3d base_color;
+
+		stripe_color.xyz.x = tm_clr.stripe.r;
+		stripe_color.xyz.y = tm_clr.stripe.g;
+		stripe_color.xyz.z = tm_clr.stripe.b;
+
+		base_color.xyz.x = tm_clr.base.r;
+		base_color.xyz.y = tm_clr.base.g;
+		base_color.xyz.z = tm_clr.base.b;
+
+		uniform_block.stripe_color = stripe_color;
+		uniform_block.base_color = base_color;
+	}
+
+	if ( shader_flags & SDR_FLAG_MODEL_THRUSTER ) {
+		uniform_block.thruster_scale = material_info->get_thrust_scale();
+	}
+
+
+	if ( shader_flags & SDR_FLAG_MODEL_FOG ) {
+		material::fog fog_params = material_info->get_fog();
+
+		if ( fog_params.enabled ) {
+			uniform_block.fogStart = fog_params.dist_near;
+			uniform_block.fogScale = 1.0f / (fog_params.dist_far - fog_params.dist_near);
+			uniform_block.fogColor.xyzw.x = i2fl(fog_params.r) / 255.0f;
+			uniform_block.fogColor.xyzw.y = i2fl(fog_params.g) / 255.0f;
+			uniform_block.fogColor.xyzw.z = i2fl(fog_params.b) / 255.0f;
+			uniform_block.fogColor.xyzw.w = 1.0f;
+		}
+	}
+
+	if ( shader_flags & SDR_FLAG_MODEL_NORMAL_ALPHA ) {
+		uniform_block.normalAlphaMinMax.x = material_info->get_normal_alpha_min();
+		uniform_block.normalAlphaMinMax.y = material_info->get_normal_alpha_max();
+	}
+
+	if ( shader_flags & SDR_FLAG_MODEL_NORMAL_EXTRUDE ) {
+		uniform_block.extrudeWidth = material_info->get_normal_extrude_width();
+	}
+	
+	if ( Uniform_buffer_handle < 0 ) {
+		Uniform_buffer_handle = opengl_create_buffer_object(GL_UNIFORM_BUFFER, GL_STREAM_DRAW);
+	}
+
+	uint incoming_size = sizeof(GL_model_uniform_block);
+
+	if ( Uniform_buffer_data_offset + incoming_size > Uniform_buffer_data_size ) {
+		// incoming data won't fit the immediate buffer. time to reallocate.
+		uint new_size = Uniform_buffer_data_offset + MAX(UNIFORM_BUFFER_RESIZE_BLOCK_SIZE, Uniform_buffer_data_size);
+		ubyte *new_data_store = (ubyte*)vm_malloc(new_size);
+
+		if ( Uniform_buffer_data != NULL ) {
+			memcpy(new_data_store, Uniform_buffer_data, Uniform_buffer_data_size);
+			vm_free(Uniform_buffer_data);
+		}
+
+		Uniform_buffer_data = new_data_store;
+		Uniform_buffer_data_size = new_size;
+	}
+
+	memcpy(&Uniform_buffer_data[Uniform_buffer_data_offset], &uniform_block, sizeof(GL_model_uniform_block));
+
+	uint old_offset = Uniform_buffer_data_offset;
+
+	Uniform_buffer_data_offset += incoming_size;
+
+	// bump offset to the next alignment boundary
+	if ( GL_uniform_buffer_offset_alignment > 0 ) {
+		Uniform_buffer_data_offset += GL_uniform_buffer_offset_alignment - (Uniform_buffer_data_offset % GL_uniform_buffer_offset_alignment);
+	}
+
+	return old_offset;
+}
+
 void opengl_destroy_all_buffers()
 {
 	for ( uint i = 0; i < GL_buffer_objects.size(); i++ ) {
@@ -403,7 +688,7 @@ void opengl_tnl_init()
 		Cmdline_no_batching = true;
 	}
 
-	GL_immediate_uniform_buffer.offset_alignment = GL_uniform_buffer_offset_alignment;
+	GL_immediate_uniform_buffer = opengl_immediate_buffer(GL_UNIFORM_BUFFER, GL_uniform_buffer_offset_alignment);
 
 	if(Cmdline_shadow_quality)
 	{
@@ -944,12 +1229,11 @@ void opengl_tnl_set_uniform_buffer(void* data, uint size, const char *block_name
 {
 	Current_shader->program->Uniforms.BindUniformBlockPoint(block_name, block_binding);
 
-	opengl_bind_buffer_object(Uniform_buffer_handle);
-	glBufferData(GL_UNIFORM_BUFFER, size, data, GL_STREAM_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, block_binding, GL_buffer_objects[Uniform_buffer_handle].buffer_id);
-	//uint offset = opengl_add_to_immediate_buffer(&GL_immediate_uniform_buffer, size, data);
-
-	//glBindBufferRange(GL_UNIFORM_BUFFER, block_binding, GL_buffer_objects[GL_immediate_uniform_buffer.buffer_handle].buffer_id, offset, size);
+//  	opengl_bind_buffer_object(Uniform_buffer_handle);
+//  	glBufferData(GL_UNIFORM_BUFFER, size, data, GL_STREAM_DRAW);
+//  	glBindBufferBase(GL_UNIFORM_BUFFER, block_binding, GL_buffer_objects[Uniform_buffer_handle].buffer_id);
+	uint offset = opengl_add_to_immediate_buffer(&GL_immediate_uniform_buffer, size, data);
+ 	glBindBufferRange(GL_UNIFORM_BUFFER, block_binding, GL_buffer_objects[GL_immediate_uniform_buffer.buffer_handle].buffer_id, offset, size);
 }
 
 void opengl_tnl_set_material(material* material_info, bool set_base_map)
@@ -1399,7 +1683,9 @@ void opengl_tnl_set_model_material(model_material *material_info)
 //		Current_shader->program->Uniforms.setUniformf("extrudeWidth", material_info->get_normal_extrude_width());
 	}
 
-	opengl_tnl_set_uniform_buffer(&uniform_block, sizeof(GL_model_uniform_block), "model_data", 0);
+	Current_shader->program->Uniforms.BindUniformBlockPoint("model_data", 0);
+	//opengl_tnl_set_uniform_buffer(&uniform_block, sizeof(GL_model_uniform_block), "model_data", 0);
+	glBindBufferRange(GL_UNIFORM_BUFFER, 0, GL_buffer_objects[Uniform_buffer_handle].buffer_id, Uniform_buffer_draw_offset, sizeof(GL_model_uniform_block));
 
 	if ( Deferred_lighting ) {
 		// don't blend if we're drawing to the g-buffers
