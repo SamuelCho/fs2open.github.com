@@ -1354,24 +1354,24 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		int num_lights = MIN(Num_active_gl_lights, GL_max_lights) - 1;
 		float light_factor = material_info->get_light_factor();
 
-// 		for ( size_t i = 0; i < GL_max_lights; ++i ) {
-// 			uniform_block.lightPosition[i] = opengl_light_uniforms.Position[i];
-// 
-// 			vm_vec_copy_vec4(&uniform_block.lightDirection[i], &opengl_light_uniforms.Direction[i]);
-// 			vm_vec_copy_vec4(&uniform_block.lightDiffuseColor[i], &opengl_light_uniforms.Diffuse_color[i]);
-// 			vm_vec_copy_vec4(&uniform_block.lightSpecColor[i], &opengl_light_uniforms.Spec_color[i]);
-// 			
-// 			uniform_block.lightType[i][0] = opengl_light_uniforms.Light_type[i];
-// 			uniform_block.lightAttenuation[i][0] = opengl_light_uniforms.Attenuation[i];
-// 		}
+		for ( size_t i = 0; i < GL_max_lights; ++i ) {
+			uniform_block.lightPosition[i] = opengl_light_uniforms.Position[i];
 
-		Current_shader->program->Uniforms.setUniformi("n_lights", num_lights);
-		Current_shader->program->Uniforms.setUniform4fv("lightPosition", GL_max_lights, opengl_light_uniforms.Position);
-		Current_shader->program->Uniforms.setUniform3fv("lightDirection", GL_max_lights, opengl_light_uniforms.Direction);
-		Current_shader->program->Uniforms.setUniform3fv("lightDiffuseColor", GL_max_lights, opengl_light_uniforms.Diffuse_color);
-		Current_shader->program->Uniforms.setUniform3fv("lightSpecColor", GL_max_lights, opengl_light_uniforms.Spec_color);
-		Current_shader->program->Uniforms.setUniform1iv("lightType", GL_max_lights, opengl_light_uniforms.Light_type);
-		Current_shader->program->Uniforms.setUniform1fv("lightAttenuation", GL_max_lights, opengl_light_uniforms.Attenuation);
+			vm_vec_copy_vec4(&uniform_block.lightDirection[i], &opengl_light_uniforms.Direction[i]);
+			vm_vec_copy_vec4(&uniform_block.lightDiffuseColor[i], &opengl_light_uniforms.Diffuse_color[i]);
+			vm_vec_copy_vec4(&uniform_block.lightSpecColor[i], &opengl_light_uniforms.Spec_color[i]);
+			
+			uniform_block.lightType[i][0] = opengl_light_uniforms.Light_type[i];
+			uniform_block.lightAttenuation[i][0] = opengl_light_uniforms.Attenuation[i];
+		}
+
+// 		Current_shader->program->Uniforms.setUniformi("n_lights", num_lights);
+// 		Current_shader->program->Uniforms.setUniform4fv("lightPosition", GL_max_lights, opengl_light_uniforms.Position);
+// 		Current_shader->program->Uniforms.setUniform3fv("lightDirection", GL_max_lights, opengl_light_uniforms.Direction);
+// 		Current_shader->program->Uniforms.setUniform3fv("lightDiffuseColor", GL_max_lights, opengl_light_uniforms.Diffuse_color);
+// 		Current_shader->program->Uniforms.setUniform3fv("lightSpecColor", GL_max_lights, opengl_light_uniforms.Spec_color);
+// 		Current_shader->program->Uniforms.setUniform1iv("lightType", GL_max_lights, opengl_light_uniforms.Light_type);
+// 		Current_shader->program->Uniforms.setUniform1fv("lightAttenuation", GL_max_lights, opengl_light_uniforms.Attenuation);
 
 		uniform_block.diffuseFactor.xyz.x = GL_light_color[0] * light_factor;
 		uniform_block.diffuseFactor.xyz.y = GL_light_color[1] * light_factor;

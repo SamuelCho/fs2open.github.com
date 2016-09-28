@@ -206,6 +206,16 @@ struct GL_model_uniform_block {
 	int pad11;
 	vec3d stripe_color;
 	int team_glow_enabled;
+	int n_lights;
+	int pad12;
+	int pad13;
+	int pad14;
+	vec4 lightPosition[8];
+	vec4 lightDirection[8];
+	vec4 lightDiffuseColor[8];
+	vec4 lightSpecColor[8];
+	int lightType[8][4];
+	float lightAttenuation[8][4];
 };
 
 extern SCP_vector<opengl_shader_t> GL_shader;

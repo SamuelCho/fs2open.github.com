@@ -1,3 +1,4 @@
+#define MAX_LIGHTS 8
 layout (triangles) in;
 layout (triangle_strip, max_vertices = 3) out;
 
@@ -50,6 +51,13 @@ layout(std140) uniform model_data {
 	vec3 base_color;
 	vec3 stripe_color;
 	bool team_glow_enabled;
+	int n_lights;
+	vec4 lightPosition[MAX_LIGHTS];
+	vec3 lightDirection[MAX_LIGHTS];
+	vec3 lightDiffuseColor[MAX_LIGHTS];
+	vec3 lightSpecColor[MAX_LIGHTS];
+	int lightType[MAX_LIGHTS];
+	float lightAttenuation[MAX_LIGHTS];
 };
 
 in float geoInstance[];
