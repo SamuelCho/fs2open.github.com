@@ -447,17 +447,17 @@ uint gr_opengl_add_to_model_uniform_buffer(model_material *material_info)
 		int num_lights = MIN(Num_active_gl_lights, GL_max_lights) - 1;
 		float light_factor = material_info->get_light_factor();
 
-		// 		for ( size_t i = 0; i < GL_max_lights; ++i ) {
-		// 			uniform_block.lightPosition[i] = opengl_light_uniforms.Position[i];
-		// 
-		// 			vm_vec_copy_vec4(&uniform_block.lightDirection[i], &opengl_light_uniforms.Direction[i]);
-		// 			vm_vec_copy_vec4(&uniform_block.lightDiffuseColor[i], &opengl_light_uniforms.Diffuse_color[i]);
-		// 			vm_vec_copy_vec4(&uniform_block.lightSpecColor[i], &opengl_light_uniforms.Spec_color[i]);
-		// 			
-		// 			uniform_block.lightType[i][0] = opengl_light_uniforms.Light_type[i];
-		// 			uniform_block.lightAttenuation[i][0] = opengl_light_uniforms.Attenuation[i];
-		// 		}
-		
+		for ( size_t i = 0; i < GL_max_lights; ++i ) {
+			uniform_block.lightPosition[i] = opengl_light_uniforms.Position[i];
+
+			vm_vec_copy_vec4(&uniform_block.lightDirection[i], &opengl_light_uniforms.Direction[i]);
+			vm_vec_copy_vec4(&uniform_block.lightDiffuseColor[i], &opengl_light_uniforms.Diffuse_color[i]);
+			vm_vec_copy_vec4(&uniform_block.lightSpecColor[i], &opengl_light_uniforms.Spec_color[i]);
+
+			uniform_block.lightType[i][0] = opengl_light_uniforms.Light_type[i];
+			uniform_block.lightAttenuation[i][0] = opengl_light_uniforms.Attenuation[i];
+		}
+						
 		uniform_block.diffuseFactor.xyz.x = GL_light_color[0] * light_factor;
 		uniform_block.diffuseFactor.xyz.y = GL_light_color[1] * light_factor;
 		uniform_block.diffuseFactor.xyz.z = GL_light_color[2] * light_factor;
@@ -1683,9 +1683,9 @@ void opengl_tnl_set_model_material(model_material *material_info)
 //		Current_shader->program->Uniforms.setUniformf("extrudeWidth", material_info->get_normal_extrude_width());
 	}
 
-	//Current_shader->program->Uniforms.BindUniformBlockPoint("model_data", 0);
-	opengl_tnl_set_uniform_buffer(&uniform_block, sizeof(GL_model_uniform_block), "model_data", 0);
-	//glBindBufferRange(GL_UNIFORM_BUFFER, 0, GL_buffer_objects[Uniform_buffer_handle].buffer_id, Uniform_buffer_draw_offset, sizeof(GL_model_uniform_block));
+	Current_shader->program->Uniforms.BindUniformBlockPoint("model_data", 0);
+	//opengl_tnl_set_uniform_buffer(&uniform_block, sizeof(GL_model_uniform_block), "model_data", 0);
+	glBindBufferRange(GL_UNIFORM_BUFFER, 0, GL_buffer_objects[Uniform_buffer_handle].buffer_id, Uniform_buffer_draw_offset, sizeof(GL_model_uniform_block));
 
 	if ( Deferred_lighting ) {
 		// don't blend if we're drawing to the g-buffers
