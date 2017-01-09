@@ -56,6 +56,8 @@ public:
 	int get_shader_handle();
 	virtual uint get_shader_flags();
 
+	virtual bool equal(material &other_mat);
+
 	void set_texture_map(int tex_type, int texture_num);
 	int get_texture_map(int tex_type);
 	bool is_textured();
@@ -131,6 +133,8 @@ class model_material : public material
 
 public:
 	model_material();
+
+	virtual bool equal(model_material &other_mat);
 
 	void set_desaturation(bool enabled);
 	bool is_desaturated();

@@ -25,8 +25,10 @@ uniform float fogScale;
 out float fragFogDist;
 #endif
 #ifdef FLAG_TRANSFORM
+#define MAX_TRANSFORM_OFFSETS 128
 uniform samplerBuffer transform_tex;
 uniform int buffer_matrix_offset;
+uniform int buffer_matrix_offsets[MAX_TRANSFORM_OFFSETS];
 #ifdef FLAG_SHADOW_MAP
 out float geoNotVisible;
 #else
@@ -93,9 +95,14 @@ void main()
 	vec4 texCoord;
 	mat4 orient = mat4(1.0);
 	mat4 scale = mat4(1.0);
+  #ifdef APPLE
+	 int instanceID = gl_InstanceIDARB;
+  #else
+	 int instanceID = gl_InstanceID;
+  #endif
  #ifdef FLAG_TRANSFORM
 	float invisible;
-	getModelTransform(orient, invisible, int(vertModelID), buffer_matrix_offset);
+	getModelTransform(orient, invisible, int(vertModelID), buffer_matrix_offsets[instanceID]);
   #ifdef FLAG_SHADOW_MAP
 	geoNotVisible = invisible;
   #else
@@ -114,11 +121,7 @@ void main()
 	position = modelViewMatrix * orient * vertex;
  #ifdef FLAG_SHADOW_MAP
 	gl_Position = position;
-  #ifdef APPLE
-	 geoInstance = float(gl_InstanceIDARB);
-  #else
-	 geoInstance = float(gl_InstanceID);
-  #endif
+	geoInstance = float(instanceID);
  #else
 	gl_Position = projMatrix * position;
  #endif

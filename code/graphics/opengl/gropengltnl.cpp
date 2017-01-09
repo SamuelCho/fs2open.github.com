@@ -31,6 +31,7 @@
 #include "particle/particle.h"
 #include "graphics/shadows.h"
 #include "graphics/material.h"
+#include "tracing/tracing.h"
 
 extern int GLOWMAP;
 extern int CLOAKMAP;
@@ -64,7 +65,11 @@ size_t GL_vertex_data_in = 0;
 GLint GL_max_elements_vertices = 4096;
 GLint GL_max_elements_indices = 4096;
 
+#define GL_MAX_MODEL_DRAW_INSTANCES 128
 size_t GL_transform_buffer_offset = INVALID_SIZE;
+size_t GL_transform_buffer_offsets[GL_MAX_MODEL_DRAW_INSTANCES] = { INVALID_SIZE };
+
+static uint GL_num_instances_to_draw = 0;
 
 GLuint Shadow_map_texture = 0;
 GLuint Shadow_map_depth_texture = 0;
@@ -317,7 +322,11 @@ GLuint opengl_get_transform_buffer_texture()
 
 void gr_opengl_set_transform_buffer_offset(size_t offset)
 {
-	GL_transform_buffer_offset = offset;
+	Assert(GL_num_instances_to_draw < GL_MAX_MODEL_DRAW_INSTANCES);
+
+	//GL_transform_buffer_offset = offset;
+	GL_transform_buffer_offsets[GL_num_instances_to_draw] = offset;
+	++GL_num_instances_to_draw;
 }
 
 void opengl_destroy_all_buffers()
@@ -455,11 +464,13 @@ void opengl_render_model_program(model_material* material_info, indexed_vertex_s
 	} else {
 		ibuffer = (GLubyte*)vert_source->Index_list;
 	}
-
-	if ( Rendering_to_shadow_map ) {
-		glDrawElementsInstancedBaseVertex(GL_TRIANGLES, (GLsizei) count, element_type,
-										  ibuffer + (datap->index_offset + start), 4, (GLint)bufferp->vertex_num_offset);
+	
+	if ( GL_num_instances_to_draw > 1 || Rendering_to_shadow_map ) {
+		TRACE_SCOPE(tracing::RenderBufferInstanced);
+		glDrawElementsInstancedBaseVertex(GL_TRIANGLES, (GLsizei)count, 
+			element_type, ibuffer + (datap->index_offset + start), Rendering_to_shadow_map ? 4 : GL_num_instances_to_draw, (GLint)bufferp->vertex_num_offset);
 	} else {
+		TRACE_SCOPE(tracing::RenderBufferSingle);
 		if ( Cmdline_drawelements ) {
 			glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei) count,
 									 element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
@@ -470,6 +481,7 @@ void opengl_render_model_program(model_material* material_info, indexed_vertex_s
 	}
 
 	GL_state.Texture.SetShaderMode(GL_FALSE);
+	GL_num_instances_to_draw = 0;
 }
 
 void gr_opengl_render_model(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer* bufferp, size_t texi)
@@ -1177,7 +1189,8 @@ void opengl_tnl_set_model_material(model_material *material_info)
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_TRANSFORM ) {
 		Current_shader->program->Uniforms.setUniformi("transform_tex", render_pass);
-		Current_shader->program->Uniforms.setUniformi("buffer_matrix_offset", (int)GL_transform_buffer_offset);
+		//Current_shader->program->Uniforms.setUniformi("buffer_matrix_offset", (int)GL_transform_buffer_offset);
+		Current_shader->program->Uniforms.setUniform1iv("buffer_matrix_offsets", Rendering_to_shadow_map ? 1 : GL_num_instances_to_draw, (const int*)GL_transform_buffer_offsets);
 		
 		GL_state.Texture.SetActiveUnit(render_pass);
 		GL_state.Texture.SetTarget(GL_TEXTURE_BUFFER);

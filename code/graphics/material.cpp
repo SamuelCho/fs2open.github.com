@@ -161,6 +161,73 @@ Depth_bias(0)
 
 };
 
+bool material::equal(material &other_mat)
+{
+	if ( get_shader_handle() != other_mat.get_shader_handle() ) {
+		return false;
+	}
+
+	for ( int i = 0; i < TM_NUM_TYPES; ++i ) {
+		if ( Texture_maps[i] != other_mat.Texture_maps[i] ) {
+			return false;
+		}
+	}
+	
+	if ( Tex_type != other_mat.Tex_type ) {
+		return false;
+	}
+
+	if ( Clip_params.enabled != other_mat.Clip_params.enabled ) {
+		return false;
+	} else {
+		if ( !vm_vec_equal(Clip_params.normal, other_mat.Clip_params.normal) ) {
+			return false;
+		}
+
+		if ( !vm_vec_equal(Clip_params.position, other_mat.Clip_params.position) ) {
+			return false;
+		}
+	}
+
+	if ( Texture_addressing != other_mat.Texture_addressing ) {
+		return false;
+	}
+
+	if ( Fog_params.enabled != other_mat.Fog_params.enabled ) {
+		return false;
+	}
+
+	if ( Depth_mode != other_mat.Depth_mode ) {
+		return false;
+	}
+
+	if ( Blend_mode != other_mat.Blend_mode ) {
+		return false;
+	}
+	
+	if ( Cull_mode != other_mat.Cull_mode ) {
+		return false;
+	}
+
+	if ( Fill_mode != other_mat.Fill_mode ) {
+		return false;
+	}
+
+	if ( !vm_vec_equal(Clr, other_mat.Clr) ) {
+		return false;
+	}
+
+	if ( !fl_equal(Clr_scale, other_mat.Clr_scale) ) {
+		return false;
+	}
+
+	if ( Depth_bias != other_mat.Depth_bias ) {
+		return false;
+	}
+	
+	return true;
+}
+
 void material::set_shader_type(shader_type init_sdr_type)
 {
 	Sdr_type = init_sdr_type;
@@ -381,6 +448,15 @@ float material::get_color_scale()
 
 model_material::model_material() : material() {
 	set_shader_type(SDR_TYPE_MODEL);
+}
+
+bool model_material::equal(model_material &other_mat)
+{
+	if ( !material::equal(other_mat) ) {
+		return false;
+	}
+
+	return true;
 }
 
 void model_material::set_desaturation(bool enabled)

@@ -188,6 +188,43 @@ struct queued_buffer_draw
 	queued_buffer_draw()
 	{
 	}
+
+	bool equal(queued_buffer_draw &other_draw)
+	{
+		if ( !render_material.equal(other_draw.render_material) ) {
+			return false;
+		}
+
+		if ( vert_src->Vbuffer_handle != other_draw.vert_src->Vbuffer_handle ) {
+			return false;
+		}
+
+		if ( vert_src->Ibuffer_handle != other_draw.vert_src->Ibuffer_handle ) {
+			return false;
+		}
+
+// 		if ( buffer->vertex_offset != other_draw.buffer->vertex_offset ) {
+// 			return false;
+// 		}
+
+		if ( buffer->vertex_num_offset != other_draw.buffer->vertex_num_offset ) {
+			return false;
+		}
+
+		if ( buffer->flags != other_draw.buffer->flags ) {
+			return false;
+		}
+
+		if ( buffer->stride != other_draw.buffer->stride ) {
+			return false;
+		}
+
+		if ( texi != other_draw.texi ) {
+			return false;
+		}
+
+		return true;
+	}
 };
 
 struct outline_draw

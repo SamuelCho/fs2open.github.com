@@ -489,7 +489,7 @@ void model_draw_list::render_buffer(queued_buffer_draw &render_elements)
 	GR_DEBUG_SCOPE("Render buffer");
 	TRACE_SCOPE(tracing::RenderBuffer);
 
-	gr_set_transform_buffer_offset(render_elements.transform_buffer_offset);
+	//gr_set_transform_buffer_offset(render_elements.transform_buffer_offset);
 
 	if ( render_elements.render_material.is_lit() ) {
 		Scene_light_handler.setLights(&render_elements.lights);
@@ -589,12 +589,30 @@ void model_draw_list::render_all(gr_zbuffer_type depth_mode)
 
 	Scene_light_handler.resetLightState();
 
+	int last_render_key = -1;
+
 	for ( size_t i = 0; i < Render_keys.size(); ++i ) {
 		int render_index = Render_keys[i];
 
 		if ( depth_mode == ZBUFFER_TYPE_DEFAULT || Render_elements[render_index].render_material.get_depth_mode() == depth_mode ) {
-			render_buffer(Render_elements[render_index]);
+			if ( Deferred_lighting ) {
+				if ( last_render_key >= 0 ) {
+					if ( Render_elements[last_render_key].transform_buffer_offset < 0 || !Render_elements[last_render_key].equal(Render_elements[i]) ) {
+						render_buffer(Render_elements[last_render_key]);
+					}
+				}
+
+				gr_set_transform_buffer_offset(Render_elements[i].transform_buffer_offset);
+				last_render_key = i;
+			} else {
+				gr_set_transform_buffer_offset(Render_elements[i].transform_buffer_offset);
+				render_buffer(Render_elements[i]);
+			}
 		}
+	}
+
+	if ( last_render_key >= 0 ) {
+		render_buffer(Render_elements[last_render_key]);
 	}
 
 	gr_alpha_mask_set(0, 1.0f);

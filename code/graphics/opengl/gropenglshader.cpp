@@ -180,7 +180,7 @@ static opengl_shader_variant_t GL_shader_variants[] = {
 		"Thruster scaling" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_TRANSFORM, "FLAG_TRANSFORM", 
-		{ "transform_tex", "buffer_matrix_offset" }, {  },
+		{ "transform_tex", "buffer_matrix_offsets" }, {  },
 		"Submodel Transforms" },
 	
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_CLIP, "FLAG_CLIP", 
