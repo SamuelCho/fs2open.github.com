@@ -102,7 +102,7 @@ void main()
   #endif
  #ifdef FLAG_TRANSFORM
 	float invisible;
-	getModelTransform(orient, invisible, int(vertModelID), buffer_matrix_offsets[instanceID]);
+	getModelTransform(orient, invisible, int(vertModelID), buffer_matrix_offsets[instanceID/4]);
   #ifdef FLAG_SHADOW_MAP
 	geoNotVisible = invisible;
   #else
@@ -121,7 +121,7 @@ void main()
 	position = modelViewMatrix * orient * vertex;
  #ifdef FLAG_SHADOW_MAP
 	gl_Position = position;
-	geoInstance = float(instanceID);
+	geoInstance = float(mod(instanceID, 4));
  #else
 	gl_Position = projMatrix * position;
  #endif

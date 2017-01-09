@@ -57,8 +57,6 @@ extern Category PostMove;
 extern Category CollisionDetection;
 
 extern Category RenderBuffer;
-extern Category RenderBufferInstanced;
-extern Category RenderBufferSingle;
 
 extern Category QueueRender;
 extern Category SubmitDraws;

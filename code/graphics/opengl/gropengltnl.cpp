@@ -466,11 +466,9 @@ void opengl_render_model_program(model_material* material_info, indexed_vertex_s
 	}
 	
 	if ( GL_num_instances_to_draw > 1 || Rendering_to_shadow_map ) {
-		TRACE_SCOPE(tracing::RenderBufferInstanced);
 		glDrawElementsInstancedBaseVertex(GL_TRIANGLES, (GLsizei)count, 
-			element_type, ibuffer + (datap->index_offset + start), Rendering_to_shadow_map ? 4 : GL_num_instances_to_draw, (GLint)bufferp->vertex_num_offset);
+			element_type, ibuffer + (datap->index_offset + start), Rendering_to_shadow_map ? (4 * GL_num_instances_to_draw) : GL_num_instances_to_draw, (GLint)bufferp->vertex_num_offset);
 	} else {
-		TRACE_SCOPE(tracing::RenderBufferSingle);
 		if ( Cmdline_drawelements ) {
 			glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei) count,
 									 element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_num_offset);
@@ -1190,7 +1188,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	if ( Current_shader->flags & SDR_FLAG_MODEL_TRANSFORM ) {
 		Current_shader->program->Uniforms.setUniformi("transform_tex", render_pass);
 		//Current_shader->program->Uniforms.setUniformi("buffer_matrix_offset", (int)GL_transform_buffer_offset);
-		Current_shader->program->Uniforms.setUniform1iv("buffer_matrix_offsets", Rendering_to_shadow_map ? 1 : GL_num_instances_to_draw, (const int*)GL_transform_buffer_offsets);
+		Current_shader->program->Uniforms.setUniform1iv("buffer_matrix_offsets", GL_num_instances_to_draw, (const int*)GL_transform_buffer_offsets);
 		
 		GL_state.Texture.SetActiveUnit(render_pass);
 		GL_state.Texture.SetTarget(GL_TEXTURE_BUFFER);

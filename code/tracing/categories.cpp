@@ -45,8 +45,6 @@ Category PostMove("Post Move", false);
 Category CollisionDetection("Collision Detection", false);
 
 Category RenderBuffer("Render Buffer", true);
-Category RenderBufferInstanced("Render Buffer Instanced", true);
-Category RenderBufferSingle("Render Buffer Single", true);
 
 Category QueueRender("Queue Render", false);
 Category SubmitDraws("Submit Draws", true);

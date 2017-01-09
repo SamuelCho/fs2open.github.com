@@ -595,7 +595,7 @@ void model_draw_list::render_all(gr_zbuffer_type depth_mode)
 		int render_index = Render_keys[i];
 
 		if ( depth_mode == ZBUFFER_TYPE_DEFAULT || Render_elements[render_index].render_material.get_depth_mode() == depth_mode ) {
-			if ( Deferred_lighting ) {
+			if ( Deferred_lighting || Rendering_to_shadow_map ) {
 				if ( last_render_key >= 0 ) {
 					if ( Render_elements[last_render_key].transform_buffer_offset < 0 || !Render_elements[last_render_key].equal(Render_elements[i]) ) {
 						render_buffer(Render_elements[last_render_key]);
