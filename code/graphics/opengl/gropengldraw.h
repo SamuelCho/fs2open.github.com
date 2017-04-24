@@ -68,6 +68,8 @@ void gr_opengl_deferred_lighting_begin();
 void gr_opengl_deferred_lighting_end();
 void gr_opengl_deferred_lighting_finish();
 
+void opengl_raytrace();
+
 void opengl_render_primitives(primitive_type prim_type, vertex_layout* layout, int n_verts, int buffer_handle, size_t vert_offset, size_t byte_offset);
 void opengl_render_primitives_immediate(primitive_type prim_type, vertex_layout* layout, int n_verts, void* data, int size);
 

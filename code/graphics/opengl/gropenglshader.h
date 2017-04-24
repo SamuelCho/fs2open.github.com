@@ -165,6 +165,8 @@ void opengl_shader_check_info_log(GLuint shader_object);
 void opengl_shader_compile_deferred_light_shader();
 void opengl_shader_compile_deferred_light_clear_shader();
 
+void opengl_shader_compile_raytrace_shader();
+
 void opengl_shader_compile_passthrough_shader();
 void opengl_shader_set_passthrough(bool textured = true, bool alpha = false, vec4* clr = NULL, float color_scale = 1.0f);
 void opengl_shader_set_passthrough(bool textured, bool alpha, color *clr);

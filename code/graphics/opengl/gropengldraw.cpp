@@ -119,9 +119,13 @@ bool High_dynamic_range = false;
 
 int Scene_texture_width;
 int Scene_texture_height;
+int Scene_texture_max_mip_levels;
 
 GLfloat Scene_texture_u_scale = 1.0f;
 GLfloat Scene_texture_v_scale = 1.0f;
+
+int Raytrace_texture_initialized;
+GLuint Raytrace_texture;
 
 GLuint deferred_light_sphere_vbo = 0;
 GLuint deferred_light_sphere_ibo = 0;
@@ -1580,6 +1584,7 @@ void opengl_setup_scene_textures()
 	opengl_set_object_label(GL_FRAMEBUFFER, Scene_framebuffer, "Scene framebuffer");
 
 	// setup main render texture
+	Scene_texture_max_mip_levels = get_num_mipmap_levels(Scene_texture_width, Scene_texture_height);
 
 	// setup high dynamic range color texture
 	glGenTextures(1, &Scene_color_texture);
@@ -1588,13 +1593,16 @@ void opengl_setup_scene_textures()
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Scene_color_texture);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, Scene_texture_max_mip_levels-1);
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, Scene_texture_width, Scene_texture_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+
+	glGenerateMipmap(GL_TEXTURE_2D);
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_color_texture, 0);
 	opengl_set_object_label(GL_TEXTURE, Scene_color_texture, "Scene color texture");
@@ -2133,7 +2141,7 @@ void gr_opengl_deferred_lighting_finish()
 	memcpy(lights_copy, Lights, MAX_LIGHTS * sizeof(light));
 
 	std::sort(lights_copy, lights_copy+Num_lights, light_compare_by_type);
-
+	
 	for(int i = 0; i < Num_lights; ++i)
 	{
 		GR_DEBUG_SCOPE("Deferred apply single light");
@@ -2223,6 +2231,8 @@ void gr_opengl_deferred_lighting_finish()
 
 	opengl_draw_textured_quad(0.0f, 0.0f, 0.0f, Scene_texture_v_scale, (float)gr_screen.max_w, (float)gr_screen.max_h, Scene_texture_u_scale, 0.0f);
 
+	opengl_raytrace();
+
 	gr_set_proj_matrix(Proj_fov, gr_screen.clip_aspect, Min_draw_distance, Max_draw_distance);
 	gr_set_view_matrix(&Eye_position, &Eye_matrix);
 
@@ -2236,6 +2246,94 @@ void gr_opengl_deferred_lighting_finish()
 	GL_state.Texture.SetShaderMode(GL_FALSE);
 
 	gr_clear_states();
+}
+
+void opengl_setup_raytrace_textures()
+{
+	Scene_texture_initialized = 0;
+
+	if ( Cmdline_no_fbo ) {
+		Raytrace_texture = 0;
+		return;
+	}
+
+	glGenTextures(1, &Raytrace_texture);
+
+	GL_state.Texture.SetActiveUnit(0);
+	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+	GL_state.Texture.Enable(Raytrace_texture);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, gr_screen.max_w, gr_screen.max_h, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Raytrace_texture, 0);
+	opengl_set_object_label(GL_TEXTURE, Raytrace_texture, "Raytrace texture");
+}
+
+void opengl_raytrace()
+{
+	// make mip maps for the color buffer
+// 	GL_state.Texture.SetActiveUnit(0);
+// 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+// 	GL_state.Texture.Enable(Scene_color_texture);
+// 
+// 	glGenerateMipmap(GL_TEXTURE_2D);
+
+	gr_set_proj_matrix(Proj_fov, gr_screen.clip_aspect, Min_draw_distance, Max_draw_distance);
+
+	// now raytrace
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_luminance_texture, 0);
+
+	// clear the raytrace results buffer
+ 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+ 	glClear(GL_COLOR_BUFFER_BIT);
+
+	opengl_shader_set_current(gr_opengl_maybe_create_shader(SDR_TYPE_RAYTRACE, 0));
+
+	Current_shader->program->Uniforms.setUniformMatrix4f("projMatrix", GL_projection_matrix);
+
+	GL_state.Texture.SetShaderMode(GL_TRUE);
+	
+	GL_state.Texture.SetActiveUnit(0);
+	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+	GL_state.Texture.Enable(Scene_color_texture);
+
+	GL_state.Texture.SetActiveUnit(1);
+	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+	GL_state.Texture.Enable(Scene_normal_texture);
+
+	GL_state.Texture.SetActiveUnit(2);
+	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+	GL_state.Texture.Enable(Scene_position_texture);
+
+	GL_state.SetAlphaBlendMode(ALPHA_BLEND_NONE);
+
+	opengl_draw_textured_quad(-1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f);
+
+	gr_end_proj_matrix();
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_color_texture, 0);
+
+	if ( High_dynamic_range ) {
+		High_dynamic_range = false;
+		opengl_shader_set_passthrough(true, false);
+		High_dynamic_range = true;
+	} else {
+		opengl_shader_set_passthrough(true, false);
+	}
+
+	GL_state.Texture.SetActiveUnit(0);
+	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+	GL_state.Texture.Enable(Scene_luminance_texture);
+
+	GL_state.SetAlphaBlendMode(ALPHA_BLEND_ADDITIVE);
+
+	opengl_draw_textured_quad(0.0f, 0.0f, 0.0f, Scene_texture_v_scale, (float)Scene_texture_width, (float)Scene_texture_height, Scene_texture_u_scale, 0.0f);
 }
 
 void gr_opengl_render_shield_impact(shield_material *material_info, primitive_type prim_type, vertex_layout *layout, int buffer_handle, int n_verts)

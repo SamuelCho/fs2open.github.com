@@ -35,4 +35,6 @@ void gr_opengl_bm_save_render_target(int slot);
 int gr_opengl_bm_make_render_target(int n, int *width, int *height, int *bpp, int *mm_lvl, int flags);
 int gr_opengl_bm_set_render_target(int n, int face);
 
+int get_num_mipmap_levels(int w, int h);
+
 #endif // _OGL_BMPMAN_H

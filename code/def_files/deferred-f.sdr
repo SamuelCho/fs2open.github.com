@@ -16,6 +16,7 @@ uniform float coneAngle;
 uniform float coneInnerAngle;
 uniform bool dualCone;
 uniform vec3 coneDir;
+uniform mat4 projMatrix;
 
 #define SPEC_INTENSITY_POINT			5.3 // Point light
 #define SPEC_INTENSITY_DIRECTIONAL		3.0 // Directional light
@@ -37,11 +38,113 @@ vec4 SpecularLegacy(vec4 specColor, vec3 normal, vec3 halfVec, float specPower)
 {
 	return specColor * pow(clamp(dot(normal, halfVec), 0.0, 1.0), specPower);
 }
+float RaytracePixel(vec3 origin, vec3 dirToLight, float distance, float jitter)
+{
+	vec2 screenSize = vec2(1.0/invScreenWidth, 1.0/invScreenHeight);
+	float stride = 1.5;
+	float maxSteps = (screenSize.x > screenSize.y ? screenSize.x : screenSize.y) / stride;
+	float maxDistance = -50000.0;
+	vec3 endPoint = origin + dirToLight * distance;
+
+	vec4 H0 = projMatrix * vec4(origin, 1.0);
+	vec4 H1 = projMatrix * vec4(endPoint, 1.0);
+	float k0 = 1.0f / H0.w;
+	float k1 = 1.0f / H1.w;
+
+	vec3 Q0 = origin * k0;
+	vec3 Q1 = endPoint * k1;
+	
+	vec2 P0 = H0.xy * k0;
+	vec2 P1 = H1.xy * k1;
+
+	P0.xy *= 0.5;
+	P0.xy += 0.5;
+	P0.xy *= screenSize;
+	
+	P1.xy *= 0.5;
+	P1.xy += 0.5;
+	P1.xy *= screenSize;
+
+	vec2 delta = P1 - P0;
+	float deltaP = length(delta);
+	P1 += ((deltaP * deltaP) < 0.0001f) ? vec2(0.01f, 0.01f) : vec2(0.0f, 0.0f);
+
+	bool permute = false;
+	if(abs(delta.x) < abs(delta.y))
+	{
+		// This is a more-vertical line
+		permute = true;
+		delta = delta.yx;
+		P0 = P0.yx;
+		P1 = P1.yx;
+	}
+
+	float stepDir = sign(delta.x);
+	float invdx = stepDir / delta.x;
+
+	// Track the derivatives of Q and k
+	vec3 dQ = (Q1 - Q0) * invdx;
+	float dk = (k1 - k0) * invdx;
+	vec2 dP = vec2(stepDir, delta.y * invdx);
+
+	dP *= stride;
+	dQ *= stride;
+	dk *= stride;
+
+	P0 += dP * jitter;
+	Q0 += dQ * jitter;
+	k0 += dk * jitter;
+
+	// Slide P from P0 to P1, (now-homogeneous) Q from Q0 to Q1, k from k0 to k1
+	vec4 PQk = vec4(P0.x, P0.y, Q0.z, k0);
+	vec4 dPQk = vec4(dP.x, dP.y, dQ.z, dk);
+	vec3 Q = Q0; 
+
+	// Adjust end condition for iteration direction
+	float end = P1.x;
+	
+	vec2 hitPixel = vec2(0.0f, 0.0f);
+	float stepCount = 0.0f;
+	float rayZMin = origin.z;
+	float rayZMax = origin.z;
+	float sceneZMax = maxDistance;
+	float shadowSum = 0.0;
+
+	for(; (PQk.x <= end) && (stepCount < maxSteps); ++stepCount)
+	{
+		rayZMin = rayZMax;
+		rayZMax = (dPQk.z * 0.5f + PQk.z) / (dPQk.w * 0.5f + PQk.w);
+	
+		if(-rayZMin > -rayZMax)
+		{
+			float temp = rayZMin;
+			rayZMin = rayZMax;
+			rayZMax = temp;
+		}
+
+		hitPixel = permute ? PQk.yx : PQk.xy;
+		// You may need hitPixel.y = depthBufferSize.y - hitPixel.y; here if your vertical axis
+		// is different than ours in screen space
+		sceneZMax = texture(PositionBuffer, vec2(hitPixel.x * invScreenWidth, hitPixel.y * invScreenHeight)).z;
+
+		PQk += dPQk;
+
+		if(-sceneZMax < -rayZMax && -sceneZMax > -rayZMin - 0.5)
+		{
+			shadowSum += sceneZMax - rayZMax;
+
+			if(shadowSum >= 5.0)
+				return 1.0;
+		}
+	}
+
+	return shadowSum / 5.0;
+}
+
 void main()
 {
 	vec2 screenPos = gl_FragCoord.xy * vec2(invScreenWidth, invScreenHeight);
 	vec3 position = texture(PositionBuffer, screenPos).xyz;
-
 	if(abs(dot(position, position)) < 0.1)
 		discard;
 	vec3 lightDir = lightPosition - position.xyz;
@@ -87,10 +190,18 @@ void main()
 		}
 	}
 
-	lightDir /= dist;
+	lightDir = normalize(lightDir);
 	vec3 halfVec = normalize(lightDir + eyeDir);
 	float NdotL = clamp(dot(normal.xyz, lightDir), 0.0, 1.0);
 	vec4 fragmentColor = vec4(color * (diffuseLightColor * NdotL * attenuation), 1.0);
 	fragmentColor.rgb += SpecularBlinnPhong(specColor.rgb, lightDir, normal.xyz, halfVec, exp2(10.0 * gloss + 1.0), fresnel, NdotL).rgb * specLightColor * attenuation;
-	fragOut0 = max(fragmentColor, vec4(0.0));
+
+	//bool intersection = RaytracePixel(position, lightDir, dist, float(int(gl_FragCoord.x + gl_FragCoord.y) & 1) * 0.75);
+	float shadowTerm = RaytracePixel(position, lightDir, dist, float(int(gl_FragCoord.x + gl_FragCoord.y) & 1) * 0.75);
+
+	//fragOut0 = max(fragmentColor, vec4(0.0)) * (intersection ? 0.0f : 1.0f);
+	//fragOut0 = mix(vec4(1.0, 0.0, 0.0, 1.0) * NdotL, vec4(0.0, 1.0, 0.0, 1.0), (intersection ? 1.0f : 0.0f));
+	//fragOut0 = vec4(0.0, 1.0, 0.0, 1.0) * NdotL * (intersection ? 0.0f : 1.0f);
+	fragOut0 = max(fragmentColor, vec4(0.0)) * (1.0 - shadowTerm);
+	//fragOut0 = max(fragmentColor, vec4(0.0));
 }

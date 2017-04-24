@@ -111,7 +111,11 @@ static opengl_shader_type_t GL_shader_types[] = {
 
 	{ SDR_TYPE_SHIELD_DECAL, "shield-impact-v.sdr",	"shield-impact-f.sdr", 0,
 		{ "modelViewMatrix", "projMatrix", "shieldMap", "shieldModelViewMatrix", "shieldProjMatrix", "hitNormal", "srgb", "color" }, 
-		{ opengl_vert_attrib::POSITION, opengl_vert_attrib::NORMAL }, "Shield Decals" }
+		{ opengl_vert_attrib::POSITION, opengl_vert_attrib::NORMAL }, "Shield Decals" },
+
+	{ SDR_TYPE_RAYTRACE, "post-v.sdr",	"raytrace-f.sdr", 0,
+		{ "projMatrix", "colorBuffer", "normalBuffer", "positionBuffer", "stride", "maxDistance", "nearPlaneZ", "screenWidth", "screenHeight", "strideZCutoff", "zThickness", "maxSteps" },
+		{ opengl_vert_attrib::POSITION }, "Screenspace Reflections" }
 };
 
 /**
@@ -701,6 +705,9 @@ void opengl_shader_init()
 	// compile deferred lighting shaders
 	opengl_shader_compile_deferred_light_shader();
 
+	// compile raytracing shader
+	opengl_shader_compile_raytrace_shader();
+
 	// compile passthrough shader
 	opengl_shader_compile_passthrough_shader();
 
@@ -756,6 +763,34 @@ void opengl_shader_compile_deferred_light_shader()
 	if ( in_error ) {
 		mprintf(("  Shader in_error! Disabling deferred lighting!\n"));
 		Cmdline_no_deferred_lighting = 1;
+	}
+}
+
+void opengl_shader_compile_raytrace_shader()
+{
+	bool in_error = false;
+
+	int sdr_handle = gr_opengl_maybe_create_shader(SDR_TYPE_RAYTRACE, 0);
+
+	if ( sdr_handle >= 0 ) {
+		opengl_shader_set_current(sdr_handle);
+
+		Current_shader->program->Uniforms.setUniformi("colorBuffer", 0);
+		Current_shader->program->Uniforms.setUniformi("normalBuffer", 1);
+		Current_shader->program->Uniforms.setUniformi("positionBuffer", 2);
+		Current_shader->program->Uniforms.setUniformf("screenWidth", gr_screen.max_w);
+		Current_shader->program->Uniforms.setUniformf("screenHeight", gr_screen.max_h);
+
+		Current_shader->program->Uniforms.setUniformf("stride", 2.0f);		// Step in horizontal or vertical pixels between samples. This is a float. because integer math is slow on GPUs, but should be set to an integer >= 1.
+		Current_shader->program->Uniforms.setUniformf("maxDistance", 10000.0f);	// Maximum camera-space distance to trace before returning a miss.
+		Current_shader->program->Uniforms.setUniformf("nearPlaneZ", Min_draw_distance);
+		Current_shader->program->Uniforms.setUniformf("strideZCutoff", 1.0f);	// More distant pixels are smaller in screen space. This value tells at what point to start relaxing the stride to give higher quality reflections for objects far from the camera.
+		Current_shader->program->Uniforms.setUniformf("zThickness", 2.0f);	// thickness to ascribe to each pixel in the depth buffer
+		Current_shader->program->Uniforms.setUniformf("maxSteps", 500.0f);		// Maximum number of iterations. Higher gives better images but may be slow.
+	} else {
+		opengl_shader_set_current();
+		mprintf(("Failed to compile raytrace shader!\n"));
+		in_error = true;
 	}
 }
 

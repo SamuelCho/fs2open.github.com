@@ -190,6 +190,7 @@ SET(file_root_def_files_files
 	def_files/video-v.sdr
 	def_files/shield-impact-v.sdr
 	def_files/shield-impact-f.sdr
+	def_files/raytrace-f.sdr
 )
 
 # ExceptionHandler files

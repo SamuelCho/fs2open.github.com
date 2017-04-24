@@ -1,0 +1,188 @@
+in vec4 fragTexCoord;
+out vec4 fragOut0;
+uniform sampler2D colorBuffer;
+uniform sampler2D normalBuffer;
+uniform sampler2D positionBuffer;
+uniform float stride;		// Step in horizontal or vertical pixels between samples. This is a float. because integer math is slow on GPUs, but should be set to an integer >= 1.
+uniform float maxDistance;	// Maximum camera-space distance to trace before returning a miss.
+uniform float nearPlaneZ;	
+uniform mat4 projMatrix;
+uniform float screenWidth;
+uniform float screenHeight;
+uniform float strideZCutoff;	// More distant pixels are smaller in screen space. This value tells at what point to start relaxing the stride to give higher quality reflections for objects far from the camera.
+uniform float zThickness;	// thickness to ascribe to each pixel in the depth buffer
+uniform float maxSteps;		// Maximum number of iterations. Higher gives better images but may be slow.
+
+bool intersectsDepthBuffer(float z, float minZ, float maxZ)
+{
+	/*
+	* Based on how far away from the camera the depth is,
+	* adding a bit of extra thickness can help improve some
+	* artifacts. Driving this value up too high can cause
+	* artifacts of its own.
+	*/
+	float depthScale = min(1.0f, z * strideZCutoff);
+	z += zThickness + mix(0.0f, 2.0f, depthScale);
+	return (maxZ >= z) && (minZ - zThickness <= z);
+}
+
+#define SRGB_GAMMA 2.2
+
+void main()
+{
+	vec2 screenPos = gl_FragCoord.xy * vec2(1.0f/screenWidth, 1.0f/screenHeight);
+	vec3 normal = texture(normalBuffer, screenPos).xyz;
+	vec3 position = texture(positionBuffer, screenPos).xyz;
+	vec3 eyeDir = normalize(position);
+	vec3 rayDir = normalize(reflect(eyeDir, normal));
+	
+	if(position.z < -50000.0f)
+	{
+		discard;
+	}
+
+	float jitter = float(int(gl_FragCoord.x + gl_FragCoord.y) & 1) * 0.75f;
+	
+	float rayLength = ((position.z + rayDir.z * maxDistance) < nearPlaneZ) ? (nearPlaneZ - position.z) / rayDir.z : maxDistance;
+	vec3 endPoint = position + rayDir * 100.0;
+	
+	 // Project into homogeneous clip space
+	vec4 H0 = projMatrix * vec4(position, 1.0);
+	vec4 H1 = projMatrix * vec4(endPoint, 1.0);
+	float k0 = 1.0f / H0.w;
+	float k1 = 1.0f / H1.w;
+	
+	 // The interpolated homogeneous version of the camera-space points
+	vec3 Q0 = position * k0;
+	vec3 Q1 = endPoint * k1;
+	//vec3 Q0 = position;
+	//vec3 Q1 = endPoint;
+	
+	vec2 P0 = H0.xy * k0;
+	vec2 P1 = H1.xy * k1;
+
+	P0.xy *= 0.5;
+	P0.xy += 0.5;
+	P0.xy *= vec2(screenWidth, screenHeight);
+	
+	P1.xy *= 0.5;
+	P1.xy += 0.5;
+	P1.xy *= vec2(screenWidth, screenHeight);
+	
+	// If the line is degenerate, make it cover at least one pixel
+	// to avoid handling zero-pixel extent as a special case later
+	vec2 delta = P1 - P0;
+	float deltaP = length(delta);
+	P1 += ((deltaP * deltaP) < 0.0001f) ? vec2(0.01f, 0.01f) : vec2(0.0f, 0.0f);
+	
+	// Permute so that the primary iteration is in x to collapse
+	// all quadrant-specific DDA cases later
+	bool permute = false;
+	if(abs(delta.x) < abs(delta.y))
+	{
+		// This is a more-vertical line
+		permute = true;
+		delta = delta.yx;
+		P0 = P0.yx;
+		P1 = P1.yx;
+	}
+	
+	float stepDir = sign(delta.x);
+	float invdx = stepDir / delta.x;
+
+	// Track the derivatives of Q and k
+	vec3 dQ = (Q1 - Q0) * invdx;
+	float dk = (k1 - k0) * invdx;
+	vec2 dP = vec2(stepDir, delta.y * invdx);
+	
+	// Scale derivatives by the desired pixel stride and then
+	// offset the starting values by the jitter fraction
+//	float strideScale = 1.0f - min(1.0f, position.z * strideZCutoff);
+//	float scaledStride = 1.0f + strideScale * stride;
+	dP *= stride;
+	dQ *= stride;
+	dk *= stride;
+
+	P0 += dP * jitter;
+	Q0 += dQ * jitter;
+	k0 += dk * jitter;
+
+	// Slide P from P0 to P1, (now-homogeneous) Q from Q0 to Q1, k from k0 to k1
+	vec4 PQk = vec4(P0.x, P0.y, Q0.z, k0);
+	vec4 dPQk = vec4(dP.x, dP.y, dQ.z, dk);
+	vec3 Q = Q0; 
+
+	// Adjust end condition for iteration direction
+	float end = P1.x * stepDir;
+	
+	vec2 hitPixel = vec2(0.0f, 0.0f);
+	float stepCount = 0.0f;
+	float prevZMaxEstimate = position.z;
+	float rayZMin = prevZMaxEstimate;
+	float rayZMax = prevZMaxEstimate;
+	float sceneZMax = maxDistance;
+	bool intersection = false;
+
+	for(; stepCount < maxSteps; ++stepCount)
+	{
+		rayZMin = rayZMax;
+		rayZMax = (dPQk.z * 0.5f + PQk.z) / (dPQk.w * 0.5f + PQk.w);
+	
+		if(-rayZMin > -rayZMax)
+		{
+			float temp = rayZMin;
+			rayZMin = rayZMax;
+			rayZMax = temp;
+		}
+
+		hitPixel = permute ? PQk.yx : PQk.xy;
+		// You may need hitPixel.y = depthBufferSize.y - hitPixel.y; here if your vertical axis
+		// is different than ours in screen space
+		sceneZMax = texture(positionBuffer, vec2(hitPixel.x / screenWidth, hitPixel.y / screenHeight)).z;
+
+		PQk += dPQk;
+
+		if(-sceneZMax < -rayZMax && -sceneZMax > -rayZMin - 0.5)
+		//if(-sceneZMax > -rayZMax)
+		{
+			//return true;
+			intersection = true;
+			break;
+		}
+	}
+	
+	vec2 rayNDC = vec2(0.0, 0.0);
+
+	//while(stepCount < maxSteps && !(sceneZMax > rayZMax && sceneZMax < rayZMin))
+	//{
+		//rayZMin = prevZMaxEstimate;
+		//vec3 rayPos = position + rayDir * 0.01f * float(stepCount);
+		//vec4 rayProjected = projMatrix * vec4(rayPos, 1.0f);
+		//rayNDC = rayProjected.xy / rayProjected.w;
+		//rayNDC *= 0.5f;
+		//rayNDC += 0.5f;
+
+		//sceneZMax = texture(positionBuffer, rayNDC).z;
+		//rayZMax = rayPos.z;
+		//prevZMaxEstimate = rayZMax;
+
+		//++stepCount;
+	//}
+
+	// Advance Q based on the number of steps
+	//Q.xy += dQ.xy * stepCount;
+	//vec3 hitPoint = Q * (1.0f / PQk.w);
+	
+	//depth = texture(positionBuffer, vec2(hitPixel.x/screenWidth, hitPixel.y/screenHeight)).z;
+	
+	//vec4 posProjected = vec4(texture(positionBuffer, screenPos).xyz, 1.0) * projMatrix;
+	//fragOut0.xy = (posProjected.xy / posProjected.w) * vec2(0.5f, 0.5f) + vec2(0.5, 0.5f);
+	//fragOut0.xy = screenPos;
+	//fragOut0.z = 0.0f;
+	//fragOut0.w = 1.0f;
+
+	//fragOut0 = vec4(hitPixel.x, hitPixel.y, depth, rDotV) * (intersection ? 1.0f : 0.0f);
+	fragOut0 = texture(colorBuffer, vec2(hitPixel.x/screenWidth, hitPixel.y/screenHeight)) * (intersection ? 1.0f : 0.0f);
+	//fragOut0 = texture(colorBuffer, rayNDC) * (intersection ? 1.0f : 0.0f);
+	//fragOut0 = vec4(1.0, 0.0, 0.0, 1.0) * (intersection ? 1.0f : 0.0f);
+}
