@@ -974,6 +974,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		Current_shader->program->Uniforms.setUniform3fv("lightSpecColor", GL_max_lights, opengl_light_uniforms.Spec_color);
 		Current_shader->program->Uniforms.setUniform1iv("lightType", GL_max_lights, opengl_light_uniforms.Light_type);
 		Current_shader->program->Uniforms.setUniform1fv("lightAttenuation", GL_max_lights, opengl_light_uniforms.Attenuation);
+		Current_shader->program->Uniforms.setUniform1fv("lightRadius", GL_max_lights, opengl_light_uniforms.Radius);
 
 		if ( !material_info->get_center_alpha() ) {
 			Current_shader->program->Uniforms.setUniform3f("diffuseFactor", GL_light_color[0] * light_factor, GL_light_color[1] * light_factor, GL_light_color[2] * light_factor);

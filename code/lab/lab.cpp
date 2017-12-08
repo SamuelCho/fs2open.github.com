@@ -813,14 +813,41 @@ void labviewer_render_model(float frametime)
 	light_dir.xyz.y = 1.0f;
 	light_dir.xyz.x = 0.0000001f;
 	light_add_directional(&light_dir, 0.65f, 1.0f, 1.0f, 1.0f,-1);
+	
 	int mx, my;
 	mouse_get_pos( &mx, &my );
+
+	// unproject screen coordinates to eye coordinates
+	vec3d tube_dir = vmd_z_vector;
+	vec3d tube_start;
+	vec3d tube_end;
+	tube_dir.xyz.x = -(mx * 2.0f / gr_screen.clip_width_unscaled - 1.0f) * Lab_viewer_pos.xyz.z;
+	tube_dir.xyz.y = (my * 2.0f / gr_screen.clip_height_unscaled - 1.0f) * Lab_viewer_pos.xyz.z;
+	tube_dir.xyz.z = Lab_viewer_pos.xyz.z;
+	vm_vec_normalize(&tube_dir);
+	//vm_vec_scale(&tube_dir, 500.0f);
+	vm_vec_copy_scale(&tube_start, &tube_dir, 500.0f);
+	vm_vec_copy_scale(&tube_end, &tube_dir, -500.0f);
+
+	vec3d tube_start_world;
+	vec3d tube_end_world;
+
+	vm_vec_unrotate(&tube_start_world, &tube_start, &Lab_viewer_orient);
+	vm_vec_add2(&tube_start_world, &Lab_viewer_pos);
+
+	vm_vec_unrotate(&tube_end_world, &tube_end, &Lab_viewer_orient);
+	vm_vec_add2(&tube_end_world, &Lab_viewer_pos);
+
+	light_add_tube(&tube_start, &tube_end, 100.0, 100.0, 1.0, 1.0, 1.0, 1.0, -1);
+
 	light_dir.xyz.y = 0.0000001f;
 	light_dir.xyz.x = sinf(my/150.0f);
 	light_dir.xyz.z = cosf(my/150.0f);
 	vm_vec_normalize(&light_dir);
 	vm_vec_scale(&light_dir, mx*10.1f);
-	light_add_point(&light_dir,1,mx*10.2f+0.1f, 0.5f, 1.0f, 1.0f, 1.0f,-1);
+	//light_add_point(&light_dir,1,mx*10.2f+0.1f, 0.5f, 1.0f, 1.0f, 1.0f,-1);
+
+	
 
 	light_rotate_all();
 	// lighting for techroom

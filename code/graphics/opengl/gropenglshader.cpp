@@ -120,7 +120,7 @@ static opengl_shader_type_t GL_shader_types[] = {
  */
 static opengl_shader_variant_t GL_shader_variants[] = {
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_LIGHT, "FLAG_LIGHT", 
-		{ "n_lights", "lightPosition", "lightDirection", "lightDiffuseColor", "lightSpecColor", "lightType", "lightAttenuation", "ambientFactor", "diffuseFactor", "emissionFactor", "defaultGloss" }, {  },
+		{ "n_lights", "lightPosition", "lightDirection", "lightDiffuseColor", "lightSpecColor", "lightType", "lightAttenuation", "lightRadius", "ambientFactor", "diffuseFactor", "emissionFactor", "defaultGloss" }, {  },
 		"Lighting" },
 
 	{ SDR_TYPE_MODEL, false, SDR_FLAG_MODEL_FOG, "FLAG_FOG", 

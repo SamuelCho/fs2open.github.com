@@ -1151,7 +1151,7 @@ void scene_lights::setLightFilter(int objnum, const vec3d *pos, float rad)
 			}
 			break;
 			case LT_TUBE: {
-				if ( l.light_ignore_objnum != objnum ) {
+				//if ( l.light_ignore_objnum != objnum ) {
 					vec3d nearest;
 					float dist_squared, max_dist_squared;
 					vm_vec_dist_squared_to_line(pos,&l.vec,&l.vec2,&nearest,&dist_squared);
@@ -1162,7 +1162,7 @@ void scene_lights::setLightFilter(int objnum, const vec3d *pos, float rad)
 					if ( dist_squared < max_dist_squared ) {
 						FilteredLights.push_back(i);
 					}
-				}
+				//}
 			}
 			break;
 

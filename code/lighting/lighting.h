@@ -26,6 +26,7 @@
 #define LT_POINT		1		// A point light, like an explosion
 #define LT_TUBE			2		// A tube light, like a fluorescent light
 #define LT_CONE			3		// A cone light, like a flood light
+#define LT_SPHERE		4		// A sphere light, like a lightbulb
 
 #define MAX_LIGHT_LEVELS 16
 

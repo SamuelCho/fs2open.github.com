@@ -1583,7 +1583,7 @@ void beam_calc_facing_pts( vec3d *top, vec3d *bot, vec3d *fvec, vec3d *pos, floa
 }
 
 // light scale factor
-float blight = 25.5f;
+float blight = 2.55f;
 DCF(blight, "Sets the beam light scale factor (Default is 25.5f)")
 {
 	dc_stuff_float(&blight);
@@ -1688,7 +1688,7 @@ void beam_add_light_large(beam *bm, object *objp, vec3d *pt0, vec3d *pt1)
 	noise = frand_range(1.0f - bwi->sections[0].flicker, 1.0f + bwi->sections[0].flicker);
 
 	// widest part of the beam
-	float light_rad = beam_get_widest(bm) * blight * noise;		
+	float light_rad = beam_get_widest(bm) * noise;		
 
 	// average rgb of the beam	
 	float fr = (float)wip->laser_color_1.red / 255.0f;
@@ -1755,7 +1755,7 @@ void beam_apply_lighting()
 			vm_vec_scale(&dir, -0.8f);  // TODO: This probably needs to *not* be stupid. -taylor
 			vm_vec_scale_add(&pt, &l->bm->last_start, &dir, bwi->beam_muzzle_radius * 5.0f);
 
-			beam_add_light_small(l->bm, &Objects[l->objnum], &pt);
+			//beam_add_light_small(l->bm, &Objects[l->objnum], &pt);
 			break;
 
 		// from the beam passing by

@@ -31,6 +31,8 @@ struct opengl_light
 	float SpotExp, SpotCutOff;
 	float ConstantAtten, LinearAtten, QuadraticAtten;
 
+	float Radius;
+
 	bool occupied;
 	int type;
 };
@@ -42,6 +44,7 @@ struct opengl_light_uniform_data {
 	vec3d *Direction;
 	int *Light_type;
 	float *Attenuation;
+	float *Radius;
 };
 
 extern opengl_light_uniform_data opengl_light_uniforms;

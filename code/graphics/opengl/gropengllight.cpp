@@ -95,6 +95,7 @@ void FSLight2GLLight(light *FSLight, opengl_light *GLLight)
 			// this crap still needs work...
 			GLLight->ConstantAtten = 1.0f;
 			GLLight->LinearAtten = (1.0f / MAX(FSLight->rada, FSLight->radb)) * 1.25f;
+			GLLight->Radius = MAX(FSLight->rada, FSLight->radb);
 
 			GLLight->Specular[0] *= static_point_factor;
 			GLLight->Specular[1] *= static_point_factor;
@@ -107,6 +108,7 @@ void FSLight2GLLight(light *FSLight, opengl_light *GLLight)
 			GLLight->ConstantAtten = 1.0f;
 			GLLight->LinearAtten = (1.0f / MAX(FSLight->rada, FSLight->radb)) * 1.25f;
 			GLLight->QuadraticAtten = (1.0f / MAX(FSLight->rada_squared, FSLight->radb_squared)) * 1.25f;
+			GLLight->Radius = MAX(FSLight->rada, FSLight->radb);
 
 			GLLight->Specular[0] *= static_tube_factor;
 			GLLight->Specular[1] *= static_tube_factor;
@@ -120,9 +122,12 @@ void FSLight2GLLight(light *FSLight, opengl_light *GLLight)
 			// Valathil: When using shaders pass the beam direction (not normalized IMPORTANT for calculation of tube)
 			vec3d a;
 			vm_vec_sub(&a, &FSLight->vec2, &FSLight->vec);
-			GLLight->SpotDir[0] = a.xyz.x;
-			GLLight->SpotDir[1] = a.xyz.y;
-			GLLight->SpotDir[2] = a.xyz.z;
+			//GLLight->SpotDir[0] = a.xyz.x;
+			//GLLight->SpotDir[1] = a.xyz.y;
+			//GLLight->SpotDir[2] = a.xyz.z;
+			GLLight->SpotDir[0] = FSLight->vec.xyz.x;
+			GLLight->SpotDir[1] = FSLight->vec.xyz.y;
+			GLLight->SpotDir[2] = FSLight->vec.xyz.z;
 			GLLight->SpotCutOff = 90.0f; // Valathil: So shader dectects tube light
 			break;
 		}
@@ -141,6 +146,10 @@ void FSLight2GLLight(light *FSLight, opengl_light *GLLight)
 		}
 		
 		case LT_CONE:
+			break;
+
+		case LT_SPHERE:
+			GLLight->Radius = MAX(FSLight->rada, FSLight->radb);
 			break;
 
 		default:
@@ -178,6 +187,8 @@ void opengl_set_light(int light_num, opengl_light *ltp)
 	opengl_light_uniforms.Light_type[light_num] = ltp->type;
 
 	opengl_light_uniforms.Attenuation[light_num] = ltp->LinearAtten;
+
+	opengl_light_uniforms.Radius[light_num] = ltp->Radius;
 }
 
 bool opengl_sort_active_lights(const opengl_light &la, const opengl_light &lb)
@@ -370,6 +381,11 @@ void opengl_light_shutdown()
 		vm_free(opengl_light_uniforms.Attenuation);
 		opengl_light_uniforms.Attenuation = NULL;
 	}
+
+	if ( opengl_light_uniforms.Radius != NULL ) {
+		vm_free(opengl_light_uniforms.Radius);
+		opengl_light_uniforms.Radius = NULL;
+	}
 }
 
 void opengl_light_init()
@@ -391,6 +407,7 @@ void opengl_light_init()
 	opengl_light_uniforms.Direction = (vec3d *)vm_malloc(GL_max_lights * sizeof(vec3d));
 	opengl_light_uniforms.Light_type = (int *)vm_malloc(GL_max_lights * sizeof(int));
 	opengl_light_uniforms.Attenuation = (float *)vm_malloc(GL_max_lights * sizeof(float));
+	opengl_light_uniforms.Radius = (float *)vm_malloc(GL_max_lights * sizeof(float));
 }
 
 void gr_opengl_set_lighting(bool set, bool state)

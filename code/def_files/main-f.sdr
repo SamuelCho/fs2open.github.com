@@ -1,7 +1,9 @@
 #define MAX_LIGHTS 8
 #define LT_DIRECTIONAL		0
 #define LT_POINT			1
-#define LT_TUBE			2
+#define LT_TUBE				2
+#define LT_CONE				3
+#define LT_SPHERE			4
 uniform vec4 color;
 #ifdef FLAG_LIGHT
 uniform vec4 lightPosition[MAX_LIGHTS];
@@ -10,6 +12,7 @@ uniform vec3 lightDiffuseColor[MAX_LIGHTS];
 uniform vec3 lightSpecColor[MAX_LIGHTS];
 uniform int lightType[MAX_LIGHTS];
 uniform float lightAttenuation[MAX_LIGHTS];
+uniform float lightRadius[MAX_LIGHTS];
 uniform int n_lights;
 uniform float defaultGloss;
 uniform vec3 ambientFactor;
@@ -263,6 +266,176 @@ vec3 CalculateLighting(vec3 normal, vec3 diffuseMaterial, vec3 specularMaterial,
 	}
 	return diffuseMaterial * (lightAmbient + lightDiffuse) + lightSpecular;
 }
+
+vec3 ApplyLightDirectional(int i, vec3 normal, vec3 eyeDir, vec3 diffuseMaterial, vec3 specularMaterial, float glossFactor, float fresnelFactor, float aoFactor)
+{
+	vec3 lightDir = normalize(lightPosition[i].xyz);
+	vec3 halfVec = normalize(lightDir + eyeDir);
+	float NdotL = max(dot(normal, lightDir), 0.0);
+	vec3 diffuse = lightDiffuseColor[i] * diffuseMaterial * diffuseFactor * NdotL;
+	vec3 specular = lightSpecColor[i] * SpecularBlinnPhong(specularMaterial, lightDir, normal, halfVec, exp2(10.0 * glossFactor + 1.0), fresnelFactor, NdotL);
+	return diffuse + specular;
+}
+
+vec3 ApplyLightPoint(int i, vec3 normal, vec3 eyeDir, vec3 diffuseMaterial, vec3 specularMaterial, float glossFactor, float fresnelFactor, float aoFactor)
+{
+	vec3 lightDir = lightPosition[i].xyz - fragPosition.xyz;
+	float dist = length(lightDir);
+	lightDir = normalize(lightDir);
+	vec3 halfVec = normalize(lightDir + eyeDir);
+	float NdotL = max(dot(normal, lightDir), 0.0);
+
+	float attenuation = 1.0 / (1.0 + lightAttenuation[i] * dist);
+
+	vec3 diffuse = lightDiffuseColor[i] * diffuseMaterial * diffuseFactor * NdotL * attenuation;
+	vec3 specular = lightSpecColor[i] * SpecularBlinnPhong(specularMaterial, lightDir, normal, halfVec, exp2(10.0 * glossFactor + 1.0), fresnelFactor, NdotL) * attenuation;
+	return diffuse + specular;
+}
+
+vec3 ApplyLightTubeOld(int i, vec3 normal, vec3 reflect, vec3 eyeDir, vec3 diffuseMaterial, vec3 specularMaterial, float glossFactor, float fresnelFactor, float aoFactor)
+{
+	vec3 beamDir = normalize(lightDirection[i] - lightPosition[i].xyz);
+	// Get nearest point on line
+	float neardist = dot(fragPosition.xyz - lightDirection[i], beamDir);
+	// Move back from the endpoint of the beam along the beam by the distance we calculated
+	vec3 nearest = lightDirection[i] - beamDir * neardist;
+	vec3 lightDir = nearest - fragPosition.xyz;
+	float dist = length(lightDir);
+	lightDir = normalize(lightDir);
+	vec3 halfVec = normalize(lightDir + eyeDir);
+	float NdotL = max(dot(normal, lightDir), 0.0);
+
+	//float beamlength = length(lightDirection[i]);
+	//vec3 beamDir = normalize(lightDirection[i]);
+	// Get nearest point on line
+	//float neardist = dot(fragPosition.xyz - lightPosition[i].xyz, beamDir);
+	// Move back from the endpoint of the beam along the beam by the distance we calculated
+	//vec3 nearest = lightPosition[i].xyz - beamDir * neardist;
+	//vec3 lightDir = nearest - fragPosition.xyz;
+	//float dist = length(lightDir);
+	//lightDir = normalize(lightDir);
+	//vec3 halfVec = normalize(lightDir + eyeDir);
+	//float NdotL = max(dot(normal, lightDir), 0.0);
+
+	float attenuation = 1.0 / (1.0 + lightAttenuation[i] * dist);
+
+	vec3 diffuse = lightDiffuseColor[i] * diffuseMaterial * diffuseFactor * NdotL * attenuation;
+	vec3 specular = lightSpecColor[i] * SpecularBlinnPhong(specularMaterial, lightDir, normal, halfVec, exp2(10.0 * glossFactor + 1.0), fresnelFactor, NdotL) * attenuation;
+
+	return diffuse + specular;
+}
+
+vec3 ApplyLightTube(int i, vec3 normal, vec3 reflect, vec3 eyeDir, vec3 diffuseMaterial, vec3 specularMaterial, float glossFactor, float fresnelFactor, float aoFactor)
+{
+	//vec3 tubeStart = lightPosition[i].xyz - lightDirection[i];
+	vec3 tubeStart = lightDirection[i];
+	vec3 tubeEnd = lightPosition[i].xyz;
+
+	vec3 beamDir = normalize(lightPosition[i].xyz - lightDirection[i]);
+	// Get nearest point on line
+	float neardist = dot(fragPosition.xyz - lightDirection[i], beamDir);
+	// Move back from the endpoint of the beam along the beam by the distance we calculated
+	vec3 nearest = lightDirection[i] - beamDir * neardist;
+	vec3 lightDir = nearest - fragPosition.xyz;
+	float dist = length(lightDir);
+	lightDir = normalize(lightDir);
+	vec3 halfVec = normalize(lightDir + eyeDir);
+	float NoL = max(dot(normal, lightDir), 0.0);
+	
+	vec3 L0			= tubeStart - fragPosition.xyz;
+	vec3 L1			= tubeEnd - fragPosition.xyz;
+	
+	float distL0	= length( L0 );
+	float distL1	= length( L1 );
+
+	float NoL0		= dot( L0, normal ) / ( 2.0 * distL0 );
+	float NoL1		= dot( L1, normal ) / ( 2.0 * distL1 );
+	//float NoL		= ( 2.0 * clamp( NoL0 + NoL1, 0.0, 1.0 ) ) / ( distL0 * distL1 + dot( L0, L1) + 2.0 );
+	//float NoL		= (dot( L0, normal ) / distL0 + dot( L1, normal ) / distL1) / (distL0 * distL1 + dot( L0, L1));
+	
+	vec3 Ld			= L1 - L0;
+	float RoL0		= dot( reflect, L0 );
+	float RoLd		= dot( reflect, Ld );
+	float L0oLd 	= dot( L0, Ld );
+	float distLd	= length( Ld );
+	//float t			= ( RoL0 * RoLd - L0oLd ) / ( distLd * distLd - RoLd * RoLd );
+	float t = (L0oLd * RoL0 - dot(L0, L0) * RoLd) / (L0oLd * RoLd - dot(Ld, Ld) * RoL0);
+
+	vec3 closestPoint	= L0 + Ld * clamp( t, 0.0, 1.0 );
+	vec3 centerToRay	= dot( closestPoint, reflect ) * reflect - closestPoint;
+	closestPoint		= closestPoint + centerToRay * clamp( lightRadius[i] / length( centerToRay ), 0.0, 1.0 );
+	vec3 l				= normalize( closestPoint );
+	vec3 h				= normalize( eyeDir + l );
+	float specNoL = dot(l, normal);
+
+	float HoN		= clamp( dot( h, normal ), 0.0, 1.0 );
+	float HoV		= dot( h, eyeDir );
+
+	float distLight	= length( closestPoint );
+
+	float specPower = exp2(10.0 * glossFactor + 1.0);
+
+	vec3 diffuse = lightDiffuseColor[i] * diffuseMaterial * diffuseFactor * NoL * clamp( lightRadius[i] / ( dist ), 0.0, 1.0 );
+	//vec3 diffuse = lightDiffuseColor[i] * diffuseMaterial * diffuseFactor * attenuation;
+	vec3 specular = lightSpecColor[i] * SpecularBlinnPhong(specularMaterial, l, normal, h, exp2(10.0 * glossFactor + 1.0), fresnelFactor, specNoL)  * clamp( lightRadius[i] / ( distLight ), 0.0, 1.0 );
+	//vec3 specular = lightSpecColor[i] * specularMaterial * ((specPower + 2.0) / 8.0 ) * pow(HoN, specPower) * NoL * attenuation;
+
+	return specular + diffuse;
+}
+
+vec3 ApplyLightSphere(int i, vec3 normal, vec3 reflect, vec3 eyeDir, vec3 diffuseMaterial, vec3 specularMaterial, float glossFactor, float fresnelFactor, float aoFactor)
+{
+	vec3 L				= lightPosition[i].xyz - fragPosition.xyz;
+	vec3 centerToRay	= dot( L, reflect ) * reflect - L;
+	vec3 closestPoint	= L + centerToRay * clamp( lightRadius[i] / length( centerToRay ), 0.0, 1.0 );	
+	vec3 l				= normalize( closestPoint );
+	vec3 h				= normalize( eyeDir + l );
+
+	float NoL		= clamp( dot( normal, l ), 0.0, 1.0 );
+	float HoN		= clamp( dot( h, normal ), 0.0, 1.0 );
+	float HoV		= dot( h, eyeDir );
+
+	float distL		= length( L );
+	float attenuation = clamp( lightRadius[i] / ( distL * 2.0 ), 0.0, 1.0 );
+
+	vec3 diffuse = lightDiffuseColor[i] * diffuseMaterial * diffuseFactor * NoL * attenuation;
+	vec3 specular = lightSpecColor[i] * SpecularBlinnPhong(specularMaterial, l, normal, h, exp2(10.0 * glossFactor + 1.0), fresnelFactor, NoL) * attenuation;
+
+	return diffuse + specular;
+}
+
+vec3 ApplyLights(vec3 eyeDir, vec3 normal, vec3 diffuseMaterial, vec3 specularMaterial, float glossFactor, float fresnelFactor, float shadowFactor, float aoFactor)
+{
+	vec3 reflectDir = reflect(-eyeDir, normal);
+	reflectDir = normalize(reflectDir);
+	vec3 lightAmbient = (emissionFactor + ambientFactor * ambientFactor) * aoFactor; // ambientFactor^2 due to legacy OpenGL compatibility behavior
+	vec3 light = lightAmbient * diffuseMaterial;
+	#pragma optionNV unroll all
+	for (int i = 0; i < MAX_LIGHTS; ++i) {
+		if (i > n_lights)
+			break;
+
+		switch(lightType[i])
+		{
+			case LT_DIRECTIONAL:
+				light += ApplyLightDirectional(i, normal, eyeDir, diffuseMaterial, specularMaterial, glossFactor, fresnelFactor, aoFactor) * ((i == 0) ? shadowFactor : 1.0);
+				// only apply shadow for the first directional light
+				break;
+			case LT_POINT:
+				light += ApplyLightPoint(i, normal, eyeDir, diffuseMaterial, specularMaterial, glossFactor, fresnelFactor, aoFactor);
+				break;
+			case LT_TUBE:
+				light += ApplyLightTube(i, normal, reflectDir, eyeDir, diffuseMaterial, specularMaterial, glossFactor, fresnelFactor, aoFactor);
+				break;
+			case LT_SPHERE:
+				light += ApplyLightSphere(i, normal, reflectDir, eyeDir, diffuseMaterial, specularMaterial, glossFactor, fresnelFactor, aoFactor);
+				break;
+		}
+	}
+
+	return light;
+}
+
 #endif
 void main()
 {
@@ -362,7 +535,8 @@ void main()
 	shadow = getShadowValue();
 #endif
 #ifdef FLAG_LIGHT
-	baseColor.rgb = CalculateLighting(normal, baseColor.rgb, specColor.rgb, glossData, fresnelFactor, shadow, aoFactors.x);
+	//baseColor.rgb = CalculateLighting(normal, baseColor.rgb, specColor.rgb, glossData, fresnelFactor, shadow, aoFactors.x);
+	baseColor.rgb = ApplyLights(eyeDir, normal, baseColor.rgb, specColor.rgb, glossData, fresnelFactor, shadow, aoFactors.x);
 #else
  #ifdef FLAG_SPEC_MAP
 	baseColor.rgb += pow(1.0 - clamp(dot(eyeDir, normal), 0.0, 1.0), 5.0 * clamp(glossData, 0.01, 1.0)) * specColor.rgb;
