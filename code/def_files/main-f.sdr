@@ -273,7 +273,7 @@ vec3 SpecularGGX(vec3 specColor, vec3 light, vec3 normal, vec3 halfVec, vec3 vie
 
 	vec3 fresnel = FresnelSchlick(specColor, light, halfVec);
 	
-	float alphaPrime = alpha + 1.0f;
+	float alphaPrime = roughness + 1.0f;
 	float k = alphaPrime * alphaPrime / 8.0f;
 	float g1vNL = 1.0f / (dotNL * (1.0f - k) + k);
 	float g1vNV = 1.0f / (dotNV * (1.0f - k) + k);
