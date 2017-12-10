@@ -259,7 +259,7 @@ vec3 SpecularBlinnPhong(vec3 specColor, vec3 light, vec3 normal, vec3 halfVec, f
 
 vec3 SpecularGGX(vec3 specColor, vec3 light, vec3 normal, vec3 halfVec, vec3 view, float gloss)
 {
-	float roughness = 1.0f - gloss;
+	float roughness = clamp(1.0f - gloss, 0.0f, 1.0f);
 	float alpha = roughness * roughness;
 
 	float dotNL = clamp(dot(normal, light), 0.0f, 1.0f);
@@ -273,7 +273,8 @@ vec3 SpecularGGX(vec3 specColor, vec3 light, vec3 normal, vec3 halfVec, vec3 vie
 
 	vec3 fresnel = FresnelSchlick(specColor, light, halfVec);
 	
-	float k = alpha / 2.0f;
+	float alphaPrime = alpha + 1.0f;
+	float k = alphaPrime * alphaPrime / 8.0f;
 	float g1vNL = 1.0f / (dotNL * (1.0f - k) + k);
 	float g1vNV = 1.0f / (dotNV * (1.0f - k) + k);
 	float visibility = g1vNL * g1vNV;
