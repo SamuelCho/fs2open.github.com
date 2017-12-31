@@ -327,7 +327,6 @@ vec3 CalculateLighting(vec3 normal, vec3 diffuseMaterial, vec3 specularMaterial,
 		float NdotL = max(dot(normal, lightDir), 0.0);
 		// Ambient, Diffuse, and Specular
 		lightDiffuse += (lights[i].diffuse_color.rgb * diffuseFactor * NdotL * attenuation) * shadow;
-		//lightSpecular += lights[i].spec_color * SpecularBlinnPhong(specularMaterial, lightDir, normal, halfVec, exp2(10.0 * gloss + 1.0), fresnel, NdotL) * attenuation * shadow;
 		lightSpecular += lights[i].spec_color * SpecularGGX(specularMaterial, lightDir, normal, halfVec, eyeDir, gloss, NdotL) * attenuation * shadow;
 	}
 	return diffuseMaterial * (lightAmbient + lightDiffuse) + lightSpecular;
