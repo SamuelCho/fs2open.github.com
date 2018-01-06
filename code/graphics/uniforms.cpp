@@ -187,6 +187,10 @@ void convert_model_material(model_uniform_data* data_out,
 		data_out->sNormalmapIndex = bm_get_array_index(material.get_texture_map(TM_NORMAL_TYPE));
 	}
 
+	if ( shader_flags & SDR_FLAG_MODEL_NORMAL_MAP ) {
+		data_out->sHeightmapIndex = bm_get_array_index(material.get_texture_map(TM_HEIGHT_TYPE));
+	}
+
 	if ( shader_flags & SDR_FLAG_MODEL_AMBIENT_MAP ) {
 		data_out->sAmbientmapIndex = bm_get_array_index(material.get_texture_map(TM_AMBIENT_TYPE));
 	}

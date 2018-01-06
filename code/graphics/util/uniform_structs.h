@@ -118,6 +118,7 @@ struct model_uniform_data {
 
 	int sSpecmapIndex;
 	int sNormalmapIndex;
+	int sHeightmapIndex;
 	int sAmbientmapIndex;
 	int sMiscmapIndex;
 };

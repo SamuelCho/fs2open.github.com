@@ -87,6 +87,7 @@ layout (std140) uniform modelData {
 
 	int sSpecmapIndex;
 	int sNormalmapIndex;
+	int sHeightmapIndex;
 	int sAmbientmapIndex;
 	int sMiscmapIndex;
 };
@@ -107,6 +108,9 @@ in vec3 fragEnvReflect;
 #ifdef FLAG_NORMAL_MAP
 uniform sampler2DArray sNormalmap;
 in mat3 fragTangentMatrix;
+#endif
+#ifdef FLAG_HEIGHT_MAP
+uniform sampler2DArray sHeightmap;
 #endif
 #ifdef FLAG_AMBIENT_MAP
 uniform sampler2DArray sAmbientmap;
@@ -145,6 +149,81 @@ out vec4 fragOut0;
 out vec4 fragOut1;
 out vec4 fragOut2;
 out vec4 fragOut3;
+
+#ifdef FLAG_HEIGHT_MAP
+vec2 reliefParallaxMapping(in vec3 V, in vec2 T)//, out float parallaxHeight)
+{
+	float parallaxScale = 0.025f;
+   // determine required number of layers
+   const float minLayers = 10;
+   const float maxLayers = 15;
+   float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0, 0, 1), V)));
+
+   // height of each layer
+   float layerHeight = 1.0 / numLayers;
+   // depth of current layer
+   float currentLayerHeight = 0;
+   // shift of texture coordinates for each iteration
+   vec2 dtex = parallaxScale * V.xy / V.z / numLayers;
+
+   // current texture coordinates
+   vec2 currentTextureCoords = T;
+
+   // depth from heightmap
+   float heightFromTexture = 1.0f - texture(sHeightmap, vec3(currentTextureCoords, float(sHeightmapIndex))).r;
+
+   // while point is above surface
+   while(heightFromTexture > currentLayerHeight) 
+   {
+      // go to the next layer
+      currentLayerHeight += layerHeight; 
+      // shift texture coordinates along V
+      currentTextureCoords -= dtex;
+      // new depth from heightmap
+      heightFromTexture = 1.0f - texture(sHeightmap, vec3(currentTextureCoords, float(sHeightmapIndex))).r;
+   }
+
+   ///////////////////////////////////////////////////////////
+   // Start of Relief Parallax Mapping
+
+   // decrease shift and height of layer by half
+   vec2 deltaTexCoord = dtex / 2;
+   float deltaHeight = layerHeight / 2;
+
+   // return to the mid point of previous layer
+   currentTextureCoords += deltaTexCoord;
+   currentLayerHeight -= deltaHeight;
+
+   // binary search to increase precision of Steep Paralax Mapping
+   const int numSearches = 35;
+   for(int i=0; i < numSearches; i++)
+   {
+      // decrease shift and height of layer by half
+      deltaTexCoord /= 2;
+      deltaHeight /= 2;
+
+      // new depth from heightmap
+      heightFromTexture = 1.0f - texture(sHeightmap, vec3(currentTextureCoords, float(sHeightmapIndex))).r;
+
+      // shift along or agains vector V
+      if(heightFromTexture > currentLayerHeight) // below the surface
+      {
+         currentTextureCoords -= deltaTexCoord;
+         currentLayerHeight += deltaHeight;
+      }
+      else // above the surface
+      {
+         currentTextureCoords += deltaTexCoord;
+         currentLayerHeight -= deltaHeight;
+      }
+   }
+
+   // return results
+   //parallaxHeight = currentLayerHeight;
+   
+   return currentTextureCoords;
+}
+#endif
 
 #ifdef FLAG_SHADOWS
 vec2 sampleShadowMap(vec2 uv, vec2 offset_uv, int cascade, float shadowMapSizeInv)
@@ -316,15 +395,14 @@ void main()
 #ifdef FLAG_LIGHT
 	glossData = defaultGloss;
 #endif
-	vec2 aoFactors = vec2(1.0, 1.0);
-#ifdef	FLAG_AMBIENT_MAP
-	// red channel is ambient occlusion factor which only affects ambient lighting.
-	// green is cavity occlusion factor which only affects diffuse and specular lighting.
-	aoFactors = texture(sAmbientmap, vec3(texCoord, float(sAmbientmapIndex))).xy;
-#endif
 	vec3 unitNormal = normalize(fragNormal);
 	vec3 normal = unitNormal;
 #ifdef FLAG_NORMAL_MAP
+ #ifdef FLAG_HEIGHT_MAP
+	vec3 tangentEyeDir = transpose(fragTangentMatrix) * eyeDir;
+	//texCoord = parallaxMapping(tangentEyeDir, texCoord);
+	texCoord = reliefParallaxMapping(tangentEyeDir, texCoord);
+ #endif
    // Normal map - convert from DXT5nm
    vec2 normalSample;
    normal.rg = normalSample = (texture(sNormalmap, vec3(texCoord, float(sNormalmapIndex))).ag * 2.0) - 1.0;
@@ -337,11 +415,15 @@ void main()
    else
       normal = unitNormal;
 #endif
-
 #ifdef FLAG_ANIMATED
    vec2 distort = vec2(cos(fragPosition.x*fragPosition.w*0.005+anim_timer*20.0)*sin(fragPosition.y*fragPosition.w*0.005),sin(fragPosition.x*fragPosition.w*0.005+anim_timer*20.0)*cos(fragPosition.y*fragPosition.w*0.005))*0.03;
 #endif
-
+	vec2 aoFactors = vec2(1.0, 1.0);
+#ifdef	FLAG_AMBIENT_MAP
+	// red channel is ambient occlusion factor which only affects ambient lighting.
+	// green is cavity occlusion factor which only affects diffuse and specular lighting.
+	aoFactors = texture(sAmbientmap, vec3(texCoord, float(sAmbientmapIndex))).xy;
+#endif
 #ifdef FLAG_DIFFUSE_MAP
 	vec2 diffuseTexCoord = texCoord;
  #ifdef FLAG_ANIMATED
