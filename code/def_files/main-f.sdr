@@ -151,26 +151,27 @@ out vec4 fragOut2;
 out vec4 fragOut3;
 
 #ifdef FLAG_HEIGHT_MAP
-vec2 reliefParallaxMapping(in vec3 V, in vec2 T)//, out float parallaxHeight)
+vec2 reliefParallaxMapping(in vec3 V, in vec2 T)
 {
-	float parallaxScale = 0.025f;
+	float parallaxScale = 0.04f;
    // determine required number of layers
    const float minLayers = 10.0f;
-   const float maxLayers = 45.0f;
+   const float maxLayers = 50.0f;
    float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0, 0, 1), V)));
 
    // height of each layer
    float layerHeight = 1.0f / numLayers;
    // depth of current layer
-   float currentLayerHeight = 0.0f;
+   float currentLayerHeight = -0.5f;
    // shift of texture coordinates for each iteration
    vec2 dtex = parallaxScale * (V.xy / V.z) / (numLayers);
+   dtex *= 0.5f;
 
    // current texture coordinates
-   vec2 currentTextureCoords = T;// - dtex * numLayers * 0.5f;
+   vec2 currentTextureCoords = T + dtex * numLayers * 0.5f;
 
    // depth from heightmap
-   float heightFromTexture = 1.0f - texture(sHeightmap, vec3(currentTextureCoords, float(sHeightmapIndex))).r;
+   float heightFromTexture = 0.5f - texture(sHeightmap, vec3(currentTextureCoords, float(sHeightmapIndex))).r;
    float lastHeightFromTexture = heightFromTexture;
    int numSteps = int(numLayers);
    bool found = false;
@@ -179,22 +180,19 @@ vec2 reliefParallaxMapping(in vec3 V, in vec2 T)//, out float parallaxHeight)
    {
 		// new depth from heightmap
 		lastHeightFromTexture = heightFromTexture;
-		heightFromTexture = 1.0f - texture(sHeightmap, vec3(currentTextureCoords, float(sHeightmapIndex))).r;
+		heightFromTexture = 0.5f - texture(sHeightmap, vec3(currentTextureCoords, float(sHeightmapIndex))).r;
 
 		// go to the next layer
 		currentLayerHeight += layerHeight; 
 		// shift texture coordinates along V
 		currentTextureCoords -= dtex;
 
-		//if(lastHeightFromTexture < currentLayerHeight && heightFromTexture > currentLayerHeight)
 		if(heightFromTexture < currentLayerHeight)
 		{
 			found = true;
 			break;
 		}
    }
-   
-   //if(!found) return T;
 
    ///////////////////////////////////////////////////////////
    // Start of Relief Parallax Mapping
@@ -208,7 +206,8 @@ vec2 reliefParallaxMapping(in vec3 V, in vec2 T)//, out float parallaxHeight)
    currentLayerHeight -= deltaHeight;
 
    // binary search to increase precision of Steep Paralax Mapping
-   const int numSearches = 25;
+   const int numSearches = 35;
+
    for(int i=0; i < numSearches; i++)
    {
       // decrease shift and height of layer by half
@@ -216,7 +215,7 @@ vec2 reliefParallaxMapping(in vec3 V, in vec2 T)//, out float parallaxHeight)
       deltaHeight /= 2;
 
       // new depth from heightmap
-      heightFromTexture = 1.0f - texture(sHeightmap, vec3(currentTextureCoords, float(sHeightmapIndex))).r;
+      heightFromTexture = 0.5f - texture(sHeightmap, vec3(currentTextureCoords, float(sHeightmapIndex))).r;
 
       // shift along or agains vector V
       if(heightFromTexture > currentLayerHeight) // below the surface
@@ -230,15 +229,13 @@ vec2 reliefParallaxMapping(in vec3 V, in vec2 T)//, out float parallaxHeight)
          currentLayerHeight -= deltaHeight;
       }
    }
-
-   // return results
-   //parallaxHeight = currentLayerHeight;
-   
+      
    return currentTextureCoords;
 }
+
 vec2 parallaxMapping(in vec3 V, in vec2 T)//, out float parallaxHeight)
 {
-float parallaxScale = 0.025f;
+float parallaxScale = 0.04f;
    // determine optimal number of layers
    const float minLayers = 10;
    const float maxLayers = 15;
