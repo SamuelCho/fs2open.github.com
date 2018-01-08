@@ -155,33 +155,46 @@ vec2 reliefParallaxMapping(in vec3 V, in vec2 T)//, out float parallaxHeight)
 {
 	float parallaxScale = 0.025f;
    // determine required number of layers
-   const float minLayers = 10;
-   const float maxLayers = 15;
+   const float minLayers = 10.0f;
+   const float maxLayers = 45.0f;
    float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0, 0, 1), V)));
 
    // height of each layer
-   float layerHeight = 1.0 / numLayers;
+   float layerHeight = 1.0f / numLayers;
    // depth of current layer
-   float currentLayerHeight = 0;
+   float currentLayerHeight = 0.0f;
    // shift of texture coordinates for each iteration
-   vec2 dtex = parallaxScale * V.xy / V.z / numLayers;
+   vec2 dtex = parallaxScale * (V.xy / V.z) / (numLayers);
 
    // current texture coordinates
-   vec2 currentTextureCoords = T;
+   vec2 currentTextureCoords = T;// - dtex * numLayers * 0.5f;
 
    // depth from heightmap
    float heightFromTexture = 1.0f - texture(sHeightmap, vec3(currentTextureCoords, float(sHeightmapIndex))).r;
+   float lastHeightFromTexture = heightFromTexture;
+   int numSteps = int(numLayers);
+   bool found = false;
 
-   // while point is above surface
-   while(heightFromTexture > currentLayerHeight) 
+   for(int i = 0; i < numSteps; ++i)
    {
-      // go to the next layer
-      currentLayerHeight += layerHeight; 
-      // shift texture coordinates along V
-      currentTextureCoords -= dtex;
-      // new depth from heightmap
-      heightFromTexture = 1.0f - texture(sHeightmap, vec3(currentTextureCoords, float(sHeightmapIndex))).r;
+		// new depth from heightmap
+		lastHeightFromTexture = heightFromTexture;
+		heightFromTexture = 1.0f - texture(sHeightmap, vec3(currentTextureCoords, float(sHeightmapIndex))).r;
+
+		// go to the next layer
+		currentLayerHeight += layerHeight; 
+		// shift texture coordinates along V
+		currentTextureCoords -= dtex;
+
+		//if(lastHeightFromTexture < currentLayerHeight && heightFromTexture > currentLayerHeight)
+		if(heightFromTexture < currentLayerHeight)
+		{
+			found = true;
+			break;
+		}
    }
+   
+   //if(!found) return T;
 
    ///////////////////////////////////////////////////////////
    // Start of Relief Parallax Mapping
@@ -195,7 +208,7 @@ vec2 reliefParallaxMapping(in vec3 V, in vec2 T)//, out float parallaxHeight)
    currentLayerHeight -= deltaHeight;
 
    // binary search to increase precision of Steep Paralax Mapping
-   const int numSearches = 35;
+   const int numSearches = 25;
    for(int i=0; i < numSearches; i++)
    {
       // decrease shift and height of layer by half
@@ -222,6 +235,62 @@ vec2 reliefParallaxMapping(in vec3 V, in vec2 T)//, out float parallaxHeight)
    //parallaxHeight = currentLayerHeight;
    
    return currentTextureCoords;
+}
+vec2 parallaxMapping(in vec3 V, in vec2 T)//, out float parallaxHeight)
+{
+float parallaxScale = 0.025f;
+   // determine optimal number of layers
+   const float minLayers = 10;
+   const float maxLayers = 15;
+   float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0, 0, 1), V)));
+
+   // height of each layer
+   float layerHeight = 1.0 / numLayers;
+   // current depth of the layer
+   float curLayerHeight = 0;
+   // shift of texture coordinates for each layer
+   vec2 dtex = parallaxScale * V.xy / V.z / numLayers;
+
+   // current texture coordinates
+   vec2 currentTextureCoords = T;
+
+   // depth from heightmap
+   float heightFromTexture = texture(sHeightmap, vec3(currentTextureCoords, float(sHeightmapIndex))).r;
+   int i = 0;
+
+   // while point is above the surface
+   while(heightFromTexture > curLayerHeight && i < numLayers)  
+   {
+      // to the next layer
+      curLayerHeight += layerHeight; 
+      // shift of texture coordinates
+      currentTextureCoords -= dtex;
+      // new depth from heightmap
+      heightFromTexture = texture(sHeightmap, vec3(currentTextureCoords, float(sHeightmapIndex))).r;
+	  i++;
+   }
+
+   ///////////////////////////////////////////////////////////
+
+   // previous texture coordinates
+   vec2 prevTCoords = currentTextureCoords;
+
+   // heights for linear interpolation
+   float nextH	= heightFromTexture - curLayerHeight;
+   float prevH	= texture(sHeightmap, vec3(prevTCoords, float(sHeightmapIndex))).r
+                           - curLayerHeight + layerHeight;
+
+   // proportions for linear interpolation
+   float weight = nextH / (nextH - prevH);
+
+   // interpolation of texture coordinates
+   vec2 finalTexCoords = prevTCoords * weight + currentTextureCoords * (1.0-weight);
+
+   // interpolation of depth values
+   //parallaxHeight = curLayerHeight + prevH * weight + nextH * (1.0 - weight);
+
+   // return result
+   return finalTexCoords;
 }
 #endif
 
