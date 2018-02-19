@@ -90,6 +90,8 @@ static GLenum GL_read_format = GL_BGRA;
 
 GLuint GL_vao = 0;
 
+bool GL_workaround_clipping_planes = false;
+
 static std::unique_ptr<os::OpenGLContext> GL_context = nullptr;
 
 static std::unique_ptr<os::GraphicsOperations> graphic_operations = nullptr;
@@ -1275,11 +1277,10 @@ static void APIENTRY debug_callback(GLenum source, GLenum type, GLuint id, GLenu
 	switch(severity) {
 		case GL_DEBUG_SEVERITY_HIGH_ARB:
 			severityStr = "High";
-			print_to_general_log = true; // High and medium messages are sent to the normal log for later troubleshooting
+			print_to_general_log = true; // High priority messages are sent to the normal log for later troubleshooting
 			break;
 		case GL_DEBUG_SEVERITY_MEDIUM_ARB:
 			severityStr = "Medium";
-			print_to_general_log = true;
 			break;
 		case GL_DEBUG_SEVERITY_LOW_ARB:
 			severityStr = "Low";
@@ -1378,6 +1379,19 @@ static void init_extensions() {
 	}
 }
 
+static void opengl_do_workaround_checks() {
+	auto vendor = glGetString(GL_VENDOR);
+
+	if (strstr((const char*) vendor, "NVIDIA")) {
+		// Nvidia has some weird issues with clipping planes. Check #1579 for more information.
+		GL_workaround_clipping_planes = true;
+		mprintf(("  Applying clipping plane workaround for NVIDIA hardware.\n"));
+	} else {
+		// Assume everone else has proper support for this
+		GL_workaround_clipping_planes = false;
+	}
+}
+
 bool gr_opengl_init(std::unique_ptr<os::GraphicsOperations>&& graphicsOps)
 {
 	if (GL_initted) {
@@ -1445,6 +1459,8 @@ bool gr_opengl_init(std::unique_ptr<os::GraphicsOperations>&& graphicsOps)
 	mprintf(( "  OpenGL Renderer  : %s\n", glGetString(GL_RENDERER) ));
 	mprintf(( "  OpenGL Version   : %s\n", glGetString(GL_VERSION) ));
 	mprintf(( "\n" ));
+
+	opengl_do_workaround_checks();
 
 	if (Cmdline_fullscreen_window || Cmdline_window) {
 		opengl_go_windowed();
