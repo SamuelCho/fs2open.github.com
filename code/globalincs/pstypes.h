@@ -97,9 +97,9 @@ Note: this is a struct, not a class, so no member functions. */
 typedef struct vec3d {
 	union {
 		struct {
-			float x,y,z;
+			float x,y,z,w;
 		} xyz;
-		float a1d[3];
+		float a1d[4];
 	};
 } vec3d;
 
@@ -116,8 +116,7 @@ typedef struct matrix {
 		struct {
 			vec3d	rvec, uvec, fvec;
 		} vec;
-		float a2d[3][3];
-		float a1d[9];
+		float a2d[3][4];
 	};
 } matrix;
 

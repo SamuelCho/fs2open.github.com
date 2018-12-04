@@ -568,6 +568,16 @@ inline matrix operator*(const matrix& left, const matrix& right) {
 	return out;
 }
 
+inline float vm_matrix_get_a1d(matrix* m, int i)
+{
+	return m->a2d[i / 3][i % 3];
+}
+
+inline void vm_matrix_set_a1d(matrix* m, int i, float v)
+{
+	m->a2d[i / 3][i % 3] = v;
+}
+
 #endif
 
 

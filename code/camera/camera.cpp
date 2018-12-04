@@ -74,7 +74,7 @@ void camera::reset()
 	for(int i = 0; i < 9; i++)
 	{
 		ori[i].clear();
-		ori[i].set(vmd_identity_matrix.a1d[i]);
+		ori[i].set( vm_matrix_get_a1d(&vmd_identity_matrix, i) );
 	}
 }
 
@@ -198,7 +198,7 @@ void camera::set_rotation(matrix *in_orientation, float in_rotation_time, float 
 	{
 		c_ori = *in_orientation;
 		for(int i = 0; i < 9; i++)
-			ori[i].set(in_orientation->a1d[i]);
+			ori[i].set(vm_matrix_get_a1d(in_orientation, i));
 		flags |= CAM_STATIONARY_ORI;
 		return;
 	}
@@ -212,7 +212,7 @@ void camera::set_rotation(matrix *in_orientation, float in_rotation_time, float 
 	}
 
 	for(int i = 0; i < 9; i++)
-		ori[i].setAVD(in_orientation->a1d[i], in_rotation_time, in_rotation_acceleration_time, in_rotation_deceleration_time, 0.0f);
+		ori[i].setAVD(vm_matrix_get_a1d(in_orientation, i), in_rotation_time, in_rotation_acceleration_time, in_rotation_deceleration_time, 0.0f);
 }
 
 void camera::set_rotation(angles *in_angles, float in_rotation_time, float in_rotation_acceleration_time, float in_rotation_deceleration_time)
@@ -416,7 +416,7 @@ void camera::get_info(vec3d *position, matrix *orientation)
 			for(int i = 0; i < 9; i++)
 			{
 				ori[i].get(&pos, NULL);
-				mtxB.a1d[i] = pos;
+				vm_matrix_set_a1d(&mtxB, i, pos);
 			}
 			vm_matrix_x_matrix(&c_ori, &mtxA, &mtxB);
 

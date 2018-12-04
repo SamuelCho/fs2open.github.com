@@ -101,7 +101,7 @@ ADE_INDEXER(l_Matrix,
 		}
 	} else {
 		idx--;    //Lua->FS2
-		val = &mh->GetMatrix()->a1d[idx];
+		val = &mh->GetMatrix()->a2d[idx / 3][idx % 3];
 	}
 
 	if (ADE_SETTING_VAR && *val != newval) {
@@ -152,8 +152,8 @@ ADE_FUNC(__tostring,
 	}
 
 	char buf[128];
-	float* a = &mh->GetMatrix()->a1d[0];
-	sprintf(buf, "[%f %f %f | %f %f %f | %f %f %f]", a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8]);
+	matrix *m = mh->GetMatrix();
+	sprintf(buf, "[%f %f %f | %f %f %f | %f %f %f]", vm_matrix_get_a1d(m, 0), vm_matrix_get_a1d(m, 1), vm_matrix_get_a1d(m, 2), vm_matrix_get_a1d(m, 3), vm_matrix_get_a1d(m, 4), vm_matrix_get_a1d(m, 5), vm_matrix_get_a1d(m, 6), vm_matrix_get_a1d(m, 7), vm_matrix_get_a1d(m, 8));
 
 	return ade_set_args(L, "s", buf);
 }
@@ -177,7 +177,7 @@ ADE_FUNC(getInterpolated,
 
 //matrix subtraction & scaling
 	for (int i = 0; i < 9; i++) {
-		final.a1d[i] = A->a1d[i] + (B->a1d[i] - A->a1d[i]) * factor;
+		vm_matrix_set_a1d(&final, i, vm_matrix_get_a1d(A, i) + (vm_matrix_get_a1d(B, i) - vm_matrix_get_a1d(A, i) * factor));
 	}
 
 	return ade_set_args(L, "o", l_Matrix.Set(matrix_h(&final)));

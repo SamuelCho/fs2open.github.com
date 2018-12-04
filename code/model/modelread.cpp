@@ -5845,8 +5845,7 @@ void model_subsystem::reset()
     memset(crewspot, 0, sizeof(crewspot));
     turret_norm.xyz.x = turret_norm.xyz.y = turret_norm.xyz.z = 0.0f;
     
-    for (auto it = std::begin(turret_matrix.a1d); it != std::end(turret_matrix.a1d); ++it)
-        *it = 0.0f;
+	memset(&turret_matrix, 0, sizeof(matrix));
 
     turret_fov = 0;
     turret_max_fov = 0;

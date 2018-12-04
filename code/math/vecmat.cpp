@@ -1514,7 +1514,7 @@ int vm_matrix_same(matrix *m1, matrix *m2)
 {
 	int i;
 	for (i = 0; i < 9; i++)
-		if (m1->a1d[i] != m2->a1d[i])
+		if ( vm_matrix_get_a1d(m1, i) != vm_matrix_get_a1d(m2, i) )
 			return 0;
 
 	return 1;
