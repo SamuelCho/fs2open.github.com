@@ -130,10 +130,10 @@ struct interp_vertex {
 //
 
 static int Num_interp_verts_allocated = 0;
-vec3d **Interp_verts = NULL;
+vec3_interp **Interp_verts = NULL;
 static vertex *Interp_points = NULL;
 static vertex *Interp_splode_points = NULL;
-vec3d *Interp_splode_verts = NULL;
+vec3_interp *Interp_splode_verts = NULL;
 static int Interp_num_verts = 0;
 
 static float Interp_box_scale = 1.0f; // this is used to scale both detail boxes and spheres
@@ -152,7 +152,7 @@ int Interp_saved_lighting_full = 0;
 
 
 static int Num_interp_norms_allocated = 0;
-static vec3d **Interp_norms = NULL;
+static vec3_interp **Interp_norms = NULL;
 static ubyte *Interp_light_applied = NULL;
 static int Interp_num_norms = 0;
 static ubyte *Interp_lights;
@@ -262,11 +262,11 @@ void model_allocate_interp_data(int n_verts, int n_norms)
 			Interp_verts = NULL;
 		}
 		// Interp_verts can't be reliably realloc'd so free and malloc it on each resize (no data needs to be carried over)
-		Interp_verts = (vec3d**) vm_malloc( n_verts * sizeof(vec3d *) );
+		Interp_verts = (vec3_interp**) vm_malloc( n_verts * sizeof(vec3_interp *) );
 
 		Interp_points = (vertex*) vm_realloc( Interp_points, n_verts * sizeof(vertex) );
 		Interp_splode_points = (vertex*) vm_realloc( Interp_splode_points, n_verts * sizeof(vertex) );
-		Interp_splode_verts = (vec3d*) vm_realloc( Interp_splode_verts, n_verts * sizeof(vec3d) );
+		Interp_splode_verts = (vec3_interp*) vm_realloc( Interp_splode_verts, n_verts * sizeof(vec3_interp) );
 
 		Num_interp_verts_allocated = n_verts;
 
@@ -280,7 +280,7 @@ void model_allocate_interp_data(int n_verts, int n_norms)
 			Interp_norms = NULL;
 		}
 		// Interp_norms can't be reliably realloc'd so free and malloc it on each resize (no data needs to be carried over)
-		Interp_norms = (vec3d**) vm_malloc( n_norms * sizeof(vec3d *) );
+		Interp_norms = (vec3_interp**) vm_malloc( n_norms * sizeof(vec3_interp *) );
 
 		// these next two lighting things aren't values that need to be carried over, but we need to make sure they are 0 by default
 		if (Interp_light_applied != NULL) {
@@ -411,7 +411,8 @@ void model_interp_splode_defpoints(ubyte * p, polymodel * /*pm*/, bsp_info * /*s
 
 	ubyte * normcount = p+20;
 	vertex *dest = Interp_splode_points;
-	vec3d *src = vp(p+offset);
+	vec3_interp *src = vp(p+offset);
+
 
 	for (n = 0; n < nverts; n++) {
 		nnorms += normcount[n];
@@ -430,10 +431,13 @@ void model_interp_splode_defpoints(ubyte * p, polymodel * /*pm*/, bsp_info * /*s
 		vm_vec_normalize(&dir);
 
 		for(int i=0; i<normcount[n]; i++)src++;
+		
+		vec3d temp;
+		vm_vec_from_interp(&temp, &Interp_splode_verts[n]);
 
-		vm_vec_scale_add2(&Interp_splode_verts[n], &dir, dist);
+		vm_vec_scale_add2(&temp, &dir, dist);
 
-		g3_rotate_vertex(dest, &Interp_splode_verts[n]);
+		g3_rotate_vertex(dest, &temp);
 		
 		dest++;
 
@@ -461,7 +465,7 @@ void model_interp_defpoints(ubyte * p, polymodel *pm, bsp_info *sm)
 
 	ubyte * normcount = p+20;
 	vertex *dest = NULL;
-	vec3d *src = vp(p+offset);
+	vec3_interp *src = vp(p+offset);
 
 	// Get pointer to lights
 	Interp_lights = p+20+nverts;
@@ -506,7 +510,7 @@ void model_interp_defpoints(ubyte * p, polymodel *pm, bsp_info *sm)
 				tmp.xyz.y = src->xyz.y * 1.0f;
 				tmp.xyz.z = src->xyz.z * Interp_thrust_scale;
 			} else {
-				tmp = *src;
+				vm_vec_from_interp(&tmp, src);
 			}
 			
 			g3_rotate_vertex(dest,&tmp);
@@ -560,8 +564,11 @@ void model_interp_defpoints(ubyte * p, polymodel *pm, bsp_info *sm)
 						
 				g3_rotate_vertex(dest, &point);
 			}else{
-				Interp_verts[n] = src;	
-				g3_rotate_vertex(dest, src);
+				Interp_verts[n] = src;
+
+				vec3d tmp;
+				vm_vec_from_interp(&tmp, src);
+				g3_rotate_vertex(dest, &tmp);
 			}
 
 			src++;		// move to normal
@@ -1236,7 +1243,7 @@ static int submodel_get_points_internal(int model_num, int submodel_num)
 				int nnorms = 0;			
 
 				ubyte * normcount = p+20;
-				vec3d *src = vp(p+offset);
+				vec3_interp *src = vp(p+offset);
 
 				for (n = 0; n < nverts; n++) {
 					nnorms += normcount[n];
@@ -1245,8 +1252,8 @@ static int submodel_get_points_internal(int model_num, int submodel_num)
 				model_allocate_interp_data(nverts, nnorms);
 
 				// this must happen only after the interp_data allocation call (since the address changes)
-				vec3d **verts = Interp_verts;
-				vec3d **norms = Interp_norms;
+				vec3_interp **verts = Interp_verts;
+				vec3_interp **norms = Interp_norms;
 
 				for (n=0; n<nverts; n++ )	{
 					*verts++ = src;
@@ -1313,14 +1320,14 @@ void submodel_get_two_random_points(int model_num, int submodel_num, vec3d *v1, 
 	int vn1 = myrand() % nv;
 	int vn2 = myrand() % nv;
 
-	*v1 = *Interp_verts[vn1];
-	*v2 = *Interp_verts[vn2];
+	vm_vec_from_interp(v1, Interp_verts[vn1]);
+	vm_vec_from_interp(v2, Interp_verts[vn2]);
 
 	if(n1 != NULL){
-		*n1 = *Interp_norms[vn1];
+		vm_vec_from_interp(n1, Interp_norms[vn1]);
 	}
 	if(n2 != NULL){
-		*n2 = *Interp_norms[vn2];
+		vm_vec_from_interp(n2, Interp_norms[vn2]);
 	}
 }
 
@@ -1746,7 +1753,7 @@ void parse_defpoint(int off, ubyte *bsp_data)
 	int next_norm = 0;
 
 	ubyte *normcount = off+bsp_data+20;
-	vec3d *src = vp(off+bsp_data+offset);
+	vec3_interp *src = vp(off+bsp_data+offset);
 
 	// Get pointer to lights
 	Interp_lights = off+bsp_data+20+nverts;
@@ -1795,7 +1802,7 @@ void parse_tmap(int offset, ubyte *bsp_data)
 	tverts = (model_tmap_vert *)&bsp_data[offset+44];
 
 	vertex *V;
-	vec3d *v;
+	vec3_interp *v;
 	vec3d *N;
 
 	int problem_count = 0;
@@ -1810,10 +1817,10 @@ void parse_tmap(int offset, ubyte *bsp_data)
 		V->texture_position.u = tverts[0].u;
 		V->texture_position.v = tverts[0].v;
 
-		*N = *Interp_norms[(int)tverts[0].normnum];
+		vm_vec_from_interp(N, Interp_norms[(int)tverts[0].normnum]);
 
 		if ( IS_VEC_NULL(N) )
-			*N = *vp(p);
+			vm_vec_from_interp(N, vp(p));
 
 	  	problem_count += check_values(N);
 		vm_vec_normalize_safe(N);
@@ -1827,10 +1834,10 @@ void parse_tmap(int offset, ubyte *bsp_data)
 		V->texture_position.u = tverts[i].u;
 		V->texture_position.v = tverts[i].v;
 
-		*N = *Interp_norms[(int)tverts[i].normnum];
+		vm_vec_from_interp(N, Interp_norms[(int)tverts[i].normnum]);
 
 		if ( IS_VEC_NULL(N) )
-			*N = *vp(p);
+			vm_vec_from_interp(N, vp(p));
 
 	 	problem_count += check_values(N);
 		vm_vec_normalize_safe(N);
@@ -1844,10 +1851,10 @@ void parse_tmap(int offset, ubyte *bsp_data)
 		V->texture_position.u = tverts[i+1].u;
 		V->texture_position.v = tverts[i+1].v;
 
-		*N = *Interp_norms[(int)tverts[i+1].normnum];
+		vm_vec_from_interp(N, Interp_norms[(int)tverts[i + 1].normnum]);
 
 		if ( IS_VEC_NULL(N) )
-			*N = *vp(p);
+			vm_vec_from_interp(N, vp(p));
 
 		problem_count += check_values(N);
 		vm_vec_normalize_safe(N);
@@ -3021,7 +3028,7 @@ void bsp_polygon_data::process_defpoints(int off, ubyte* bsp_data)
 	int offset = w(off + bsp_data + 16);
 
 	ubyte *normcount = off + bsp_data + 20;
-	vec3d *src = vp(off + bsp_data + offset);
+	vec3_interp *src = vp(off + bsp_data + offset);
 
 	// Get pointer to lights
 	Lights = off + bsp_data + 20 + nverts;
@@ -3034,11 +3041,17 @@ void bsp_polygon_data::process_defpoints(int off, ubyte* bsp_data)
 	Normal_list.clear();
 
 	for (n = 0; n < nverts; n++) {
-		Vertex_list.push_back(*src);
+		vec3d vert_tmp;
+
+		vm_vec_from_interp(&vert_tmp, src);
+		Vertex_list.push_back(vert_tmp);
 		src++; // move to normal
 
 		for (i = 0; i < normcount[n]; i++) {
-			Normal_list.push_back(*src);
+			vec3d norm_tmp;
+
+			vm_vec_from_interp(&norm_tmp, src);
+			Normal_list.push_back(norm_tmp);
 			src++;
 		}
 	}
@@ -3102,8 +3115,8 @@ void bsp_polygon_data::process_tmap(int offset, ubyte* bsp_data)
 		vert.normal = Normal_list[(int)tverts[i].normnum];
 
 		// see if this normal is okay
-		if (IS_VEC_NULL(&vert.normal))
-			vert.normal = *vp(p);
+		if ( IS_VEC_NULL(&vert.normal) )
+			vm_vec_from_interp(&vert.normal, vp(p));
 
 		problem_count += check_values(&vert.normal);
 		vm_vec_normalize_safe(&vert.normal);

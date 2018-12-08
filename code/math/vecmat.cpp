@@ -10,9 +10,11 @@
 
 
 #include <cstdio>
-#if _M_IX86_FP >= 1
-	#include <xmmintrin.h>
-#endif
+//#if _M_IX86_FP >= 1
+#include <xmmintrin.h>
+#include <smmintrin.h>
+#include <pmmintrin.h>
+//#endif
 
 #include "math/vecmat.h"
 #include "utils/RandomRange.h"
@@ -158,9 +160,13 @@ void vm_set_identity(matrix *m)
 //ok for dest to equal either source, but should use vm_vec_add2() if so
 void vm_vec_add(vec3d *dest, const vec3d *src0, const vec3d *src1)
 {
+#ifdef USE_INTRINSICS
+	dest->m128 = _mm_add_ps(src0->m128, src1->m128);
+#else
 	dest->xyz.x = src0->xyz.x + src1->xyz.x;
 	dest->xyz.y = src0->xyz.y + src1->xyz.y;
 	dest->xyz.z = src0->xyz.z + src1->xyz.z;
+#endif
 }
 
 //subs two vectors, fills in dest, returns ptr to dest
@@ -211,6 +217,23 @@ vec3d *vm_vec_avg_n(vec3d *dest, int n, const vec3d src[])
 	return dest;
 }
 
+vec3d *vm_vec_avg_n(vec3d *dest, int n, const vec3_interp src[])
+{
+	float x = 0.0f, y = 0.0f, z = 0.0f;
+	float inv_n = 1.0f / (float)n;;
+
+	for ( int i = 0; i < n; i++ ) {
+		x += src[i].xyz.x;
+		y += src[i].xyz.y;
+		z += src[i].xyz.z;
+	}
+
+	dest->xyz.x = x * inv_n;
+	dest->xyz.y = y * inv_n;
+	dest->xyz.z = z * inv_n;
+
+	return dest;
+}
 
 //averages two vectors. returns ptr to dest
 //dest can equal either source

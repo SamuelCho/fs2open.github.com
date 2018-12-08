@@ -100,7 +100,7 @@ void moff_defpoints(ubyte * p, int just_count)
 		return;
 
 	ubyte * normcount = p+20;
-	vec3d *src = vp(p+offset);
+	vec3_interp *src = vp(p+offset);
 
 	// make sure we have enough space allocated for the new data
 	for (n = 0; n < nverts; n++) {
@@ -133,6 +133,7 @@ void moff_tmappoly(ubyte * p, polymodel * pm, model_octant * oct, int just_count
 {
 	int i, nv;
 	model_tmap_vert *verts;
+	vec3d tmp;
 
 	nv = w(p+36);
 	if ( nv < 0 ) return;
@@ -147,19 +148,21 @@ void moff_tmappoly(ubyte * p, polymodel * pm, model_octant * oct, int just_count
 		Assert( Interp_verts != NULL );
 
 		for (i=0;i<nv;i++)	{
-			vm_vec_add2( &center_point, Interp_verts[verts[i].vertnum] );
+			vm_vec_from_interp(&tmp, Interp_verts[verts[i].vertnum]);
+			vm_vec_add2( &center_point, &tmp );
 		}
 
 		center_point.xyz.x /= nv;
 		center_point.xyz.y /= nv;
 		center_point.xyz.z /= nv;
 
-		*vp(p+20) = center_point;
+		vm_vec_to_interp(vp(p + 20), &center_point);
 
 		float rad = 0.0f;
 
 		for (i=0;i<nv;i++)	{
-			float dist = vm_vec_dist( &center_point, Interp_verts[verts[i].vertnum] );
+			vm_vec_from_interp(&tmp, Interp_verts[verts[i].vertnum]);
+			float dist = vm_vec_dist( &center_point, &tmp );
 			if ( dist > rad )	{
 				rad = dist;
 			}
@@ -167,12 +170,14 @@ void moff_tmappoly(ubyte * p, polymodel * pm, model_octant * oct, int just_count
 		fl(p+32) = rad;
 	}
 
+	vm_vec_from_interp(&tmp, vp(p + 20));
+
 	// Put each face into a particular octant
-	if ( point_in_octant( pm, oct, vp(p+20) ) )	{
+	if ( point_in_octant( pm, oct, &tmp) )	{
 		if (just_count)
 			oct->nverts++;
 		else
-			oct->verts[oct->nverts++] = vp(p+20);
+			oct->verts[oct->nverts++] = vp(p + 20);
 		return;
 	}
 }
@@ -194,6 +199,7 @@ void moff_flatpoly(ubyte * p, polymodel * pm, model_octant * oct, int just_count
 {
 	int i, nv;
 	short *verts;
+	vec3d tmp;
 
 	nv = w(p+36);
 	if ( nv < 0 ) return;
@@ -208,19 +214,21 @@ void moff_flatpoly(ubyte * p, polymodel * pm, model_octant * oct, int just_count
 		Assert( Interp_verts != NULL );
 
 		for (i=0;i<nv;i++)	{
-			vm_vec_add2( &center_point, Interp_verts[verts[i*2]] );
+			vm_vec_from_interp(&tmp, Interp_verts[verts[i * 2]]);
+			vm_vec_add2( &center_point, &tmp );
 		}
 
 		center_point.xyz.x /= nv;
 		center_point.xyz.y /= nv;
 		center_point.xyz.z /= nv;
 
-		*vp(p+20) = center_point;
+		vm_vec_to_interp(vp(p + 20), &center_point);
 
 		float rad = 0.0f;
 
 		for (i=0;i<nv;i++)	{
-			float dist = vm_vec_dist( &center_point, Interp_verts[verts[i*2]] );
+			vm_vec_from_interp(&tmp, Interp_verts[verts[i * 2]]);
+			float dist = vm_vec_dist( &center_point, &tmp );
 			if ( dist > rad )	{
 				rad = dist;
 			}
@@ -228,8 +236,10 @@ void moff_flatpoly(ubyte * p, polymodel * pm, model_octant * oct, int just_count
 		fl(p+32) = rad;
 	}
 
+	vm_vec_from_interp(&tmp, vp(p + 20));
+
 	// Put each face's center point into a particular octant
-	if ( point_in_octant( pm, oct, vp(p+20) ) )	{
+	if ( point_in_octant( pm, oct, &tmp) )	{
 		if (just_count)
 			oct->nverts++;
 		else
@@ -299,7 +309,7 @@ void model_octant_find_faces( polymodel * pm, model_octant * oct )
 		return;
 	}
 
-	oct->verts = (vec3d **)vm_malloc( sizeof(vec3d *) * oct->nverts );
+	oct->verts = (vec3_interp **)vm_malloc( sizeof(vec3_interp *) * oct->nverts );
 	Assert(oct->verts!=NULL);
 
 	oct->nverts = 0;

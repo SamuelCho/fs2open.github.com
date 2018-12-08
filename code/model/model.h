@@ -550,7 +550,7 @@ typedef struct bsp_light {
 typedef struct model_octant {
 	vec3d		min, max;				// The bounding box that makes up this octant defined as 2 points.
 	int			nverts;					// how many vertices are in this octant
-	vec3d		**verts;					// The vertices in this octant in the high-res hull.  A vertex can only be in one octant.
+	vec3_interp	**verts;					// The vertices in this octant in the high-res hull.  A vertex can only be in one octant.
 	int			nshield_tris;			// how many shield triangles are in the octant
 	shield_tri	**shield_tris;			// the shield triangles that make up this octant. A tri could be in multiple octants.
 } model_octant;

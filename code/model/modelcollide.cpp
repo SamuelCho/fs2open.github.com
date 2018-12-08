@@ -46,7 +46,7 @@ static vec3d		Mc_p1;			// The ray end rotated into the current submodel's frame 
 static float		Mc_mag;			// The length of the ray
 static vec3d		Mc_direction;	// A vector from the ray's origin to its end, in the current submodel's frame of reference
 
-static vec3d 		**Mc_point_list = NULL;		// A pointer to the current submodel's vertex list
+static vec3_interp	**Mc_point_list = NULL;		// A pointer to the current submodel's vertex list
 
 static float		Mc_edge_time;
 
@@ -70,7 +70,7 @@ void model_collide_allocate_point_list(int n_points)
 		Mc_point_list = NULL;
 	}
 
-	Mc_point_list = (vec3d**) vm_malloc( sizeof(vec3d *) * n_points );
+	Mc_point_list = (vec3_interp**) vm_malloc( sizeof(vec3_interp *) * n_points );
 
 	Verify( Mc_point_list != NULL );
 }
@@ -359,7 +359,7 @@ void model_collide_defpoints(ubyte * p)
 	int offset = w(p+16);	
 
 	ubyte * normcount = p+20;
-	vec3d *src = vp(p+offset);
+	vec3_interp *src = vp(p+offset);
 	
 	Assert( Mc_point_list != NULL );
 
@@ -377,7 +377,7 @@ int model_collide_parse_bsp_defpoints(ubyte * p)
 	int offset = w(p+16);	
 
 	ubyte * normcount = p+20;
-	vec3d *src = vp(p+offset);
+	vec3_interp *src = vp(p+offset);
 
 	model_collide_allocate_point_list(nverts);
 
@@ -408,7 +408,8 @@ void model_collide_flatpoly(ubyte * p)
 {
 	int i;
 	int nv;
-	vec3d *points[TMAP_MAX_VERTS];
+	vec3d *points_ptrs[TMAP_MAX_VERTS];
+	vec3d points[TMAP_MAX_VERTS];
 	short *verts;
 
 	nv = w(p+36);
@@ -424,13 +425,20 @@ void model_collide_flatpoly(ubyte * p)
 	verts = (short *)(p+44);
 
 	for (i=0;i<nv;i++)	{
-		points[i] = Mc_point_list[verts[i*2]];
+		vm_vec_from_interp(&points[i], Mc_point_list[verts[i * 2]]);
+		points_ptrs[i] = &points[i];
 	}
 
+	vec3d plane_pnt;
+	vec3d plane_norm;
+
+	vm_vec_from_interp(&plane_pnt, vp(p + 20));
+	vm_vec_from_interp(&plane_norm, vp(p + 8));
+
 	if ( Mc->flags & MC_CHECK_SPHERELINE )	{
-		mc_check_sphereline_face(nv, points, vp(p+20), vp(p+8), NULL, -1, p, NULL);
+		mc_check_sphereline_face(nv, points_ptrs, &plane_pnt, &plane_norm, NULL, -1, p, NULL);
 	} else {
-		mc_check_face(nv, points, vp(p+20), vp(p+8), NULL, -1, p, NULL);
+		mc_check_face(nv, points_ptrs, &plane_pnt, &plane_norm, NULL, -1, p, NULL);
 	}
 }
 
@@ -449,7 +457,8 @@ void model_collide_tmappoly(ubyte * p)
 	int i;
 	int nv;
 	uv_pair uvlist[TMAP_MAX_VERTS];
-	vec3d *points[TMAP_MAX_VERTS];
+	vec3d *points_ptrs[TMAP_MAX_VERTS];
+	vec3d points[TMAP_MAX_VERTS];
 	model_tmap_vert *verts;
 
 	nv = w(p+36);
@@ -475,15 +484,22 @@ void model_collide_tmappoly(ubyte * p)
 	verts = (model_tmap_vert *)(p+44);
 
 	for (i=0;i<nv;i++)	{
-		points[i] = Mc_point_list[verts[i].vertnum];
+		vm_vec_from_interp(&points[i], Mc_point_list[verts[i].vertnum]);
+		points_ptrs[i] = &points[i];
 		uvlist[i].u = verts[i].u;
 		uvlist[i].v = verts[i].v;
 	}
 
+	vec3d plane_pnt;
+	vec3d plane_norm;
+
+	vm_vec_from_interp(&plane_pnt, vp(p + 20));
+	vm_vec_from_interp(&plane_norm, vp(p + 8));
+
 	if ( Mc->flags & MC_CHECK_SPHERELINE )	{
-		mc_check_sphereline_face(nv, points, vp(p+20), vp(p+8), uvlist, tmap_num, p, NULL);
+		mc_check_sphereline_face(nv, points_ptrs, &plane_pnt, &plane_norm, uvlist, tmap_num, p, NULL);
 	} else {
-		mc_check_face(nv, points, vp(p+20), vp(p+8), uvlist, tmap_num, p, NULL);
+		mc_check_face(nv, points_ptrs, &plane_pnt, &plane_norm, uvlist, tmap_num, p, NULL);
 	}
 }
 
@@ -510,9 +526,14 @@ void model_collide_sortnorm(ubyte * p)
 	int postlist = w(p+48);
 	int onlist = w(p+52);
 	vec3d hitpos;
+	vec3d min;
+	vec3d max;
 
+	vm_vec_from_interp(&min, vp(p + 56));
+	vm_vec_from_interp(&max, vp(p + 68));
+	
 	if ( Mc_pm->version >= 2000 )	{
-		if ( mc_ray_boundingbox( vp(p+56), vp(p+68), &Mc_p0, &Mc_direction, &hitpos) )	{
+		if ( mc_ray_boundingbox( &min, &max, &Mc_p0, &Mc_direction, &hitpos) )	{
 			if ( !(Mc->flags & MC_CHECK_RAY) && (vm_vec_dist(&hitpos, &Mc_p0) > Mc_mag) ) {
 				return;
 			}
@@ -535,6 +556,8 @@ int model_collide_sub(void *model_ptr )
 	ubyte *p = (ubyte *)model_ptr;
 	int chunk_type, chunk_size;
 	vec3d hitpos;
+	vec3d min;
+	vec3d max;
 
 	chunk_type = w(p);
 	chunk_size = w(p+4);
@@ -543,13 +566,16 @@ int model_collide_sub(void *model_ptr )
 
 //		mprintf(( "Processing chunk type %d, len=%d\n", chunk_type, chunk_size ));
 
+		vm_vec_from_interp(&min, vp(p + 8));
+		vm_vec_from_interp(&max, vp(p + 20));
+
 		switch (chunk_type) {
 		case OP_DEFPOINTS:	model_collide_defpoints(p); break;
 		case OP_FLATPOLY:		model_collide_flatpoly(p); break;
 		case OP_TMAPPOLY:		model_collide_tmappoly(p); break;
 		case OP_SORTNORM:		model_collide_sortnorm(p); break;
 		case OP_BOUNDBOX:	
-			if ( mc_ray_boundingbox( vp(p+8), vp(p+20), &Mc_p0, &Mc_direction, &hitpos ) )	{
+			if ( mc_ray_boundingbox( &min, &max, &Mc_p0, &Mc_direction, &hitpos ) )	{
 				if ( !(Mc->flags & MC_CHECK_RAY) && (vm_vec_dist(&hitpos, &Mc_p0) > Mc_mag) ) {
 					// The ray isn't long enough to intersect the bounding box
 					return 1;
@@ -674,13 +700,13 @@ void model_collide_parse_bsp_tmappoly(bsp_collision_leaf *leaf, SCP_vector<model
 	leaf->num_verts = (ubyte)nv;
 	leaf->vert_start = (int)vert_buffer->size();
 
-	vec3d *plane_pnt = vp(p+20);
+	vec3_interp *plane_pnt = vp(p+20);
 	float face_rad = fl(p+32);
-	vec3d *plane_norm = vp(p+8);
+	vec3_interp *plane_norm = vp(p+8);
 
-	leaf->plane_pnt = *plane_pnt;
+	vm_vec_from_interp(&leaf->plane_pnt, plane_pnt);
 	leaf->face_rad = face_rad;
-	leaf->plane_norm = *plane_norm;
+	vm_vec_from_interp(&leaf->plane_norm, plane_norm);
 
 	for ( i = 0; i < nv; ++i ) {
 		vert_buffer->push_back(verts[i]);
@@ -710,13 +736,13 @@ void model_collide_parse_bsp_flatpoly(bsp_collision_leaf *leaf, SCP_vector<model
 	leaf->num_verts = (ubyte)nv;
 	leaf->vert_start = (int)vert_buffer->size();
 
-	vec3d *plane_pnt = vp(p+20);
+	vec3_interp *plane_pnt = vp(p+20);
 	float face_rad = fl(p+32);
-	vec3d *plane_norm = vp(p+8);
+	vec3_interp *plane_norm = vp(p+8);
 
-	leaf->plane_pnt = *plane_pnt;
+	vm_vec_from_interp(&leaf->plane_pnt, plane_pnt);
 	leaf->face_rad = face_rad;
-	leaf->plane_norm = *plane_norm;
+	vm_vec_from_interp(&leaf->plane_norm, plane_norm);
 
 	model_tmap_vert vert;
 
@@ -777,8 +803,8 @@ void model_collide_parse_bsp(bsp_collision_tree *tree, void *model_ptr, int vers
 	node_buffer.push_back(new_node);
 
 	size_t i = 0;
-	vec3d *min;
-	vec3d *max;
+	vec3_interp *min;
+	vec3_interp *max;
 
 	bsp_datap[i] = p;
 
@@ -794,8 +820,8 @@ void model_collide_parse_bsp(bsp_collision_tree *tree, void *model_ptr, int vers
 				min = vp(p+56);
 				max = vp(p+68);
 
-				node_buffer[i].min = *min;
-				node_buffer[i].max = *max;
+				vm_vec_from_interp(&node_buffer[i].min, min);
+				vm_vec_from_interp(&node_buffer[i].max, max);
 			}
 
 			node_buffer[i].leaf = -1;
@@ -833,8 +859,8 @@ void model_collide_parse_bsp(bsp_collision_tree *tree, void *model_ptr, int vers
 			min = vp(p+8);
 			max = vp(p+20);
 
-			node_buffer[i].min = *min;
-			node_buffer[i].max = *max;
+			vm_vec_from_interp(&node_buffer[i].min, min);
+			vm_vec_from_interp(&node_buffer[i].max, max);
 
 			node_buffer[i].front = -1;
 			node_buffer[i].back = -1;
@@ -888,7 +914,7 @@ void model_collide_parse_bsp(bsp_collision_tree *tree, void *model_ptr, int vers
 	tree->point_list = (vec3d*)vm_malloc(sizeof(vec3d) * n_verts);
 
 	for ( i = 0; i < (size_t)n_verts; ++i ) {
-		tree->point_list[i] = *Mc_point_list[i];
+		vm_vec_from_interp(&tree->point_list[i], Mc_point_list[i]);
 	}
 
 	tree->n_verts = n_verts;

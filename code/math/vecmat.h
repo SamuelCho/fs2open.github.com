@@ -15,6 +15,7 @@
 #include "globalincs/pstypes.h"
 #include "math/floating.h"
 
+//#define USE_INTRINSICS
 
 #define vm_is_vec_nan(v) (fl_is_nan((v)->xyz.x) || fl_is_nan((v)->xyz.y) || fl_is_nan((v)->xyz.z))
 
@@ -100,7 +101,7 @@ void vm_vec_sub2(vec3d *dest, const vec3d *src);
 
 //averages n vectors
 vec3d *vm_vec_avg_n(vec3d *dest, int n, const vec3d src[]);
-
+vec3d *vm_vec_avg_n(vec3d *dest, int n, const vec3_interp src[]);
 
 //averages two vectors. returns ptr to dest
 //dest can equal either source
@@ -566,6 +567,18 @@ inline matrix operator*(const matrix& left, const matrix& right) {
 	matrix out;
 	vm_matrix_x_matrix(&out, &left, &right);
 	return out;
+}
+
+inline void vm_vec_from_interp(vec3d* dest, vec3_interp* src) {
+	dest->xyz.x = src->xyz.x;
+	dest->xyz.y = src->xyz.y;
+	dest->xyz.z = src->xyz.z;
+}
+
+inline void vm_vec_to_interp(vec3_interp* dest, vec3d* src) {
+	dest->xyz.x = src->xyz.x;
+	dest->xyz.y = src->xyz.y;
+	dest->xyz.z = src->xyz.z;
 }
 
 inline float vm_matrix_get_a1d(matrix* m, int i)

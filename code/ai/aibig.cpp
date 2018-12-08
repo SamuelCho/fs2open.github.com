@@ -104,7 +104,7 @@ void ai_bpap(object *objp, vec3d *attacker_objp_pos, vec3d *attacker_objp_fvec, 
 
 	//	Index #0 is best one.
 	if ( pm->octants[octs[0]].verts ) {
-		*local_attack_point = *pm->octants[octs[0]].verts[0];	//	Set just in case it doesn't get set below.
+		vm_vec_from_interp(local_attack_point, pm->octants[octs[0]].verts[0]); //	Set just in case it doesn't get set below.
 	} else {
 		vm_vec_zero(local_attack_point);
 	}
@@ -126,7 +126,7 @@ void ai_bpap(object *objp, vec3d *attacker_objp_pos, vec3d *attacker_objp_fvec, 
 
 				index = (int) (frand() * (octp->nverts));
 
-				rel_point = *octp->verts[index];
+				vm_vec_from_interp(&rel_point, octp->verts[index]);
 				vm_vec_unrotate(&result_point, &rel_point, &objp->orient);
 				vm_vec_add2(&result_point, &objp->pos);
 

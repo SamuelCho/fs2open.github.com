@@ -26,6 +26,8 @@
 #include <algorithm>
 #include <cstdint>
 
+#include <xmmintrin.h>
+
 // value to represent an uninitialized state in any int or uint
 #define UNINITIALIZED 0x7f8e6d9c
 
@@ -100,8 +102,18 @@ typedef struct vec3d {
 			float x,y,z,w;
 		} xyz;
 		float a1d[4];
+		__m128 m128;
 	};
 } vec3d;
+
+typedef struct vec3_interp {
+	union {
+		struct {
+			float x, y, z;
+		} xyz;
+		float a1d[3];
+	};
+} vec3_interp;
 
 typedef struct vec2d {
 	float x, y;

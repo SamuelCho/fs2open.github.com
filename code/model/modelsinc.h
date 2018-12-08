@@ -67,7 +67,7 @@ class polymodel;
 #define uw(p)	(*((uint *) (p)))
 #define w(p)	(*((int *) (p)))
 #define wp(p)	((int *) (p))
-#define vp(p)	((vec3d *) (p))
+#define vp(p)	((vec3_interp *) (p))
 #define fl(p)	(*((float *) (p)))
 
 extern int model_interp(matrix * orient, ubyte * data, polymodel * pm );
@@ -88,6 +88,6 @@ void swap_bsp_data( polymodel *pm, void *model_ptr );
 // endian swapping stuff - kaz
 void swap_sldc_data(ubyte *buffer);
 
-extern vec3d **Interp_verts;
+extern vec3_interp **Interp_verts;
 
 #endif

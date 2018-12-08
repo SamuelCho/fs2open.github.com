@@ -1390,7 +1390,7 @@ void flash_ball::initialize(int number, float min_ray_width, float max_ray_width
 #define uw(p)	(*((uint *) (p)))
 #define w(p)	(*((int *) (p)))
 #define wp(p)	((int *) (p))
-#define vp(p)	((vec3d *) (p))
+#define vp(p)	((vec3_interp *) (p))
 #define fl(p)	(*((float *) (p)))
 
 void flash_ball::defpoint(int off, ubyte *bsp_data)
@@ -1399,7 +1399,7 @@ void flash_ball::defpoint(int off, ubyte *bsp_data)
 	int nverts = w(off+bsp_data+8);	
 	int offset = w(off+bsp_data+16);
 	ubyte * normcount = off+bsp_data+20;
-	vec3d *src = vp(off+bsp_data+offset);
+	vec3_interp *src = vp(off+bsp_data+offset);
 
 	if(n_rays < nverts){
 		if(ray)vm_free(ray);
@@ -1411,7 +1411,7 @@ void flash_ball::defpoint(int off, ubyte *bsp_data)
 		vec3d temp;
 		for (n=0; n<nverts; n++ )	{
 
-			temp = *src;
+			vm_vec_from_interp(&temp, src);
 			vm_vec_sub2(&temp, &center);
 			vm_vec_normalize(&temp);
 			ray[n].start.world = temp;
