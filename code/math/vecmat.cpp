@@ -173,9 +173,13 @@ void vm_vec_add(vec3d *dest, const vec3d *src0, const vec3d *src1)
 //ok for dest to equal either source, but should use vm_vec_sub2() if so
 void vm_vec_sub(vec3d *dest, const vec3d *src0, const vec3d *src1)
 {
+#ifdef USE_INTRINSICS
+	dest->m128 = _mm_sub_ps(src0->m128, src1->m128);
+#else
 	dest->xyz.x = src0->xyz.x - src1->xyz.x;
 	dest->xyz.y = src0->xyz.y - src1->xyz.y;
 	dest->xyz.z = src0->xyz.z - src1->xyz.z;
+#endif
 }
 
 
@@ -183,36 +187,42 @@ void vm_vec_sub(vec3d *dest, const vec3d *src0, const vec3d *src1)
 //dest can equal source
 void vm_vec_add2(vec3d *dest, const vec3d *src)
 {
+#ifdef USE_INTRINSICS
+	dest->m128 = _mm_add_ps(dest->m128, src->m128);
+#else
 	dest->xyz.x += src->xyz.x;
 	dest->xyz.y += src->xyz.y;
 	dest->xyz.z += src->xyz.z;
+#endif
 }
 
 //subs one vector from another, returns ptr to dest
 //dest can equal source
 void vm_vec_sub2(vec3d *dest, const vec3d *src)
 {
+#ifdef USE_INTRINSICS
+	dest->m128 = _mm_sub_ps(dest->m128, src->m128);
+#else
 	dest->xyz.x -= src->xyz.x;
 	dest->xyz.y -= src->xyz.y;
 	dest->xyz.z -= src->xyz.z;
+#endif
 }
 
 //averages n vectors. returns ptr to dest
 //dest can equal either source
 vec3d *vm_vec_avg_n(vec3d *dest, int n, const vec3d src[])
 {
-	float x = 0.0f, y = 0.0f, z = 0.0f;
-	float inv_n = 1.0f / (float) n;;
+	float inv_n = 1.0f / (float) n;
+	vec3d tmp;
+
+	memset(&tmp, 0, sizeof(vec3d));
 
 	for(int i = 0; i<n; i++){
-		x += src[i].xyz.x;
-		y += src[i].xyz.y;
-		z += src[i].xyz.z;
+		vm_vec_add2(&tmp, &src[i]);
 	}
-
-	dest->xyz.x = x * inv_n;
-	dest->xyz.y = y * inv_n;
-	dest->xyz.z = z * inv_n;
+	
+	vm_vec_copy_scale(dest, &tmp, inv_n);
 
 	return dest;
 }
@@ -239,9 +249,8 @@ vec3d *vm_vec_avg_n(vec3d *dest, int n, const vec3_interp src[])
 //dest can equal either source
 vec3d *vm_vec_avg(vec3d *dest, const vec3d *src0, const vec3d *src1)
 {
-	dest->xyz.x = (src0->xyz.x + src1->xyz.x) * 0.5f;
-	dest->xyz.y = (src0->xyz.y + src1->xyz.y) * 0.5f;
-	dest->xyz.z = (src0->xyz.z + src1->xyz.z) * 0.5f;
+	vm_vec_add(dest, src0, src1);
+	vm_vec_scale(dest, 0.5f);
 
 	return dest;
 }
@@ -250,9 +259,10 @@ vec3d *vm_vec_avg(vec3d *dest, const vec3d *src0, const vec3d *src1)
 //dest can equal any source
 vec3d *vm_vec_avg3(vec3d *dest, const vec3d *src0, const vec3d *src1, const vec3d *src2)
 {
-	dest->xyz.x = (src0->xyz.x + src1->xyz.x + src2->xyz.x) * 0.333333333f;
-	dest->xyz.y = (src0->xyz.y + src1->xyz.y + src2->xyz.y) * 0.333333333f;
-	dest->xyz.z = (src0->xyz.z + src1->xyz.z + src2->xyz.z) * 0.333333333f;
+	vm_vec_add(dest, src0, src1);
+	vm_vec_add2(dest, src2);
+	vm_vec_scale(dest, 0.333333333f);
+
 	return dest;
 }
 
@@ -260,9 +270,11 @@ vec3d *vm_vec_avg3(vec3d *dest, const vec3d *src0, const vec3d *src1, const vec3
 //dest can equal any source
 vec3d *vm_vec_avg4(vec3d *dest, const vec3d *src0, const vec3d *src1, const vec3d *src2, const vec3d *src3)
 {
-	dest->xyz.x = (src0->xyz.x + src1->xyz.x + src2->xyz.x + src3->xyz.x) * 0.25f;
-	dest->xyz.y = (src0->xyz.y + src1->xyz.y + src2->xyz.y + src3->xyz.y) * 0.25f;
-	dest->xyz.z = (src0->xyz.z + src1->xyz.z + src2->xyz.z + src3->xyz.z) * 0.25f;
+	vm_vec_add(dest, src0, src1);
+	vm_vec_add2(dest, src2);
+	vm_vec_add2(dest, src3);
+	vm_vec_scale(dest, 0.25f);
+
 	return dest;
 }
 
@@ -270,86 +282,130 @@ vec3d *vm_vec_avg4(vec3d *dest, const vec3d *src0, const vec3d *src1, const vec3
 //scales a vector in place.
 void vm_vec_scale(vec3d *dest, float s)
 {
+#ifdef USE_INTRINSICS
+	dest->m128 = _mm_mul_ps(dest->m128, _mm_set_ps1(s));
+#else
 	dest->xyz.x = dest->xyz.x * s;
 	dest->xyz.y = dest->xyz.y * s;
 	dest->xyz.z = dest->xyz.z * s;
+#endif
 }
 
 //scales a 4-component vector in place.
 void vm_vec_scale(vec4 *dest, float s)
 {
+#ifdef USE_INTRINSICS
+	dest->m128 = _mm_mul_ps(dest->m128, _mm_set_ps1(s));
+#else
 	dest->xyzw.x = dest->xyzw.x * s;
 	dest->xyzw.y = dest->xyzw.y * s;
 	dest->xyzw.z = dest->xyzw.z * s;
 	dest->xyzw.w = dest->xyzw.w * s;
+#endif
 }
 
 //scales and copies a vector.
 void vm_vec_copy_scale(vec3d *dest, const vec3d *src, float s)
 {
+#ifdef USE_INTRINSICS
+	dest->m128 = _mm_mul_ps(src->m128, _mm_set_ps1(s));
+#else
 	dest->xyz.x = src->xyz.x*s;
 	dest->xyz.y = src->xyz.y*s;
 	dest->xyz.z = src->xyz.z*s;
+#endif
 }
 
 //scales a vector, adds it to another, and stores in a 3rd vector
 //dest = src1 + k * src2
 void vm_vec_scale_add(vec3d *dest, const vec3d *src1, const vec3d *src2, float k)
 {
+#ifdef USE_INTRINSICS
+	dest->m128 = _mm_add_ps(src1->m128, _mm_mul_ps(src2->m128, _mm_set_ps1(k)));
+#else
 	dest->xyz.x = src1->xyz.x + src2->xyz.x*k;
 	dest->xyz.y = src1->xyz.y + src2->xyz.y*k;
 	dest->xyz.z = src1->xyz.z + src2->xyz.z*k;
+#endif
 }
 
 //scales a vector, subtracts it to another, and stores in a 3rd vector
 //dest = src1 - k * src2
 void vm_vec_scale_sub(vec3d *dest, const vec3d *src1, const vec3d *src2, float k)
 {
+#ifdef USE_INTRINSICS
+	dest->m128 = _mm_sub_ps(src1->m128, _mm_mul_ps(src2->m128, _mm_set_ps1(k)));
+#else
 	dest->xyz.x = src1->xyz.x - src2->xyz.x*k;
 	dest->xyz.y = src1->xyz.y - src2->xyz.y*k;
 	dest->xyz.z = src1->xyz.z - src2->xyz.z*k;
+#endif
 }
 
 //scales a vector and adds it to another
 //dest += k * src
 void vm_vec_scale_add2(vec3d *dest, const vec3d *src, float k)
 {
+#ifdef USE_INTRINSICS
+	dest->m128 = _mm_add_ps(dest->m128, _mm_mul_ps(src->m128, _mm_set_ps1(k)));
+#else
 	dest->xyz.x += src->xyz.x*k;
 	dest->xyz.y += src->xyz.y*k;
 	dest->xyz.z += src->xyz.z*k;
+#endif
 }
 
 //scales a vector and adds it to another
 //dest += k * src
 void vm_vec_scale_sub2(vec3d *dest, const vec3d *src, float k)
 {
+#ifdef USE_INTRINSICS
+	dest->m128 = _mm_sub_ps(dest->m128, _mm_mul_ps(src->m128, _mm_set_ps1(k)));
+#else
 	dest->xyz.x -= src->xyz.x*k;
 	dest->xyz.y -= src->xyz.y*k;
 	dest->xyz.z -= src->xyz.z*k;
+#endif
 }
 
 //scales a vector in place, taking n/d for scale.
 //dest *= n/d
 void vm_vec_scale2(vec3d *dest, float n, float d)
 {	
+#ifdef USE_INTRINSICS
+	dest->m128 = _mm_mul_ps(dest->m128, _mm_mul_ps(_mm_set_ps1(n), _mm_set_ps1(d)));
+#else
 	d = 1.0f/d;
 
 	dest->xyz.x = dest->xyz.x* n * d;
 	dest->xyz.y = dest->xyz.y* n * d;
 	dest->xyz.z = dest->xyz.z* n * d;
+#endif
 }
 
 //returns dot product of 2 vectors
 float vm_vec_dot(const vec3d *v0, const vec3d *v1)
 {
+#ifdef USE_INTRINSICS
+	vec3d out;
+	out.m128 = _mm_dp_ps(v0->m128, v1->m128, 0x7F);
+	return out.xyz.x;
+#else
 	return (v1->xyz.x*v0->xyz.x)+(v1->xyz.y*v0->xyz.y)+(v1->xyz.z*v0->xyz.z);
+#endif
 }
 
 
 //returns dot product of <x,y,z> and vector
 float vm_vec_dot3(float x, float y, float z, const vec3d *v)
 {
+#ifdef USE_INTRINSICS
+	vec3d out;
+	out.m128 = _mm_dp_ps(v->m128, _mm_set_ps(x, y, z, 0.0f), 0x7F);
+	return out.xyz.x;
+#else
 	return (x*v->xyz.x)+(y*v->xyz.y)+(z*v->xyz.z);
+#endif
 }
 
 //returns magnitude of a vector
@@ -357,7 +413,7 @@ float vm_vec_mag(const vec3d *v)
 {
 	float mag1;
 
-	mag1 = (v->xyz.x * v->xyz.x) + (v->xyz.y * v->xyz.y) + (v->xyz.z * v->xyz.z);
+	mag1 = vm_vec_dot(v, v);
 
 	if (mag1 <= 0.0f) {
 		return 0.0f;
@@ -369,17 +425,16 @@ float vm_vec_mag(const vec3d *v)
 //returns squared magnitude of a vector, useful if you want to compare distances
 float vm_vec_mag_squared(const vec3d *v)
 {
-	return ((v->xyz.x * v->xyz.x) + (v->xyz.y * v->xyz.y) + (v->xyz.z * v->xyz.z));
+	return vm_vec_dot(v, v);
 }
 
 float vm_vec_dist_squared(const vec3d *v0, const vec3d *v1)
 {
 	float dx, dy, dz;
+	vec3d dest;
 
-	dx = v0->xyz.x - v1->xyz.x;
-	dy = v0->xyz.y - v1->xyz.y;
-	dz = v0->xyz.z - v1->xyz.z;
-	return dx*dx + dy*dy + dz*dz;
+	vm_vec_sub(&dest, v0, v1);
+	return vm_vec_mag_squared(&dest);
 }
 
 //computes the distance between two points. (does sub and mag)
@@ -464,9 +519,7 @@ float vm_vec_copy_normalize(vec3d *dest, const vec3d *src)
 
 	float im = 1.0f / m;
 
-	dest->xyz.x = src->xyz.x * im;
-	dest->xyz.y = src->xyz.y * im;
-	dest->xyz.z = src->xyz.z * im;
+	vm_vec_copy_scale(dest, src, im);
 	
 	return m;
 }
@@ -499,9 +552,7 @@ float vm_vec_normalize_safe(vec3d *v)
 
 	float im = 1.0f / m;
 
-	v->xyz.x *= im;
-	v->xyz.y *= im;
-	v->xyz.z *= im;
+	vm_vec_scale(v, im);
 
 	return m;
 
@@ -511,16 +562,7 @@ float vm_vec_normalize_safe(vec3d *v)
 //returns approximation of 1/magnitude of a vector
 static float vm_vec_imag(const vec3d *v)
 {
-#if _M_IX86_FP < 1
-	return 1.0f / sqrt( (v->xyz.x*v->xyz.x)+(v->xyz.y*v->xyz.y)+(v->xyz.z*v->xyz.z) );
-#else
-	float x = (v->xyz.x*v->xyz.x)+(v->xyz.y*v->xyz.y)+(v->xyz.z*v->xyz.z);
-	__m128  xx = _mm_load_ss( & x );
-	xx = _mm_rsqrt_ss( xx );
-	_mm_store_ss( & x, xx );
-
-	return x;
-#endif
+	return 1.0f / sqrt(vm_vec_mag_squared(v));
 }
 
 //normalize a vector. returns 1/mag of source vec. uses approx 1/mag
@@ -533,9 +575,7 @@ float vm_vec_copy_normalize_quick(vec3d *dest,const vec3d *src)
 
 	Assert(im > 0.0f);
 
-	dest->xyz.x = src->xyz.x*im;
-	dest->xyz.y = src->xyz.y*im;
-	dest->xyz.z = src->xyz.z*im;
+	vm_vec_copy_scale(dest, src, im);
 
 	return 1.0f/im;
 }
@@ -551,9 +591,7 @@ float vm_vec_normalize_quick(vec3d *src)
 
 	Assert(im > 0.0f);
 
-	src->xyz.x = src->xyz.x*im;
-	src->xyz.y = src->xyz.y*im;
-	src->xyz.z = src->xyz.z*im;
+	vm_vec_scale(src, im);
 
 	return 1.0f/im;
 
@@ -572,9 +610,7 @@ float vm_vec_copy_normalize_quick_mag(vec3d *dest, const vec3d *src)
 
 	float im = 1.0f / m;
 
-	dest->xyz.x = src->xyz.x * im;
-	dest->xyz.y = src->xyz.y * im;
-	dest->xyz.z = src->xyz.z * im;
+	vm_vec_copy_scale(dest, src, im);
 
 	return m;
 
@@ -627,11 +663,29 @@ vec3d *vm_vec_normal(vec3d *dest, const vec3d *p0, const vec3d *p1, const vec3d 
 //your inputs are ok.
 vec3d *vm_vec_cross(vec3d *dest, const vec3d *src0, const vec3d *src1)
 {
+#ifdef USE_INTRINSICS
+	__m128 a;
+	__m128 b;
+	__m128 c;
+
+	a = _mm_shuffle_ps(src0->m128, src0->m128, _MM_SHUFFLE(3, 0, 2, 1));    // a = (y, z, x, w)
+	b = _mm_shuffle_ps(src1->m128, src1->m128, _MM_SHUFFLE(3, 1, 0, 2));    // b = (z, x, y, w)
+	c = _mm_mul_ps(a, b);												// c = a * b;
+
+	a = _mm_shuffle_ps(src0->m128, src0->m128, _MM_SHUFFLE(3, 1, 0, 2));    // a = (z, x, y, w)
+	b = _mm_shuffle_ps(src1->m128, src1->m128, _MM_SHUFFLE(3, 0, 2, 1));    // b = (y, z, x, w)
+	b = _mm_mul_ps(a, b);													// c = a * b;
+
+	dest->m128 = _mm_sub_ps(c, b);
+
+	return dest;
+#else
 	dest->xyz.x = (src0->xyz.y * src1->xyz.z) - (src0->xyz.z * src1->xyz.y);
 	dest->xyz.y = (src0->xyz.z * src1->xyz.x) - (src0->xyz.x * src1->xyz.z);
 	dest->xyz.z = (src0->xyz.x * src1->xyz.y) - (src0->xyz.y * src1->xyz.x);
 
 	return dest;
+#endif
 }
 
 int vm_test_parallel(const vec3d *src0, const vec3d *src1)
@@ -935,9 +989,9 @@ vec3d *vm_vec_rotate(vec3d *dest, const vec3d *src, const matrix *m)
 {
 	Assert(dest != src);
 
-	dest->xyz.x = (src->xyz.x*m->vec.rvec.xyz.x)+(src->xyz.y*m->vec.rvec.xyz.y)+(src->xyz.z*m->vec.rvec.xyz.z);
-	dest->xyz.y = (src->xyz.x*m->vec.uvec.xyz.x)+(src->xyz.y*m->vec.uvec.xyz.y)+(src->xyz.z*m->vec.uvec.xyz.z);
-	dest->xyz.z = (src->xyz.x*m->vec.fvec.xyz.x)+(src->xyz.y*m->vec.fvec.xyz.y)+(src->xyz.z*m->vec.fvec.xyz.z);
+	dest->xyz.x = vm_vec_dot(src, &m->vec.rvec);
+	dest->xyz.y = vm_vec_dot(src, &m->vec.uvec);
+	dest->xyz.z = vm_vec_dot(src, &m->vec.fvec);
 
 	return dest;
 }
@@ -960,10 +1014,10 @@ vec3d *vm_vec_rotate(vec3d *dest, const vec3d *src, const matrix *m)
 vec3d *vm_vec_unrotate(vec3d *dest, const vec3d *src, const matrix *m)
 {
 	Assert(dest != src);
-
-	dest->xyz.x = (src->xyz.x*m->vec.rvec.xyz.x)+(src->xyz.y*m->vec.uvec.xyz.x)+(src->xyz.z*m->vec.fvec.xyz.x);
-	dest->xyz.y = (src->xyz.x*m->vec.rvec.xyz.y)+(src->xyz.y*m->vec.uvec.xyz.y)+(src->xyz.z*m->vec.fvec.xyz.y);
-	dest->xyz.z = (src->xyz.x*m->vec.rvec.xyz.z)+(src->xyz.y*m->vec.uvec.xyz.z)+(src->xyz.z*m->vec.fvec.xyz.z);
+	
+	dest->xyz.x = vm_vec_dot3(m->vec.rvec.xyz.x, m->vec.uvec.xyz.x, m->vec.fvec.xyz.x, src);
+	dest->xyz.y = vm_vec_dot3(m->vec.rvec.xyz.y, m->vec.uvec.xyz.y, m->vec.fvec.xyz.y, src);
+	dest->xyz.z = vm_vec_dot3(m->vec.rvec.xyz.z, m->vec.uvec.xyz.z, m->vec.fvec.xyz.z, src);
 
 	return dest;
 }
@@ -1188,17 +1242,9 @@ void vm_trackball( int idx, int idy, matrix * RotMat )
 //	Compute the outer product of A = A * transpose(A).  1x3 vector becomes 3x3 matrix.
 static void vm_vec_outer_product(matrix *mat, const vec3d *vec)
 {
-	mat->vec.rvec.xyz.x = vec->xyz.x * vec->xyz.x;
-	mat->vec.rvec.xyz.y = vec->xyz.x * vec->xyz.y;
-	mat->vec.rvec.xyz.z = vec->xyz.x * vec->xyz.z;
-
-	mat->vec.uvec.xyz.x = vec->xyz.y * vec->xyz.x; //-V537
-	mat->vec.uvec.xyz.y = vec->xyz.y * vec->xyz.y;
-	mat->vec.uvec.xyz.z = vec->xyz.y * vec->xyz.z; //-V537
-
-	mat->vec.fvec.xyz.x = vec->xyz.z * vec->xyz.x;
-	mat->vec.fvec.xyz.y = vec->xyz.z * vec->xyz.y; //-V537
-	mat->vec.fvec.xyz.z = vec->xyz.z * vec->xyz.z;
+	vm_vec_copy_scale(&mat->vec.rvec, vec, vec->xyz.x);
+	vm_vec_copy_scale(&mat->vec.uvec, vec, vec->xyz.y);
+	vm_vec_copy_scale(&mat->vec.fvec, vec, vec->xyz.z);
 }
 
 //	Find the point on the line between p0 and p1 that is nearest to int_pnt.
@@ -1996,9 +2042,7 @@ void get_camera_limits(const matrix *start_camera, const matrix *end_camera, flo
 	vm_matrix_to_rot_axis_and_angle(&rot_matrix, &theta, &rot_axis);
 
 	// find the rotation about each axis
-	angle.xyz.x = theta * rot_axis.xyz.x;
-	angle.xyz.y = theta * rot_axis.xyz.y;
-	angle.xyz.z = theta * rot_axis.xyz.z;
+	vm_vec_copy_scale(&angle, &rot_axis, theta);
 
 	// allow for 0 time input
 	if (time <= 1e-5f) {
@@ -2008,15 +2052,16 @@ void get_camera_limits(const matrix *start_camera, const matrix *end_camera, flo
 
 		// find acceleration limit using  (theta/2) takes (time/2)
 		// and using const accel  theta = 1/2 acc * time^2
-		acc_max->xyz.x = 4.0f * fl_abs(angle.xyz.x) / (time * time);
-		acc_max->xyz.y = 4.0f * fl_abs(angle.xyz.y) / (time * time);
-		acc_max->xyz.z = 4.0f * fl_abs(angle.xyz.z) / (time * time);
+		acc_max->xyz.x = fl_abs(angle.xyz.x);
+		acc_max->xyz.y = fl_abs(angle.xyz.y);
+		acc_max->xyz.z = fl_abs(angle.xyz.z);
+
+		vm_vec_scale(acc_max, 4.0f / (time * time));
 
 		// find angular velocity limits
 		// w_max = acc_max * time / 2
-		w_max->xyz.x = acc_max->xyz.x * time / 2.0f;
-		w_max->xyz.y = acc_max->xyz.y * time / 2.0f;
-		w_max->xyz.z = acc_max->xyz.z * time / 2.0f;
+
+		vm_vec_copy_scale(w_max, acc_max, time / 2.0f);
 	}
 }
 
@@ -2813,15 +2858,21 @@ void vm_matrix4_x_matrix4(matrix4 *dest, const matrix4 *src0, const matrix4 *src
 
 float vm_vec4_dot4(float x, float y, float z, float w, const vec4 *v)
 {
+#ifdef USE_INTRINSICS
+	vec3d out;
+	out.m128 = _mm_dp_ps(v->m128, _mm_set_ps(x, y, z, w), 0xFF);
+	return out.a1d[0];
+#else
 	return (x * v->xyzw.x) + (y * v->xyzw.y) + (z * v->xyzw.z) + (w * v->xyzw.w);
+#endif
 }
 
 void vm_vec_transform(vec4 *dest, const vec4 *src, const matrix4 *m)
 {
-	dest->xyzw.x = (m->vec.rvec.xyzw.x * src->xyzw.x) + (m->vec.uvec.xyzw.x * src->xyzw.y) + (m->vec.fvec.xyzw.x * src->xyzw.z) + (m->vec.pos.xyzw.x * src->xyzw.w);
-	dest->xyzw.y = (m->vec.rvec.xyzw.y * src->xyzw.x) + (m->vec.uvec.xyzw.y * src->xyzw.y) + (m->vec.fvec.xyzw.y * src->xyzw.z) + (m->vec.pos.xyzw.y * src->xyzw.w);
-	dest->xyzw.z = (m->vec.rvec.xyzw.z * src->xyzw.x) + (m->vec.uvec.xyzw.z * src->xyzw.y) + (m->vec.fvec.xyzw.z * src->xyzw.z) + (m->vec.pos.xyzw.z * src->xyzw.w);
-	dest->xyzw.w = (m->vec.rvec.xyzw.w * src->xyzw.x) + (m->vec.uvec.xyzw.w * src->xyzw.y) + (m->vec.fvec.xyzw.w * src->xyzw.z) + (m->vec.pos.xyzw.w * src->xyzw.w);
+	dest->xyzw.x = vm_vec4_dot4(m->vec.rvec.xyzw.x, m->vec.uvec.xyzw.x, m->vec.fvec.xyzw.x, m->vec.pos.xyzw.x, src);
+	dest->xyzw.y = vm_vec4_dot4(m->vec.rvec.xyzw.y, m->vec.uvec.xyzw.y, m->vec.fvec.xyzw.y, m->vec.pos.xyzw.y, src);
+	dest->xyzw.z = vm_vec4_dot4(m->vec.rvec.xyzw.z, m->vec.uvec.xyzw.z, m->vec.fvec.xyzw.z, m->vec.pos.xyzw.z, src);
+	dest->xyzw.w = vm_vec4_dot4(m->vec.rvec.xyzw.w, m->vec.uvec.xyzw.w, m->vec.fvec.xyzw.w, m->vec.pos.xyzw.w, src);
 }
 
 void vm_vec_transform(vec3d *dest, const vec3d *src, const matrix4 *m, bool pos)
@@ -2858,6 +2909,15 @@ vec4 vm_vec3_to_ve4(const vec3d& vec, float w) {
 	out.xyzw.y = vec.xyz.y;
 	out.xyzw.z = vec.xyz.z;
 	out.xyzw.w = w;
+
+	return out;
+}
+vec3_interp vm_vec4_to_interp(const vec4& vec) {
+	vec3_interp out;
+
+	out.xyz.x = vec.xyzw.x;
+	out.xyz.y = vec.xyzw.y;
+	out.xyz.z = vec.xyzw.z;
 
 	return out;
 }

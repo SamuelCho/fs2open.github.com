@@ -74,6 +74,7 @@ typedef struct vec4 {
 			float x,y,z,w;
 		} xyzw;
 		float a1d[4];
+		__m128 m128;
 	};
 } vec4;
 

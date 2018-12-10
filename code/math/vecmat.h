@@ -15,7 +15,7 @@
 #include "globalincs/pstypes.h"
 #include "math/floating.h"
 
-//#define USE_INTRINSICS
+#define USE_INTRINSICS
 
 #define vm_is_vec_nan(v) (fl_is_nan((v)->xyz.x) || fl_is_nan((v)->xyz.y) || fl_is_nan((v)->xyz.z))
 
@@ -496,6 +496,8 @@ vec3d vm_vec4_to_vec3(const vec4& vec);
  */
 vec4 vm_vec3_to_ve4(const vec3d& vec, float w = 1.0f);
 
+vec3_interp vm_vec4_to_interp(const vec4& vec);
+
 /** Compares two vec3ds */
 inline bool operator==(const vec3d& left, const vec3d& right) { return vm_vec_same(&left, &right) != 0; }
 inline bool operator!=(const vec3d& left, const vec3d& right) { return !(left == right); }
@@ -579,6 +581,14 @@ inline void vm_vec_to_interp(vec3_interp* dest, vec3d* src) {
 	dest->xyz.x = src->xyz.x;
 	dest->xyz.y = src->xyz.y;
 	dest->xyz.z = src->xyz.z;
+}
+
+inline vec3_interp vm_vec_to_interp(vec3d* src) {
+	vec3_interp out;
+	out.xyz.x = src->xyz.x;
+	out.xyz.y = src->xyz.y;
+	out.xyz.z = src->xyz.z;
+	return out;
 }
 
 inline float vm_matrix_get_a1d(matrix* m, int i)
