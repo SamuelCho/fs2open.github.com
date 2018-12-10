@@ -401,7 +401,7 @@ float vm_vec_dot3(float x, float y, float z, const vec3d *v)
 {
 #ifdef USE_INTRINSICS
 	vec3d out;
-	out.m128 = _mm_dp_ps(v->m128, _mm_set_ps(x, y, z, 0.0f), 0x7F);
+	out.m128 = _mm_dp_ps(v->m128, _mm_set_ps(0.0f, z, y, x), 0x7F);
 	return out.xyz.x;
 #else
 	return (x*v->xyz.x)+(y*v->xyz.y)+(z*v->xyz.z);
@@ -2859,8 +2859,8 @@ void vm_matrix4_x_matrix4(matrix4 *dest, const matrix4 *src0, const matrix4 *src
 float vm_vec4_dot4(float x, float y, float z, float w, const vec4 *v)
 {
 #ifdef USE_INTRINSICS
-	vec3d out;
-	out.m128 = _mm_dp_ps(v->m128, _mm_set_ps(x, y, z, w), 0xFF);
+	vec4 out;
+	out.m128 = _mm_dp_ps(v->m128, _mm_set_ps(w, z, y, x), 0xFF);
 	return out.a1d[0];
 #else
 	return (x * v->xyzw.x) + (y * v->xyzw.y) + (z * v->xyzw.z) + (w * v->xyzw.w);
