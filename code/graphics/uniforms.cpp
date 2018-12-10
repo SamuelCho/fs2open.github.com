@@ -238,8 +238,8 @@ void convert_model_material(model_uniform_data* data_out,
 		base_color.xyz.y = tm_clr.base.g;
 		base_color.xyz.z = tm_clr.base.b;
 
-		data_out->stripe_color = stripe_color;
-		data_out->base_color = base_color;
+		vm_vec_to_interp(&data_out->stripe_color, &stripe_color);
+		vm_vec_to_interp(&data_out->base_color, &base_color);
 
 		data_out->team_glow_enabled = bm_has_alpha_channel(material.get_texture_map(TM_MISC_TYPE)) ? 1 : 0;
 	}

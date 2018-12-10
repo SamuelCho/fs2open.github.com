@@ -33,19 +33,19 @@ struct deferred_global_data {
  * @brief Data for one deferred light rendering call
  */
 struct deferred_light_data {
-	vec3d diffuseLightColor;
+	vec3_interp diffuseLightColor;
 	float coneAngle;
 
-	vec3d specLightColor;
+	vec3_interp specLightColor;
 	float coneInnerAngle;
 
-	vec3d coneDir;
+	vec3_interp coneDir;
 	float dualCone;
 
-	vec3d scale;
+	vec3_interp scale;
 	float lightRadius;
 
-	vec3d lightDir;
+	vec3_interp lightDir;
 	int lightType;
 
 	int enable_shadows;
@@ -55,11 +55,11 @@ struct deferred_light_data {
 
 struct model_light {
 	vec4 position;
-	vec3d diffuse_color;
+	vec3_interp diffuse_color;
 	int light_type;
-	vec3d spec_color;
+	vec3_interp spec_color;
 	float attenuation;
-	vec3d direction;
+	vec3_interp direction;
 
 	float pad;
 };
@@ -92,19 +92,19 @@ struct model_uniform_data {
 	int n_lights;
 	float defaultGloss;
 
-	vec3d ambientFactor;
+	vec3_interp ambientFactor;
 	int desaturate;
 
-	vec3d diffuseFactor;
+	vec3_interp diffuseFactor;
 	int blend_alpha;
 
-	vec3d emissionFactor;
+	vec3_interp emissionFactor;
 	int overrideDiffuse;
 
-	vec3d diffuseClr;
+	vec3_interp diffuseClr;
 	int overrideGlow;
 
-	vec3d glowClr;
+	vec3_interp glowClr;
 	int overrideSpec;
 
 	vec3d specClr;
@@ -117,10 +117,10 @@ struct model_uniform_data {
 
 	vec4 fogColor;
 
-	vec3d base_color;
+	vec3_interp base_color;
 	float anim_timer;
 
-	vec3d stripe_color;
+	vec3_interp stripe_color;
 	float vpwidth;
 
 	float vpheight;
@@ -179,7 +179,7 @@ struct decal_globals {
 	matrix4 invViewMatrix;
 	matrix4 invProjMatrix;
 
-	vec3d ambientLight;
+	vec3_interp ambientLight;
 	float pad0;
 
 	vec2d viewportSize;
@@ -190,7 +190,7 @@ struct decal_info {
 	matrix4 model_matrix;
 	matrix4 inv_model_matrix;
 
-	vec3d decal_direction;
+	vec3_interp decal_direction;
 	float normal_angle_cutoff;
 
 	int diffuse_index;

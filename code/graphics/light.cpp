@@ -148,11 +148,15 @@ static void set_light(int light_num, gr_light* ltp) {
 	Assert(light_num < (int)graphics::MAX_UNIFORM_LIGHTS);
 
 	vm_vec_transform(&gr_light_uniforms[light_num].position, &ltp->Position, &gr_view_matrix);
-	vm_vec_transform(&gr_light_uniforms[light_num].direction, &ltp->SpotDir, &gr_view_matrix, false);
 
-	gr_light_uniforms[light_num].diffuse_color = vm_vec4_to_vec3(ltp->Diffuse);
+	vec3d light_dir;
 
-	gr_light_uniforms[light_num].spec_color = vm_vec4_to_vec3(ltp->Specular);
+	vm_vec_transform(&light_dir, &ltp->SpotDir, &gr_view_matrix, false);
+	vm_vec_to_interp(&gr_light_uniforms[light_num].direction, &light_dir);
+
+	gr_light_uniforms[light_num].diffuse_color = vm_vec4_to_interp(ltp->Diffuse);
+
+	gr_light_uniforms[light_num].spec_color = vm_vec4_to_interp(ltp->Specular);
 
 	gr_light_uniforms[light_num].light_type = ltp->type;
 

@@ -168,8 +168,7 @@ void gr_opengl_deferred_lighting_finish()
 			spec.xyz.y = l.spec_g * l.intensity;
 			spec.xyz.z = l.spec_b * l.intensity;
 
-			light_data->diffuseLightColor = diffuse;
-			light_data->specLightColor = spec;
+			vm_vec_to_interp(&light_data->diffuseLightColor, &diffuse);
 
 			switch (l.type) {
 			case Light_Type::Directional:
@@ -189,7 +188,8 @@ void gr_opengl_deferred_lighting_finish()
 				light_data->lightDir.xyz.y = view_dir.xyzw.y;
 				light_data->lightDir.xyz.z = view_dir.xyzw.z;
 
-				vm_vec_scale(&light_data->specLightColor, static_light_factor);
+				vm_vec_scale(&spec, static_light_factor);
+				vm_vec_to_interp(&light_data->specLightColor, &spec);
 
 				first_directional = false;
 				break;
@@ -197,13 +197,13 @@ void gr_opengl_deferred_lighting_finish()
 				light_data->dualCone = l.dual_cone ? 1.0f : 0.0f;
 				light_data->coneAngle = l.cone_angle;
 				light_data->coneInnerAngle = l.cone_inner_angle;
-				light_data->coneDir = l.vec2;
+				vm_vec_to_interp(&light_data->coneDir, &l.vec2);
 				FALLTHROUGH;
 			case Light_Type::Point:
-				light_data->diffuseLightColor = diffuse;
-				light_data->specLightColor = spec;
+				vm_vec_to_interp(&light_data->diffuseLightColor, &diffuse);
 
-				vm_vec_scale(&light_data->specLightColor, static_point_factor);
+				vm_vec_scale(&spec, static_point_factor);
+				vm_vec_to_interp(&light_data->specLightColor, &spec);
 
 				light_data->lightRadius = MAX(l.rada, l.radb) * 1.25f;
 				light_data->scale.xyz.x = MAX(l.rada, l.radb) * 1.28f;
@@ -211,7 +211,7 @@ void gr_opengl_deferred_lighting_finish()
 				light_data->scale.xyz.z = MAX(l.rada, l.radb) * 1.28f;
 				break;
 			case Light_Type::Tube: {
-				light_data->diffuseLightColor = diffuse;
+				vm_vec_to_interp(&light_data->diffuseLightColor, &diffuse);
 				light_data->lightRadius = l.radb * 1.5f;
 				light_data->lightType = LT_TUBE;
 
@@ -223,14 +223,15 @@ void gr_opengl_deferred_lighting_finish()
 				light_data->scale.xyz.y = l.radb * 1.53f;
 				light_data->scale.xyz.z = length;
 
-				vm_vec_scale(&light_data->specLightColor, static_tube_factor);
+				vm_vec_scale(&spec, static_tube_factor);
+				vm_vec_to_interp(&light_data->specLightColor, &spec);
 
 				// Tube lights consist of two different types of lights with almost the same properties
 				light_data = uniformAligner.addTypedElement<deferred_light_data>();
-				light_data->diffuseLightColor = diffuse;
-				light_data->specLightColor = spec;
+				vm_vec_to_interp(&light_data->diffuseLightColor, &diffuse);
 
-				vm_vec_scale(&light_data->specLightColor, static_tube_factor);
+				vm_vec_scale(&spec, static_tube_factor);
+				vm_vec_to_interp(&light_data->specLightColor, &spec);
 
 				light_data->lightRadius = l.radb * 1.5f;
 				light_data->lightType = LT_POINT;

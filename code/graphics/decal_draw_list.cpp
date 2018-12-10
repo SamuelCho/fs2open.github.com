@@ -193,7 +193,9 @@ void decal_draw_list::add_decal(int diffuse_bitmap,
 	vm_matrix4_get_orientation(&transform_rot, &transform);
 
 	// The decal shader works in view-space so the direction also has to be transformed into that space
-	vm_vec_transform(&info->decal_direction, &transform_rot.vec.fvec, &gr_view_matrix, false);
+	vec3d decal_dir;
+	vm_vec_transform(&decal_dir, &transform_rot.vec.fvec, &gr_view_matrix, false);
+	vm_vec_to_interp(&info->decal_direction, &decal_dir);
 
 	vm_inverse_matrix4(&info->model_matrix, &info->inv_model_matrix);
 
