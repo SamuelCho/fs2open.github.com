@@ -86,7 +86,7 @@ ADE_FUNC(get3DValues, l_SoundEntry, "vector Postion[, number radius=0.0]", "Comp
 	"The position of the listener is always the the current viewing position.", "number, number", "The volume and the panning, in that sequence, or both -1 on error")
 {
 	sound_entry_h *seh = NULL;
-	vec3d *sourcePos = NULL;
+	vec3d_h *sourcePos = NULL;
 	float radius = 0.0f;
 
 	float vol = 0.0f;
@@ -98,7 +98,7 @@ ADE_FUNC(get3DValues, l_SoundEntry, "vector Postion[, number radius=0.0]", "Comp
 	if (seh == NULL || !seh->IsValid())
 		return ade_set_error(L, "ff", -1.0f, -1.0f);
 
-	int result = snd_get_3d_vol_and_pan(seh->Get(), sourcePos, &vol, &pan, radius);
+	int result = snd_get_3d_vol_and_pan(seh->Get(), &sourcePos->vec, &vol, &pan, radius);
 
 	if (result < 0)
 	{
@@ -330,7 +330,7 @@ ADE_OBJ_DERIV(l_Sound3D, sound_h, "3Dsound", "3D sound instance handle", l_Sound
 ADE_FUNC(updatePosition, l_Sound3D, "vector Position[, number radius = 0.0]", "Updates the given 3D sound with the specified position and an optional range value", "boolean", "true if succeesed, false otherwise")
 {
 	sound_h *sh;
-	vec3d *newPos = NULL;
+	vec3d_h *newPos = NULL;
 	float radius = 0.0f;
 
 	if(!ade_get_args(L, "oo|f", l_Sound.GetPtr(&sh), l_Vector.GetPtr(&newPos), &radius))
@@ -339,7 +339,7 @@ ADE_FUNC(updatePosition, l_Sound3D, "vector Position[, number radius = 0.0]", "U
 	if (!sh->IsValid() || newPos == NULL)
 		return ade_set_error(L, "b", false);
 
-	snd_update_3d_pos(sh->getSignature(), sh->Get(), newPos, radius);
+	snd_update_3d_pos(sh->getSignature(), sh->Get(), &newPos->vec, radius);
 
 	return ADE_RETURN_TRUE;
 }

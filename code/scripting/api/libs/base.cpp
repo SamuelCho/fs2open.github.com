@@ -69,8 +69,8 @@ ADE_FUNC(createOrientation, l_Base, "[p/r1c1, b/r1c2, h/r1c3, r2c1, r2c2, r2c3, 
 
 ADE_FUNC(createVector, l_Base, "[x, y, z]", "Creates a vector object", "vector", "Vector object")
 {
-	vec3d v3 = vmd_zero_vector;
-	ade_get_args(L, "|fff", &v3.xyz.x, &v3.xyz.y, &v3.xyz.z);
+	vec3d_h v3(&vmd_zero_vector);
+	ade_get_args(L, "|fff", &v3.vec.xyz.x, &v3.vec.xyz.y, &v3.vec.xyz.z);
 
 	return ade_set_args(L, "o", l_Vector.Set(v3));
 }

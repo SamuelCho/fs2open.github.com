@@ -27,43 +27,43 @@ ADE_OBJ(l_Particle, particle_h, "particle", "Handle to a particle");
 ADE_VIRTVAR(Position, l_Particle, "vector", "The current position of the particle (world vector)", "vector", "The current position")
 {
 	particle_h *ph = NULL;
-	vec3d newVec = vmd_zero_vector;
+	vec3d_h newVec(&vmd_zero_vector);
 	if (!ade_get_args(L, "o|o", l_Particle.GetPtr(&ph), l_Vector.Get(&newVec)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if (ph == NULL)
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if (!ph->isValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if (ADE_SETTING_VAR)
 	{
-		ph->Get().lock()->pos = newVec;
+		ph->Get().lock()->pos = newVec.vec;
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(ph->Get().lock()->pos));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&ph->Get().lock()->pos)));
 }
 
 ADE_VIRTVAR(Velocity, l_Particle, "vector", "The current velocity of the particle (world vector)", "vector", "The current velocity")
 {
 	particle_h *ph = NULL;
-	vec3d newVec = vmd_zero_vector;
+	vec3d_h newVec(&vmd_zero_vector);
 	if (!ade_get_args(L, "o|o", l_Particle.GetPtr(&ph), l_Vector.Get(&newVec)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if (ph == NULL)
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if (!ph->isValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if (ADE_SETTING_VAR)
 	{
-		ph->Get().lock()->velocity = newVec;
+		ph->Get().lock()->velocity = newVec.vec;
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(ph->Get().lock()->velocity));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&ph->Get().lock()->velocity)));
 }
 
 ADE_VIRTVAR(Age, l_Particle, "number", "The time this particle already lives", "number", "The current age or -1 on error")

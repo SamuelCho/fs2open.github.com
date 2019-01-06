@@ -93,20 +93,20 @@ ADE_VIRTVAR(Orientation, l_Camera, "orientation", "New camera orientation", "ori
 ADE_VIRTVAR(Position, l_Camera, "vector", "New camera position", "vector", "Camera position")
 {
 	camid cid;
-	vec3d *pos = NULL;
+	vec3d_h *pos = NULL;
 	if(!ade_get_args(L, "o|o", l_Camera.Get(&cid), l_Vector.GetPtr(&pos)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(!cid.isValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(ADE_SETTING_VAR && pos) {
-		cid.getCamera()->set_position(pos);
+		cid.getCamera()->set_position(&pos->vec);
 	}
 
 	vec3d v = vmd_zero_vector;
 	cid.getCamera()->get_info(&v, NULL);
-	return ade_set_args(L, "o", l_Vector.Set(v));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&v)));
 }
 
 ADE_VIRTVAR(Self, l_Camera, "object", "New mount object", "object", "Camera object")
@@ -285,7 +285,7 @@ ADE_FUNC(setPosition, l_Camera, "[wvector Position, number Translation Time, num
 		 "boolean", "true if successful, false or nil otherwise")
 {
 	camid cid;
-	vec3d *pos=NULL;
+	vec3d_h *pos=NULL;
 	float time=0.0f;
 	float acc_time=0.0f;
 	float dec_time=0.0f;
@@ -295,7 +295,7 @@ ADE_FUNC(setPosition, l_Camera, "[wvector Position, number Translation Time, num
 	if(!cid.isValid())
 		return ADE_RETURN_NIL;
 
-	cid.getCamera()->set_position(pos, time, acc_time, dec_time);
+	cid.getCamera()->set_position(&pos->vec, time, acc_time, dec_time);
 
 	return ADE_RETURN_TRUE;
 }

@@ -8,10 +8,24 @@
 namespace scripting {
 namespace api {
 
+vec3d_h::vec3d_h()
+{
+
+}
+
+vec3d_h::vec3d_h(vec3d&& v)
+{
+	vec.xyz = std::move(v.xyz);
+}
+
+vec3d_h::vec3d_h(vec3d* v)
+{
+	vec.xyz = v->xyz;
+}
 
 //**********OBJECT: orientation matrix
 //WMC - So matrix can use vector, I define it up here.
-ADE_OBJ(l_Vector, vec3d, "vector", "Vector object");
+ADE_OBJ(l_Vector, vec3d_h, "vector", "Vector object");
 
 void matrix_h::ValidateAngles() {
 	if (status == MatrixState::AnglesOutOfDate) {
@@ -209,12 +223,13 @@ ADE_FUNC(rotateVector,
 		 "Rotated vector, or empty vector on error") {
 	matrix_h* mh;
 	vec3d* v3;
-	if (!ade_get_args(L, "oo", l_Matrix.GetPtr(&mh), l_Vector.GetPtr(&v3))) {
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+	vec3d_h* v3_h;
+	if (!ade_get_args(L, "oo", l_Matrix.GetPtr(&mh), l_Vector.GetPtr(&v3_h))) {
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 	}
 
-	vec3d v3r;
-	vm_vec_rotate(&v3r, v3, mh->GetMatrix());
+	vec3d_h v3r;
+	vm_vec_rotate(&v3r.vec, v3, mh->GetMatrix());
 
 	return ade_set_args(L, "o", l_Vector.Set(v3r));
 }
@@ -226,13 +241,13 @@ ADE_FUNC(unrotateVector,
 		 "vector",
 		 "Unrotated vector, or empty vector on error") {
 	matrix_h* mh;
-	vec3d* v3;
+	vec3d_h* v3;
 	if (!ade_get_args(L, "oo", l_Matrix.GetPtr(&mh), l_Vector.GetPtr(&v3))) {
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 	}
 
-	vec3d v3r;
-	vm_vec_unrotate(&v3r, v3, mh->GetMatrix());
+	vec3d_h v3r;
+	vm_vec_unrotate(&v3r.vec, &v3->vec, mh->GetMatrix());
 
 	return ade_set_args(L, "o", l_Vector.Set(v3r));
 }
@@ -245,10 +260,10 @@ ADE_FUNC(getUvec,
 		 "Vector or null vector on error") {
 	matrix_h* mh = NULL;
 	if (!ade_get_args(L, "o", l_Matrix.GetPtr(&mh))) {
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(mh->GetMatrix()->vec.uvec));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&mh->GetMatrix()->vec.uvec)));
 }
 
 ADE_FUNC(getFvec,
@@ -259,10 +274,10 @@ ADE_FUNC(getFvec,
 		 "Vector or null vector on error") {
 	matrix_h* mh = NULL;
 	if (!ade_get_args(L, "o", l_Matrix.GetPtr(&mh))) {
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(mh->GetMatrix()->vec.fvec));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&mh->GetMatrix()->vec.fvec)));
 }
 
 ADE_FUNC(getRvec,
@@ -273,10 +288,10 @@ ADE_FUNC(getRvec,
 		 "Vector or null vector on error") {
 	matrix_h* mh = NULL;
 	if (!ade_get_args(L, "o", l_Matrix.GetPtr(&mh))) {
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(mh->GetMatrix()->vec.rvec));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&mh->GetMatrix()->vec.rvec)));
 }
 
 
@@ -285,7 +300,7 @@ ADE_INDEXER(l_Vector,
 			"Vector component",
 			"number",
 			"Value at index, or 0 if vector handle is invalid") {
-	vec3d* v3;
+	vec3d_h* v3;
 	const char* s = nullptr;
 	float newval = 0.0f;
 	int numargs = ade_get_args(L, "os|f", l_Vector.GetPtr(&v3), &s, &newval);
@@ -308,10 +323,10 @@ ADE_INDEXER(l_Vector,
 	}
 
 	if (ADE_SETTING_VAR) {
-		v3->a1d[idx] = newval;
+		v3->vec.a1d[idx] = newval;
 	}
 
-	return ade_set_args(L, "f", v3->a1d[idx]);
+	return ade_set_args(L, "f", v3->vec.a1d[idx]);
 }
 
 ADE_FUNC(__add,
@@ -320,20 +335,20 @@ ADE_FUNC(__add,
 		 "Adds vector by another vector, or adds all axes by value",
 		 "vector",
 		 "Final vector, or null vector if error occurs") {
-	vec3d v3 = vmd_zero_vector;
+	vec3d_h v3(&vmd_zero_vector);
 	if (lua_isnumber(L, 1) || lua_isnumber(L, 2)) {
 		float f;
 		if ((lua_isnumber(L, 1) && ade_get_args(L, "fo", &f, l_Vector.Get(&v3)))
 			|| (lua_isnumber(L, 2) && ade_get_args(L, "of", l_Vector.Get(&v3), &f))) {
-			v3.xyz.x += f;
-			v3.xyz.y += f;
-			v3.xyz.z += f;
+			v3.vec.xyz.x += f;
+			v3.vec.xyz.y += f;
+			v3.vec.xyz.z += f;
 		}
 	} else {
-		vec3d v3b;
+		vec3d_h v3b;
 		//WMC - doesn't really matter which is which
 		if (ade_get_args(L, "oo", l_Vector.Get(&v3), l_Vector.Get(&v3b))) {
-			vm_vec_add2(&v3, &v3b);
+			vm_vec_add2(&v3.vec, &v3b.vec);
 		}
 	}
 	return ade_set_args(L, "o", l_Vector.Set(v3));
@@ -345,20 +360,20 @@ ADE_FUNC(__sub,
 		 "Subtracts vector from another vector, or subtracts all axes by value",
 		 "vector",
 		 "Final vector, or null vector if error occurs") {
-	vec3d v3 = vmd_zero_vector;
+	vec3d_h v3(&vmd_zero_vector);
 	if (lua_isnumber(L, 1) || lua_isnumber(L, 2)) {
 		float f;
 		if ((lua_isnumber(L, 1) && ade_get_args(L, "fo", &f, l_Vector.Get(&v3)))
 			|| (lua_isnumber(L, 2) && ade_get_args(L, "of", l_Vector.Get(&v3), &f))) {
-			v3.xyz.x += f;
-			v3.xyz.y += f;
-			v3.xyz.z += f;
+			v3.vec.xyz.x += f;
+			v3.vec.xyz.y += f;
+			v3.vec.xyz.z += f;
 		}
 	} else {
-		vec3d v3b;
+		vec3d_h v3b;
 		//WMC - doesn't really matter which is which
 		if (ade_get_args(L, "oo", l_Vector.Get(&v3), l_Vector.Get(&v3b))) {
-			vm_vec_sub2(&v3, &v3b);
+			vm_vec_sub2(&v3.vec, &v3b.vec);
 		}
 	}
 
@@ -371,23 +386,23 @@ ADE_FUNC(__mul,
 		 "Scales vector object (Multiplies all axes by number), or multiplies each axes by the other vector's axes.",
 		 "vector",
 		 "Final vector, or null vector if error occurs") {
-	vec3d v3 = vmd_zero_vector;
+	vec3d_h v3(&vmd_zero_vector);
 	if (lua_isnumber(L, 1) || lua_isnumber(L, 2)) {
 		float f;
 		if ((lua_isnumber(L, 1) && ade_get_args(L, "fo", &f, l_Vector.Get(&v3)))
 			|| (lua_isnumber(L, 2) && ade_get_args(L, "of", l_Vector.Get(&v3), &f))) {
-			vm_vec_scale(&v3, f);
+			vm_vec_scale(&v3.vec, f);
 		}
 	} else {
-		vec3d* v1 = NULL;
-		vec3d* v2 = NULL;
+		vec3d_h* v1 = NULL;
+		vec3d_h* v2 = NULL;
 		if (!ade_get_args(L, "oo", l_Vector.GetPtr(&v1), l_Vector.GetPtr(&v2))) {
-			return ade_set_args(L, "o", l_Vector.Set(vmd_zero_vector));
+			return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 		}
 
-		v3.xyz.x = v1->xyz.x * v2->xyz.x;
-		v3.xyz.y = v1->xyz.y * v2->xyz.y;
-		v3.xyz.z = v1->xyz.z * v2->xyz.z;
+		v3.vec.xyz.x = v1->vec.xyz.x * v2->vec.xyz.x;
+		v3.vec.xyz.y = v1->vec.xyz.y * v2->vec.xyz.y;
+		v3.vec.xyz.z = v1->vec.xyz.z * v2->vec.xyz.z;
 	}
 
 	return ade_set_args(L, "o", l_Vector.Set(v3));
@@ -399,23 +414,23 @@ ADE_FUNC(__div,
 		 "Scales vector object (Divide all axes by number), or divides each axes by the dividing vector's axes.",
 		 "vector",
 		 "Final vector, or null vector if error occurs") {
-	vec3d v3 = vmd_zero_vector;
+	vec3d_h v3(&vmd_zero_vector);
 	if (lua_isnumber(L, 1) || lua_isnumber(L, 2)) {
 		float f;
 		if ((lua_isnumber(L, 1) && ade_get_args(L, "fo", &f, l_Vector.Get(&v3)))
 			|| (lua_isnumber(L, 2) && ade_get_args(L, "of", l_Vector.Get(&v3), &f))) {
-			vm_vec_scale(&v3, 1.0f / f);
+			vm_vec_scale(&v3.vec, 1.0f / f);
 		}
 	} else {
-		vec3d* v1 = NULL;
-		vec3d* v2 = NULL;
+		vec3d_h* v1 = NULL;
+		vec3d_h* v2 = NULL;
 		if (!ade_get_args(L, "oo", l_Vector.GetPtr(&v1), l_Vector.GetPtr(&v2))) {
-			return ade_set_args(L, "o", l_Vector.Set(vmd_zero_vector));
+			return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 		}
 
-		v3.xyz.x = v1->xyz.x / v2->xyz.x;
-		v3.xyz.y = v1->xyz.y / v2->xyz.y;
-		v3.xyz.z = v1->xyz.z / v2->xyz.z;
+		v3.vec.xyz.x = v1->vec.xyz.x / v2->vec.xyz.x;
+		v3.vec.xyz.y = v1->vec.xyz.y / v2->vec.xyz.y;
+		v3.vec.xyz.z = v1->vec.xyz.z / v2->vec.xyz.z;
 	}
 
 	return ade_set_args(L, "o", l_Vector.Set(v3));
@@ -428,13 +443,13 @@ ADE_FUNC(__tostring,
 		 "Converts a vector to string with format \"(x,y,z)\"",
 		 "string",
 		 "Vector as string, or empty string if handle is invalid") {
-	vec3d* v3;
+	vec3d_h* v3;
 	if (!ade_get_args(L, "o", l_Vector.GetPtr(&v3))) {
 		return ade_set_error(L, "s", "");
 	}
 
 	char buf[128];
-	sprintf(buf, "(%f,%f,%f)", v3->xyz.x, v3->xyz.y, v3->xyz.z);
+	sprintf(buf, "(%f,%f,%f)", v3->vec.xyz.x, v3->vec.xyz.y, v3->vec.xyz.z);
 
 	return ade_set_args(L, "s", buf);
 }
@@ -445,15 +460,15 @@ ADE_FUNC(getOrientation,
 		 "Returns orientation object representing the direction of the vector. Does not require vector to be normalized.",
 		 "orientation",
 		 "Orientation object, or null orientation object if handle is invalid") {
-	vec3d v3;
+	vec3d_h v3;
 	if (!ade_get_args(L, "o", l_Vector.Get(&v3))) {
 		return ade_set_error(L, "o", l_Matrix.Set(matrix_h()));
 	}
 
 	matrix mt = vmd_identity_matrix;
 
-	vm_vec_normalize_safe(&v3);
-	vm_vector_2_matrix_norm(&mt, &v3);
+	vm_vec_normalize_safe(&v3.vec);
+	vm_vector_2_matrix_norm(&mt, &v3.vec);
 	matrix_h mh(&mt);
 
 	return ade_set_args(L, "o", l_Matrix.Set(mh));
@@ -465,21 +480,21 @@ ADE_FUNC(getMagnitude,
 		 "Returns the magnitude of a vector (Total regardless of direction)",
 		 "number",
 		 "Magnitude of vector, or 0 if handle is invalid") {
-	vec3d* v3;
+	vec3d_h* v3;
 	if (!ade_get_args(L, "o", l_Vector.GetPtr(&v3))) {
 		return ade_set_error(L, "f", 0.0f);
 	}
 
-	return ade_set_args(L, "f", vm_vec_mag(v3));
+	return ade_set_args(L, "f", vm_vec_mag(&v3->vec));
 }
 
 ADE_FUNC(getDistance, l_Vector, "Vector", "Distance", "number", "Returns distance from another vector") {
-	vec3d* v3a, * v3b;
+	vec3d_h* v3a, * v3b;
 	if (!ade_get_args(L, "oo", l_Vector.GetPtr(&v3a), l_Vector.GetPtr(&v3b))) {
 		return ade_set_error(L, "f", 0.0f);
 	}
 
-	return ade_set_args(L, "f", vm_vec_dist(v3a, v3b));
+	return ade_set_args(L, "f", vm_vec_dist(&v3a->vec, &v3b->vec));
 }
 
 ADE_FUNC(getDotProduct,
@@ -488,12 +503,12 @@ ADE_FUNC(getDotProduct,
 		 "Returns dot product of vector object with vector argument",
 		 "number",
 		 "Dot product, or 0 if a handle is invalid") {
-	vec3d* v3a, * v3b;
+	vec3d_h* v3a, * v3b;
 	if (!ade_get_args(L, "oo", l_Vector.GetPtr(&v3a), l_Vector.GetPtr(&v3b))) {
 		return ade_set_error(L, "f", 0.0f);
 	}
 
-	return ade_set_args(L, "f", vm_vec_dot(v3a, v3b));
+	return ade_set_args(L, "f", vm_vec_dot(&v3a->vec, &v3b->vec));
 }
 
 ADE_FUNC(getCrossProduct,
@@ -502,13 +517,13 @@ ADE_FUNC(getCrossProduct,
 		 "Returns cross product of vector object with vector argument",
 		 "vector",
 		 "Cross product, or null vector if a handle is invalid") {
-	vec3d* v3a, * v3b;
+	vec3d_h* v3a, * v3b;
 	if (!ade_get_args(L, "oo", l_Vector.GetPtr(&v3a), l_Vector.GetPtr(&v3b))) {
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 	}
 
-	vec3d v3r;
-	vm_vec_cross(&v3r, v3a, v3b);
+	vec3d_h v3r;
+	vm_vec_cross(&v3r.vec, &v3a->vec, &v3b->vec);
 
 	return ade_set_args(L, "o", l_Vector.Set(v3r));
 }
@@ -519,7 +534,7 @@ ADE_FUNC(getScreenCoords,
 		 "Gets screen cordinates of a world vector",
 		 "number,number",
 		 "X (number), Y (number), or false if off-screen") {
-	vec3d v3;
+	vec3d_h v3;
 	if (!ade_get_args(L, "o", l_Vector.Get(&v3))) {
 		return ADE_RETURN_NIL;
 	}
@@ -529,7 +544,7 @@ ADE_FUNC(getScreenCoords,
 	if (do_g3)
 		g3_start_frame(1);
 
-	g3_rotate_vertex(&vtx, &v3);
+	g3_rotate_vertex(&vtx, &v3.vec);
 	g3_project_vertex(&vtx);
 
 	if (do_g3)
@@ -548,12 +563,12 @@ ADE_FUNC(getNormalized,
 		 "Returns a normalized version of the vector",
 		 "vector",
 		 "Normalized Vector, or NIL if invalid") {
-	vec3d v3;
+	vec3d_h v3;
 	if (!ade_get_args(L, "o", l_Vector.Get(&v3))) {
 		return ADE_RETURN_NIL;
 	}
 
-	vm_vec_normalize(&v3);
+	vm_vec_normalize(&v3.vec);
 
 	return ade_set_args(L, "o", l_Vector.Set(v3));
 }

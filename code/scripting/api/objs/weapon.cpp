@@ -208,24 +208,24 @@ ADE_VIRTVAR(HomingPosition, l_Weapon, "vector", "Position that weapon will home 
 			"vector", "Homing point, or null vector if weapon handle is invalid")
 {
 	object_h *objh;
-	vec3d *v3 = nullptr;
+	vec3d_h *v3 = nullptr;
 	if(!ade_get_args(L, "o|o", l_Weapon.GetPtr(&objh), l_Vector.GetPtr(&v3)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(!objh->IsValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	weapon *wp = NULL;
 	if(objh->objp->instance > -1)
 		wp = &Weapons[objh->objp->instance];
 	else
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(ADE_SETTING_VAR)
 	{
 		if(v3)
 		{
-			wp->homing_pos = *v3;
+			wp->homing_pos = v3->vec;
 		}
 		else
 		{
@@ -233,7 +233,7 @@ ADE_VIRTVAR(HomingPosition, l_Weapon, "vector", "Position that weapon will home 
 		}
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(wp->homing_pos));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&wp->homing_pos)));
 }
 
 ADE_VIRTVAR(HomingSubsystem, l_Weapon, "subsystem", "Subsystem that weapon will home in on.", "subsystem", "Homing subsystem, or invalid subsystem handle if weapon is not homing or weapon handle is invalid")

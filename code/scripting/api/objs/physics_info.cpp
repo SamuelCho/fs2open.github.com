@@ -47,18 +47,18 @@ ADE_VIRTVAR(AfterburnerAccelerationTime, l_Physics, "number", "Afterburner accel
 ADE_VIRTVAR(AfterburnerVelocityMax, l_Physics, "vector", "Afterburner max velocity (Local vector)", "vector", "Afterburner max velocity, or null vector if handle is invalid")
 {
 	physics_info_h *pih;
-	vec3d *v3=NULL;
+	vec3d_h *v3=NULL;
 	if(!ade_get_args(L, "o|o", l_Physics.GetPtr(&pih), l_Vector.GetPtr(&v3)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(!pih->IsValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(ADE_SETTING_VAR && v3 != NULL) {
-		pih->pi->afterburner_max_vel = *v3;
+		pih->pi->afterburner_max_vel = v3->vec;
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(pih->pi->afterburner_max_vel));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&pih->pi->afterburner_max_vel)));
 }
 
 ADE_VIRTVAR(BankingConstant, l_Physics, "number", "Banking constant", "number", "Banking constant, or 0 if handle is invalid")
@@ -149,18 +149,18 @@ ADE_VIRTVAR(Mass, l_Physics, "number", "Object mass", "number", "Object mass, or
 ADE_VIRTVAR(RotationalVelocity, l_Physics, "vector", "Rotational velocity (Local vector)", "vector", "Rotational velocity, or null vector if handle is invalid")
 {
 	physics_info_h *pih;
-	vec3d *v3=NULL;
+	vec3d_h *v3=NULL;
 	if(!ade_get_args(L, "o|o", l_Physics.GetPtr(&pih), l_Vector.GetPtr(&v3)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(!pih->IsValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(ADE_SETTING_VAR && v3 != NULL) {
-		pih->pi->rotvel = *v3;
+		pih->pi->rotvel = v3->vec;
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(pih->pi->rotvel));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&pih->pi->rotvel)));
 }
 
 ADE_VIRTVAR(RotationalVelocityDamping, l_Physics, "number", "Rotational damping, ie derivative of rotational speed", "number", "Rotational damping, or 0 if handle is invalid")
@@ -183,35 +183,35 @@ ADE_VIRTVAR(RotationalVelocityDamping, l_Physics, "number", "Rotational damping,
 ADE_VIRTVAR(RotationalVelocityDesired, l_Physics, "vector", "Desired rotational velocity", "vector", "Desired rotational velocity, or null vector if handle is invalid")
 {
 	physics_info_h *pih;
-	vec3d *v3=NULL;
+	vec3d_h *v3=NULL;
 	if(!ade_get_args(L, "o|o", l_Physics.GetPtr(&pih), l_Vector.GetPtr(&v3)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(!pih->IsValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(ADE_SETTING_VAR && v3 != NULL) {
-		pih->pi->desired_rotvel = *v3;
+		pih->pi->desired_rotvel = v3->vec;
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(pih->pi->desired_rotvel));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&pih->pi->desired_rotvel)));
 }
 
 ADE_VIRTVAR(RotationalVelocityMax, l_Physics, "vector", "Maximum rotational velocity (Local vector)", "vector", "Maximum rotational velocity, or null vector if handle is invalid")
 {
 	physics_info_h *pih;
-	vec3d *v3=NULL;
+	vec3d_h *v3=NULL;
 	if(!ade_get_args(L, "o|o", l_Physics.GetPtr(&pih), l_Vector.GetPtr(&v3)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(!pih->IsValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(ADE_SETTING_VAR && v3 != NULL) {
-		pih->pi->max_rotvel = *v3;
+		pih->pi->max_rotvel = v3->vec;
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(pih->pi->max_rotvel));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&pih->pi->max_rotvel)));
 }
 
 ADE_VIRTVAR(ShockwaveShakeAmplitude, l_Physics, "number", "How much shaking from shockwaves is applied to object", "number", "Shockwave shake amplitude, or 0 if handle is invalid")
@@ -285,52 +285,52 @@ ADE_VIRTVAR(SlideDecelerationTime, l_Physics, "number", "Time to decelerate from
 ADE_VIRTVAR(Velocity, l_Physics, "vector", "Object world velocity (World vector)", "vector", "Object velocity, or null vector if handle is invalid")
 {
 	physics_info_h *pih;
-	vec3d *v3=NULL;
+	vec3d_h *v3=NULL;
 	if(!ade_get_args(L, "o|o", l_Physics.GetPtr(&pih), l_Vector.GetPtr(&v3)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(!pih->IsValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(ADE_SETTING_VAR && v3 != NULL) {
-		pih->pi->vel = *v3;
+		pih->pi->vel = v3->vec;
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(pih->pi->vel));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&pih->pi->vel)));
 }
 
 ADE_VIRTVAR(VelocityDesired, l_Physics, "vector", "Desired velocity (World vector)", "vector", "Desired velocity, or null vector if handle is invalid")
 {
 	physics_info_h *pih;
-	vec3d *v3=NULL;
+	vec3d_h *v3=NULL;
 	if(!ade_get_args(L, "o|o", l_Physics.GetPtr(&pih), l_Vector.GetPtr(&v3)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(!pih->IsValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(ADE_SETTING_VAR && v3 != NULL) {
-		pih->pi->desired_vel = *v3;
+		pih->pi->desired_vel = v3->vec;
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(pih->pi->desired_vel));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&pih->pi->desired_vel)));
 }
 
 ADE_VIRTVAR(VelocityMax, l_Physics, "vector", "Object max local velocity (Local vector)", "vector", "Maximum velocity, or null vector if handle is invalid")
 {
 	physics_info_h *pih;
-	vec3d *v3=NULL;
+	vec3d_h *v3=NULL;
 	if(!ade_get_args(L, "o|o", l_Physics.GetPtr(&pih), l_Vector.GetPtr(&v3)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(!pih->IsValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(ADE_SETTING_VAR && v3 != NULL) {
-		pih->pi->max_vel = *v3;
+		pih->pi->max_vel = v3->vec;
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(pih->pi->max_vel));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&pih->pi->max_vel)));
 }
 
 ADE_VIRTVAR(VerticalThrust, l_Physics, "number", "Vertical thrust amount (0-1), used primarily for thruster graphics", "number", "Vertical thrust amount, or 0 if handle is invalid")
@@ -444,15 +444,15 @@ ADE_FUNC(applyWhack, l_Physics, "vector Impulse, [ vector Position]", "Applies a
 {
 	object_h objh;
 	physics_info_h *pih;
-	vec3d *impulse;
-	vec3d *offset = &vmd_zero_vector;
+	vec3d_h *impulse;
+	vec3d_h *offset;
 
 	if (!ade_get_args(L, "oo|o", l_Physics.GetPtr(&pih), l_Vector.GetPtr(&impulse), l_Vector.GetPtr(&offset)))
 		return ADE_RETURN_NIL;
 
 	objh = pih->objh;
 
-	physics_apply_whack(impulse, offset, pih->pi, &objh.objp->orient, pih->pi->mass);
+	physics_apply_whack(&impulse->vec, &offset->vec, pih->pi, &objh.objp->orient, pih->pi->mass);
 
 	return ADE_RETURN_TRUE;
 

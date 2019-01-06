@@ -86,9 +86,9 @@ ADE_FUNC(getCollisionPoint, l_ColInfo, "[boolean local]", "The collision point o
 	else
 	{
 		if (local)
-			return ade_set_args(L, "o", l_Vector.Set(collide->hit_point));
+			return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&collide->hit_point)));
 		else
-			return ade_set_args(L, "o", l_Vector.Set(collide->hit_point_world));
+			return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&collide->hit_point_world)));
 	}
 }
 
@@ -117,11 +117,11 @@ ADE_FUNC(getCollisionNormal, l_ColInfo, "[boolean local]", "The collision normal
 
 			vm_vec_unrotate(&normal, &collide->hit_normal, collide->orient);
 
-			return ade_set_args(L, "o", l_Vector.Set(normal));
+			return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&normal)));
 		}
 		else
 		{
-			return ade_set_args(L, "o", l_Vector.Set(collide->hit_normal));
+			return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&collide->hit_normal)));
 		}
 	}
 }

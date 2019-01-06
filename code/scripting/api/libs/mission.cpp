@@ -798,7 +798,7 @@ ADE_FUNC(createShip, l_Mission, "[string Name, shipclass Class=Shipclass[1], ori
 	const char* name = nullptr;
 	int sclass = -1;
 	matrix_h *orient = NULL;
-	vec3d pos = vmd_zero_vector;
+	vec3d_h pos(&vmd_zero_vector);
 	ade_get_args(L, "|sooo", &name, l_Shipclass.Get(&sclass), l_Matrix.GetPtr(&orient), l_Vector.Get(&pos));
 
 	matrix *real_orient = &vmd_identity_matrix;
@@ -811,7 +811,7 @@ ADE_FUNC(createShip, l_Mission, "[string Name, shipclass Class=Shipclass[1], ori
 		return ade_set_error(L, "o", l_Ship.Set(object_h()));
 	}
 
-	int obj_idx = ship_create(real_orient, &pos, sclass, name);
+	int obj_idx = ship_create(real_orient, &pos.vec, sclass, name);
 
 	if(obj_idx > -1) {
 		model_page_in_textures(Ship_info[sclass].model_num, sclass);
@@ -826,7 +826,7 @@ ADE_FUNC(createWaypoint, l_Mission, "[vector Position, waypointlist List]",
 		 "waypoint",
 		 "Waypoint handle, or invalid waypoint handle if waypoint couldn't be created")
 {
-	vec3d *v3 = NULL;
+	vec3d_h *v3 = NULL;
 	waypointlist_h *wlh = NULL;
 	if(!ade_get_args(L, "|oo", l_Vector.GetPtr(&v3), l_WaypointList.GetPtr(&wlh)))
 		return ade_set_error(L, "o", l_Waypoint.Set(object_h()));
@@ -839,7 +839,7 @@ ADE_FUNC(createWaypoint, l_Mission, "[vector Position, waypointlist List]",
 		int wp_index = (int) wlh->wlp->get_waypoints().size() - 1;
 		waypoint_instance = calc_waypoint_instance(wp_list_index, wp_index);
 	}
-	int obj_idx = waypoint_add(v3 != NULL ? v3 : &vmd_zero_vector, waypoint_instance);
+	int obj_idx = waypoint_add(v3 != NULL ? &v3->vec : &vmd_zero_vector, waypoint_instance);
 
 	if(obj_idx >= 0)
 		return ade_set_args(L, "o", l_Waypoint.Set(object_h(&Objects[obj_idx])));
@@ -857,7 +857,7 @@ ADE_FUNC(createWeapon, l_Mission, "[weaponclass Class=WeaponClass[1], orientatio
 	object_h *parent = NULL;
 	int group = -1;
 	matrix_h *orient = NULL;
-	vec3d pos = vmd_zero_vector;
+	vec3d_h pos(&vmd_zero_vector);
 	ade_get_args(L, "|ooooi", l_Weaponclass.Get(&wclass), l_Matrix.GetPtr(&orient), l_Vector.Get(&pos), l_Object.GetPtr(&parent), &group);
 
 	matrix *real_orient = &vmd_identity_matrix;
@@ -868,7 +868,7 @@ ADE_FUNC(createWeapon, l_Mission, "[weaponclass Class=WeaponClass[1], orientatio
 
 	int parent_idx = (parent && parent->IsValid()) ? OBJ_INDEX(parent->objp) : -1;
 
-	int obj_idx = weapon_create(&pos, real_orient, wclass, parent_idx, group);
+	int obj_idx = weapon_create(&pos.vec, real_orient, wclass, parent_idx, group);
 
 	if(obj_idx > -1)
 		return ade_set_args(L, "o", l_Weapon.Set(object_h(&Objects[obj_idx])));

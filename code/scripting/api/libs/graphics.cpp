@@ -280,7 +280,7 @@ ADE_FUNC(createCamera, l_Graphics,
 		 "Camera handle, or invalid camera handle if camera couldn't be created")
 {
 	const char* s = nullptr;
-	vec3d *v = &vmd_zero_vector;
+	vec3d_h *v;
 	matrix_h *mh = NULL;
 	if(!ade_get_args(L, "s|oo", &s, l_Vector.GetPtr(&v), l_Matrix.GetPtr(&mh)))
 		return ADE_RETURN_NIL;
@@ -288,7 +288,7 @@ ADE_FUNC(createCamera, l_Graphics,
 	matrix *mtx = &vmd_identity_matrix;
 	if(mh != NULL)
 		mtx = mh->GetMatrix();
-	camid cid = cam_create(s, v, mtx);
+	camid cid = cam_create(s, &v->vec, mtx);
 
 	//Set position
 	return ade_set_args(L, "o", l_Camera.Set(cid));
@@ -424,7 +424,7 @@ ADE_FUNC(getVectorFromCoords, l_Graphics,
 
 	vm_vec_add2(&pos, &View_position);
 
-	return ade_set_args(L, "o", l_Vector.Set(pos));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&pos)));
 }
 
 ADE_FUNC(setTarget, l_Graphics, "[texture Texture]",
@@ -604,7 +604,7 @@ ADE_FUNC(drawPixel, l_Graphics, "number X, number Y", "Sets pixel to CurrentColo
 ADE_FUNC(drawPolygon, l_Graphics, "texture Texture, [vector Position={0,0,0}, orientation Orientation=nil, number Width=1.0, number Height=1.0]", "Draws a polygon. May not work properly in hooks other than On Object Render.", NULL, NULL)
 {
 	texture_h* tdx = nullptr;
-	vec3d pos = vmd_zero_vector;
+	vec3d_h pos(&vmd_zero_vector);
 	matrix_h *mh = NULL;
 	float width = 1.0f;
 	float height = 1.0f;
@@ -628,7 +628,7 @@ ADE_FUNC(drawPolygon, l_Graphics, "texture Texture, [vector Position={0,0,0}, or
 	material mat_params;
 	material_set_unlit(&mat_params, tdx->handle, lua_Opacity, lua_Opacity_type == GR_ALPHABLEND_FILTER ? true : false,
 	                   false);
-	g3_render_rect_oriented(&mat_params, &pos, orip, width, height);
+	g3_render_rect_oriented(&mat_params, &pos.vec, orip, width, height);
 
 	if(!in_frame)
 		g3_end_frame();
@@ -666,7 +666,7 @@ ADE_FUNC(drawRectangle, l_Graphics, "number X1, number Y1, number X2, number Y2,
 ADE_FUNC(drawSphere, l_Graphics, "[number Radius = 1.0, vector Position]", "Draws a sphere with radius Radius at world vector Position. May not work properly in hooks other than On Object Render.", "boolean", "True if successful, false or nil otherwise")
 {
 	float rad = 1.0f;
-	vec3d pos = vmd_zero_vector;
+	vec3d_h pos(&vmd_zero_vector);
 	ade_get_args(L, "|fo", &rad, l_Vector.Get(&pos));
 
 	bool in_frame = g3_in_frame() > 0;
@@ -697,8 +697,8 @@ ADE_FUNC(drawSphere, l_Graphics, "[number Radius = 1.0, vector Position]", "Draw
 	}
 
 	vertex vtx;
-	vtx.world = pos;
-	g3_rotate_vertex(&vtx, &pos);
+	vtx.world = pos.vec;
+	g3_rotate_vertex(&vtx, &pos.vec);
 	g3_draw_sphere(&vtx, rad);
 
 	if(!in_frame) {
@@ -713,7 +713,7 @@ ADE_FUNC(drawSphere, l_Graphics, "[number Radius = 1.0, vector Position]", "Draw
 ADE_FUNC(drawModel, l_Graphics, "model, position, orientation", "Draws the given model with the specified position and orientation - Use with extreme care, may not work properly in all scripting hooks.", "int", "Zero if successful, otherwise an integer error code")
 {
 	model_h *mdl = NULL;
-	vec3d *v = &vmd_zero_vector;
+	vec3d_h *v;
 	matrix_h *mh = NULL;
 	if(!ade_get_args(L, "ooo", l_Model.GetPtr(&mdl), l_Vector.GetPtr(&v), l_Matrix.GetPtr(&mh)))
 		return ade_set_args(L, "i", 1);
@@ -762,7 +762,7 @@ ADE_FUNC(drawModel, l_Graphics, "model, position, orientation", "Draws the given
 
 	render_info.set_detail_level_lock(0);
 
-	model_render_immediate(&render_info, model_num, orient, v);
+	model_render_immediate(&render_info, model_num, orient, &v->vec);
 
 	//OK we're done
 	gr_end_view_matrix();
@@ -779,7 +779,7 @@ ADE_FUNC(drawModel, l_Graphics, "model, position, orientation", "Draws the given
 ADE_FUNC(drawModelOOR, l_Graphics, "model Model, vector Position, matrix Orientation, [integer Flags]", "Draws the given model with the specified position and orientation - Use with extreme care, designed to operate properly only in On Object Render hooks.", "int", "Zero if successful, otherwise an integer error code")
 {
 	model_h *mdl = NULL;
-	vec3d *v = &vmd_zero_vector;
+	vec3d_h *v;
 	matrix_h *mh = NULL;
 	int flags = MR_NORMAL;
 	if(!ade_get_args(L, "ooo|i", l_Model.GetPtr(&mdl), l_Vector.GetPtr(&v), l_Matrix.GetPtr(&mh), &flags))
@@ -807,7 +807,7 @@ ADE_FUNC(drawModelOOR, l_Graphics, "model Model, vector Position, matrix Orienta
 	model_render_params render_info;
 	render_info.set_flags(flags);
 
-	model_render_immediate(&render_info, model_num, orient, v);
+	model_render_immediate(&render_info, model_num, orient, &v->vec);
 
 	return ade_set_args(L, "i", 0);
 }

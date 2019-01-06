@@ -38,39 +38,39 @@ ADE_VIRTVAR(Class, l_Beam, "weaponclass", "Weapon's class", "weaponclass", "Weap
 ADE_VIRTVAR(LastShot, l_Beam, "vector", "End point of the beam", "vector", "vector or null vector if beam handle is not valid")
 {
 	object_h *oh=NULL;
-	vec3d *vec3 = nullptr;
+	vec3d_h *vec3 = nullptr;
 	if(!ade_get_args(L, "o|o", l_Beam.GetPtr(&oh), l_Vector.GetPtr(&vec3)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(!oh->IsValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	beam *bp = &Beams[oh->objp->instance];
 
 	if(ADE_SETTING_VAR && vec3) {
-		bp->last_shot = *vec3;
+		bp->last_shot = vec3->vec;
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(bp->last_shot));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&bp->last_shot)));
 }
 
 ADE_VIRTVAR(LastStart, l_Beam, "vector", "Start point of the beam", "vector", "vector or null vector if beam handle is not valid")
 {
 	object_h *oh=NULL;
-	vec3d *v3 = nullptr;
+	vec3d_h *v3 = nullptr;
 	if(!ade_get_args(L, "o|o", l_Beam.GetPtr(&oh), l_Vector.GetPtr(&v3)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(!oh->IsValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	beam *bp = &Beams[oh->objp->instance];
 
 	if(ADE_SETTING_VAR && v3) {
-		bp->last_start = *v3;
+		bp->last_start = v3->vec;
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(bp->last_start));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&bp->last_start)));
 }
 
 ADE_VIRTVAR(Target, l_Beam, "object", "Target of beam. Value may also be a deriviative of the 'object' class, such as 'ship'.", "object", "Beam target, or invalid object handle if beam handle is invalid")
@@ -238,21 +238,21 @@ ADE_FUNC(getCollisionPosition, l_Beam, "number", "Get the position of the define
 	object_h *objh;
 	int idx;
 	if(!ade_get_args(L, "oi", l_Beam.GetPtr(&objh), &idx))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	// convert from Lua to C
 	idx--;
 	if ((idx >= MAX_FRAME_COLLISIONS) || (idx < 0))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	beam *bp = NULL;
 	if(objh->objp->instance > -1)
 		bp = &Beams[objh->objp->instance];
 	else
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	// so we have valid beam and valid indexer
-	return ade_set_args(L, "o", l_Vector.Set(bp->f_collisions[idx].cinfo.hit_point_world));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&bp->f_collisions[idx].cinfo.hit_point_world)));
 }
 
 ADE_FUNC(getCollisionInformation, l_Beam, "number", "Get the collision information of the specified collision", "collision info", "handle to information or invalid handle on error")
@@ -328,34 +328,34 @@ ADE_FUNC(getStartDirectionInfo, l_Beam, NULL, "Gets the start information about 
 {
 	object_h *objh;
 	if(!ade_get_args(L, "o", l_Beam.GetPtr(&objh)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	beam *bp = NULL;
 	if(objh->objp->instance > -1)
 		bp = &Beams[objh->objp->instance];
 	else
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	beam_info inf = bp->binfo;
 
-	return ade_set_args(L, "o", l_Vector.Set(inf.dir_a));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&inf.dir_a)));
 }
 
 ADE_FUNC(getEndDirectionInfo, l_Beam, NULL, "Gets the end information about the direction. The vector is a normalized vector from LastStart showing the end direction of a slashing beam", "vector", "The start direction or null vector if invalid")
 {
 	object_h *objh;
 	if(!ade_get_args(L, "o", l_Beam.GetPtr(&objh)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	beam *bp = NULL;
 	if(objh->objp->instance > -1)
 		bp = &Beams[objh->objp->instance];
 	else
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	beam_info inf = bp->binfo;
 
-	return ade_set_args(L, "o", l_Vector.Set(inf.dir_b));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&inf.dir_b)));
 }
 
 

@@ -113,8 +113,8 @@ ADE_FUNC(playLoopingSound, l_Audio, "soundentry", "Plays the specified sound as 
 ADE_FUNC(play3DSound, l_Audio, "soundentry[, vector source[, vector listener]]", "Plays the specified sound entry handle. Source if by default 0, 0, 0 and listener is by default the current viewposition", "3Dsound", "A handle to the playing sound")
 {
 	sound_entry_h *seh = NULL;
-	vec3d *source = &vmd_zero_vector;
-	vec3d *listener = &View_position;
+	vec3d_h *source;
+	vec3d_h *listener;
 
 	if (!ade_get_args(L, "o|oo", l_SoundEntry.GetPtr(&seh), l_Vector.GetPtr(&source), l_Vector.GetPtr(&listener)))
 		return ade_set_error(L, "o", l_Sound3D.Set(sound_h()));
@@ -122,7 +122,7 @@ ADE_FUNC(play3DSound, l_Audio, "soundentry[, vector source[, vector listener]]",
 	if (seh == NULL || !seh->IsValid())
 		return ade_set_error(L, "o", l_Sound3D.Set(sound_h()));
 
-	auto handle = snd_play_3d(seh->Get(), source, listener);
+	auto handle = snd_play_3d(seh->Get(), &source->vec, &listener->vec);
 
 	if (!handle.isValid()) {
 		return ade_set_args(L, "o", l_Sound3D.Set(sound_h()));

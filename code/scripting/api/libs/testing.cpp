@@ -77,9 +77,15 @@ ADE_FUNC(createParticle, l_Testing, "vector Position, vector Velocity, number Li
 	bool rev=false;
 	object_h *objh=NULL;
 	texture_h* texture = nullptr;
-	if (!ade_get_args(L, "ooffo|fboo", l_Vector.Get(&pi.pos), l_Vector.Get(&pi.vel), &pi.lifetime, &pi.rad,
-	                  l_Enum.GetPtr(&type), &temp, &rev, l_Texture.GetPtr(&texture), l_Object.GetPtr(&objh)))
+	vec3d_h pos;
+	vec3d_h vel;
+
+	if ( !ade_get_args(L, "ooffo|fboo", l_Vector.Get(&pos), l_Vector.Get(&vel), &pi.lifetime, &pi.rad,
+		l_Enum.GetPtr(&type), &temp, &rev, l_Texture.GetPtr(&texture), l_Object.GetPtr(&objh)) ) {
+		pi.pos = pos.vec;
+		pi.vel = vel.vec;
 		return ADE_RETURN_NIL;
+	}
 
 	if(type != NULL)
 	{

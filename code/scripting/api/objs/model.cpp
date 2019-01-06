@@ -123,45 +123,45 @@ ADE_VIRTVAR(Dockingbays, l_Model, "dockingbays", "Docking bays handle of model",
 ADE_VIRTVAR(BoundingBoxMax, l_Model, "vector", "Model bounding box maximum", "vector", "Model bounding box, or an empty vector if the handle is invalid")
 {
 	model_h *mdl = NULL;
-	vec3d *v = NULL;
+	vec3d_h *v = NULL;
 	if(!ade_get_args(L, "o|o", l_Model.GetPtr(&mdl), l_Vector.GetPtr(&v)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	polymodel *pm = mdl->Get();
 
 	if(pm == NULL)
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(ADE_SETTING_VAR && v != NULL) {
-		pm->maxs = *v;
+		pm->maxs = v->vec;
 
 		//Recalculate this, so it stays valid
 		model_calc_bound_box(pm->bounding_box, &pm->mins, &pm->maxs);
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(pm->maxs));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&pm->maxs)));
 }
 
 ADE_VIRTVAR(BoundingBoxMin, l_Model, "vector", "Model bounding box minimum", "vector", "Model bounding box, or an empty vector if the handle is invalid")
 {
 	model_h *mdl = NULL;
-	vec3d *v = NULL;
+	vec3d_h *v = NULL;
 	if(!ade_get_args(L, "o|o", l_Model.GetPtr(&mdl), l_Vector.GetPtr(&v)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	polymodel *pm = mdl->Get();
 
 	if(pm == NULL)
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(ADE_SETTING_VAR && v != NULL) {
-		pm->mins = *v;
+		pm->mins = v->vec;
 
 		//Recalculate this, so it stays valid
 		model_calc_bound_box(pm->bounding_box, &pm->mins, &pm->maxs);
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(pm->mins));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&pm->mins)));
 }
 
 ADE_VIRTVAR(Filename, l_Model, "string", "Model filename", "string", "Model filename, or an empty string if the handle is invalid")
@@ -575,7 +575,7 @@ bool glowpoint_h::isValid() {
 ADE_VIRTVAR(Position, l_Glowpoint, NULL, "The (local) vector to the position of the glowpoint", "vector", "The local vector to the glowpoint or nil invalid")
 {
 	glowpoint_h *glh = NULL;
-	vec3d newVec;
+	vec3d_h newVec;
 
 	if(!ade_get_args(L, "o|o", l_Glowpoint.GetPtr(&glh), l_Vector.Get(&newVec)))
 		return ADE_RETURN_NIL;
@@ -587,10 +587,10 @@ ADE_VIRTVAR(Position, l_Glowpoint, NULL, "The (local) vector to the position of 
 
 	if (ADE_SETTING_VAR)
 	{
-		glh->point->pnt = newVec;
+		glh->point->pnt = newVec.vec;
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(vec));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&vec)));
 }
 
 ADE_VIRTVAR(Radius, l_Glowpoint, NULL, "The radius of the glowpoint", "number", "The radius of the glowpoint or -1 of invalid")
@@ -750,14 +750,14 @@ ADE_FUNC(getPoint, l_Dockingbay, "number index", "Gets the location of a docking
 
 	if (!ade_get_args(L, "oi", l_Dockingbay.GetPtr(&dbh), &index))
 	{
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 	}
 
 	index--; // Lua --> C/C++
 
 	if (dbh == NULL || !dbh->IsValid())
 	{
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 	}
 
 	dock_bay* dbp = dbh->getDockingBay();
@@ -765,10 +765,10 @@ ADE_FUNC(getPoint, l_Dockingbay, "number index", "Gets the location of a docking
 	if (index < 0 || index > dbp->num_slots)
 	{
 		LuaError(L, "Invalid dock bay index %d!", (index + 1));
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(dbp->pnt[index]));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&dbp->pnt[index])));
 }
 
 ADE_FUNC(getNormal, l_Dockingbay, "number index", "Gets the normal of a docking point in this bay", "vector", "The normal vector or null vector on error")
@@ -778,14 +778,14 @@ ADE_FUNC(getNormal, l_Dockingbay, "number index", "Gets the normal of a docking 
 
 	if (!ade_get_args(L, "oi", l_Dockingbay.GetPtr(&dbh), &index))
 	{
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 	}
 
 	index--; // Lua --> C/C++
 
 	if (dbh == NULL || !dbh->IsValid())
 	{
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 	}
 
 	dock_bay* dbp = dbh->getDockingBay();
@@ -793,10 +793,10 @@ ADE_FUNC(getNormal, l_Dockingbay, "number index", "Gets the normal of a docking 
 	if (index < 0 || index > dbp->num_slots)
 	{
 		LuaError(L, "Invalid dock bay index %d!", (index + 1));
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(dbp->norm[index]));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&dbp->norm[index])));
 }
 
 ADE_FUNC(computeDocker, l_Dockingbay, "dockingbay", "Computes the final position and orientation of a docker bay that docks with this bay.", "vector, orientation", "The local location and orientation of the docker vessel in the reference to the vessel of the docking bay handle, or a nil value on error")
@@ -841,7 +841,7 @@ ADE_FUNC(computeDocker, l_Dockingbay, "dockingbay", "Computes the final position
 	// Now get the position of the other vessel
 	vm_vec_add(&final_pos, &dockee_dock_pos, &docker_dock_pos);
 
-	return ade_set_args(L, "oo", l_Vector.Set(final_pos),l_Matrix.Set(matrix_h(&final_orient)));
+	return ade_set_args(L, "oo", l_Vector.Set(vec3d_h(&final_pos)),l_Matrix.Set(matrix_h(&final_orient)));
 }
 
 ADE_FUNC(isValid, l_Dockingbay, NULL, "Detects whether is valid or not", "number", "<i>true</i> if valid, <i>false</i> otherwise")

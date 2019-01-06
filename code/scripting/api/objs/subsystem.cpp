@@ -183,43 +183,43 @@ ADE_VIRTVAR(HitpointsMax, l_Subsystem, "number", "Subsystem hitpoints max", "num
 ADE_VIRTVAR(Position, l_Subsystem, "vector", "Subsystem position with regards to main ship (Local Vector)", "vector", "Subsystem position, or null vector if subsystem handle is invalid")
 {
 	ship_subsys_h *sso;
-	vec3d *v = NULL;
+	vec3d_h *v = NULL;
 	if(!ade_get_args(L, "o|o", l_Subsystem.GetPtr(&sso), l_Vector.GetPtr(&v)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(!sso->IsValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(ADE_SETTING_VAR && v != NULL)
 	{
-		sso->ss->system_info->pnt = *v;
+		sso->ss->system_info->pnt = v->vec;
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(sso->ss->system_info->pnt));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&sso->ss->system_info->pnt)));
 }
 
 ADE_VIRTVAR(GunPosition, l_Subsystem, "vector", "Subsystem gun position with regards to main ship (Local vector)", "vector", "Gun position, or null vector if subsystem handle is invalid")
 {
 	ship_subsys_h *sso;
-	vec3d *v = NULL;
+	vec3d_h *v = NULL;
 	if(!ade_get_args(L, "o|o", l_Subsystem.GetPtr(&sso), l_Vector.GetPtr(&v)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(!sso->IsValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	polymodel *pm = model_get(Ship_info[Ships[sso->objp->instance].ship_info_index].model_num);
 	Assert(pm != NULL);
 
 	if(sso->ss->system_info->turret_gun_sobj < 0)
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	bsp_info *sm = &pm->submodel[sso->ss->system_info->turret_gun_sobj];
 
 	if(ADE_SETTING_VAR && v != NULL)
-		sm->offset = *v;
+		sm->offset = v->vec;
 
-	return ade_set_args(L, "o", l_Vector.Set(sm->offset));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&sm->offset)));
 }
 
 ADE_VIRTVAR(Name, l_Subsystem, "string", "Subsystem name", "string", "Subsystem name, or an empty string if handle is invalid")
@@ -568,7 +568,7 @@ ADE_FUNC(fireWeapon, l_Subsystem, "[Turret weapon index = 1, Flak range = 100]",
 ADE_FUNC(rotateTurret, l_Subsystem, "vector Pos[, boolean reset=false", "Rotates the turret to face Pos or resets the turret to its original state", "boolean", "true on success false otherwise")
 {
 	ship_subsys_h *sso;
-	vec3d pos = vmd_zero_vector;
+	vec3d_h pos(&vmd_zero_vector);
 	bool reset = false;
 	if (!ade_get_args(L, "oo|b", l_Subsystem.GetPtr(&sso), l_Vector.Get(&pos), &reset))
 		return ADE_RETURN_NIL;
@@ -587,7 +587,7 @@ ADE_FUNC(rotateTurret, l_Subsystem, "vector Pos[, boolean reset=false", "Rotates
 	// Find direction of turret
 	model_instance_find_world_dir(&gvec, &tp->turret_norm, Ships[objp->instance].model_instance_num, tp->turret_gun_sobj, &objp->orient);
 
-	int ret_val = model_rotate_gun(Ship_info[(&Ships[sso->objp->instance])->ship_info_index].model_num, tp, &Objects[sso->objp->instance].orient, &sso->ss->submodel_info_1.angs, &sso->ss->submodel_info_2.angs, &Objects[sso->objp->instance].pos, &pos, (&Ships[sso->objp->instance])->objnum, reset);
+	int ret_val = model_rotate_gun(Ship_info[(&Ships[sso->objp->instance])->ship_info_index].model_num, tp, &Objects[sso->objp->instance].orient, &sso->ss->submodel_info_1.angs, &sso->ss->submodel_info_2.angs, &Objects[sso->objp->instance].pos, &pos.vec, (&Ships[sso->objp->instance])->objnum, reset);
 
 	if (ret_val)
 		return ADE_RETURN_TRUE;
@@ -599,10 +599,10 @@ ADE_FUNC(getTurretHeading, l_Subsystem, NULL, "Returns the turrets forward vecto
 {
 	ship_subsys_h *sso;
 	if(!ade_get_args(L, "o", l_Subsystem.GetPtr(&sso)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(!sso->IsValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	vec3d gvec;
 	object *objp = sso->objp;
@@ -612,7 +612,7 @@ ADE_FUNC(getTurretHeading, l_Subsystem, NULL, "Returns the turrets forward vecto
 	vec3d out;
 	vm_vec_rotate(&out, &gvec, &sso->objp->orient);
 
-	return ade_set_args(L, "o", l_Vector.Set(out));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&out)));
 }
 
 ADE_FUNC(getFOVs, l_Subsystem, NULL, "Returns current turrets FOVs", "number, number, number", "Standard FOV, maximum barrel elevation, turret base fov.")
@@ -638,16 +638,16 @@ ADE_FUNC(getNextFiringPosition, l_Subsystem, NULL, "Retrieves the next position 
 {
 	ship_subsys_h *sso;
 	if(!ade_get_args(L, "o", l_Subsystem.GetPtr(&sso)))
-		return ade_set_error(L, "oo", l_Vector.Set(vmd_zero_vector), l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "oo", l_Vector.Set(vec3d_h(&vmd_zero_vector)), l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(!sso->IsValid())
-		return ade_set_error(L, "oo", l_Vector.Set(vmd_zero_vector), l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "oo", l_Vector.Set(vec3d_h(&vmd_zero_vector)), l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	vec3d gpos, gvec;
 
 	ship_get_global_turret_gun_info(sso->objp, sso->ss, &gpos, &gvec, 1, NULL);
 
-	return ade_set_args(L, "oo", l_Vector.Set(gpos), l_Vector.Set(gvec));
+	return ade_set_args(L, "oo", l_Vector.Set(vec3d_h(&gpos)), l_Vector.Set(vec3d_h(&gvec)));
 }
 
 ADE_FUNC(getTurretMatrix, l_Subsystem, NULL, "Returns current subsystems turret matrix", "matrix", "Turret matrix.")

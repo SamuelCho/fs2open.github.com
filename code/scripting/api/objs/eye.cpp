@@ -31,41 +31,41 @@ ADE_OBJ(l_Eyepoint, eye_h, "eyepoint", "Eyepoint handle");
 ADE_VIRTVAR(Normal, l_Eyepoint, "vector", "Eyepoint normal", "vector", "Eyepoint normal, or null vector if handle is invalid")
 {
 	eye_h *eh;
-	vec3d *v;
+	vec3d_h *v;
 	if(!ade_get_args(L, "o|o", l_Eyepoint.GetPtr(&eh), l_Vector.GetPtr(&v)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(!eh->IsValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	polymodel *pm = model_get(eh->model);
 
 	if(ADE_SETTING_VAR && v != NULL)
 	{
-		pm->view_positions[eh->eye_idx].norm = *v;
+		pm->view_positions[eh->eye_idx].norm = v->vec;
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(pm->view_positions[eh->eye_idx].norm));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&pm->view_positions[eh->eye_idx].norm)));
 }
 
 ADE_VIRTVAR(Position, l_Eyepoint, "vector", "Eyepoint location (Local vector)", "vector", "Eyepoint location, or null vector if handle is invalid")
 {
 	eye_h *eh;
-	vec3d *v;
+	vec3d_h *v;
 	if(!ade_get_args(L, "o|o", l_Eyepoint.GetPtr(&eh), l_Vector.GetPtr(&v)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(!eh->IsValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	polymodel *pm = model_get(eh->model);
 
 	if(ADE_SETTING_VAR && v != NULL)
 	{
-		pm->view_positions[eh->eye_idx].pnt = *v;
+		pm->view_positions[eh->eye_idx].pnt = v->vec;
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(pm->view_positions[eh->eye_idx].pnt));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&pm->view_positions[eh->eye_idx].pnt)));
 }
 
 ADE_FUNC(IsValid, l_Eyepoint, NULL, "Detect whether this handle is valid", "boolean", "true if valid false otherwise")

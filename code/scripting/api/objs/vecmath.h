@@ -12,7 +12,16 @@
 namespace scripting {
 namespace api {
 
-DECLARE_ADE_OBJ(l_Vector, vec3d);
+struct vec3d_h {
+	vec3d vec;
+
+public:
+	vec3d_h();
+	vec3d_h(vec3d&& v);
+	explicit vec3d_h(vec3d* v);
+};
+
+DECLARE_ADE_OBJ(l_Vector, vec3d_h);
 
 //WMC - Due to the exorbitant times required to store matrix data,
 //I initially store the matrix in this struct.

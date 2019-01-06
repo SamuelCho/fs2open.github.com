@@ -98,39 +98,39 @@ ADE_VIRTVAR(Parent, l_Object, "object", "Parent of the object. Value may also be
 ADE_VIRTVAR(Position, l_Object, "vector", "Object world position (World vector)", "vector", "World position, or null vector if handle is invalid")
 {
 	object_h *objh;
-	vec3d *v3=NULL;
+	vec3d_h *v3=NULL;
 	if(!ade_get_args(L, "o|o", l_Object.GetPtr(&objh), l_Vector.GetPtr(&v3)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(!objh->IsValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(ADE_SETTING_VAR && v3 != NULL) {
-		objh->objp->pos = *v3;
+		objh->objp->pos = v3->vec;
 		if (objh->objp->type == OBJ_WAYPOINT) {
 			waypoint *wpt = find_waypoint_with_objnum(OBJ_INDEX(objh->objp));
-			wpt->set_pos(v3);
+			wpt->set_pos(&v3->vec);
 		}
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(objh->objp->pos));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&objh->objp->pos)));
 }
 
 ADE_VIRTVAR(LastPosition, l_Object, "vector", "Object world position as of last frame (World vector)", "vector", "World position, or null vector if handle is invalid")
 {
 	object_h *objh;
-	vec3d *v3=NULL;
+	vec3d_h *v3=NULL;
 	if(!ade_get_args(L, "o|o", l_Object.GetPtr(&objh), l_Vector.GetPtr(&v3)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(!objh->IsValid())
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
+		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 
 	if(ADE_SETTING_VAR && v3 != NULL) {
-		objh->objp->last_pos = *v3;
+		objh->objp->last_pos = v3->vec;
 	}
 
-	return ade_set_args(L, "o", l_Vector.Set(objh->objp->last_pos));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&objh->objp->last_pos)));
 }
 
 ADE_VIRTVAR(Orientation, l_Object, "orientation", "Object world orientation (World orientation)", "orientation", "Orientation, or null orientation if handle is invalid")
@@ -291,7 +291,7 @@ ADE_FUNC(getfvec, l_Object, "[boolean normalize]", "Returns the objects' current
 	if (normalize)
 		vm_vec_normalize(&v1);
 
-	return ade_set_args(L, "o", l_Vector.Set(v1));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&v1)));
 }
 
 ADE_FUNC(getuvec, l_Object, "[boolean normalize]", "Returns the objects' current uvec.", "vector", "Objects' up vector, or nil if invalid. If called with a true argument, vector will be normalized.")
@@ -312,7 +312,7 @@ ADE_FUNC(getuvec, l_Object, "[boolean normalize]", "Returns the objects' current
 	if (normalize)
 		vm_vec_normalize(&v1);
 
-	return ade_set_args(L, "o", l_Vector.Set(v1));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&v1)));
 }
 
 ADE_FUNC(getrvec, l_Object, "[boolean normalize]", "Returns the objects' current rvec.", "vector", "Objects' rvec, or nil if invalid. If called with a true argument, vector will be normalized.")
@@ -333,7 +333,7 @@ ADE_FUNC(getrvec, l_Object, "[boolean normalize]", "Returns the objects' current
 	if (normalize)
 		vm_vec_normalize(&v1);
 
-	return ade_set_args(L, "o", l_Vector.Set(v1));
+	return ade_set_args(L, "o", l_Vector.Set(vec3d_h(&v1)));
 }
 
 ADE_FUNC(checkRayCollision, l_Object, "vector Start Point, vector End Point, [boolean Local]", "Checks the collisions between the polygons of the current object and a ray", "vector, collision info", "World collision point (local if boolean is set to true) and the specific collsision info, nil if no collisions")
@@ -341,7 +341,7 @@ ADE_FUNC(checkRayCollision, l_Object, "vector Start Point, vector End Point, [bo
 	object_h *objh = NULL;
 	object *obj = NULL;
 	int model_num = -1, model_instance_num = -1, temp = 0;
-	vec3d *v3a, *v3b;
+	vec3d_h *v3a, *v3b;
 	bool local = false;
 	if(!ade_get_args(L, "ooo|b", l_Object.GetPtr(&objh), l_Vector.GetPtr(&v3a), l_Vector.GetPtr(&v3b), &local))
 		return ADE_RETURN_NIL;
@@ -395,8 +395,8 @@ ADE_FUNC(checkRayCollision, l_Object, "vector Start Point, vector End Point, [bo
 	hull_check.submodel_num = submodel;
 	hull_check.orient = &obj->orient;
 	hull_check.pos = &obj->pos;
-	hull_check.p0 = v3a;
-	hull_check.p1 = v3b;
+	hull_check.p0 = &v3a->vec;
+	hull_check.p1 = &v3b->vec;
 	hull_check.flags = flags;
 
 	if ( !model_collide(&hull_check) ) {
@@ -404,9 +404,9 @@ ADE_FUNC(checkRayCollision, l_Object, "vector Start Point, vector End Point, [bo
 	}
 
 	if (local)
-		return ade_set_args(L, "oo", l_Vector.Set(hull_check.hit_point), l_ColInfo.Set(mc_info_h(hull_check)));
+		return ade_set_args(L, "oo", l_Vector.Set(vec3d_h(&hull_check.hit_point)), l_ColInfo.Set(mc_info_h(hull_check)));
 	else
-		return ade_set_args(L, "oo", l_Vector.Set(hull_check.hit_point_world),  l_ColInfo.Set(mc_info_h(hull_check)));
+		return ade_set_args(L, "oo", l_Vector.Set(vec3d_h(&hull_check.hit_point_world)),  l_ColInfo.Set(mc_info_h(hull_check)));
 }
 
 ADE_FUNC(addPreMoveHook, l_Object, "function(object) callback",
