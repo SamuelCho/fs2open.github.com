@@ -21,11 +21,6 @@
 #include "tracing/Monitor.h"
 
 
-
-//#define MAX_PAIRS 10000	//	Bumped back to 10,000 by WMC
-			//	Reduced from 10,000 to 6,000 by MK on 4/1/98.
-			//	Most I saw was 3400 in sm1-06a, the asteroid mission.  No other mission came close.
-#define MIN_PAIRS	2500	// start out with this many pairs
 #define PAIRS_BUMP	1000		// increase by this many avialable pairs when more are needed
 
 // the next 3 variables are used for pair statistics
@@ -35,8 +30,6 @@ int Num_pairs = 0;
 int Num_pairs_allocated = 0;
 int Num_pairs_checked = 0;
 int pairs_not_created = 0;
-
-int Num_pairs_hwm = 0;
 
 obj_pair *Obj_pairs = NULL;
 
@@ -1035,6 +1028,10 @@ void obj_collide_retime_cached_pairs(int checkdly)
 	}
 }
 
+// used only in obj_sort_and_collide()
+static SCP_vector<int> sort_list_y;
+static SCP_vector<int> sort_list_z;
+
 void obj_sort_and_collide()
 {
 	if (Cmdline_dis_collisions)
@@ -1042,9 +1039,6 @@ void obj_sort_and_collide()
 
 	if ( !(Game_detail_flags & DETAIL_FLAG_COLLISION) )
 		return;
-
-	SCP_vector<int> sort_list_y;
-	SCP_vector<int> sort_list_z;
 
 	sort_list_y.clear();
 	{
