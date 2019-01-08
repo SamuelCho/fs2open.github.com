@@ -17,8 +17,11 @@ struct vec3d_h {
 
 public:
 	vec3d_h();
-	vec3d_h(vec3d&& v);
+	vec3d_h(const vec3d_h& v);
+	vec3d_h(vec3d_h&& v);
 	explicit vec3d_h(vec3d* v);
+
+	vec3d_h& operator=(const vec3d_h& v);
 };
 
 DECLARE_ADE_OBJ(l_Vector, vec3d_h);

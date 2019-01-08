@@ -13,14 +13,25 @@ vec3d_h::vec3d_h()
 
 }
 
-vec3d_h::vec3d_h(vec3d&& v)
+vec3d_h::vec3d_h(const vec3d_h& v)
 {
-	vec.xyz = std::move(v.xyz);
+	vec.xyz = v.vec.xyz;
+}
+
+vec3d_h::vec3d_h(vec3d_h&& v)
+{
+	vec.xyz = v.vec.xyz;
 }
 
 vec3d_h::vec3d_h(vec3d* v)
 {
 	vec.xyz = v->xyz;
+}
+
+vec3d_h& vec3d_h::operator=(const vec3d_h& v)
+{
+	vec.xyz = v.vec.xyz;
+	return *this;
 }
 
 //**********OBJECT: orientation matrix
@@ -222,14 +233,13 @@ ADE_FUNC(rotateVector,
 		 "vector",
 		 "Rotated vector, or empty vector on error") {
 	matrix_h* mh;
-	vec3d* v3;
-	vec3d_h* v3_h;
-	if (!ade_get_args(L, "oo", l_Matrix.GetPtr(&mh), l_Vector.GetPtr(&v3_h))) {
+	vec3d_h* v3;
+	if (!ade_get_args(L, "oo", l_Matrix.GetPtr(&mh), l_Vector.GetPtr(&v3))) {
 		return ade_set_error(L, "o", l_Vector.Set(vec3d_h(&vmd_zero_vector)));
 	}
 
 	vec3d_h v3r;
-	vm_vec_rotate(&v3r.vec, v3, mh->GetMatrix());
+	vm_vec_rotate(&v3r.vec, &v3->vec, mh->GetMatrix());
 
 	return ade_set_args(L, "o", l_Vector.Set(v3r));
 }
