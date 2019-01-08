@@ -387,9 +387,17 @@ void vm_vec_scale2(vec3d *dest, float n, float d)
 float vm_vec_dot(const vec3d *v0, const vec3d *v1)
 {
 #ifdef USE_INTRINSICS
-	vec3d out;
-	out.m128 = _mm_dp_ps(v0->m128, v1->m128, 0x7F);
-	return out.xyz.x;
+	//vec3d out;
+	//out.m128 = _mm_dp_ps(v0->m128, v1->m128, 0x7F);
+	vec3d mul;
+	vec3d add;
+	
+	mul.m128 = _mm_mul_ps(v0->m128, v1->m128);
+	add.m128 = _mm_add_ss(_mm_shuffle_ps(mul.m128, mul.m128, _MM_SHUFFLE(1, 1, 1, 1)), _mm_shuffle_ps(mul.m128, mul.m128, _MM_SHUFFLE(2, 2, 2, 2)));
+	add.m128 = _mm_add_ss(mul.m128, add.m128);
+	mul.m128 = _mm_shuffle_ps(add.m128, add.m128, _MM_SHUFFLE(0, 0, 0, 0));
+
+	return mul.xyz.x;
 #else
 	return (v1->xyz.x*v0->xyz.x)+(v1->xyz.y*v0->xyz.y)+(v1->xyz.z*v0->xyz.z);
 #endif
@@ -400,9 +408,17 @@ float vm_vec_dot(const vec3d *v0, const vec3d *v1)
 float vm_vec_dot3(float x, float y, float z, const vec3d *v)
 {
 #ifdef USE_INTRINSICS
-	vec3d out;
-	out.m128 = _mm_dp_ps(v->m128, _mm_set_ps(0.0f, z, y, x), 0x7F);
-	return out.xyz.x;
+	//vec3d out;
+	//out.m128 = _mm_dp_ps(v->m128, _mm_set_ps(0.0f, z, y, x), 0x7F);
+	vec3d mul;
+	vec3d add;
+
+	mul.m128 = _mm_mul_ps(v->m128, _mm_set_ps(0.0f, z, y, x));
+	add.m128 = _mm_add_ss(_mm_shuffle_ps(mul.m128, mul.m128, _MM_SHUFFLE(1, 1, 1, 1)), _mm_shuffle_ps(mul.m128, mul.m128, _MM_SHUFFLE(2, 2, 2, 2)));
+	add.m128 = _mm_add_ss(mul.m128, add.m128);
+	mul.m128 = _mm_shuffle_ps(add.m128, add.m128, _MM_SHUFFLE(0, 0, 0, 0));
+
+	return mul.xyz.x;
 #else
 	return (x*v->xyz.x)+(y*v->xyz.y)+(z*v->xyz.z);
 #endif
@@ -2859,9 +2875,16 @@ void vm_matrix4_x_matrix4(matrix4 *dest, const matrix4 *src0, const matrix4 *src
 float vm_vec4_dot4(float x, float y, float z, float w, const vec4 *v)
 {
 #ifdef USE_INTRINSICS
-	vec4 out;
-	out.m128 = _mm_dp_ps(v->m128, _mm_set_ps(w, z, y, x), 0xFF);
-	return out.a1d[0];
+	vec4 a;
+	vec4 b;
+
+	a.m128 = _mm_mul_ps(v->m128, _mm_set_ps(w, z, y, x));
+	b.m128 = _mm_shuffle_ps(a.m128, a.m128, _MM_SHUFFLE(1, 0, 3, 2));
+	a.m128 = _mm_add_ps(a.m128, b.m128);
+	b.m128 = _mm_shuffle_ps(a.m128, a.m128, _MM_SHUFFLE(0, 1, 0, 1));
+	a.m128 = _mm_add_ps(a.m128, b.m128);
+
+	return a.a1d[0];
 #else
 	return (x * v->xyzw.x) + (y * v->xyzw.y) + (z * v->xyzw.z) + (w * v->xyzw.w);
 #endif
