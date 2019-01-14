@@ -103,8 +103,8 @@ struct primitive_batch_buffer {
 
 	void* buffer_ptr;
 	size_t buffer_size;
-
 	size_t desired_buffer_size;
+	size_t max_buffer_size;
 
 	primitive_type prim_type;
 
@@ -125,5 +125,5 @@ void batching_add_quad(int texture, vertex *verts);
 void batching_add_tri(int texture, vertex *verts);
 
 void batching_render_all(bool render_distortions = false);
-
+void batching_orphan_buffers();
 void batching_shutdown();

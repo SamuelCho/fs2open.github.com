@@ -40,6 +40,7 @@
 #include "parse/parselo.h"
 #include "popup/popup.h"
 #include "render/3d.h"
+#include "render/batching.h"
 #include "scripting/scripting.h"
 #include "tracing/tracing.h"
 #include "utils/boost/hash_combine.h"
@@ -2164,6 +2165,7 @@ void gr_flip(bool execute_scripting)
 
 	gr_reset_immediate_buffer();
 
+	batching_orphan_buffers();
 	// Use this opportunity for retiring the uniform buffers
 	uniform_buffer_managers_retire_buffers();
 

@@ -806,6 +806,7 @@ typedef struct screen {
 	gr_sync (*gf_sync_fence)();
 	bool (*gf_sync_wait)(gr_sync sync, uint64_t timeoutns);
 	void (*gf_sync_delete)(gr_sync sync);
+	bool (*gf_get_sync)(gr_sync sync);
 
 	void (*gf_set_viewport)(int x, int y, int width, int height);
 } screen;
@@ -1117,6 +1118,9 @@ inline bool gr_sync_wait(gr_sync sync, uint64_t timeoutns) {
 }
 inline void gr_sync_delete(gr_sync sync) {
 	(*gr_screen.gf_sync_delete)(sync);
+}
+inline bool gr_get_sync(gr_sync sync) {
+	return (*gr_screen.gf_get_sync)(sync);
 }
 
 // color functions

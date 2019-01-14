@@ -20,6 +20,10 @@ class UniformBuffer {
 	UniformAligner _aligner;
 
 	gr_sync _sync_obj = nullptr;
+
+	bool frameFinished = true;
+
+	size_t maxSize = 0;
  public:
 	UniformBuffer(size_t element_size, size_t header_size = 0);
 	~UniformBuffer();
@@ -43,6 +47,8 @@ class UniformBuffer {
 	 */
 	void submitData();
 
+	void orphanData();
+
 	/**
 	 * @brief Signal that the code is done using this uniform buffer
 	 *
@@ -56,6 +62,8 @@ class UniformBuffer {
 	 * @return @c true if the GPU may still be using this buffer, @c false if not
 	 */
 	bool isInUse();
+
+	void OnEndFrame();
 };
 
 }

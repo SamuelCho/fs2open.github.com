@@ -814,7 +814,12 @@ void batching_allocate_and_load_buffer(primitive_batch_buffer *draw_queue)
 	}
 
 	if ( draw_queue->buffer_num >= 0 ) {
-		gr_update_buffer_data(draw_queue->buffer_num, draw_queue->buffer_size, draw_queue->buffer_ptr);
+		if ( draw_queue->max_buffer_size < draw_queue->buffer_size ) {
+			draw_queue->max_buffer_size = draw_queue->buffer_size;
+			gr_update_buffer_data(draw_queue->buffer_num, draw_queue->max_buffer_size, draw_queue->buffer_ptr);
+		} else {
+			gr_update_buffer_data_offset(draw_queue->buffer_num, 0, draw_queue->buffer_size, draw_queue->buffer_ptr);
+		}
 	}
 }
 
@@ -901,6 +906,13 @@ void batching_render_all(bool render_distortions)
 	}
 	
 	gr_clear_states();
+}
+
+void batching_orphan_buffers()
+{
+	for ( auto buffer_iter = Batching_buffers.begin(); buffer_iter != Batching_buffers.end(); ++buffer_iter ) {
+		gr_update_buffer_data(buffer_iter->second.buffer_num, buffer_iter->second.max_buffer_size, NULL);
+	}
 }
 
 void batching_shutdown()

@@ -1194,6 +1194,7 @@ void opengl_setup_function_pointers()
 	gr_screen.gf_sync_fence = gr_opengl_sync_fence;
 	gr_screen.gf_sync_wait = gr_opengl_sync_wait;
 	gr_screen.gf_sync_delete = gr_opengl_sync_delete;
+	gr_screen.gf_get_sync = gr_opengl_get_sync;
 
 	gr_screen.gf_set_viewport = gr_opengl_set_viewport;
 

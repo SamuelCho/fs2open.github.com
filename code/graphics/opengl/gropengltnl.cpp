@@ -64,6 +64,7 @@ GLuint shadow_fbo = 0;
 bool Rendering_to_shadow_map = false;
 
 int Transform_buffer_handle = -1;
+size_t Transform_buffer_size = 0;
 
 SCP_unordered_map<vertex_layout, GLuint> Stored_vertex_arrays;
 
@@ -254,28 +255,28 @@ void gr_opengl_update_buffer_data(int handle, size_t size, void* data)
 
 	opengl_bind_buffer_object(handle);
 
-	if (size <= buffer_obj.size && buffer_obj.type == GL_UNIFORM_BUFFER) {
-		// Uniform buffer can use unsychronized buffer mapping since those are always synchronized by us
-		// We also don't care about the previous data and tell OpenGL to map the buffer unsynchronized.
-		auto ptr = glMapBufferRange(buffer_obj.type,
-									0,
-									size,
-									GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
-		if (ptr == nullptr) {
-			// Something went wrong, try subdata instead
-			glBufferSubData(buffer_obj.type, 0, size, data);
-		} else {
-			memcpy(ptr, data, size);
-
-			glUnmapBuffer(buffer_obj.type);
-		}
-	} else {
+// 	if (size <= buffer_obj.size && buffer_obj.type == GL_UNIFORM_BUFFER) {
+// 		// Uniform buffer can use unsychronized buffer mapping since those are always synchronized by us
+// 		// We also don't care about the previous data and tell OpenGL to map the buffer unsynchronized.
+// 		auto ptr = glMapBufferRange(buffer_obj.type,
+// 									0,
+// 									size,
+// 									GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
+// 		if (ptr == nullptr) {
+// 			// Something went wrong, try subdata instead
+// 			glBufferSubData(buffer_obj.type, 0, size, data);
+// 		} else {
+// 			memcpy(ptr, data, size);
+// 
+// 			glUnmapBuffer(buffer_obj.type);
+// 		}
+// 	} else {
 		GL_vertex_data_in -= buffer_obj.size;
 		buffer_obj.size = size;
 		GL_vertex_data_in += buffer_obj.size;
 
 		glBufferData(buffer_obj.type, size, data, buffer_obj.usage);
-	}
+//	}
 }
 
 void gr_opengl_update_buffer_data_offset(int handle, size_t offset, size_t size, void* data)

@@ -73,6 +73,7 @@ void UniformBufferManager::retireBuffers() {
 	for (auto& buffer : _usedBuffers) {
 		if (!buffer->isInUse()) {
 			// This buffer will be retired soon so add it to the list before removing it from the used list
+			buffer->OnEndFrame();
 			_retiredBuffers.push_back(buffer);
 		}
 	}

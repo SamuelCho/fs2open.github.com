@@ -26,3 +26,12 @@ void gr_opengl_sync_delete(gr_sync sync) {
 
 	glDeleteSync((GLsync) sync);
 }
+bool gr_opengl_get_sync(gr_sync sync) {
+	GLint signaled = 0;
+	glGetSynciv((GLsync) sync, GL_SYNC_STATUS, 1, NULL, &signaled);
+	
+	if ( signaled == GL_SIGNALED )
+		return true;
+
+	return false;
+}

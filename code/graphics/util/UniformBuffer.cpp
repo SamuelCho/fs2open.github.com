@@ -28,34 +28,51 @@ void UniformBuffer::submitData() {
 		return;
 	}
 
-	gr_update_buffer_data(_buffer_obj, _aligner.getSize(), _aligner.getData());
+	if ( maxSize < _aligner.getSize() ) {
+		maxSize = _aligner.getSize();
+		gr_update_buffer_data(_buffer_obj, _aligner.getSize(), _aligner.getData());
+	} else {
+		gr_update_buffer_data_offset(_buffer_obj, 0, _aligner.getSize(), _aligner.getData());
+	}
+}
+void UniformBuffer::orphanData() {
+	gr_update_buffer_data(_buffer_obj, maxSize, nullptr);
 }
 void UniformBuffer::finished() {
-	Assertion(_sync_obj == nullptr, "Can't finish using uniform buffer while it's still in use!");
+//	Assertion(_sync_obj == nullptr, "Can't finish using uniform buffer while it's still in use!");
 
 	// We use fences to determine if the GPU is still using this buffer. That allows us to use multiple buffers and
 	// avoid implicit synchronization which might be performed by the driver otherwise.
-	_sync_obj = gr_sync_fence();
-
+//	_sync_obj = gr_sync_fence();
+	
 	// Uniform data is single-use only so we can discard the old data of the aligner
 	_aligner.clear();
+	frameFinished = false;
 }
 bool UniformBuffer::isInUse() {
-	if (_sync_obj == nullptr) {
-		// Probably was signaled before, just assume that this means that the buffer is not in use anymore
-		return false;
-	}
-
-	if (gr_sync_wait(_sync_obj, 0)) {
-		// Fence was signaled => buffer is not in use anymore
-		// Delete the sync object since we don't need it anymore
-		gr_sync_delete(_sync_obj);
-		_sync_obj = nullptr;
-		return false;
-	}
+// 	if (_sync_obj == nullptr) {
+// 		// Probably was signaled before, just assume that this means that the buffer is not in use anymore
+// 		return false;
+// 	}
+// 
+// 	if ( gr_get_sync(_sync_obj) ) { // gr_sync_wait(_sync_obj, 0)
+// 		// Fence was signaled => buffer is not in use anymore
+// 		// Delete the sync object since we don't need it anymore
+// 		gr_sync_delete(_sync_obj);
+// 		_sync_obj = nullptr;
+// 		return false;
+// 	}
 
 	// Fence still exists and has not been signaled yet. The buffer is still in use
-	return true;
+	//return true;
+
+	return !frameFinished;
+}
+void UniformBuffer::OnEndFrame() {
+	if ( !frameFinished ) {
+		frameFinished = true;
+		orphanData();
+	}
 }
 UniformBuffer::UniformBuffer(UniformBuffer&& other) SCP_NOEXCEPT : _aligner(0, 0) {
 	*this = std::move(other);
