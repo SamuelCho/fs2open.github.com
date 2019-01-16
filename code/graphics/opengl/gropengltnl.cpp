@@ -98,6 +98,15 @@ struct opengl_buffer_object {
 static SCP_vector<opengl_buffer_object> GL_buffer_objects;
 static int GL_vertex_buffers_in_use = 0;
 
+struct opengl_transform_buffers {
+	int buffer_handle;
+	size_t max_size;
+
+	bool used_in_frame;
+};
+
+static SCP_vector<opengl_transform_buffers> GL_transform_buffers;
+
 static GLenum convertBufferType(BufferType type) {
 	switch (type) {
 		case BufferType::Vertex:
@@ -381,11 +390,46 @@ int opengl_create_texture_buffer_object()
 
 void gr_opengl_update_transform_buffer(void* data, size_t size)
 {
-	if ( Transform_buffer_handle < 0 || size <= 0 ) {
-		return;
+// 	if ( Transform_buffer_handle < 0 || size <= 0 ) {
+// 		return;
+// 	}
+
+	bool resize = false;
+	size_t buffer_idx = 0;
+
+	// find a buffer that's not being used that can fit this data.
+	for ( size_t i = 0; i < GL_transform_buffers.size(); i++ ) {
+		if ( !GL_transform_buffers[i].used_in_frame) {
+			if ( GL_transform_buffers[i].max_size < size ) {
+				resize = true;
+			}
+
+			buffer_idx = i;
+			break;
+		}
 	}
 
-	gr_opengl_update_buffer_data(Transform_buffer_handle, size, data);
+	if ( buffer_idx == GL_transform_buffers.size() ) {
+		opengl_transform_buffers temp;
+
+		temp.buffer_handle = opengl_create_texture_buffer_object();
+		temp.max_size = 0;
+		temp.used_in_frame = false;
+		
+		resize = true;
+
+		GL_transform_buffers.push_back(temp);
+	}
+
+	Transform_buffer_handle = GL_transform_buffers[buffer_idx].buffer_handle;
+	GL_transform_buffers[buffer_idx].used_in_frame = true;
+
+	if ( resize ) {
+		GL_transform_buffers[buffer_idx].max_size = size;
+		gr_opengl_update_buffer_data(Transform_buffer_handle, size, data);
+	} else {
+		gr_opengl_update_buffer_data_offset(Transform_buffer_handle, 0, size, data);
+	}
 
 	opengl_buffer_object &buffer_obj = GL_buffer_objects[Transform_buffer_handle];
 
@@ -393,6 +437,23 @@ void gr_opengl_update_transform_buffer(void* data, size_t size)
 	// didn't have to do this on AMD and Nvidia drivers but Intel drivers seem to want it.
 	glBindTexture(GL_TEXTURE_BUFFER, buffer_obj.texture);
 	glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, buffer_obj.buffer_id);
+}
+
+static int transform_buffer_compare(const opengl_transform_buffers &a, const opengl_transform_buffers &b)
+{
+	return (a.max_size > b.max_size);
+}
+
+void gr_opengl_reset_transform_buffers()
+{
+	for ( size_t i = 0; i < GL_transform_buffers.size(); i++ ) {
+		if ( GL_transform_buffers[i].used_in_frame ) {
+			GL_transform_buffers[i].used_in_frame = false;
+			gr_opengl_update_buffer_data(GL_transform_buffers[i].buffer_handle, GL_transform_buffers[i].max_size, NULL);
+		}
+	}
+
+	std::sort(GL_transform_buffers.begin(), GL_transform_buffers.end(), transform_buffer_compare);
 }
 
 GLuint opengl_get_transform_buffer_texture()
@@ -490,7 +551,7 @@ static bool opengl_init_shadow_framebuffer(int size, GLenum color_format)
 
 void opengl_tnl_init()
 {
-	Transform_buffer_handle = opengl_create_texture_buffer_object();
+	//Transform_buffer_handle = opengl_create_texture_buffer_object();
 
 	if (Cmdline_shadow_quality) {
 		int size = (Cmdline_shadow_quality == 2 ? 1024 : 512);

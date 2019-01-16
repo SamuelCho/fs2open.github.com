@@ -60,6 +60,7 @@ void gr_opengl_bind_uniform_buffer(uniform_block_type bind_point, size_t offset,
 GLuint opengl_buffer_get_id(GLenum expected_type, int buffer_handle);
 
 void gr_opengl_update_transform_buffer(void* data, size_t size);
+void gr_opengl_reset_transform_buffers();
 
 void opengl_tnl_init();
 void opengl_tnl_shutdown();

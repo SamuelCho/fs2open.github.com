@@ -131,6 +131,11 @@ void gr_stub_update_transform_buffer(void*  /*data*/, size_t  /*size*/)
 
 }
 
+void gr_stub_reset_transform_buffers()
+{
+
+}
+
 void gr_stub_set_clear_color(int  /*r*/, int  /*g*/, int  /*b*/)
 {
 }
@@ -474,6 +479,7 @@ bool gr_stub_init()
 	gr_screen.gf_create_buffer	= gr_stub_create_buffer;
 	gr_screen.gf_delete_buffer		= gr_stub_delete_buffer;
 
+	gr_screen.gf_reset_transform_buffers = gr_stub_reset_transform_buffers;
 	gr_screen.gf_update_transform_buffer	= gr_stub_update_transform_buffer;
 	gr_screen.gf_update_buffer_data		= gr_stub_update_buffer_data;
 	gr_screen.gf_update_buffer_data_offset = gr_stub_update_buffer_data_offset;

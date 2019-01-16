@@ -1130,6 +1130,7 @@ void opengl_setup_function_pointers()
 	gr_screen.gf_bind_uniform_buffer = gr_opengl_bind_uniform_buffer;
 
 	gr_screen.gf_update_transform_buffer	= gr_opengl_update_transform_buffer;
+	gr_screen.gf_reset_transform_buffers = gr_opengl_reset_transform_buffers;
 
 	gr_screen.gf_post_process_set_effect	= gr_opengl_post_process_set_effect;
 	gr_screen.gf_post_process_set_defaults	= gr_opengl_post_process_set_defaults;

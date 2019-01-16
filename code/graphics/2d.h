@@ -733,6 +733,7 @@ typedef struct screen {
 	void (*gf_update_buffer_data)(int handle, size_t size, void* data);
 	void (*gf_update_buffer_data_offset)(int handle, size_t offset, size_t size, void* data);
 	void (*gf_update_transform_buffer)(void* data, size_t size);
+	void (*gf_reset_transform_buffers)();
 
 	// postprocessing effects
 	void (*gf_post_process_set_effect)(const char*, int, const vec3d*);
@@ -972,6 +973,7 @@ inline int gr_create_buffer(BufferType type, BufferUsageHint usage)
 #define gr_update_buffer_data			GR_CALL(gr_screen.gf_update_buffer_data)
 #define gr_update_buffer_data_offset	GR_CALL(gr_screen.gf_update_buffer_data_offset)
 #define gr_update_transform_buffer		GR_CALL(gr_screen.gf_update_transform_buffer)
+#define gr_reset_transform_buffers		GR_CALL(gr_screen.gf_reset_transform_buffers)
 
 #define gr_scene_texture_begin			GR_CALL(gr_screen.gf_scene_texture_begin)
 #define gr_scene_texture_end			GR_CALL(gr_screen.gf_scene_texture_end)

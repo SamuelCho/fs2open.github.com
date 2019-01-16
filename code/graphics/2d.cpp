@@ -2169,6 +2169,8 @@ void gr_flip(bool execute_scripting)
 	// Use this opportunity for retiring the uniform buffers
 	uniform_buffer_managers_retire_buffers();
 
+	gr_reset_transform_buffers();
+
 	gr_screen.gf_flip();
 }
 
