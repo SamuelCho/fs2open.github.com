@@ -80,6 +80,7 @@ void batching_init_buffer(primitive_batch_buffer *buffer, primitive_type prim_ty
 	buffer->buffer_size = 0;
 	buffer->desired_buffer_size = 0;
 	buffer->prim_type = prim_type;
+	buffer->max_buffer_size = 0;
 }
 
 void batching_determine_blend_color(color *clr, int texture, float alpha)

@@ -81,6 +81,8 @@ UniformBuffer& UniformBuffer::operator=(UniformBuffer&& other) SCP_NOEXCEPT {
 	std::swap(_buffer_obj, other._buffer_obj);
 	std::swap(_aligner, other._aligner);
 	std::swap(_sync_obj, other._sync_obj);
+	std::swap(maxSize, other.maxSize);
+	std::swap(frameFinished, other.frameFinished);
 
 	return *this;
 }

@@ -71,9 +71,10 @@ void UniformBufferManager::retireBuffers() {
 	GR_DEBUG_SCOPE("Retiring buffers of buffer manager");
 
 	for (auto& buffer : _usedBuffers) {
+		buffer->OnEndFrame();
+
 		if (!buffer->isInUse()) {
 			// This buffer will be retired soon so add it to the list before removing it from the used list
-			buffer->OnEndFrame();
 			_retiredBuffers.push_back(buffer);
 		}
 	}
