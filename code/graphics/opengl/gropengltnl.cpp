@@ -395,16 +395,15 @@ void gr_opengl_update_transform_buffer(void* data, size_t size)
 // 	}
 
 	bool resize = false;
-	size_t buffer_idx = 0;
+	size_t buffer_idx;
 
 	// find a buffer that's not being used that can fit this data.
-	for ( size_t i = 0; i < GL_transform_buffers.size(); i++ ) {
-		if ( !GL_transform_buffers[i].used_in_frame) {
-			if ( GL_transform_buffers[i].max_size < size ) {
+	for ( buffer_idx = 0; buffer_idx < GL_transform_buffers.size(); buffer_idx++ ) {
+		if ( !GL_transform_buffers[buffer_idx].used_in_frame) {
+			if ( GL_transform_buffers[buffer_idx].max_size < size ) {
 				resize = true;
 			}
 
-			buffer_idx = i;
 			break;
 		}
 	}
