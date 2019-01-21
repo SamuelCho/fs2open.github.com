@@ -74,6 +74,8 @@ static Tree* weap_tree = nullptr;
 static Slider* ambient_sldr = nullptr;
 static Slider* direct_sldr = nullptr;
 static Slider* bloom_sldr = nullptr;
+static Slider* exposure_sldr = nullptr;
+static Slider* tonemapper_sldr = nullptr;
 
 // holds the beginning and ending indices of each specie/type of ship/weapon
 static SCP_vector<std::pair<TreeItem*, TreeItem*>> ship_list_endpoints;
@@ -1089,6 +1091,8 @@ void labviewer_close_render_options_window(GUIObject* /*caller*/)
 {
 	ambient_sldr = nullptr;
 	bloom_sldr = nullptr;
+	exposure_sldr = nullptr;
+	tonemapper_sldr = nullptr;
 	direct_sldr = nullptr;
 	Lab_render_options_window = nullptr;
 }
@@ -1118,6 +1122,11 @@ void labviewer_render_options_set_static_light_factor(Slider* caller)
 }
 
 void labviewer_render_options_set_bloom(Slider* caller) { Cmdline_bloom_intensity = fl2i(caller->GetSliderValue()); }
+
+void labviewer_render_options_set_exposure(Slider* caller) { Cmdline_hdr_exposure = caller->GetSliderValue(); }
+
+void labviewer_render_options_set_tonemapper(Slider* caller) { Cmdline_hdr_tonemapper = fl2i(caller->GetSliderValue()); }
+
 
 void labviewer_make_render_options_window(Button* /*caller*/)
 {
@@ -1191,6 +1200,16 @@ void labviewer_make_render_options_window(Button* /*caller*/)
 	bloom_sldr->SetSliderValue((float)Cmdline_bloom_intensity);
 	Lab_render_options_window->AddChild(bloom_sldr);
 	y += bloom_sldr->GetHeight() + 1;
+
+	exposure_sldr = new Slider("Exposure", 0.0f, 10.0f, 0, y + 2, labviewer_render_options_set_exposure, Lab_render_options_window->GetWidth());
+	exposure_sldr->SetSliderValue((float)Cmdline_hdr_exposure);
+	Lab_render_options_window->AddChild(exposure_sldr);
+	y += exposure_sldr->GetHeight() + 1;
+
+	tonemapper_sldr = new Slider("Tonemapper", 0.0f, 10.0f, 0, y + 2, labviewer_render_options_set_tonemapper, Lab_render_options_window->GetWidth());
+	tonemapper_sldr->SetSliderValue((float)Cmdline_hdr_tonemapper);
+	Lab_render_options_window->AddChild(tonemapper_sldr);
+	y += tonemapper_sldr->GetHeight() + 1;
 
 	// start tree
 	cmp = (Tree*)Lab_render_options_window->AddChild(

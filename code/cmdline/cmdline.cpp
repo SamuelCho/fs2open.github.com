@@ -347,6 +347,8 @@ int Cmdline_enable_3d_shockwave = 0;
 int Cmdline_softparticles = 0;
 int Cmdline_postprocess = 0;
 int Cmdline_bloom_intensity = 75;
+float Cmdline_hdr_exposure = 1.0f;
+int Cmdline_hdr_tonemapper = 0;
 bool Cmdline_fxaa = false;
 int Cmdline_fxaa_preset = 6;
 extern int Fxaa_preset_last_frame;

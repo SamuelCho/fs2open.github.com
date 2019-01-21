@@ -72,6 +72,8 @@ extern int Cmdline_enable_3d_shockwave;
 extern int Cmdline_softparticles;
 extern int Cmdline_postprocess;
 extern int Cmdline_bloom_intensity;
+extern float Cmdline_hdr_exposure;
+extern int Cmdline_hdr_tonemapper;
 extern bool Cmdline_fxaa;
 extern int Cmdline_fxaa_preset;
 extern bool Cmdline_fb_explosions;
