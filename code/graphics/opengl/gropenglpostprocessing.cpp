@@ -86,7 +86,7 @@ void opengl_post_pass_tonemap()
 
 	Current_shader->program->Uniforms.setUniformi("tex", 0);
 	Current_shader->program->Uniforms.setUniformf("exposure", Cmdline_hdr_exposure);
-	Current_shader->program->Uniforms.setUniformi("algorithm", Cmdline_hdr_tonemapper);
+	Current_shader->program->Uniforms.setUniformi("operator", Cmdline_hdr_tonemapper);
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_ldr_texture, 0);
 
