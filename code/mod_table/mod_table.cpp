@@ -29,6 +29,8 @@ int Default_fiction_viewer_ui;
 bool Enable_external_shaders;
 bool Enable_external_default_scripts;
 int Default_detail_level;
+float Default_hdr_exposure;
+int Default_hdr_tonemapper;
 bool Full_color_head_anis;
 bool Weapons_inherit_parent_collision_group;
 bool Flight_controls_follow_eyepoint_orientation;
@@ -266,6 +268,17 @@ void parse_mod_table(const char *filename)
 			mprintf(("Game Settings Table: $BMPMAN Slot Limit is deprecated and should be removed. It is not needed anymore.\n"));
 		}
 
+		if (optional_string("$Default HDR Tonemapper:") ) {
+			SCP_string tonemapper_name;
+			stuff_string(tonemapper_name, F_NAME);
+
+			Default_hdr_tonemapper = parse_tonemapper_arg(tonemapper_name.c_str());
+		}
+
+		if ( optional_string("$Default HDR Exposure:") ) {
+			stuff_float(&Default_hdr_exposure);
+		}
+
 		optional_string("#NETWORK SETTINGS");
 
 		if (optional_string("$FS2NetD port:")) {
@@ -455,6 +468,8 @@ void mod_table_reset() {
 	Enable_external_shaders = false;
 	Enable_external_default_scripts             = false;
 	Default_detail_level = 3; // "very high" seems a reasonable default in 2012 -zookeeper
+	Default_hdr_exposure = -1.0f;
+	Default_hdr_tonemapper = -1;
 	Full_color_head_anis = false;
 	Weapons_inherit_parent_collision_group = false;
 	Flight_controls_follow_eyepoint_orientation = false;

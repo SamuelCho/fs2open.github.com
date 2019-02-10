@@ -101,6 +101,9 @@ float Gr_save_resize_X = 1.0f, Gr_save_resize_Y = 1.0f;
 float Gr_save_menu_offset_X = 0.0f, Gr_save_menu_offset_Y = 0.0f;
 float Gr_save_menu_zoomed_offset_X = 0.0f, Gr_save_menu_zoomed_offset_Y = 0.0f;
 
+float Gr_hdr_exposure = 1.0f;
+int Gr_hdr_tonemapper = 0;
+
 bool Save_custom_screen_size;
 
 // Forward definitions
@@ -1155,6 +1158,9 @@ bool gr_init(std::unique_ptr<os::GraphicsOperations>&& graphicsOps, int d_mode, 
 	gr_set_clear_color(0, 0, 0);
 
 	gr_set_shader(NULL);
+
+	Gr_hdr_exposure = (Cmdline_hdr_exposure > 0.0f) ? Cmdline_hdr_exposure : ((Default_hdr_exposure > 0.0f) ? Default_hdr_exposure : Gr_hdr_exposure);
+	Gr_hdr_tonemapper = (Cmdline_hdr_tonemapper >= 0) ? Cmdline_hdr_tonemapper : ((Default_hdr_tonemapper >= 0) ? Default_hdr_tonemapper : Gr_hdr_tonemapper);
 
 	Gr_inited = 1;
 

@@ -130,6 +130,8 @@ SCP_string Lab_team_color = "<none>";
 int orig_cmdline_ambient;
 float orig_cmdline_direct;
 int orig_cmdline_bloom;
+float orig_cmdline_hdr_exposure;
+int orig_cmdline_hdr_tonemapper;
 
 camid Lab_cam;
 float lab_cam_distance = 100.0f;
@@ -184,10 +186,14 @@ void reset_view()
 		gr_calculate_ambient_factor(orig_cmdline_ambient);
 		static_light_factor = orig_cmdline_direct;
 		Cmdline_bloom_intensity = orig_cmdline_bloom;
+		Gr_hdr_tonemapper = orig_cmdline_hdr_tonemapper;
+		Gr_hdr_exposure = orig_cmdline_hdr_exposure;
 	} else {
 		ambient_sldr->SetSliderValue((float)orig_cmdline_ambient);
 		direct_sldr->SetSliderValue(orig_cmdline_direct);
 		bloom_sldr->SetSliderValue((float)orig_cmdline_bloom);
+		tonemapper_sldr->SetSliderValue((int)orig_cmdline_hdr_tonemapper);
+		exposure_sldr->SetSliderValue((float)orig_cmdline_hdr_exposure);
 	}
 }
 
@@ -1123,9 +1129,9 @@ void labviewer_render_options_set_static_light_factor(Slider* caller)
 
 void labviewer_render_options_set_bloom(Slider* caller) { Cmdline_bloom_intensity = fl2i(caller->GetSliderValue()); }
 
-void labviewer_render_options_set_exposure(Slider* caller) { Cmdline_hdr_exposure = caller->GetSliderValue(); }
+void labviewer_render_options_set_exposure(Slider* caller) { Gr_hdr_exposure = caller->GetSliderValue(); }
 
-void labviewer_render_options_set_tonemapper(Slider* caller) { Cmdline_hdr_tonemapper = fl2i(caller->GetSliderValue()); }
+void labviewer_render_options_set_tonemapper(Slider* caller) { Gr_hdr_tonemapper = fl2i(caller->GetSliderValue()); }
 
 
 void labviewer_make_render_options_window(Button* /*caller*/)
@@ -1202,12 +1208,12 @@ void labviewer_make_render_options_window(Button* /*caller*/)
 	y += bloom_sldr->GetHeight() + 1;
 
 	exposure_sldr = new Slider("Exposure", 0.0f, 10.0f, 0, y + 2, labviewer_render_options_set_exposure, Lab_render_options_window->GetWidth());
-	exposure_sldr->SetSliderValue((float)Cmdline_hdr_exposure);
+	exposure_sldr->SetSliderValue((float)Gr_hdr_exposure);
 	Lab_render_options_window->AddChild(exposure_sldr);
 	y += exposure_sldr->GetHeight() + 1;
 
 	tonemapper_sldr = new Slider("Tonemapper", 0.0f, 10.0f, 0, y + 2, labviewer_render_options_set_tonemapper, Lab_render_options_window->GetWidth());
-	tonemapper_sldr->SetSliderValue((float)Cmdline_hdr_tonemapper);
+	tonemapper_sldr->SetSliderValue((float)Gr_hdr_tonemapper);
 	Lab_render_options_window->AddChild(tonemapper_sldr);
 	y += tonemapper_sldr->GetHeight() + 1;
 
@@ -2168,6 +2174,8 @@ void lab_init()
 	orig_cmdline_ambient = Cmdline_ambient_factor;
 	orig_cmdline_direct = static_light_factor;
 	orig_cmdline_bloom = Cmdline_bloom_intensity;
+	orig_cmdline_hdr_tonemapper = Gr_hdr_tonemapper;
+	orig_cmdline_hdr_exposure = Gr_hdr_exposure;
 
 	// save detail options
 	Lab_detail_texture_save = Detail.hardware_textures;

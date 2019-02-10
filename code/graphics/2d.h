@@ -40,6 +40,9 @@ extern int Gr_inited;
 extern int gr_zbuffering, gr_zbuffering_mode;
 extern int gr_global_zbuffering;
 
+extern float Gr_hdr_exposure;
+extern int Gr_hdr_tonemapper;
+
 class material;
 class model_material;
 class particle_material;

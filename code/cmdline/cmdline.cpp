@@ -249,6 +249,23 @@ Flag exe_params[] =
 	{ "-debug_window",		"Enable the debug window",					true,	0,					EASY_DEFAULT,		"Dev Tool",		"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-debug_window", },
 };
 
+struct tonemapper_arg {
+	char name[64];
+	int index;
+};
+
+tonemapper_arg tonemapper_args[] =
+{
+	{ "aces_narkowicz", 0 },
+	{ "aces_hill", 1 },
+	{ "reinhard", 2 },
+	{ "lottes", 3 },
+	{ "filmic_hejl", 4 },
+	{ "uchimura", 5 },
+	{ "uncharted2", 6 },
+	{ "linear", 7 },
+};
+
 // forward declaration
 const char * get_param_desc(const char *flag_name);
 
@@ -320,6 +337,8 @@ cmdline_parm enable_3d_shockwave_arg("-3dshockwave", NULL, AT_NONE);
 cmdline_parm softparticles_arg("-soft_particles", NULL, AT_NONE);
 cmdline_parm postprocess_arg("-post_process", NULL, AT_NONE);
 cmdline_parm bloom_intensity_arg("-bloom_intensity", "Set bloom intensity, requires -post_process", AT_INT);
+cmdline_parm hdr_exposure_arg("-hdr_exposure", "HDR exposure factor", AT_FLOAT);	// Cmdline_hdr_exposure
+cmdline_parm hdr_tonemapper_arg("-hdr_tonemapper", "HDR tonemapping operator", AT_STRING);	// Cmdline_hdr_tonemapper
 cmdline_parm fxaa_arg("-fxaa", NULL, AT_NONE);
 cmdline_parm fxaa_preset_arg("-fxaa_preset", "FXAA quality (0-9), requires -post_process and -fxaa", AT_INT);
 cmdline_parm fb_explosions_arg("-fb_explosions", NULL, AT_NONE);
@@ -347,8 +366,8 @@ int Cmdline_enable_3d_shockwave = 0;
 int Cmdline_softparticles = 0;
 int Cmdline_postprocess = 0;
 int Cmdline_bloom_intensity = 75;
-float Cmdline_hdr_exposure = 1.0f;
-int Cmdline_hdr_tonemapper = 0;
+float Cmdline_hdr_exposure = -1.0f;
+int Cmdline_hdr_tonemapper = -1;
 bool Cmdline_fxaa = false;
 int Cmdline_fxaa_preset = 6;
 extern int Fxaa_preset_last_frame;
@@ -2024,6 +2043,16 @@ bool SetCmdlineParams()
 		Cmdline_bloom_intensity = bloom_intensity_arg.get_int();
 	}
 
+	if ( hdr_exposure_arg.found() )
+	{
+		Cmdline_hdr_exposure = hdr_exposure_arg.get_float();
+	}
+
+	if ( hdr_tonemapper_arg.found() )
+	{
+		Cmdline_hdr_tonemapper = parse_tonemapper_arg(hdr_tonemapper_arg.str());
+	}
+
 	if ( flightshaftsoff_arg.found() )
 	{
 		ls_force_off = true;
@@ -2169,4 +2198,15 @@ const char * get_param_desc(const char *flag_name)
 		}
 	}
 	return "UNKNOWN - FIXME!";
+}
+
+const int parse_tonemapper_arg(const char* arg)
+{
+	for ( tonemapper_arg& tonemapper : tonemapper_args ) {
+		if ( !strcmp(tonemapper.name, arg) ) {
+			return tonemapper.index;
+		}
+	}
+
+	return 0;	// return aces_narkowicz
 }

@@ -21,6 +21,8 @@ extern int Default_fiction_viewer_ui;
 extern bool Enable_external_shaders;
 extern bool Enable_external_default_scripts;
 extern int Default_detail_level;
+extern float Default_hdr_exposure;
+extern int Default_hdr_tonemapper;
 extern bool Full_color_head_anis;
 extern bool Weapons_inherit_parent_collision_group;
 extern bool Flight_controls_follow_eyepoint_orientation;
