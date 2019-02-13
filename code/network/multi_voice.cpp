@@ -21,6 +21,7 @@
 #include "sound/rtvoice.h"
 #include "menuui/optionsmenumulti.h"
 #include "network/multi.h"
+#include "object/object.h"
 #include "playerman/player.h"
 #include "debugconsole/console.h"
 
@@ -57,8 +58,8 @@ int Multi_voice_send_mode = MULTI_MSG_NONE;							// gotten from the multi_msg s
 int Multi_voice_qos;															// default quality of sound
 
 // sounds added to the front and end of a playing voice stream (set to -1 if none are wanted)
-#define MULTI_VOICE_PRE_SOUND							SND_CUE_VOICE
-#define MULTI_VOICE_POST_SOUND						SND_END_VOICE
+#define MULTI_VOICE_PRE_SOUND							GameSounds::CUE_VOICE
+#define MULTI_VOICE_POST_SOUND						GameSounds::END_VOICE
 int Multi_voice_pre_sound_size = 0;
 
 // sound data
@@ -124,7 +125,7 @@ typedef struct voice_stream {
 	fix stream_last_heard;													// last time we heard from this stream	
 
 	fix stream_start_time;													// time the stream started playing
-	int stream_snd_handle;													// sound playing instance handle
+	sound_handle stream_snd_handle;                                         // sound playing instance handle
 	int stream_rtvoice_handle;												// rtvoice buffer handle
 } voice_stream;
 voice_stream Multi_voice_stream[MULTI_VOICE_MAX_STREAMS];		// voice streams themselves
@@ -253,7 +254,7 @@ void multi_voice_client_send_pending();
 // initialize the multiplayer voice system
 void multi_voice_init()
 {
-	int idx,s_idx,pre_size,pre_sound;
+	int idx, s_idx, pre_size;
 
 	// if the voice system is already initialized, just reset some stuff
 	if(Multi_voice_inited){
@@ -318,8 +319,8 @@ void multi_voice_init()
 
 		// attempt to copy in the "pre" voice sound
 		auto gs = gamesnd_get_game_sound(MULTI_VOICE_PRE_SOUND);
-		pre_sound = snd_load(gamesnd_choose_entry(gs), gs->flags, 0);
-		if(pre_sound != -1){
+		auto pre_sound = snd_load(gamesnd_choose_entry(gs), gs->flags, 0);
+		if (pre_sound.isValid()) {
 			// get the pre-sound size
 			if((snd_size(pre_sound,&pre_size) != -1) && (pre_size < MULTI_VOICE_MAX_BUFFER_SIZE)){
 				snd_get_data(pre_sound,Multi_voice_playback_buffer);
@@ -336,8 +337,8 @@ void multi_voice_init()
 	memset(Multi_voice_stream,0,sizeof(voice_stream) * MULTI_VOICE_MAX_STREAMS);	
 	for(idx=0;idx<MULTI_VOICE_MAX_STREAMS;idx++){
 		Multi_voice_stream[idx].token_status = MULTI_VOICE_TOKEN_INDEX_FREE;
-		Multi_voice_stream[idx].token_stamp = -1;		
-		Multi_voice_stream[idx].stream_snd_handle = -1;
+		Multi_voice_stream[idx].token_stamp = -1;
+		Multi_voice_stream[idx].stream_snd_handle = sound_handle::invalid();
 
 		// get a playback buffer handle
 		if(Multi_voice_can_play){
@@ -394,7 +395,7 @@ void multi_voice_close()
 		if(Multi_voice_stream[idx].stream_rtvoice_handle != -1){
 			rtvoice_free_playback_buffer(Multi_voice_stream[idx].stream_rtvoice_handle);
 			Multi_voice_stream[idx].stream_rtvoice_handle = -1;
-			Multi_voice_stream[idx].stream_snd_handle = -1;
+			Multi_voice_stream[idx].stream_snd_handle     = sound_handle::invalid();
 		}
 	}
 
@@ -462,8 +463,8 @@ void multi_voice_process()
 
 	// find any playing sound streams which have finished and unmark them
 	for(idx=0;idx<MULTI_VOICE_MAX_STREAMS;idx++){
-		if((Multi_voice_stream[idx].stream_snd_handle != -1) && !multi_voice_stream_playing(idx)){
-			Multi_voice_stream[idx].stream_snd_handle = -1;
+		if ((Multi_voice_stream[idx].stream_snd_handle.isValid()) && !multi_voice_stream_playing(idx)) {
+			Multi_voice_stream[idx].stream_snd_handle = sound_handle::invalid();
 		}
 	}
 
@@ -521,7 +522,7 @@ int multi_voice_status()
 	earliest_time = -1;
 	for(idx=0;idx<MULTI_VOICE_MAX_STREAMS;idx++){
 		// if we found a playing stream
-		if(Multi_voice_stream[idx].stream_snd_handle != -1){
+		if (Multi_voice_stream[idx].stream_snd_handle.isValid()) {
 			if((earliest == -1) || (Multi_voice_stream[idx].stream_start_time < earliest_time)){
 				earliest = idx;
 				earliest_time = Multi_voice_stream[idx].stream_start_time;
@@ -1158,7 +1159,7 @@ void multi_voice_player_send_stream()
 }
 
 // process incoming sound data, return bytes processed
-int multi_voice_process_data(ubyte *data, int player_index,int msg_mode,net_player *target)
+int multi_voice_process_data(ubyte *data, int player_index,int  /*msg_mode*/,net_player * /*target*/)
 {
 	ubyte stream_id,chunk_index;
 	ushort chunk_size,uc_size;	
@@ -1380,7 +1381,7 @@ int multi_voice_get_stream(int stream_id)
 }
 
 // is the given sound stream playing (compares uncompressed sound size with current playback position)
-int multi_voice_stream_playing(int stream_index)
+int multi_voice_stream_playing(int  /*stream_index*/)
 {
 	// if the handle is invalid, it can't be playing
 	/*
@@ -1400,26 +1401,22 @@ int multi_voice_stream_playing(int stream_index)
 
 // tack on pre and post sounds to a sound stream (pass -1 for either if no sound is wanted)
 // return final buffer size
-int multi_voice_mix(int post_sound,char *data,int cur_size,int max_size)
+int multi_voice_mix(gamesnd_id post_sound,char *data,int cur_size,int max_size)
 {
 	int post_size;
 	
 	// if the user passed -1 for both pre and post sounds, don't do a thing
-	if(post_sound == -1){
+	if(!post_sound.isValid()){
 		return cur_size;
 	}
 
 	// get the sizes of the additional sounds
 	
 	// post sound
-	if(post_sound >= 0){
-		auto gs = gamesnd_get_game_sound(post_sound);
-		post_sound = snd_load(gamesnd_choose_entry(gs), gs->flags, 0);
-		if(post_sound >= 0){
-			if(snd_size(post_sound,&post_size) == -1){
-				post_size = 0;
-			}
-		} else {
+	auto gs = gamesnd_get_game_sound(post_sound);
+	auto post_sound_handle = snd_load(gamesnd_choose_entry(gs), gs->flags, 0);
+	if (post_sound_handle.isValid()) {
+		if(snd_size(post_sound_handle, &post_size) == -1){
 			post_size = 0;
 		}
 	} else {
@@ -1430,7 +1427,7 @@ int multi_voice_mix(int post_sound,char *data,int cur_size,int max_size)
 	if(post_size > 0){
 		if((max_size - cur_size) > post_size){
 			// copy in the sound
-			snd_get_data(post_sound,data + cur_size);
+			snd_get_data(post_sound_handle, data + cur_size);
 
 			// increment the cur_size
 			cur_size += post_size;
@@ -1922,8 +1919,8 @@ void multi_voice_alg_play_window(int stream_index)
 		Assert(Multi_voice_stream[stream_index].stream_rtvoice_handle != -1);
 
 		// kill any previously playing sounds
-		rtvoice_stop_playback(Multi_voice_stream[stream_index].stream_rtvoice_handle);	
-		Multi_voice_stream[stream_index].stream_snd_handle = -1;
+		rtvoice_stop_playback(Multi_voice_stream[stream_index].stream_rtvoice_handle);
+		Multi_voice_stream[stream_index].stream_snd_handle = sound_handle::invalid();
 
 		// if we can play sound and we know who this is from, display it
 		if(Multi_voice_can_play){
@@ -2120,7 +2117,7 @@ void multi_voice_test_process()
 int multi_voice_test_get_playback_buffer()
 {
 	// return voice stream 0
-	Assert(Multi_voice_stream[0].stream_snd_handle == -1);
+	Assert(!Multi_voice_stream[0].stream_snd_handle.isValid());
 	Assert(Multi_voice_stream[0].stream_rtvoice_handle != -1);
 
 	return Multi_voice_stream[0].stream_rtvoice_handle;

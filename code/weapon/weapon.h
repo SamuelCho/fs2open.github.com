@@ -16,6 +16,7 @@
 #include "globalincs/systemvars.h"
 #include "graphics/2d.h"
 #include "graphics/generic.h"
+#include "gamesnd/gamesnd.h"
 #include "model/model.h"
 #include "weapon/shockwave.h"
 #include "weapon/trails.h"
@@ -37,11 +38,6 @@ extern int Num_weapon_subtypes;
 #define	WRT_LASER	1
 #define	WRT_POF		2
 
-//	Bitflags controlling weapon behavior
-#define	MAX_WEAPON_FLAGS	18						//	Maximum number of different bit flags legal to specify in a single weapons.tbl Flags line
-
-#define	WEAPON_EXHAUST_DELTA_TIME	75		//	Delay in milliseconds between exhaust blobs
-
 //particle names go here -nuke
 #define PSPEW_NONE		-1			//used to disable a spew, useful for xmts
 #define PSPEW_DEFAULT	0			//std fs2 pspew
@@ -51,7 +47,9 @@ extern int Num_weapon_subtypes;
 #define PSPEW_PLUME		4			//spewers arrayed within a radius for thruster style effects, may converge or scatter
 
 #define MAX_PARTICLE_SPEWERS	4	//i figure 4 spewers should be enough for now -nuke
-#define MAX_WEP_DAMAGE_SLOTS	32		//Maximum number of ships which can be counted as killer or assits on destroying this weapon
+
+// scale factor for supercaps taking damage from weapons which are not "supercap" weapons
+#define SUPERCAP_DAMAGE_SCALE			0.25f
 
 enum class WeaponState : uint32_t
 {
@@ -142,7 +140,7 @@ typedef struct weapon {
 
 	mc_info* collisionInfo; // The last collision of this weapon or NULL if it had none
 
-	int hud_in_flight_snd_sig;					// Signature of the sound played while the weapon is in flight
+	sound_handle hud_in_flight_snd_sig; // Signature of the sound played while the weapon is in flight
 
 	WeaponState weapon_state; // The current state of the weapon
 } weapon;
@@ -170,9 +168,9 @@ typedef struct beam_weapon_info {
 	float beam_particle_angle;			// angle of beam particle spew cone
 	generic_anim beam_particle_ani;		// particle_ani
 	float beam_iff_miss_factor[MAX_IFFS][NUM_SKILL_LEVELS];	// magic # which makes beams miss more. by parent iff and player skill level
-	int beam_loop_sound;				// looping beam sound
-	int beam_warmup_sound;				// warmup sound
-	int beam_warmdown_sound;			// warmdown sound
+	gamesnd_id beam_loop_sound;				// looping beam sound
+	gamesnd_id beam_warmup_sound;				// warmup sound
+	gamesnd_id beam_warmdown_sound;			// warmdown sound
 	int beam_num_sections;				// the # of visible "sections" on the beam
 	generic_anim beam_glow;				// muzzle glow bitmap
 	float glow_length;					// (DahBlount) determines the length the muzzle glow when using a directional glow
@@ -317,12 +315,12 @@ typedef struct weapon_info {
 	// Seeker strength - for countermeasures overhaul.
 	float seeker_strength;
 
-	int pre_launch_snd;
+	gamesnd_id pre_launch_snd;
 	int	pre_launch_snd_min_interval;	//Minimum interval in ms between the last time the pre-launch sound was played and the next time it can play, as a limiter in case the player is pumping the trigger
-	int	launch_snd;
-	int	impact_snd;
-	int disarmed_impact_snd;
-	int	flyby_snd;							//	whizz-by sound, transmitted through weapon's portable atmosphere.
+	gamesnd_id	launch_snd;
+	gamesnd_id	impact_snd;
+	gamesnd_id disarmed_impact_snd;
+	gamesnd_id	flyby_snd;							//	whizz-by sound, transmitted through weapon's portable atmosphere.
 	
 	// Specific to weapons with TRAILS:
 	trail_info tr_info;			
@@ -333,17 +331,17 @@ typedef struct weapon_info {
 
 	float shield_impact_explosion_radius;
 
-	particle::ParticleEffectIndex impact_weapon_expl_effect; // Impact particle effect
-	
-	particle::ParticleEffectIndex dinky_impact_weapon_expl_effect; // Dinky impact particle effect
+	particle::ParticleEffectHandle impact_weapon_expl_effect; // Impact particle effect
 
-	particle::ParticleEffectIndex flash_impact_weapon_expl_effect;
+	particle::ParticleEffectHandle dinky_impact_weapon_expl_effect; // Dinky impact particle effect
 
-	particle::ParticleEffectIndex piercing_impact_effect;
-	particle::ParticleEffectIndex piercing_impact_secondary_effect;
+	particle::ParticleEffectHandle flash_impact_weapon_expl_effect;
+
+	particle::ParticleEffectHandle piercing_impact_effect;
+	particle::ParticleEffectHandle piercing_impact_secondary_effect;
 
 	// Particle effect for the various states, WeaponState::NORMAL is the state for the whole lifetime, even for missiles
-	SCP_unordered_map<WeaponState, particle::ParticleEffectIndex, WeaponStateHash> state_effects;
+	SCP_unordered_map<WeaponState, particle::ParticleEffectHandle, WeaponStateHash> state_effects;
 
 	// EMP effect
 	float emp_intensity;					// intensity of the EMP effect
@@ -447,6 +445,11 @@ typedef struct weapon_info {
 	int				targeting_priorities[32];
 	int				num_targeting_priorities;
 
+	// Optional weapon failures
+	float failure_rate;
+	SCP_string failure_sub_name;
+	int failure_sub;
+
 	// the optional pattern of weapons that this weapon will fire
 	size_t			num_substitution_patterns;
 	int				weapon_substitution_pattern[MAX_SUBSTITUTION_PATTERNS]; //weapon_indexes
@@ -454,9 +457,9 @@ typedef struct weapon_info {
 
 	int			score; //Optional score for destroying the weapon
 
-	int hud_tracking_snd; // Sound played when this weapon tracks a target
-	int hud_locked_snd; // Sound played when this weapon locked onto a target
-	int hud_in_flight_snd; // Sound played while the weapon is in flight
+	gamesnd_id hud_tracking_snd; // Sound played when this weapon tracks a target
+	gamesnd_id hud_locked_snd; // Sound played when this weapon locked onto a target
+	gamesnd_id hud_in_flight_snd; // Sound played while the weapon is in flight
 	InFlightSoundType in_flight_play_type; // The status when the sound should be played
 
 	decals::creation_info impact_decal;
@@ -468,6 +471,10 @@ public:
     inline bool is_locked_homing() { return wi_flags[Weapon::Info_Flags::Homing_aspect, Weapon::Info_Flags::Homing_javelin]; }
     inline bool hurts_big_ships()  { return wi_flags[Weapon::Info_Flags::Bomb, Weapon::Info_Flags::Beam, Weapon::Info_Flags::Huge, Weapon::Info_Flags::Big_only]; }
     inline bool is_interceptable() { return wi_flags[Weapon::Info_Flags::Fighter_Interceptable, Weapon::Info_Flags::Turret_Interceptable]; }
+
+	const char* get_display_string();
+
+	bool has_alternate_name();
 
 	void reset();
 } weapon_info;
@@ -569,7 +576,6 @@ void weapon_maybe_spew_particle(object *obj);
 
 bool weapon_armed(weapon *wp, bool hit_target);
 void weapon_hit( object * weapon_obj, object * other_obj, vec3d * hitpos, int quadrant = -1, vec3d* hitnormal = NULL );
-int cmeasure_name_lookup(char *name);
 void spawn_child_weapons( object *objp );
 
 // call to detonate a weapon. essentially calls weapon_hit() with other_obj as NULL, and sends a packet in multiplayer
@@ -579,7 +585,6 @@ void	weapon_area_apply_blast(vec3d *force_apply_pos, object *ship_objp, vec3d *b
 int	weapon_area_calc_damage(object *objp, vec3d *pos, float inner_rad, float outer_rad, float max_blast, float max_damage,
 										float *blast, float *damage, float limit);
 
-void	missile_obj_list_rebuild();	// called by save/restore code only
 missile_obj *missile_obj_return_address(int index);
 void find_homing_object_cmeasures(const SCP_vector<object*> &cmeasure_list);
 

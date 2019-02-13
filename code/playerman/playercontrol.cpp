@@ -68,6 +68,10 @@ int press_glide = 0;
 ////////////////////////////////////////////////////////////
 static int Player_all_alone_msg_inited=0;	// flag used for initializing a player-specific voice msg
 
+float Player_warpout_speed = 40.0f;
+float Target_warpout_match_percent = 0.05f;
+float Minimum_player_warpout_time = 3.0f;
+
 #ifndef NDEBUG
 	int Show_killer_weapon = 0;
 	DCF_BOOL( show_killer_weapon, Show_killer_weapon )
@@ -266,7 +270,7 @@ void view_modify(angles *ma, angles *da, float max_p, float max_h, float frame_t
 	CLAMP(ma->h, -max_h, max_h);
 }
 
-void do_view_track_target(float frame_time)
+void do_view_track_target(float  /*frame_time*/)
 {
 	vec3d view_vector;
 	vec3d targetpos_rotated;
@@ -409,7 +413,7 @@ void do_view_slew(float frame_time)
 	}
 }
 
-void do_view_chase(float frame_time)
+void do_view_chase(float  /*frame_time*/)
 {
 	float t;
 
@@ -653,10 +657,10 @@ void read_keyboard_controls( control_info * ci, float frame_time, physics_info *
 			control_used(ONE_THIRD_THROTTLE);
 			player_clear_speed_matching();
 			if ( Player->ci.forward_cruise_percent < 33.3f ) {
-				snd_play( gamesnd_get_game_sound(ship_get_sound(Player_obj, SND_THROTTLE_UP)), 0.0f );
+				snd_play( gamesnd_get_game_sound(ship_get_sound(Player_obj, GameSounds::THROTTLE_UP)), 0.0f );
 
 			} else if ( Player->ci.forward_cruise_percent > 33.3f ) {
-				snd_play( gamesnd_get_game_sound(ship_get_sound(Player_obj, SND_THROTTLE_DOWN)), 0.0f );
+				snd_play( gamesnd_get_game_sound(ship_get_sound(Player_obj, GameSounds::THROTTLE_DOWN)), 0.0f );
 			}
 
 			Player->ci.forward_cruise_percent = 33.3f;
@@ -667,10 +671,10 @@ void read_keyboard_controls( control_info * ci, float frame_time, physics_info *
 			control_used(TWO_THIRDS_THROTTLE);
 			player_clear_speed_matching();
 			if ( Player->ci.forward_cruise_percent < 66.6f ) {
-				snd_play( gamesnd_get_game_sound(ship_get_sound(Player_obj, SND_THROTTLE_UP)), 0.0f );
+				snd_play( gamesnd_get_game_sound(ship_get_sound(Player_obj, GameSounds::THROTTLE_UP)), 0.0f );
 
 			} else if (Player->ci.forward_cruise_percent > 66.6f) {
-				snd_play( gamesnd_get_game_sound(ship_get_sound(Player_obj, SND_THROTTLE_DOWN)), 0.0f );
+				snd_play( gamesnd_get_game_sound(ship_get_sound(Player_obj, GameSounds::THROTTLE_DOWN)), 0.0f );
 			}
 
 			Player->ci.forward_cruise_percent = 66.6f;
@@ -695,7 +699,7 @@ void read_keyboard_controls( control_info * ci, float frame_time, physics_info *
 			control_used(ZERO_THROTTLE);
 			player_clear_speed_matching();
 			if ( ci->forward_cruise_percent > 0.0f && Player_obj->phys_info.fspeed > 0.5) {
-				snd_play( gamesnd_get_game_sound(ship_get_sound(Player_obj, SND_ZERO_THROTTLE)), 0.0f );
+				snd_play( gamesnd_get_game_sound(ship_get_sound(Player_obj, GameSounds::ZERO_THROTTLE)), 0.0f );
 			}
 
 			ci->forward_cruise_percent = 0.0f;
@@ -706,7 +710,7 @@ void read_keyboard_controls( control_info * ci, float frame_time, physics_info *
 			control_used(MAX_THROTTLE);
 			player_clear_speed_matching();
 			if ( ci->forward_cruise_percent < 100.0f ) {
-				snd_play( gamesnd_get_game_sound(ship_get_sound(Player_obj, SND_FULL_THROTTLE)), 0.0f );
+				snd_play( gamesnd_get_game_sound(ship_get_sound(Player_obj, GameSounds::FULL_THROTTLE)), 0.0f );
 			}
 
 			ci->forward_cruise_percent = 100.0f;
@@ -917,19 +921,19 @@ void read_keyboard_controls( control_info * ci, float frame_time, physics_info *
 						object_set_gliding(Player_obj, false);
 						ci->forward_cruise_percent = savedspeed;
 						press_glide = !press_glide;
-						snd_play( gamesnd_get_game_sound(ship_get_sound(Player_obj, SND_THROTTLE_UP)), 0.0f );
+						snd_play( gamesnd_get_game_sound(ship_get_sound(Player_obj, GameSounds::THROTTLE_UP)), 0.0f );
 					}
 				} else if ( !object_get_gliding(Player_obj) ) {
 					object_set_gliding(Player_obj, true);
 					savedspeed = ci->forward_cruise_percent;
 					ci->forward_cruise_percent = 0.0f;
 					override_analog_throttle = 1;
-					if (Ship_info[Player_ship->ship_info_index].glide_start_snd > 0) {
+					if (Ship_info[Player_ship->ship_info_index].glide_start_snd.isValid()) {
 						//If a custom glide start sound was specified, play it
 						snd_play( gamesnd_get_game_sound(Ship_info[Player_ship->ship_info_index].glide_start_snd), 0.0f );
 					} else {
 						//If glide_start_snd wasn't set (probably == 0), use the default throttle down sound
-						snd_play( gamesnd_get_game_sound(ship_get_sound(Player_obj, SND_THROTTLE_DOWN)), 0.0f );
+						snd_play( gamesnd_get_game_sound(ship_get_sound(Player_obj, GameSounds::THROTTLE_DOWN)), 0.0f );
 					}
 				}
 			}
@@ -940,12 +944,12 @@ void read_keyboard_controls( control_info * ci, float frame_time, physics_info *
 				if ( object_get_gliding(Player_obj) && !object_glide_forced(Player_obj) ) {
 					object_set_gliding(Player_obj, false);
 					ci->forward_cruise_percent = savedspeed;
-					if (Ship_info[Player_ship->ship_info_index].glide_end_snd > 0) {
+					if (Ship_info[Player_ship->ship_info_index].glide_end_snd.isValid()) {
 						//If a custom glide end sound was specified, play it
 						snd_play( gamesnd_get_game_sound(Ship_info[Player_ship->ship_info_index].glide_end_snd), 0.0f );
 					} else {
 						//If glide_end_snd wasn't set (probably == 0), use the default throttle up sound
-						snd_play( gamesnd_get_game_sound(ship_get_sound(Player_obj, SND_THROTTLE_UP)), 0.0f );
+						snd_play( gamesnd_get_game_sound(ship_get_sound(Player_obj, GameSounds::THROTTLE_UP)), 0.0f );
 					}
 				}
 			}
@@ -1035,7 +1039,7 @@ void read_player_controls(object *objp, float frametime)
 				// check if warp ability has been disabled
 				if (!(Warpout_forced) && (Ships[objp->instance].flags[Ship::Ship_Flags::Warp_broken] || Ships[objp->instance].flags[Ship::Ship_Flags::Warp_never]) ) {
 					HUD_sourced_printf(HUD_SOURCE_HIDDEN, "%s", XSTR( "Cannot warp out at this time.", 81));
-					snd_play(gamesnd_get_game_sound(SND_PLAYER_WARP_FAIL));
+					snd_play(gamesnd_get_game_sound(GameSounds::PLAYER_WARP_FAIL));
 					gameseq_post_event( GS_EVENT_PLAYER_WARPOUT_STOP );
 				} else {
 					if ( Warpout_forced ) {
@@ -1060,7 +1064,7 @@ void read_player_controls(object *objp, float frametime)
 					if (sip->warpout_engage_time >= 0)
 						warpout_delay = sip->warpout_engage_time / 1000.0f;
 					else
-						warpout_delay = MINIMUM_PLAYER_WARPOUT_TIME;
+						warpout_delay = Minimum_player_warpout_time;
 
 					// Wait at least 3 seconds before making sure warp speed is set.
 					if ( Warpout_time > warpout_delay) {
@@ -1069,7 +1073,7 @@ void read_player_controls(object *objp, float frametime)
 						if(target_warpout_speed != 0.0f) {
 							diffSpeed = fl_abs(objp->phys_info.fspeed - target_warpout_speed )/target_warpout_speed;
 						}
-						if ( diffSpeed < TARGET_WARPOUT_MATCH_PERCENT )	{
+						if ( diffSpeed < Target_warpout_match_percent)	{
 							gameseq_post_event( GS_EVENT_PLAYER_WARPOUT_DONE_STAGE1 );
 						}
 					}
@@ -1383,8 +1387,8 @@ void player_level_init()
 
 	Player->request_repair_timestamp = 1;	// timestamp until next 'requesting repair sir' message can be played
 
-	Player->repair_sound_loop = -1;
-	Player->cargo_scan_loop = -1;
+	Player->repair_sound_loop  = sound_handle::invalid();
+	Player->cargo_scan_loop    = sound_handle::invalid();
 	Player->cargo_inspect_time = 0;			// time that current target's cargo has been inspected for
 
 	Player->target_is_dying = -1;				// The player target is dying, set to -1 if no target
@@ -1424,13 +1428,13 @@ void player_init()
 void player_stop_looped_sounds()
 {
 	Assert(Player);
-	if ( Player->repair_sound_loop > -1 )	{
+	if (Player->repair_sound_loop.isValid()) {
 		snd_stop(Player->repair_sound_loop);
-		Player->repair_sound_loop = -1;
+		Player->repair_sound_loop = sound_handle::invalid();
 	}
-	if ( Player->cargo_scan_loop > -1 )	{
+	if (Player->cargo_scan_loop.isValid()) {
 		snd_stop(Player->cargo_scan_loop);
-		Player->cargo_scan_loop = -1;
+		Player->cargo_scan_loop = sound_handle::invalid();
 	}
 }
 
@@ -1441,8 +1445,8 @@ void player_stop_looped_sounds()
 void player_maybe_start_repair_sound()
 {
 	Assert(Player);
-	if ( Player->repair_sound_loop == -1 ) {
-		Player->repair_sound_loop = snd_play_looping( gamesnd_get_game_sound(SND_SHIP_REPAIR) );
+	if (!Player->repair_sound_loop.isValid()) {
+		Player->repair_sound_loop = snd_play_looping( gamesnd_get_game_sound(GameSounds::SHIP_REPAIR) );
 	}
 }
 
@@ -1452,9 +1456,9 @@ void player_maybe_start_repair_sound()
 void player_stop_repair_sound()
 {
 	Assert(Player);
-	if ( Player->repair_sound_loop != -1 ) {
+	if (Player->repair_sound_loop.isValid()) {
 		snd_stop(Player->repair_sound_loop);
-		Player->repair_sound_loop  = -1;
+		Player->repair_sound_loop = sound_handle::invalid();
 	}
 }
 
@@ -1464,8 +1468,8 @@ void player_stop_repair_sound()
 void player_maybe_start_cargo_scan_sound()
 {
 	Assert(Player);
-	if ( Player->cargo_scan_loop == -1 ) {
-		Player->cargo_scan_loop = snd_play_looping( gamesnd_get_game_sound(ship_get_sound(Player_obj, SND_CARGO_SCAN)) );
+	if (!Player->cargo_scan_loop.isValid()) {
+		Player->cargo_scan_loop = snd_play_looping( gamesnd_get_game_sound(ship_get_sound(Player_obj, GameSounds::CARGO_SCAN)) );
 	}
 }
 
@@ -1475,9 +1479,9 @@ void player_maybe_start_cargo_scan_sound()
 void player_stop_cargo_scan_sound()
 {
 	Assert(Player);
-	if ( Player->cargo_scan_loop != -1 ) {
+	if (Player->cargo_scan_loop.isValid()) {
 		snd_stop(Player->cargo_scan_loop);
-		Player->cargo_scan_loop  = -1;
+		Player->cargo_scan_loop = sound_handle::invalid();
 	}
 }
 
@@ -1597,7 +1601,8 @@ int player_inspect_cargo(float frametime, char *outstr)
 	}
 
 	// see if player is within inspection range
-	if ( Player_ai->current_target_distance < MAX(CARGO_REVEAL_MIN_DIST, (cargo_objp->radius+CARGO_RADIUS_DELTA)) ) {
+	ship_info* player_sip = &Ship_info[Player_ship->ship_info_index];
+	if ( Player_ai->current_target_distance < MAX(player_sip->scan_range_normal, (cargo_objp->radius + player_sip->scan_range_normal - CARGO_RADIUS_REAL_DELTA)) ) {
 
 		// check if player is facing cargo, do not proceed with inspection if not
 		vm_vec_normalized_dir(&vec_to_cargo, &cargo_objp->pos, &Player_obj->pos);
@@ -1614,7 +1619,7 @@ int player_inspect_cargo(float frametime, char *outstr)
 
 		// player is facing the cargo, and withing range, so proceed with inspection
 		if ( hud_sensors_ok(Player_ship, 0) ) {
-			Player->cargo_inspect_time += fl2i(frametime*1000+0.5f);
+			Player->cargo_inspect_time += (int)std::lround(frametime*1000);
 		}
 
 		if ( !(cargo_sp->flags[Ship::Ship_Flags::Scannable]) )
@@ -1624,7 +1629,7 @@ int player_inspect_cargo(float frametime, char *outstr)
 
 		if ( Player->cargo_inspect_time > cargo_sip->scan_time ) {
 			ship_do_cargo_revealed( cargo_sp );
-			snd_play( gamesnd_get_game_sound(SND_CARGO_REVEAL), 0.0f );
+			snd_play( gamesnd_get_game_sound(GameSounds::CARGO_REVEAL), 0.0f );
 			Player->cargo_inspect_time = 0;
 		}
 	} else {
@@ -1698,10 +1703,11 @@ int player_inspect_cap_subsys_cargo(float frametime, char *outstr)
 	subsys_rad = subsys->system_info->radius;
 
 	// Goober5000
+	ship_info* player_sip = &Ship_info[Player_ship->ship_info_index];
     if (cargo_sip->is_huge_ship()) {
-		scan_dist = MAX(CAP_CARGO_REVEAL_MIN_DIST, (subsys_rad + CAPITAL_CARGO_RADIUS_DELTA));
+		scan_dist = MAX(player_sip->scan_range_capital, (subsys_rad + player_sip->scan_range_capital - CARGO_RADIUS_REAL_DELTA));
 	} else {
-		scan_dist = MAX(CARGO_REVEAL_MIN_DIST, (subsys_rad + CARGO_RADIUS_DELTA));
+		scan_dist = MAX(player_sip->scan_range_normal, (subsys_rad + player_sip->scan_range_normal - CARGO_RADIUS_REAL_DELTA));
 	}
 
 	if ( Player_ai->current_target_distance < scan_dist ) {
@@ -1724,7 +1730,7 @@ int player_inspect_cap_subsys_cargo(float frametime, char *outstr)
 
 		// player is facing the cargo, and within range, so proceed with inspection
 		if ( hud_sensors_ok(Player_ship, 0) ) {
-			Player->cargo_inspect_time += fl2i(frametime*1000+0.5f);
+			Player->cargo_inspect_time += (int)std::lround(frametime*1000);
 		}
 
 		if ( !(cargo_sp->flags[Ship::Ship_Flags::Scannable]) )
@@ -1734,7 +1740,7 @@ int player_inspect_cap_subsys_cargo(float frametime, char *outstr)
 
 		if ( Player->cargo_inspect_time > cargo_sip->scan_time ) {
 			ship_do_cap_subsys_cargo_revealed( cargo_sp, subsys, 0);
-			snd_play( gamesnd_get_game_sound(SND_CARGO_REVEAL), 0.0f );
+			snd_play( gamesnd_get_game_sound(GameSounds::CARGO_REVEAL), 0.0f );
 			Player->cargo_inspect_time = 0;
 		}
 	} else {
@@ -1780,7 +1786,7 @@ void player_generate_killer_weapon_name(int weapon_info_index, int killer_specie
 #else
 	if (killer_species == Ship_info[Player_ship->ship_info_index].species) {
 #endif
-		strcpy(weapon_name, Weapon_info[weapon_info_index].name);
+		strcpy(weapon_name, Weapon_info[weapon_info_index].get_display_string());
 	} else {
 		if ( Weapon_info[weapon_info_index].subtype == WP_MISSILE ) {
 			strcpy(weapon_name, XSTR( "missile", 90));
@@ -1987,30 +1993,6 @@ void player_maybe_play_all_alone_msg()
 	}
 	Player->flags |= PLAYER_FLAGS_NO_CHECK_ALL_ALONE_MSG;
 } 
-
-void player_get_padlock_orient(matrix *eye_orient)
-{
-	Assert(Viewer_mode & VM_PADLOCK_ANY);
-
-	matrix old_eye_orient;
-	old_eye_orient = *eye_orient;
-
-	if ( Viewer_mode & VM_PADLOCK_UP ) {
-		eye_orient->vec.fvec = old_eye_orient.vec.uvec;
-		vm_vec_copy_scale( &eye_orient->vec.uvec, &old_eye_orient.vec.fvec, -1.0f );
-	} else if ( Viewer_mode & VM_PADLOCK_REAR ) {
-		vm_vec_negate(&eye_orient->vec.fvec);
-		vm_vec_negate(&eye_orient->vec.rvec);
-	} else if ( Viewer_mode & VM_PADLOCK_LEFT ) {
-		vm_vec_copy_scale( &eye_orient->vec.fvec, &old_eye_orient.vec.rvec, -1.0f );
-		eye_orient->vec.rvec = old_eye_orient.vec.fvec;
-	} else if ( Viewer_mode & VM_PADLOCK_RIGHT ) {
-		eye_orient->vec.fvec = old_eye_orient.vec.rvec;
-		vm_vec_copy_scale( &eye_orient->vec.rvec, &old_eye_orient.vec.fvec, -1.0f );
-	} else {
-		Int3();
-	}
-}
 
 void player_display_padlock_view()
 {

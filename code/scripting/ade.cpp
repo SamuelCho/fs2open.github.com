@@ -2,16 +2,21 @@
 //
 
 #include "scripting/ade.h"
-#include "ship/ship.h"
 #include "ade_api.h"
+#include "def_files/def_files.h"
+#include "mod_table/mod_table.h"
+#include "scripting/lua/LuaFunction.h"
+#include "ship/ship.h"
 
+#include "ade.h"
+#include "ade_args.h"
+#include "scripting/api/objs/asteroid.h"
+#include "scripting/api/objs/beam.h"
+#include "scripting/api/objs/debris.h"
 #include "scripting/api/objs/object.h"
 #include "scripting/api/objs/ship.h"
-#include "scripting/api/objs/asteroid.h"
-#include "scripting/api/objs/debris.h"
 #include "scripting/api/objs/waypoint.h"
 #include "scripting/api/objs/weapon.h"
-#include "scripting/api/objs/beam.h"
 
 namespace {
 using namespace scripting;
@@ -70,31 +75,7 @@ int ade_index_handler(lua_State* L) {
 		}
 		lua_pop(L, 1);
 
-		//*****STEP 2: Check for handle signature-specific values
-		if (lua_isuserdata(L, obj_ldx) && ade_id != UINT_MAX && !ADE_SETTING_VAR) {
-			//WMC - I assume char is one byte
-			static_assert(sizeof(char) == 1, "char needs to have size 1!");
-
-			//Get userdata sig
-			char* ud = (char*) lua_touserdata(L, obj_ldx);
-			ODATA_SIG_TYPE sig = *(ODATA_SIG_TYPE*) (ud + entry->Value.Object.size);
-
-			//Now use it to index the table with that #
-			lua_pushnumber(L, sig);
-			lua_rawget(L, mtb_ldx);
-			if (lua_istable(L, -1)) {
-				int hvt_ldx = lua_gettop(L);
-				lua_pushvalue(L, key_ldx);
-				lua_rawget(L, hvt_ldx);
-				if (!lua_isnil(L, -1)) {
-					return 1;
-				} else
-					lua_pop(L, 1);    //nil value
-			}
-			lua_pop(L, 1);    //sig table
-		}
-
-		//*****STEP 3: Check for __ademember objects (ie defaults)
+		//*****STEP 2: Check for __ademember objects (ie defaults)
 		lua_pushstring(L, "__ademembers");
 		lua_rawget(L, mtb_ldx);
 		if (lua_istable(L, -1)) {
@@ -108,7 +89,7 @@ int ade_index_handler(lua_State* L) {
 		}
 		lua_pop(L, 1);    //member table
 
-		//*****STEP 4: Check for virtual variables
+		//*****STEP 3: Check for virtual variables
 		lua_pushstring(L, "__virtvars");
 		lua_rawget(L, mtb_ldx);
 		if (lua_istable(L, -1)) {
@@ -142,7 +123,7 @@ int ade_index_handler(lua_State* L) {
 		}
 		lua_pop(L, 1);    //virtvar table
 
-		//*****STEP 5: Use the indexer
+		//*****STEP 4: Use the indexer
 		//NOTE: Requires metatable from step 1.5
 
 		//Get indexer
@@ -178,41 +159,6 @@ int ade_index_handler(lua_State* L) {
 		lua_pushvalue(L, key_ldx);
 		lua_rawget(L, obj_ldx);
 		return 1;
-	}
-		//*****STEP 7: Set sig thingie
-	else if (ADE_SETTING_VAR && ade_id != UINT_MAX && mtb_ldx != INT_MAX && lua_isuserdata(L, obj_ldx)) {
-		//WMC - I assume char is one byte
-		Assert(sizeof(char) == 1);
-
-		//Get userdata sig
-		char* ud = (char*) lua_touserdata(L, obj_ldx);
-		ODATA_SIG_TYPE sig = *(ODATA_SIG_TYPE*) (ud + entry->Value.Object.size);
-
-		//Now use it to index the table with that #
-		lua_pushnumber(L, sig);
-		lua_rawget(L, mtb_ldx);
-
-		//Create table, if necessary
-		if (!lua_istable(L, -1)) {
-			lua_pop(L, 1);
-			lua_newtable(L);
-			lua_pushnumber(L, sig);
-			lua_pushvalue(L, -2);
-			lua_rawset(L, mtb_ldx);
-		}
-
-		//Index the table
-		if (lua_istable(L, -1)) {
-			int hvt_ldx = lua_gettop(L);
-			lua_pushvalue(L, key_ldx);
-			lua_pushvalue(L, arg_ldx);
-			lua_rawset(L, hvt_ldx);
-
-			lua_pushvalue(L, key_ldx);
-			lua_rawget(L, hvt_ldx);
-			return 1;
-		}
-		lua_pop(L, 1);    //WMC - maybe-sig-table
 	}
 	lua_pop(L, 1);    //WMC - metatable
 
@@ -328,12 +274,7 @@ const ade_table_entry& ade_manager::getEntry(size_t idx) const {
 	return _table_entries[idx];
 }
 
-ade_table_entry::ade_table_entry()
-	: Name(NULL), ShortName(NULL), Idx(UINT_MAX), ParentIdx(UINT_MAX), DerivatorIdx(UINT_MAX), Instanced(false),
-	  Size(0), Arguments(NULL), Description(NULL), ReturnType(NULL), ReturnDescription(NULL), Num_subentries(0) {
-	Type = '\0';
-	memset(Subentries, 0, sizeof(Subentries));
-}
+ade_table_entry::ade_table_entry() { memset(Subentries, 0, sizeof(Subentries)); }
 //Think of n_mtb_ldx as the parent metatable
 int ade_table_entry::SetTable(lua_State* L, int p_amt_ldx, int p_mtb_ldx) {
 	uint i;
@@ -347,24 +288,30 @@ int ade_table_entry::SetTable(lua_State* L, int p_amt_ldx, int p_mtb_ldx) {
 		//Set any actual data
 		int nset = 0;
 		switch (Type) {
-			//WMC - This hack by taylor is a necessary evil.
-			//64-bit function pointers do not get passed properly
-			//when using va_args for some reason.
-			case 'u':
-			case 'v':
-				lua_pushstring(L, "<UNNAMED FUNCTION>");
-				lua_pushboolean(L, 0);
-				lua_pushcclosure(L, Value.Function, 2);
-				nset++;
-				break;
+		case 'o': {
+			// Create an empty userdata value and use it as the value for this library
+			lua_newuserdata(L, 0);
+			//Create or get object metatable
+			luaL_getmetatable(L, Name);
+			//Set the metatable for the object
+			lua_setmetatable(L, -2);
+			nset++;
+			break;
+		}
+		case 'u':
+		case 'v':
+			// WMC - This hack by taylor is a necessary evil.
+			// 64-bit function pointers do not get passed properly
+			// when using va_args for some reason.
+			lua_pushstring(L, "<UNNAMED FUNCTION>");
+			lua_pushboolean(L, 0);
+			lua_pushcclosure(L, Function, 2);
+			nset++;
+			break;
 
-			default:
-				char typestr[2] = {
-					Type,
-					'\0'
-				};
-				nset = ade_set_args(L, typestr, Value);
-				break;
+		default:
+			UNREACHABLE("Unhandled value type '%c'!", Type);
+			break;
 		}
 
 		if (nset) {
@@ -395,7 +342,7 @@ int ade_table_entry::SetTable(lua_State* L, int p_amt_ldx, int p_mtb_ldx) {
 				}
 			} else {
 				//WMC - Member objects prefixed with __ are assumed to be metatable objects
-				if (strnicmp("__", GetName(), 2) && lua_istable(L, p_amt_ldx)) {
+				if (strnicmp("__", GetName(), 2) != 0 && lua_istable(L, p_amt_ldx)) {
 					desttable_ldx = p_amt_ldx;
 				} else if (lua_istable(L, p_mtb_ldx)) {
 					desttable_ldx = p_mtb_ldx;
@@ -466,6 +413,16 @@ int ade_table_entry::SetTable(lua_State* L, int p_amt_ldx, int p_mtb_ldx) {
 		lua_pushboolean(L, 1);                            //upvalue(2) = setting true/false
 		lua_pushcclosure(L, ade_index_handler, 2);
 		lua_rawset(L, mtb_ldx);
+
+		if (Destructor != nullptr) {
+			// Set up the destructor of this type if it exists
+			lua_pushstring(L, "__gc");
+			lua_pushfstring(L, "%s Destructor", GetName()); // upvalue(1) = function name
+			lua_pushboolean(L, 0);                          // upvalue(2) = setting true/false
+			lua_pushlightuserdata(L, Destructor_upvalue);   // upvalue(3) = Reference to ade_obj
+			lua_pushcclosure(L, Destructor, 3);
+			lua_rawset(L, mtb_ldx);
+		}
 
 		//***Create virtvar storage facility
 		lua_pushstring(L, "__virtvars");
@@ -727,7 +684,7 @@ void ade_table_entry::OutputMeta(FILE *fp)
 	for(i = 0; i < Num_subentries; i++)
 	{
 		auto entry = &getTableEntry(Subentries[i]);
-		if(ParentIdx == UINT_MAX || stricmp(entry->Name, "__indexer"))
+		if(ParentIdx == UINT_MAX || stricmp(entry->Name, "__indexer") != 0)
 			entry->OutputMeta(fp);
 	}
 	fputs("</dl></dd>\n", fp);
@@ -750,10 +707,6 @@ ade_lib::ade_lib(const char* in_name, const ade_lib_handle* parent, const char* 
 	//within the scripting environment, but I don't think
 	//there will be any catastrophic consequences.
 	ate.Type = 'o';
-	ate.Value.Object.idx = ade_manager::getInstance()->getNumEntries();
-	ate.Value.Object.sig = NULL;
-	ate.Value.Object.buf = &Num_reinforcements;	//WMC - I just chose Num_ship_classes randomly. MageKing17 - changed to Num_reinforcements, likewise at random, due to the removal of Num_ship_classes
-	ate.Value.Object.size = sizeof(Num_reinforcements);
 	ate.Description = in_desc;
 
 	if(parent != NULL)
@@ -777,12 +730,14 @@ ade_func::ade_func(const char* name,
 				   const char* desc,
 				   const char* ret_type,
 				   const char* ret_desc) {
+	Assertion(strcmp(name, "__gc") != 0, "__gc is a reserved function name! An API function may not use it!");
+
 	ade_table_entry ate;
 
 	ate.Name = name;
 	ate.Instanced = true;
 	ate.Type = 'u';
-	ate.Value.Function = func;
+	ate.Function = func;
 	ate.Arguments = args;
 	ate.Description = desc;
 	ate.ReturnType = ret_type;
@@ -798,12 +753,14 @@ ade_virtvar::ade_virtvar(const char* name,
 						 const char* desc,
 						 const char* ret_type,
 						 const char* ret_desc) {
+	Assertion(strcmp(name, "__gc") != 0, "__gc is a reserved function name! An API function may not use it!");
+
 	ade_table_entry ate;
 
 	ate.Name = name;
 	ate.Instanced = true;
 	ate.Type = 'v';
-	ate.Value.Function = func;
+	ate.Function = func;
 	ate.Arguments = args;
 	ate.Description = desc;
 	ate.ReturnType = ret_type;
@@ -824,7 +781,7 @@ ade_indexer::ade_indexer(lua_CFunction func,
 	ate.Name = "__indexer";
 	ate.Instanced = true;
 	ate.Type = 'u';
-	ate.Value.Function = func;
+	ate.Function = func;
 	ate.Arguments = args;
 	ate.Description = desc;
 	ate.ReturnType = ret_type;
@@ -977,27 +934,71 @@ int ade_set_object_with_breed(lua_State *L, int obj_idx)
 	using namespace scripting::api;
 
 	if(obj_idx < 0 || obj_idx >= MAX_OBJECTS)
-		return ade_set_error(L, "o", l_Object.Set(object_h()));
+		return ade_set_args(L, "o", l_Object.Set(object_h()));
 
 	object *objp = &Objects[obj_idx];
 
 	switch(objp->type)
 	{
-		case OBJ_SHIP:
-			return ade_set_args(L, "o", l_Ship.Set(object_h(objp)));
-		case OBJ_ASTEROID:
-			return ade_set_args(L, "o", l_Asteroid.Set(object_h(objp)));
-		case OBJ_DEBRIS:
-			return ade_set_args(L, "o", l_Debris.Set(object_h(objp)));
-		case OBJ_WAYPOINT:
-			return ade_set_args(L, "o", l_Waypoint.Set(object_h(objp)));
-		case OBJ_WEAPON:
-			return ade_set_args(L, "o", l_Weapon.Set(object_h(objp)));
-		case OBJ_BEAM:
-			return ade_set_args(L, "o", l_Beam.Set(object_h(objp)));
-		default:
-			return ade_set_args(L, "o", l_Object.Set(object_h(objp)));
+	case OBJ_SHIP:
+		return ade_set_args(L, "o", l_Ship.Set(object_h(objp)));
+	case OBJ_ASTEROID:
+		return ade_set_args(L, "o", l_Asteroid.Set(object_h(objp)));
+	case OBJ_DEBRIS:
+		return ade_set_args(L, "o", l_Debris.Set(object_h(objp)));
+	case OBJ_WAYPOINT:
+		return ade_set_args(L, "o", l_Waypoint.Set(object_h(objp)));
+	case OBJ_WEAPON:
+		return ade_set_args(L, "o", l_Weapon.Set(object_h(objp)));
+	case OBJ_BEAM:
+		return ade_set_args(L, "o", l_Beam.Set(object_h(objp)));
+	default:
+		return ade_set_args(L, "o", l_Object.Set(object_h(objp)));
 	}
 }
 
+void load_default_script(lua_State* L, const char* name)
+{
+	using namespace luacpp;
+
+	SCP_string source;
+	SCP_string source_name;
+	if (Enable_external_default_scripts && cf_exists(name, CF_TYPE_SCRIPTS)) {
+		// Load from disk (or built-in file)
+		source_name = name;
+
+		auto cfp = cfopen(name, "rb", CFILE_NORMAL, CF_TYPE_SCRIPTS);
+		Assertion(cfp != nullptr, "Failed to open default file!");
+
+		auto length = cfilelength(cfp);
+
+		source.resize((size_t)length);
+		cfread(&source[0], 1, length, cfp);
+
+		cfclose(cfp);
+	} else {
+		// Load from default files
+		source_name = SCP_string("default ") + name;
+
+		auto def = defaults_get_file(name);
+
+		auto c = reinterpret_cast<const char*>(def.data);
+		source.assign(c, c + def.size);
+	}
+
+	try {
+		auto func = LuaFunction::createFromCode(L, source, source_name);
+		func.setErrorFunction(LuaFunction::createFromCFunction(L, ade_friendly_error));
+		try {
+			func();
+		} catch (const LuaException&) {
+			// The execution of the function may also throw an exception but that should have been handled by a LuaError
+			// before
+		}
+	} catch (const LuaException& e) {
+		LuaError(L, "Error while loading default script: %s", e.what());
+	}
+}
+
+ade_table_entry& internal::getTableEntry(size_t idx) { return ade_manager::getInstance()->getEntry(idx); }
 }

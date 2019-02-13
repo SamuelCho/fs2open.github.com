@@ -24,7 +24,7 @@
 #include "weapon/swarm.h"
 #include "weapon/weapon.h"
 
-#include <limits.h>
+#include <climits>
 
 
 // How close a turret has to be point at its target before it
@@ -243,7 +243,7 @@ int bomb_headed_towards_ship(object *bomb_objp, object *ship_objp)
  * @note All non-negative return values are expressed in what I like to call "widx"s.
  * @return -1 if unable to find a weapon for the target at all.
  */
-int turret_select_best_weapon(ship_subsys *turret, object *target)
+int turret_select_best_weapon(ship_subsys *turret, object * /*target*/)
 {
 	//TODO: Fill this out with extraodinary gun-picking algorithms
 	if(turret->weapons.num_primary_banks > 0)
@@ -1290,7 +1290,9 @@ void ship_get_global_turret_gun_info(object *objp, ship_subsys *ssp, vec3d *gpos
 		model_instance_find_world_point(&tmp_pos, &avg, Ships[objp->instance].model_instance_num, tp->turret_gun_sobj, &objp->orient, &objp->pos);
 
 		if (targetp == nullptr) {
-            Assertion(ssp->turret_enemy_objnum >= 0, "The turret enemy object number %d for %s on ship number %d is invalid.", ssp->turret_enemy_objnum, ssp->sub_name, ssp->parent_objnum);
+			ship* shipp = &Ships[Objects[ssp->parent_objnum].instance];
+            Assertion(ssp->turret_enemy_objnum >= 0, "The turret enemy object number %d for %s on ship name %s is invalid.", ssp->turret_enemy_objnum, ssp->sub_name, 
+																								(shipp->has_display_name()) ? shipp->display_name.c_str() : shipp->ship_name);
             object *lep = &Objects[ssp->turret_enemy_objnum];
 
 			int best_weapon_tidx = turret_select_best_weapon(ssp, lep);
@@ -1301,9 +1303,9 @@ void ship_get_global_turret_gun_info(object *objp, ship_subsys *ssp, vec3d *gpos
 
 			weapon_info *wip = get_turret_weapon_wip(&ssp->weapons, best_weapon_tidx);
 
-			float weapon_system_strength = ship_get_subsystem_strength(&Ships[ssp->parent_objnum], SUBSYSTEM_WEAPONS);
+			float weapon_system_strength = ship_get_subsystem_strength(shipp, SUBSYSTEM_WEAPONS);
 
-            turret_ai_update_aim(&Ai_info[Ships[ssp->parent_objnum].ai_index], &Objects[ssp->turret_enemy_objnum], ssp);
+            turret_ai_update_aim(&Ai_info[shipp->ai_index], &Objects[ssp->turret_enemy_objnum], ssp);
 
 			if ((ssp->targeted_subsys != nullptr) && !(ssp->flags[Ship::Subsystem_Flags::No_SS_targeting])) {
 				vm_vec_unrotate(&enemy_point, &ssp->targeted_subsys->system_info->pnt, &Objects[ssp->turret_enemy_objnum].orient);
@@ -1874,7 +1876,7 @@ bool turret_fire_weapon(int weapon_num, ship_subsys *turret, int parent_objnum, 
 				turret->last_fired_weapon_info_index = turret_weapon_class;
 
 				Script_system.SetHookObjects(4, "Ship", &Objects[parent_objnum], "Weapon", nullptr, "Beam", objp, "Target", &Objects[turret->turret_enemy_objnum]);
-				Script_system.RunCondition(CHA_ONTURRETFIRED, 0, NULL, &Objects[parent_objnum]);
+				Script_system.RunCondition(CHA_ONTURRETFIRED, &Objects[parent_objnum]);
 				Script_system.RemHookVars(4, "Ship", "Weapon", "Beam", "Target");
 			}
 
@@ -2009,7 +2011,7 @@ bool turret_fire_weapon(int weapon_num, ship_subsys *turret, int parent_objnum, 
 					wp->turret_subsys = turret;	
 
 					Script_system.SetHookObjects(4, "Ship", &Objects[parent_objnum], "Weapon", objp, "Beam", nullptr, "Target", &Objects[turret->turret_enemy_objnum]);
-					Script_system.RunCondition(CHA_ONTURRETFIRED, 0, NULL, &Objects[parent_objnum]);
+					Script_system.RunCondition(CHA_ONTURRETFIRED, &Objects[parent_objnum]);
 					Script_system.RemHookVars(4, "Ship", "Weapon", "Beam", "Target");
 
 					// if the gun is a flak gun
@@ -2048,7 +2050,7 @@ bool turret_fire_weapon(int weapon_num, ship_subsys *turret, int parent_objnum, 
 						}
 					}
 
-					if ( wip->launch_snd != -1 ) {
+					if ( wip->launch_snd.isValid() ) {
 						// Don't play turret firing sound if turret sits on player ship... it gets annoying.
 						if ( parent_objnum != OBJ_INDEX(Player_obj) || (turret->flags[Ship::Subsystem_Flags::Play_sound_for_player]) ) {						
 							snd_play_3d( gamesnd_get_game_sound(wip->launch_snd), turret_pos, &View_position );
@@ -2126,7 +2128,7 @@ void turret_swarm_fire_from_turret(turret_swarm_info *tsi)
 		tsi->turret->last_fired_weapon_info_index = tsi->weapon_class;
 
 		Script_system.SetHookObjects(4, "Ship", &Objects[tsi->parent_objnum], "Weapon", &Objects[weapon_objnum], "Beam", nullptr, "Target", &Objects[tsi->turret->turret_enemy_objnum]);
-		Script_system.RunCondition(CHA_ONTURRETFIRED, 0, NULL, &Objects[tsi->parent_objnum]);
+		Script_system.RunCondition(CHA_ONTURRETFIRED, &Objects[tsi->parent_objnum]);
 		Script_system.RemHookVars(4, "Ship", "Weapon", "Beam", "Target");
 
 		// muzzle flash?
@@ -2135,7 +2137,7 @@ void turret_swarm_fire_from_turret(turret_swarm_info *tsi)
 		}
 
 		// maybe sound
-		if ( Weapon_info[tsi->weapon_class].launch_snd != -1 ) {
+		if ( Weapon_info[tsi->weapon_class].launch_snd.isValid() ) {
 			// Don't play turret firing sound if turret sits on player ship... it gets annoying.
 			if ( tsi->parent_objnum != OBJ_INDEX(Player_obj) ) {
 				snd_play_3d( gamesnd_get_game_sound(Weapon_info[tsi->weapon_class].launch_snd), &turret_pos, &View_position );

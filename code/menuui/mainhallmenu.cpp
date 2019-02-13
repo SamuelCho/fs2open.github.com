@@ -7,18 +7,19 @@
  *
  */
 
-#include <stdlib.h>
-#include <limits.h>
+#include <cstdlib>
+#include <climits>
 
+#include "freespace.h"
 #include "anim/animplay.h"
 #include "anim/packunpack.h"
 #include "cmdline/cmdline.h"
-#include "freespace.h"
 #include "gamehelp/contexthelp.h"
 #include "gamesequence/gamesequence.h"
 #include "gamesnd/eventmusic.h"
 #include "gamesnd/gamesnd.h"
 #include "globalincs/alphacolors.h"
+#include "globalincs/version.h"
 #include "graphics/generic.h"
 #include "io/key.h"
 #include "io/mouse.h"
@@ -33,9 +34,9 @@
 #include "network/multiui.h"
 #include "network/multiutil.h"
 #include "parse/parselo.h"
-#include "scripting/scripting.h"
 #include "playerman/player.h"
 #include "popup/popup.h"
+#include "scripting/scripting.h"
 #include "sound/audiostr.h"
 
 #ifndef NDEBUG
@@ -123,7 +124,7 @@ int Main_hall_next_intercom_sound = 0;
 int Main_hall_next_intercom_sound_stamp = -1;
 
 // handle to any playing instance of a random intercom sound
-int Main_hall_intercom_sound_handle = -1;
+sound_handle Main_hall_intercom_sound_handle = sound_handle::invalid();
 
 // handle any details related to random intercom sounds
 void main_hall_handle_random_intercom_sounds();
@@ -225,10 +226,10 @@ void main_hall_mouse_grab_region(int region);
 #define ALLENDER_REGION		4
 
 // handles to the sound instances of the doors opening/closing
-SCP_vector<int> Main_hall_door_sound_handles;
+SCP_vector<sound_handle> Main_hall_door_sound_handles;
 
 // sound handle for looping ambient sound
-int Main_hall_ambient_loop = -1;
+sound_handle Main_hall_ambient_loop = sound_handle::invalid();
 
 // cull any door sounds that have finished playing
 void main_hall_cull_door_sounds();
@@ -410,6 +411,8 @@ void main_hall_init(const SCP_string &main_hall_name)
 		return;
 	}
 
+	// gameseq_post_event(GS_EVENT_SCRIPTING);
+
 	int idx;
 	SCP_string main_hall_to_load;
 
@@ -455,7 +458,7 @@ void main_hall_init(const SCP_string &main_hall_name)
 	// Read the menu regions from mainhall.tbl
 	SCP_vector<main_hall_region>::iterator it;
 	for (it = Main_hall->regions.begin(); Main_hall->regions.end() != it; ++it) {
-		snazzy_menu_add_region(&Main_hall_region[it - Main_hall->regions.begin()], it->description.c_str(), it->mask, it->key, -1);
+		snazzy_menu_add_region(&Main_hall_region[it - Main_hall->regions.begin()], it->description.c_str(), it->mask, it->key, interface_snd_id());
 	}
 
 	// init tooltip shader						// nearly black
@@ -464,8 +467,8 @@ void main_hall_init(const SCP_string &main_hall_name)
 	// are we funny?
 	if (Vasudan_funny && main_hall_is_vasudan()) {
 		if (!stricmp(Main_hall->bitmap.c_str(), "vhall")) {
-			Main_hall->door_sounds.at(OPTIONS_REGION).at(0) = SND_VASUDAN_BUP;
-			Main_hall->door_sounds.at(OPTIONS_REGION).at(1) = SND_VASUDAN_BUP;
+			Main_hall->door_sounds.at(OPTIONS_REGION).at(0) = InterfaceSounds::VASUDAN_BUP;
+			Main_hall->door_sounds.at(OPTIONS_REGION).at(1) = InterfaceSounds::VASUDAN_BUP;
 			
 			// set head anim. hehe
 			Main_hall->door_anim_name.at(OPTIONS_REGION) = "vhallheads";
@@ -473,8 +476,8 @@ void main_hall_init(const SCP_string &main_hall_name)
 			// set the background
 			Main_hall->bitmap = "vhallhead";
 		} else if (!stricmp(Main_hall->bitmap.c_str(), "2_vhall")) {
-			Main_hall->door_sounds.at(OPTIONS_REGION).at(0) = SND_VASUDAN_BUP;
-			Main_hall->door_sounds.at(OPTIONS_REGION).at(1) = SND_VASUDAN_BUP;
+			Main_hall->door_sounds.at(OPTIONS_REGION).at(0) = InterfaceSounds::VASUDAN_BUP;
+			Main_hall->door_sounds.at(OPTIONS_REGION).at(1) = InterfaceSounds::VASUDAN_BUP;
 			
 			// set head anim. hehe
 			Main_hall->door_anim_name.at(OPTIONS_REGION) = "2_vhallheads";
@@ -592,7 +595,7 @@ void main_hall_init(const SCP_string &main_hall_name)
 	// initialize door sound handles
 	Main_hall_door_sound_handles.clear();
 	for (idx = 0; idx < Main_hall->num_door_animations; idx++) {
-		Main_hall_door_sound_handles.push_back(-1);
+		Main_hall_door_sound_handles.push_back(sound_handle::invalid());
 	}
 
 	// skip the first frame
@@ -607,7 +610,7 @@ void main_hall_init(const SCP_string &main_hall_name)
 	// initialize the random intercom sound stuff
 	Main_hall_next_intercom_sound = 0;
 	Main_hall_next_intercom_sound_stamp = -1;
-	Main_hall_intercom_sound_handle = -1;
+	Main_hall_intercom_sound_handle     = sound_handle::invalid();
 
 	// set the placement of the mouse cursor (start at the ready room)
 	Main_hall_mouse_region = -1;
@@ -771,7 +774,7 @@ void main_hall_do(float frametime)
 			snazzy_action = SNAZZY_CLICKED;
 			break;
 		case KEY_F3:
-			gamesnd_play_iface(SND_IFACE_MOUSE_CLICK);
+			gamesnd_play_iface(InterfaceSounds::IFACE_MOUSE_CLICK);
 			gameseq_post_event(GS_EVENT_LAB);
 			break;
 	#ifndef NDEBUG
@@ -831,7 +834,7 @@ void main_hall_do(float frametime)
 			switch (region_action) {
 				// clicked on the exit region
 				case EXIT_REGION:
-					gamesnd_play_iface(SND_IFACE_MOUSE_CLICK);
+					gamesnd_play_iface(InterfaceSounds::IFACE_MOUSE_CLICK);
 					main_hall_exit_game();
 					break;
 
@@ -842,24 +845,24 @@ void main_hall_do(float frametime)
 					Game_mode = GM_NORMAL;
 					
 					gameseq_post_event(GS_EVENT_NEW_CAMPAIGN);
-					gamesnd_play_iface(SND_IFACE_MOUSE_CLICK);
+					gamesnd_play_iface(InterfaceSounds::IFACE_MOUSE_CLICK);
 					break;
 
 				// clicked on the tech room region
 				case TECH_ROOM_REGION:
-					gamesnd_play_iface(SND_IFACE_MOUSE_CLICK);
+					gamesnd_play_iface(InterfaceSounds::IFACE_MOUSE_CLICK);
 					gameseq_post_event(GS_EVENT_TECH_MENU);
 					break;
 
 				// clicked on the options region
 				case OPTIONS_REGION:
-					gamesnd_play_iface(SND_IFACE_MOUSE_CLICK);
+					gamesnd_play_iface(InterfaceSounds::IFACE_MOUSE_CLICK);
 					gameseq_post_event(GS_EVENT_OPTIONS_MENU);
 					break;
 
 				// clicked on the campaign toom region
 				case CAMPAIGN_ROOM_REGION:
-					gamesnd_play_iface(SND_IFACE_MOUSE_CLICK);
+					gamesnd_play_iface(InterfaceSounds::IFACE_MOUSE_CLICK);
 					gameseq_post_event(GS_EVENT_CAMPAIGN_ROOM);
 					break;
 
@@ -897,7 +900,7 @@ void main_hall_do(float frametime)
 
 				// clicked on the barracks region
 				case BARRACKS_REGION:
-					gamesnd_play_iface(SND_IFACE_MOUSE_CLICK);
+					gamesnd_play_iface(InterfaceSounds::IFACE_MOUSE_CLICK);
 					gameseq_post_event(GS_EVENT_BARRACKS_MENU);
 					break;
 
@@ -913,7 +916,7 @@ void main_hall_do(float frametime)
 				case ESC_PRESSED:
 					// if there is a help overlay active, then don't quit the game - just kill the overlay
 					if (!help_overlay_active(Main_hall_overlay_id)) {
-						gamesnd_play_iface(SND_IFACE_MOUSE_CLICK);
+						gamesnd_play_iface(InterfaceSounds::IFACE_MOUSE_CLICK);
 						main_hall_exit_game();
 					} else { // kill the overlay
 						help_overlay_set_state(Main_hall_overlay_id,gr_screen.res,0);
@@ -923,9 +926,10 @@ void main_hall_do(float frametime)
 				// custom action
 				case SCRIPT_REGION:
 					const char *lua = it->lua_action.c_str();
-					bool success = Script_system.EvalString(lua, NULL, NULL, lua);
-					if(!success)
-						Warning(LOCATION, "mainhall '+Door Action / $Script' failed to evaluate \"%s\"; check your syntax", lua);
+					bool success    = Script_system.EvalString(lua, lua);
+					if (!success)
+						Warning(LOCATION,
+						        "mainhall '+Door Action / $Script' failed to evaluate \"%s\"; check your syntax", lua);
 					break;
 			} // END switch (code)
 
@@ -1027,7 +1031,7 @@ void main_hall_do(float frametime)
  */
 void main_hall_close()
 {
-	int idx, s_idx;
+	int idx;
 
 	if (!Main_hall_inited) {
 		return;
@@ -1061,21 +1065,9 @@ void main_hall_close()
 
 	// stop any playing door sounds
 	for (idx = 0; idx < Main_hall->num_door_animations-2; idx++) {
-		if ( (Main_hall_door_sound_handles.at(idx) != -1) && snd_is_playing(Main_hall_door_sound_handles.at(idx)) ) {
+		if ((Main_hall_door_sound_handles.at(idx).isValid()) && snd_is_playing(Main_hall_door_sound_handles.at(idx))) {
 			snd_stop(Main_hall_door_sound_handles.at(idx));
-			Main_hall_door_sound_handles.at(idx) = -1;
-		}
-	}
-
-	// stop any playing misc animation sounds
-	for (idx = 0; idx < Main_hall->num_misc_animations; idx++) {
-		// if this goes wrong, the int cast could overflow
-		Assert(Main_hall->misc_anim_special_sounds.at(idx).size() < INT_MAX);
-
-		for (s_idx = 0; s_idx < (int)Main_hall->misc_anim_special_sounds.at(idx).size(); s_idx++) {
-			if (snd_is_playing(Main_hall->misc_anim_special_sounds.at(idx).at(s_idx))) {
-				snd_stop(Main_hall->misc_anim_special_sounds.at(idx).at(s_idx));
-			}
+			Main_hall_door_sound_handles.at(idx) = sound_handle::invalid();
 		}
 	}
 
@@ -1264,17 +1256,10 @@ void main_hall_render_misc_anims(float frametime, bool over_doors)
 							&& !Main_hall->misc_anim_sound_flag.at(idx).at(s_idx) ) {
 						Main_hall->misc_anim_sound_flag.at(idx).at(s_idx) = 1;
 
-						// if the sound is already playing, then kill it.
-						// This is a pretty safe thing to do since we can assume that by the time we get to this point again,
-						// the sound will have been long finished
-						if (snd_is_playing(Main_hall->misc_anim_special_sounds.at(idx).at(s_idx))) {
-							snd_stop(Main_hall->misc_anim_special_sounds.at(idx).at(s_idx));
-						}
-
-						int sound = Main_hall->misc_anim_special_sounds.at(idx).at(s_idx);
+						auto sound = Main_hall->misc_anim_special_sounds.at(idx).at(s_idx);
 
 						// Check if the sound is valid
-						if (sound >= 0)
+						if (sound.isValid())
 						{
 							// play the sound
 							snd_play(gamesnd_get_interface_sound(sound),Main_hall->misc_anim_sound_pan.at(idx));
@@ -1401,13 +1386,13 @@ void main_hall_mouse_release_region(int region)
 	// check for door sounds, ignoring the OPTIONS_REGION (which isn't a door)
 	if (Main_hall_door_anim.at(region).num_frames > 0) {
 		// don't stop the toaster oven or microwave regions from playing all the way through
-		if (Main_hall_door_sound_handles.at(region) != -1) {
+		if (Main_hall_door_sound_handles.at(region).isValid()) {
 			snd_stop(Main_hall_door_sound_handles.at(region));
 		}
 
-		int sound = Main_hall->door_sounds.at(region).at(1);
+		auto sound = Main_hall->door_sounds.at(region).at(1);
 
-		if (sound >= 0)
+		if (sound.isValid())
 		{
 			Main_hall_door_sound_handles.at(region) = snd_play(gamesnd_get_interface_sound(sound), Main_hall->door_sound_pan.at(region));
 		}
@@ -1444,14 +1429,14 @@ void main_hall_mouse_grab_region(int region)
 
 	// check for opening/starting sounds
 	// kill the currently playing sounds if necessary
-	if (Main_hall_door_sound_handles.at(region) != -1) {
+	if (Main_hall_door_sound_handles.at(region).isValid()) {
 		snd_stop(Main_hall_door_sound_handles.at(region));
 	}
 
 
-	int sound = Main_hall->door_sounds.at(region).at(0);
+	auto sound = Main_hall->door_sounds.at(region).at(0);
 
-	if (sound >= 0)
+	if (sound.isValid())
 	{
 		Main_hall_door_sound_handles.at(region) = snd_play(gamesnd_get_interface_sound(sound),Main_hall->door_sound_pan.at(region));
 	}
@@ -1527,8 +1512,8 @@ void main_hall_cull_door_sounds()
 	// basically just set the handle of any finished sound to be -1, so that we know its free any where else in the code we may need it
 	Assert(Main_hall_door_sound_handles.size() < INT_MAX);
 	for (idx = 0; idx < (int)Main_hall_door_sound_handles.size(); idx++) {
-		if ( (Main_hall_door_sound_handles.at(idx) != -1) && !snd_is_playing(Main_hall_door_sound_handles.at(idx)) ) {
-			Main_hall_door_sound_handles.at(idx) = -1;
+		if ((Main_hall_door_sound_handles.at(idx).isValid()) && !snd_is_playing(Main_hall_door_sound_handles.at(idx))) {
+			Main_hall_door_sound_handles.at(idx) = sound_handle::invalid();
 		}
 	}
 }
@@ -1545,24 +1530,24 @@ void main_hall_handle_random_intercom_sounds()
 	}
 
 	// if we have no timestamp for the next random sound, then set on
-	if ( (Main_hall_next_intercom_sound_stamp == -1) && (Main_hall_intercom_sound_handle == -1) ) {
+	if ((Main_hall_next_intercom_sound_stamp == -1) && (!Main_hall_intercom_sound_handle.isValid())) {
 		Main_hall_next_intercom_sound_stamp = timestamp((int)((rand() * RAND_MAX_1f) * 
 			(float)(Main_hall->intercom_delay.at(Main_hall_next_intercom_sound).at(1) 
 				- Main_hall->intercom_delay.at(Main_hall_next_intercom_sound).at(0))) );
 	}
 
 	// if the there is no sound playing
-	if (Main_hall_intercom_sound_handle == -1) {
+	if (!Main_hall_intercom_sound_handle.isValid()) {
 		if (Main_hall_paused) {
 			return;
 		}
 
 		// if the timestamp has popped, play a sound
 		if ( (Main_hall_next_intercom_sound_stamp != -1) && (timestamp_elapsed(Main_hall_next_intercom_sound_stamp)) ) {
-			int sound = Main_hall->intercom_sounds.at(Main_hall_next_intercom_sound);
+			auto sound = Main_hall->intercom_sounds.at(Main_hall_next_intercom_sound);
 
 			// Check if the sound is valid
-			if (sound >= 0)
+			if (sound.isValid())
 			{
 				// play the sound
 				Main_hall_intercom_sound_handle = snd_play(gamesnd_get_interface_sound(sound));
@@ -1590,7 +1575,7 @@ void main_hall_handle_random_intercom_sounds()
 					- Main_hall->intercom_delay.at(Main_hall_next_intercom_sound).at(0))) );
 
 			// release the sound handle
-			Main_hall_intercom_sound_handle = -1;
+			Main_hall_intercom_sound_handle = sound_handle::invalid();
 		}
 	}
 }
@@ -1643,7 +1628,7 @@ void main_hall_start_ambient()
 		return;
 	}
 
-	if (Main_hall_ambient_loop == -1) {
+	if (!Main_hall_ambient_loop.isValid()) {
 		play_ambient_loop = 1;
 	} else {
 		if (!snd_is_playing(Main_hall_ambient_loop)) {
@@ -1652,7 +1637,7 @@ void main_hall_start_ambient()
 	}
 
 	if (play_ambient_loop) {
-		Main_hall_ambient_loop = snd_play_looping(gamesnd_get_interface_sound(SND_MAIN_HALL_AMBIENT));
+		Main_hall_ambient_loop = snd_play_looping(gamesnd_get_interface_sound(InterfaceSounds::MAIN_HALL_AMBIENT));
 	}
 }
 
@@ -1661,9 +1646,9 @@ void main_hall_start_ambient()
  */
 void main_hall_stop_ambient()
 {
-	if (Main_hall_ambient_loop != -1) {
+	if (Main_hall_ambient_loop.isValid()) {
 		snd_stop(Main_hall_ambient_loop);
-		Main_hall_ambient_loop = -1;
+		Main_hall_ambient_loop = sound_handle::invalid();
 	}
 }
 
@@ -1674,8 +1659,8 @@ void main_hall_stop_ambient()
  */
 void main_hall_reset_ambient_vol()
 {
-	if (Main_hall_ambient_loop >= 0) {
-		snd_set_volume(Main_hall_ambient_loop, gamesnd_get_interface_sound(SND_MAIN_HALL_AMBIENT)->volume_range.next());
+	if (Main_hall_ambient_loop.isValid()) {
+		snd_set_volume(Main_hall_ambient_loop, gamesnd_get_interface_sound(InterfaceSounds::MAIN_HALL_AMBIENT)->volume_range.next());
 	}
 }
 
@@ -1685,20 +1670,19 @@ void main_hall_reset_ambient_vol()
 void main_hall_blit_version()
 {
 	int w, h;
-	char version_string[100];
 
 	// format the version string
-	get_version_string(version_string, sizeof(version_string));
+	auto version_string = gameversion::get_version_string();
 
 	int old_font = font::get_current_fontnum();
 	font::set_font(Main_hall->font);
 
 	// get the length of the string
-	gr_get_string_size(&w,&h,version_string);
+	gr_get_string_size(&w, &h, version_string.c_str());
 
 	// print the string near the lower left corner
 	gr_set_color_fast(&Color_bright_white);
-	gr_string(5, gr_screen.max_h_unscaled_zoomed - (h * 2 + 6), version_string, GR_RESIZE_MENU_ZOOMED);
+	gr_string(5, gr_screen.max_h_unscaled_zoomed - (h * 2 + 6), version_string.c_str(), GR_RESIZE_MENU_ZOOMED);
 
 	font::set_font(old_font);
 }
@@ -1903,7 +1887,7 @@ void intercom_sounds_init(main_hall_defines &m)
 		m.intercom_delay.at(idx).push_back(0);
 
 		// intercom_sounds
-		m.intercom_sounds.push_back(-1);
+		m.intercom_sounds.push_back(interface_snd_id());
 
 		// intercom_sound_pan
 		m.intercom_sound_pan.push_back(0);
@@ -1970,7 +1954,7 @@ void misc_anim_init(main_hall_defines &m)
 
 		// misc_anim_special_sounds
 		// parse_sound_list deals with the rest of the initialisation for this one
-		m.misc_anim_special_sounds.push_back(temp);
+		m.misc_anim_special_sounds.push_back(SCP_vector<interface_snd_id>());
 
 		// misc_anim_special_trigger
 		m.misc_anim_special_trigger.push_back(temp);
@@ -2018,7 +2002,7 @@ void door_anim_init(main_hall_defines &m)
 		m.door_anim_coords.at(idx).push_back(0);
 
 		// door_sounds
-		m.door_sounds.push_back(temp);
+		m.door_sounds.push_back(SCP_vector<interface_snd_id>());
 
 		// door_sound_pan
 		m.door_sound_pan.push_back(0.0f);
@@ -2238,7 +2222,7 @@ void parse_main_hall_table(const char* filename)
 
 				for (idx = 0; idx < m->num_random_intercom_sounds; idx++) {
 					// intercom sound id
-					parse_sound("+Intercom sound:", &m->intercom_sounds.at(idx), "+Intercom sound:", PARSE_SOUND_INTERFACE_SOUND);
+					parse_iface_sound("+Intercom sound:", &m->intercom_sounds.at(idx));
 				}
 
 				for (idx = 0; idx < m->num_random_intercom_sounds; idx++) {
@@ -2300,7 +2284,7 @@ void parse_main_hall_table(const char* filename)
 
 				for (idx = 0; idx < m->num_misc_animations; idx++) {
 					// anim sound id
-					parse_sound_list("+Misc anim sounds:", m->misc_anim_special_sounds.at(idx), "+Misc anim sounds:", PARSE_SOUND_INTERFACE_SOUND);
+					parse_iface_sound_list("+Misc anim sounds:", m->misc_anim_special_sounds.at(idx), "+Misc anim sounds:");
 				}
 
 				for (idx = 0; idx < m->num_misc_animations; idx++) {
@@ -2374,7 +2358,7 @@ void parse_main_hall_table(const char* filename)
 
 				for (idx = 0; idx < m->num_door_animations; idx++) {
 					// door open and close sounds
-					parse_sound_list("+Door sounds:", m->door_sounds.at(idx), "+Door sounds:", (parse_sound_flags)(PARSE_SOUND_INTERFACE_SOUND | PARSE_SOUND_SCP_SOUND_LIST));
+					parse_iface_sound_list("+Door sounds:", m->door_sounds.at(idx), "+Door sounds:", true);
 				}
 
 				for (idx = 0; idx < m->num_door_animations; idx++) {

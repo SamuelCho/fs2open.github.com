@@ -554,75 +554,12 @@ UI_XSTR HC_text[GR_NUM_RESOLUTIONS][NUM_HUD_TEXT] = {
 	}
 };
 
-void hud_config_set_rgb(int gauge, int r, int g, int b);
-void hud_config_set_alpha(int gauge, int a);
-
-/*
-#define NUM_HC_SPECIAL_BITMAPS	2
-#define HC_SPECIAL_RETICLE			0
-#define HC_SPECIAL_TEXT				1
-typedef struct HC_special_bitmap
-{
-	char *filename;
-	int x,y;
-	int bitmap;
-} HC_special_bitmap;
-
-HC_special_bitmap HC_special_bitmaps[NUM_HC_SPECIAL_BITMAPS] =
-{
-//XSTR:OFF
-	{"HG_00a", 272, 146, -1},
-	{"HG_04a", 132, 271, -1},
-//XSTR:ON
-};
-*/
-
 static int							HC_background_bitmap;
 static int							HC_background_bitmap_mask;
 static UI_WINDOW					HC_ui_window;
 
 static int							HC_gauge_hot;			// mouse is over this gauge
 static int							HC_gauge_selected;	// gauge is selected
-
-// slider controls
-/*
-#define HC_NUM_SLIDERS							1
-#define HC_BRIGHTNESS_SLIDER					0
-struct hc_sliders {
-	// base slider
-	char *filename;
-	int x, y, xt, yt;
-	int hotspot;
-	int dot_w;
-	int dots;
-
-	// left and right buttons
-	char *left_filename;
-	int left_mask, left_x, left_y;
-	char *right_filename;
-	int right_mask, right_x, right_y;
-
-	// slider control
-	UI_DOT_SLIDER_NEW slider;  // because we have a class inside this struct, we need the constructor below..
-
-	hc_sliders(char *name, int x1, int y1, int xt1, int yt1, int h, int _dot_w, int _dots, char *_left_filename, int _left_mask, int _left_x, int _left_y, char *_right_filename, int _right_mask, int _right_x, int _right_y) : 
-				 filename(name), x(x1), y(y1), xt(xt1), yt(yt1), hotspot(h), dot_w(_dot_w), dots(_dots), left_filename(_left_filename), left_mask(_left_mask), left_x(_left_x), left_y(_left_y), right_filename(_right_filename), right_mask(_right_mask), right_x(_right_x), right_y(_right_y) {}
-};
-
-hc_sliders HC_sliders[GR_NUM_RESOLUTIONS][HC_NUM_SLIDERS] = {
-	{ // GR_640
-		hc_sliders(	"HCB_22",	419,	379,	-1,	-1,	22,	20,	10,							
-						"HCB_23",	23,	611,	379,
-						"HCB_21",	21,	391,	379)
-	},
-	{ // GR_1024
-		hc_sliders(	"2_HCB_22",	670,	606,	-1,	-1,	22,	32,	10,							
-						"2_HCB_23",	23,	698,	606,
-						"2_HCB_21",	21,	625,	606),
-	}	
-};
-*/
-
 
 // HUD colors
 typedef struct hc_col {
@@ -954,7 +891,7 @@ void hud_config_check_regions()
 		}
 
 		if ( b->pressed() ) {
-			gamesnd_play_iface(SND_USER_SELECT);
+			gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 			HC_gauge_selected = i;
 
 			// turn off select all
@@ -1053,7 +990,7 @@ void hud_config_cancel()
 // leave hud config with accepting changes
 void hud_config_commit()
 {
-	gamesnd_play_iface(SND_COMMIT_PRESSED);
+	gamesnd_play_iface(InterfaceSounds::COMMIT_PRESSED);
 	gameseq_post_event(GS_EVENT_PREVIOUS_STATE);
 }
 
@@ -1095,7 +1032,7 @@ void hud_config_handle_keypresses(int k)
 		hud_config_commit();
 		break;
 	case KEY_TAB:
-		gamesnd_play_iface(SND_USER_SELECT);
+		gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 		hud_cycle_gauge_status();
 		break;
 	}
@@ -1110,39 +1047,39 @@ void hud_config_button_do(int n)
 	switch (n) {
 	case HCB_AMBER:
 		hud_config_set_color(HUD_COLOR_AMBER);
-		gamesnd_play_iface(SND_USER_SELECT);
+		gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 		break;
 	case HCB_BLUE:
 		hud_config_set_color(HUD_COLOR_BLUE);
-		gamesnd_play_iface(SND_USER_SELECT);
+		gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 		break;
 	case HCB_GREEN:
 		hud_config_set_color(HUD_COLOR_GREEN);
-		gamesnd_play_iface(SND_USER_SELECT);
+		gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 		break;
 	case HCB_ON:
 		if ( HC_gauge_selected < 0 ) {
 			break;
 		}
-		gamesnd_play_iface(SND_USER_SELECT);
+		gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 		hud_config_set_gauge_flags(HC_gauge_selected,1,0);
 		break;
 	case HCB_OFF:
 		if ( HC_gauge_selected < 0 ) {
 			break;
 		}
-		gamesnd_play_iface(SND_USER_SELECT);
+		gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 		hud_config_set_gauge_flags(HC_gauge_selected,0,0);
 		break;
 	case HCB_POPUP:
 		if ( HC_gauge_selected < 0 ) {
 			break;
 		}
-		gamesnd_play_iface(SND_USER_SELECT);
+		gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 		hud_config_set_gauge_flags(HC_gauge_selected,1,1);
 		break;
 	case HCB_RESET:
-		gamesnd_play_iface(SND_RESET_PRESSED);
+		gamesnd_play_iface(InterfaceSounds::RESET_PRESSED);
 		hud_config_select_all_toggle(0);
 		hud_set_default_hud_config(Player);
 		hud_config_synch_ui();
@@ -1154,9 +1091,9 @@ void hud_config_button_do(int n)
 	// new stuff
 	case HCB_RED_UP:
 		if( HCS_CONV(HC_color_sliders[HCS_RED].get_currentItem()) >= 255){
-			gamesnd_play_iface(SND_GENERAL_FAIL);
+			gamesnd_play_iface(InterfaceSounds::GENERAL_FAIL);
 		} else {
-			gamesnd_play_iface(SND_USER_SELECT);
+			gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 			HC_color_sliders[HCS_RED].force_currentItem( HCS_CONV( HCS_CONV(HC_color_sliders[HCS_RED].get_currentItem()) + 1)  );
 			hud_config_red_slider();			
 		}		
@@ -1164,9 +1101,9 @@ void hud_config_button_do(int n)
 
 	case HCB_GREEN_UP:
 		if( HCS_CONV(HC_color_sliders[HCS_GREEN].get_currentItem()) >= 255){
-			gamesnd_play_iface(SND_GENERAL_FAIL);
+			gamesnd_play_iface(InterfaceSounds::GENERAL_FAIL);
 		} else {
-			gamesnd_play_iface(SND_USER_SELECT);
+			gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 			HC_color_sliders[HCS_GREEN].force_currentItem( HCS_CONV( HCS_CONV(HC_color_sliders[HCS_GREEN].get_currentItem()) + 1) );
 			hud_config_green_slider();
 		}		
@@ -1174,9 +1111,9 @@ void hud_config_button_do(int n)
 
 	case HCB_BLUE_UP:
 		if( HCS_CONV(HC_color_sliders[HCS_BLUE].get_currentItem()) >= 255){
-			gamesnd_play_iface(SND_GENERAL_FAIL);
+			gamesnd_play_iface(InterfaceSounds::GENERAL_FAIL);
 		} else {
-			gamesnd_play_iface(SND_USER_SELECT);
+			gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 			HC_color_sliders[HCS_BLUE].force_currentItem( HCS_CONV( HCS_CONV(HC_color_sliders[HCS_BLUE].get_currentItem()) + 1) );
 			hud_config_blue_slider();
 		}		
@@ -1184,9 +1121,9 @@ void hud_config_button_do(int n)
 
 	case HCB_I_UP:
 		if( HCS_CONV(HC_color_sliders[HCS_ALPHA].get_currentItem()) >= 255){
-			gamesnd_play_iface(SND_GENERAL_FAIL);
+			gamesnd_play_iface(InterfaceSounds::GENERAL_FAIL);
 		} else {
-			gamesnd_play_iface(SND_USER_SELECT);
+			gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 			HC_color_sliders[HCS_ALPHA].force_currentItem( HCS_CONV( HCS_CONV(HC_color_sliders[HCS_ALPHA].get_currentItem()) + 1) );
 			hud_config_alpha_slider_up();
 		}		
@@ -1194,9 +1131,9 @@ void hud_config_button_do(int n)
 
 	case HCB_RED_DOWN:
 		if( HCS_CONV(HC_color_sliders[HCS_RED].get_currentItem()) <= 0){
-			gamesnd_play_iface(SND_GENERAL_FAIL);
+			gamesnd_play_iface(InterfaceSounds::GENERAL_FAIL);
 		} else {
-			gamesnd_play_iface(SND_USER_SELECT);
+			gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 			HC_color_sliders[HCS_RED].force_currentItem( HCS_CONV( HCS_CONV(HC_color_sliders[HCS_RED].get_currentItem()) - 1) );
 			hud_config_red_slider();
 		}		
@@ -1204,9 +1141,9 @@ void hud_config_button_do(int n)
 
 	case HCB_GREEN_DOWN:
 		if( HCS_CONV(HC_color_sliders[HCS_GREEN].get_currentItem()) <= 0){
-			gamesnd_play_iface(SND_GENERAL_FAIL);
+			gamesnd_play_iface(InterfaceSounds::GENERAL_FAIL);
 		} else {
-			gamesnd_play_iface(SND_USER_SELECT);
+			gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 			HC_color_sliders[HCS_GREEN].force_currentItem( HCS_CONV( HCS_CONV(HC_color_sliders[HCS_GREEN].get_currentItem()) - 1) );
 			hud_config_green_slider();
 		}		
@@ -1214,9 +1151,9 @@ void hud_config_button_do(int n)
 
 	case HCB_BLUE_DOWN:
 		if( HCS_CONV(HC_color_sliders[HCS_BLUE].get_currentItem()) <= 0){
-			gamesnd_play_iface(SND_GENERAL_FAIL);
+			gamesnd_play_iface(InterfaceSounds::GENERAL_FAIL);
 		} else {
-			gamesnd_play_iface(SND_USER_SELECT);
+			gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 			HC_color_sliders[HCS_BLUE].force_currentItem( HCS_CONV( HCS_CONV(HC_color_sliders[HCS_BLUE].get_currentItem()) - 1) );
 			hud_config_blue_slider();
 		}		
@@ -1224,9 +1161,9 @@ void hud_config_button_do(int n)
 
 	case HCB_I_DOWN:
 		if( HCS_CONV(HC_color_sliders[HCS_ALPHA].get_currentItem()) <= 0){
-			gamesnd_play_iface(SND_GENERAL_FAIL);
+			gamesnd_play_iface(InterfaceSounds::GENERAL_FAIL);
 		} else {
-			gamesnd_play_iface(SND_USER_SELECT);
+			gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 			HC_color_sliders[HCS_ALPHA].force_currentItem( HCS_CONV( HCS_CONV(HC_color_sliders[HCS_ALPHA].get_currentItem()) - 1) );
 			hud_config_alpha_slider_down();
 		}		
@@ -1475,7 +1412,7 @@ void hud_config_redraw_pressed_buttons()
 // hud_config_do_frame() is called from the main freespace loop while the game is in the state
 // GS_STATE_HUD_CONFIG.
 //
-void hud_config_do_frame(float frametime) 
+void hud_config_do_frame(float  /*frametime*/) 
 {
 	int k;
 
@@ -1575,7 +1512,7 @@ void hud_config_close()
 }
 
 // hud_set_default_hud_config() will set the hud configuration to default values
-void hud_set_default_hud_config(player *p)
+void hud_set_default_hud_config(player * /*p*/)
 {
 	int idx;
 
@@ -1633,6 +1570,9 @@ void hud_config_as_observer(ship *shipp,ai_info *aif)
 
 void hud_config_as_player()
 {
+	if (HUD_config.is_observer) {		// If he was observer before
+		hud_config_restore();
+	}
 } 
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -1642,7 +1582,8 @@ void hud_config_as_player()
 void hud_config_color_save(char *name)
 {
 	int idx;
-	CFILE *out = cfopen(name, "wt", CFILE_NORMAL, CF_TYPE_PLAYERS);
+	CFILE* out     = cfopen(name, "wt", CFILE_NORMAL, CF_TYPE_PLAYERS, false,
+                        CF_LOCATION_ROOT_USER | CF_LOCATION_ROOT_GAME | CF_LOCATION_TYPE_ROOT);
 	char vals[255] = "";
 
 	// bad
@@ -1843,7 +1784,8 @@ void hud_config_color_init()
 
 	// get a list of all hcf files
 	memset(HC_filenames, 0, sizeof(char*) * MAX_HCF_FILES);
-	HC_num_files = cf_get_file_list(MAX_HCF_FILES, HC_filenames, CF_TYPE_PLAYERS, "*.hcf", CF_SORT_NAME);
+	HC_num_files = cf_get_file_list(MAX_HCF_FILES, HC_filenames, CF_TYPE_PLAYERS, "*.hcf", CF_SORT_NAME, nullptr,
+	                                CF_LOCATION_ROOT_USER | CF_LOCATION_ROOT_GAME | CF_LOCATION_TYPE_ROOT);
 }
 
 void hud_config_color_close()

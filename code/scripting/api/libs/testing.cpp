@@ -28,6 +28,8 @@ ADE_LIB(l_Testing, "Testing", "ts", "Experimental or testing stuff");
 
 ADE_FUNC(avdTest, l_Testing, NULL, "Test the AVD Physics code", NULL, NULL)
 {
+	(void)L; // unused parameter
+
 	static bool initialized = false;
 	static avd_movement avd;
 
@@ -74,7 +76,9 @@ ADE_FUNC(createParticle, l_Testing, "vector Position, vector Velocity, number Li
 	enum_h *type = NULL;
 	bool rev=false;
 	object_h *objh=NULL;
-	if(!ade_get_args(L, "ooffo|fboo", l_Vector.Get(&pi.pos), l_Vector.Get(&pi.vel), &pi.lifetime, &pi.rad, l_Enum.GetPtr(&type), &temp, &rev, l_Texture.Get((int*)&pi.optional_data), l_Object.GetPtr(&objh)))
+	texture_h* texture = nullptr;
+	if (!ade_get_args(L, "ooffo|fboo", l_Vector.Get(&pi.pos), l_Vector.Get(&pi.vel), &pi.lifetime, &pi.rad,
+	                  l_Enum.GetPtr(&type), &temp, &rev, l_Texture.GetPtr(&texture), l_Object.GetPtr(&objh)))
 		return ADE_RETURN_NIL;
 
 	if(type != NULL)
@@ -94,13 +98,14 @@ ADE_FUNC(createParticle, l_Testing, "vector Position, vector Velocity, number Li
 				pi.type = particle::PARTICLE_SMOKE2;
 				break;
 			case LE_PARTICLE_BITMAP:
-				if (pi.optional_data < 0)
-				{
-					LuaError(L, "Invalid texture specified for createParticle()!");
-				}
-
-				pi.type = particle::PARTICLE_BITMAP;
-				break;
+			    if (texture == nullptr || !texture->isValid()) {
+				    LuaError(L, "Invalid texture specified for createParticle()!");
+				    return ADE_RETURN_NIL;
+			    } else {
+				    pi.optional_data = texture->handle;
+				    pi.type          = particle::PARTICLE_BITMAP;
+			    }
+			    break;
 		}
 	}
 
@@ -113,10 +118,10 @@ ADE_FUNC(createParticle, l_Testing, "vector Position, vector Velocity, number Li
 		pi.attached_sig = objh->objp->signature;
 	}
 
-	particle::WeakParticlePtr p = particle::create(&pi);
+	particle::WeakParticlePtr p = particle::createPersistent(&pi);
 
 	if (!p.expired())
-		return ade_set_args(L, "o", l_Particle.Set(new particle_h(p)));
+		return ade_set_args(L, "o", l_Particle.Set(particle_h(p)));
 	else
 		return ADE_RETURN_NIL;
 }
@@ -150,7 +155,7 @@ ADE_FUNC(isPXOEnabled, l_Testing, NULL, "Returns whether PXO is currently enable
 ADE_FUNC(playCutscene, l_Testing, NULL, "Forces a cutscene by the specified filename string to play. Should really only be used in a non-gameplay state (i.e. start of GS_STATE_BRIEFING) otherwise odd side effects may occur. Highly Experimental.", "string", NULL)
 {
 	//This whole thing is a quick hack and can probably be done way better, but is currently functioning fine for my purposes.
-	char *filename;
+	const char* filename;
 
 	if (!ade_get_args(L, "s", &filename))
 		return ADE_RETURN_FALSE;

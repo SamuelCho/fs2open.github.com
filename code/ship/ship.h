@@ -226,7 +226,7 @@ public:
 
 	//Get
 	char *GetNamePtr(){return Name;}
-	bool IsName(char *in_name){return (stricmp(in_name,Name)==0);}
+	bool IsName(const char* in_name) { return (stricmp(in_name, Name) == 0); }
 	float GetDamage(float damage_applied, int in_damage_type_idx, float diff_dmg_scale, int is_beam = 0);
 	float GetShieldPiercePCT(int damage_type_idx);
 	int GetPiercingType(int damage_type_idx);
@@ -494,6 +494,7 @@ public:
 
 
 	char	ship_name[NAME_LENGTH];
+	SCP_string display_name;
 
 	int	team;				//	Which team it's on, HOSTILE, FRIENDLY, UNKNOWN, NEUTRAL
 	
@@ -563,7 +564,7 @@ public:
 	int swarm_missile_bank;				// The missilebank the swarm was originally launched from
 
 	int	group;								// group ship is in, or -1 if none.  Fred thing
-	int	death_roll_snd;					// id of death roll sound, may need to be stopped early	
+	sound_handle death_roll_snd;            // id of death roll sound, may need to be stopped early
 	int	ship_list_index;					// index of ship in Ship_objs[] array
 
 	int	thruster_bitmap;					// What frame the current thruster bitmap is at for this ship
@@ -595,8 +596,7 @@ public:
 	int	ts_index;							// index into the team select and Wss_slots array (or -1 if not in one of those arrays)
 
 	int	large_ship_blowup_index;			// -1 if not a large ship exploding, else this is an index used by the shipfx large ship exploding code.
-	int	sub_expl_sound_handle[NUM_SUB_EXPL_HANDLES];
-
+	std::array<sound_handle, NUM_SUB_EXPL_HANDLES> sub_expl_sound_handle;
 
 	// Stuff for showing electrical arcs on damaged ships
 	vec3d	arc_pts[MAX_SHIP_ARCS][2];			// The endpoints of each arc
@@ -715,6 +715,9 @@ public:
     inline bool is_departing() { return flags[Ship::Ship_Flags::Depart_warp, Ship::Ship_Flags::Depart_dockbay]; }
     inline bool cannot_warp() { return flags[Ship::Ship_Flags::Warp_broken, Ship::Ship_Flags::Warp_never, Ship::Ship_Flags::Disabled]; }
     inline bool is_dying_or_departing() { return is_departing() || flags[Ship::Ship_Flags::Dying]; }
+
+	bool has_display_name();
+	const char* get_display_string();
 };
 
 struct ai_target_priority {
@@ -741,6 +744,7 @@ ai_target_priority init_ai_target_priorities();
 
 typedef struct exited_ship {
 	char	ship_name[NAME_LENGTH];
+	SCP_string display_string;
 	int		obj_signature;
 	int		ship_class;
 	int		team;
@@ -835,9 +839,9 @@ class man_thruster {
     public:
 	flagset<Ship::Thruster_Flags> use_flags;
 
-	int start_snd;
-	int loop_snd;
-	int stop_snd;
+	gamesnd_id start_snd;
+	gamesnd_id loop_snd;
+	gamesnd_id stop_snd;
 
 	int tex_id;
 	int tex_nframes;
@@ -856,12 +860,18 @@ class man_thruster {
         tex_nframes = 0;
         use_flags.reset();
 
-        start_snd = -1;
-        loop_snd = -1;
-        stop_snd = -1;
+        start_snd = gamesnd_id();
+        loop_snd = gamesnd_id();
+        stop_snd = gamesnd_id();
         tex_id = -1;
     }
 };
+
+// if we are specifying a Default warp with an index into fireball.tbl, use this flag
+#define WT_DEFAULT_WITH_FIREBALL	(1<<31)
+
+// if we have more than one flag defined above, this should mask all of them
+#define WT_FLAG_MASK				~(1<<31)
 
 //Warp type defines
 #define WT_DEFAULT					0
@@ -875,38 +885,38 @@ class man_thruster {
 // Most of this only really applies properly to small ships
 typedef struct ship_collision_physics {
 	// Collision physics definitions: how a ship responds to collisions
-	float both_small_bounce;	// Bounce factor when both ships are small
+	float both_small_bounce{};	// Bounce factor when both ships are small
 								// This currently only comes into play if one ship is the player... 
 								// blame retail for that.
-	float bounce;				// Bounce factor for all other cases
-	float friction;				// Controls lateral velocity lost when colliding with a large ship
-	float rotation_factor;		// Affects the rotational energy of collisions... TBH not sure how. 
+	float bounce{};				// Bounce factor for all other cases
+	float friction{};				// Controls lateral velocity lost when colliding with a large ship
+	float rotation_factor{};		// Affects the rotational energy of collisions... TBH not sure how.
 
 	// Speed & angle constraints for a smooth landing
 	// Note that all angles are stored as a dotproduct between normalized vectors instead. This saves us from having
 	// to do a lot of dot product calculations later.
-	float landing_max_z;		
-	float landing_min_z;
-	float landing_min_y;
-	float landing_max_x;
-	float landing_max_angle;
-	float landing_min_angle;
-	float landing_max_rot_angle;
+	float landing_max_z{};
+	float landing_min_z{};
+	float landing_min_y{};
+	float landing_max_x{};
+	float landing_max_angle{};
+	float landing_min_angle{};
+	float landing_max_rot_angle{};
 
 	// Speed & angle constraints for a "rough" landing (one with normal collision consequences, but where 
 	// the ship is still reoriented towards its resting orientation)
-	float reorient_max_z;
-	float reorient_min_z;
-	float reorient_min_y;
-	float reorient_max_x;
-	float reorient_max_angle;
-	float reorient_min_angle;
-	float reorient_max_rot_angle;
+	float reorient_max_z{};
+	float reorient_min_z{};
+	float reorient_min_y{};
+	float reorient_max_x{};
+	float reorient_max_angle{};
+	float reorient_min_angle{};
+	float reorient_max_rot_angle{};
 
 	// Landing response parameters
-	float reorient_mult;		// How quickly the ship will reorient towards it's resting position
-	float landing_rest_angle;	// The vertical angle where the ship's orientation comes to rest
-	int landing_sound_idx;		//Sound to play on successful landing collisions
+	float reorient_mult{};		// How quickly the ship will reorient towards it's resting position
+	float landing_rest_angle{};	// The vertical angle where the ship's orientation comes to rest
+	gamesnd_id landing_sound_idx;		//Sound to play on successful landing collisions
 
 } ship_collision_physics;
 
@@ -968,8 +978,8 @@ public:
 
 	char		warpin_anim[MAX_FILENAME_LEN];
 	float		warpin_radius;
-	int			warpin_snd_start;
-	int			warpin_snd_end;
+	gamesnd_id	warpin_snd_start;
+	gamesnd_id	warpin_snd_end;
 	float		warpin_speed;
 	int			warpin_time;	//in ms
 	float		warpin_decel_exp;
@@ -977,8 +987,8 @@ public:
 
 	char		warpout_anim[MAX_FILENAME_LEN];
 	float		warpout_radius;
-	int			warpout_snd_start;
-	int			warpout_snd_end;
+	gamesnd_id	warpout_snd_start;
+	gamesnd_id	warpout_snd_end;
 	int			warpout_engage_time;	//in ms
 	float		warpout_speed;
 	int			warpout_time;	//in ms
@@ -1015,7 +1025,7 @@ public:
 	particle_effect		knossos_end_particles;
 	particle_effect		regular_end_particles;
 
-	particle::ParticleEffectIndex death_effect;
+	particle::ParticleEffectHandle death_effect;
 
 	//Debris stuff
 	float			debris_min_lifetime;
@@ -1113,6 +1123,8 @@ public:
 	int	score;								// default score for this ship
 
 	int	scan_time;							// time to scan this ship (in ms)
+	float scan_range_normal;                // this ship can scan other normal/small ships at this range
+	float scan_range_capital;               // this ship can scan other capital/large ships at this range
 
 	// contrail info
 	trail_info ct_info[MAX_SHIP_CONTRAILS];	
@@ -1175,12 +1187,12 @@ public:
 	bool topdown_offset_def;
 	vec3d topdown_offset;
 
-	int engine_snd;							// handle to engine sound for ship (-1 if no engine sound)
+	gamesnd_id engine_snd;							// handle to engine sound for ship (-1 if no engine sound)
 	float min_engine_vol;					// minimum volume modifier for engine sound when ship is stationary
-	int glide_start_snd;					// handle to sound to play at the beginning of a glide maneuver (default is 0 for regular throttle down sound)
-	int glide_end_snd;						// handle to sound to play at the end of a glide maneuver (default is 0 for regular throttle up sound)
+	gamesnd_id glide_start_snd;					// handle to sound to play at the beginning of a glide maneuver (default is 0 for regular throttle down sound)
+	gamesnd_id glide_end_snd;						// handle to sound to play at the end of a glide maneuver (default is 0 for regular throttle up sound)
 
-	SCP_map<GameSoundsIndex, int> ship_sounds;			// specifies ship-specific sound indexes
+	SCP_map<GameSounds, gamesnd_id> ship_sounds;			// specifies ship-specific sound indexes
 
 	int num_maneuvering;
 	man_thruster maneuvering[MAX_MAN_THRUSTERS];
@@ -1196,6 +1208,8 @@ public:
 	float minimum_convergence_distance;
 	float convergence_distance;
 	vec3d convergence_offset;
+	gamesnd_id autoaim_lock_snd;
+	gamesnd_id autoaim_lost_snd;
 
 	float emp_resistance_mod;
 
@@ -1218,9 +1232,9 @@ public:
 	~ship_info();
 	void clone(const ship_info& other);
 
-	ship_info(ship_info&& other) NOEXCEPT;
+	ship_info(ship_info&& other) SCP_NOEXCEPT;
 
-	ship_info &operator=(ship_info&& other) NOEXCEPT;
+	ship_info &operator=(ship_info&& other) SCP_NOEXCEPT;
 
 	void free_strings();
 
@@ -1365,9 +1379,8 @@ extern void ship_init();				// called once	at game start
 extern void ship_level_init();		// called before the start of each level
 
 //returns -1 if failed
-extern int ship_create(matrix * orient, vec3d * pos, int ship_type, char *ship_name = NULL);
+extern int ship_create(matrix* orient, vec3d* pos, int ship_type, const char* ship_name = nullptr);
 extern void change_ship_type(int n, int ship_type, int by_sexp = 0);
-extern void ship_model_change(int n, int ship_type);
 extern void ship_process_pre( object * objp, float frametime );
 extern void ship_process_post( object * objp, float frametime );
 extern void ship_render( object * obj, model_draw_list * scene );
@@ -1403,15 +1416,13 @@ extern void ship_cleanup(int shipnum, int cleanup_mode);
 extern void ship_destroy_instantly(object *ship_obj, int shipnum);
 extern void ship_actually_depart(int shipnum, int method = SHIP_DEPARTED_WARP);
 
-extern int ship_fire_primary_debug(object *objp);	//	Fire the debug laser.
+extern bool in_autoaim_fov(ship *shipp, int bank_to_fire, object *obj);
 extern int ship_stop_fire_primary(object * obj);
 extern int ship_fire_primary(object * objp, int stream_weapons, int force = 0);
 extern int ship_fire_secondary(object * objp, int allow_swarm = 0 );
 extern int ship_launch_countermeasure(object *objp, int rand_val = -1);
 
 // for special targeting lasers
-extern void ship_start_targeting_laser(ship *shipp);
-extern void ship_stop_targeting_laser(ship *shipp);
 extern void ship_process_targeting_lasers();
 
 extern int ship_select_next_primary(object *objp, int direction);
@@ -1422,7 +1433,6 @@ extern int get_available_primary_weapons(object *objp, int *outlist, int *outban
 
 extern int get_available_secondary_weapons(object *objp, int *outlist, int *outbanklist);
 extern void ship_recalc_subsys_strength( ship *shipp );
-extern int subsys_set(int objnum, int ignore_subsys_info = 0);
 extern void physics_ship_init(object *objp);
 
 //	Note: This is not a general purpose routine.
@@ -1431,10 +1441,6 @@ extern void physics_ship_init(object *objp);
 //	Return true/false for subsystem found/not found.
 //	Stuff vector *pos with absolute position.
 extern int get_subsystem_pos(vec3d *pos, object *objp, ship_subsys *subsysp);
-
-int parse_ship_values(ship_info* sip, const bool is_template, const bool first_time, const bool replace);
-int ship_template_lookup(const char *name = NULL);
-void parse_ship_particle_effect(ship_info* sip, particle_effect* pe, char *id_string);
 
 extern int ship_info_lookup(const char *name = NULL);
 extern int ship_name_lookup(const char *name, int inc_players = 0);	// returns the index into Ship array of name
@@ -1471,10 +1477,6 @@ extern void add_shield_point_multi(int objnum, int tri_num, vec3d *hit_pos);
 extern void shield_point_multi_setup();
 extern void shield_hit_close();
 
-void ship_draw_shield( object *objp);
-
-float compute_shield_strength(object *objp);
-
 // Returns true if the shield presents any opposition to something 
 // trying to force through it.
 // If quadrant is -1, looks at entire shield, otherwise
@@ -1495,13 +1497,12 @@ extern int ship_find_num_crewpoints(object *objp);
 extern int ship_find_num_turrets(object *objp);
 
 extern void compute_slew_matrix(matrix *orient, angles *a);
-//extern camid ship_set_eye( object *obj, int eye_index);
-extern void ship_set_eye(object *obj, int eye_index);
 extern void ship_get_eye( vec3d *eye_pos, matrix *eye_orient, object *obj, bool do_slew = true, bool from_origin = false);		// returns in eye the correct viewing position for the given object
 //extern camid ship_get_followtarget_eye(object *obj);
 extern ship_subsys *ship_get_indexed_subsys( ship *sp, int index, vec3d *attacker_pos = NULL );	// returns index'th subsystem of this ship
-extern int ship_get_index_from_subsys(ship_subsys *ssp, int objnum, int error_bypass = 0);
-extern int ship_get_subsys_index(ship *sp, const char* ss_name, int error_bypass = 0);		// returns numerical index in linked list of subsystems
+extern int ship_get_index_from_subsys(ship_subsys *ssp, int objnum);
+extern int ship_get_subsys_index(ship *sp, const char* ss_name);		// returns numerical index in linked list of subsystems
+extern int ship_get_subsys_index(ship *shipp, ship_subsys *subsys);
 extern float ship_get_subsystem_strength( ship *shipp, int type );
 extern ship_subsys *ship_get_subsys(ship *shipp, const char *subsys_name);
 extern int ship_get_num_subsys(ship *shipp);
@@ -1510,7 +1511,7 @@ extern ship_subsys *ship_get_closest_subsys_in_sight(ship *sp, int subsys_type, 
 //WMC
 char *ship_subsys_get_name(ship_subsys *ss);
 bool ship_subsys_has_instance_name(ship_subsys *ss);
-void ship_subsys_set_name(ship_subsys *ss, char *n_name);
+void ship_subsys_set_name(ship_subsys* ss, const char* n_name);
 
 // subsys disruption
 extern int ship_subsys_disrupted(ship_subsys *ss);
@@ -1530,7 +1531,6 @@ extern void ship_assign_sound(ship *sp);
 
 extern void ship_clear_ship_type_counts();
 extern void ship_add_ship_type_count( int ship_info_index, int num );
-extern void ship_add_ship_type_kill_count( int ship_info_index );
 
 extern int ship_get_type(char* output, ship_info* sip);
 extern int ship_get_default_orders_accepted( ship_info *sip );
@@ -1540,11 +1540,8 @@ extern int ship_query_general_type(ship *shipp);
 extern int ship_docking_valid(int docker, int dockee);
 extern int get_quadrant(vec3d *hit_pnt, object *shipobjp = NULL);	//	Return quadrant num of given hit point.
 
-extern void ship_obj_list_rebuild();	// only called by save/restore code
 extern int ship_query_state(char *name);
 
-// Goober5000
-int ship_primary_bank_has_ammo(int shipnum);	// check if current primary bank has ammo
 int ship_secondary_bank_has_ammo(int shipnum);	// check if current secondary bank has ammo
 
 int ship_engine_ok_to_warp(ship *sp);		// check if ship has engine power to warp
@@ -1578,14 +1575,13 @@ extern int Ship_auto_repair;	// flag to indicate auto-repair of subsystem should
 #endif
 
 void ship_subsystem_delete(ship *shipp);
-void ship_set_default_weapons(ship *shipp, ship_info *sip);
 float ship_quadrant_shield_strength(object *hit_objp, int quadrant_num);
 
 int ship_dumbfire_threat(ship *sp);
 int ship_lock_threat(ship *sp);
 
 int	bitmask_2_bitnum(int num);
-char	*ship_return_orders(char *outbuf, ship *sp);
+SCP_string ship_return_orders(ship *sp);
 char	*ship_return_time_to_goal(char *outbuf, ship *sp);
 
 void	ship_maybe_warn_player(ship *enemy_sp, float dist);
@@ -1616,7 +1612,6 @@ extern void ship_do_cap_subsys_cargo_hidden( ship *shipp, ship_subsys *subsys, i
 float ship_get_secondary_weapon_range(ship *shipp);
 
 // Goober5000
-int primary_out_of_ammo(ship_weapon *swp, int bank);
 int get_max_ammo_count_for_primary_bank(int ship_class, int bank, int ammo_type);
 
 int get_max_ammo_count_for_bank(int ship_class, int bank, int ammo_type);
@@ -1657,9 +1652,6 @@ void object_jettison_cargo(object *objp, object *cargo_objp, float jettison_spee
 // get damage done by exploding ship, takes into account mods for individual ship
 float ship_get_exp_damage(object* objp);
 
-// get whether ship has shockwave, takes into account mods for individual ship
-int ship_get_exp_propagates(ship *sp);
-
 // get outer radius of damage, takes into account mods for individual ship
 float ship_get_exp_outer_rad(object *ship_objp);
 
@@ -1674,9 +1666,6 @@ int ship_get_by_signature(int sig);
 
 // get the team of a reinforcement item
 int ship_get_reinforcement_team(int r_index);
-
-// determine if the given texture is used by a ship type. return ship info index, or -1 if not used by a ship
-int ship_get_texture(int bitmap);
 
 // page in bitmaps for all ships on a given level
 void ship_page_in();
@@ -1700,13 +1689,16 @@ int ship_is_tagged(object *objp);
 float ship_get_max_speed(ship *shipp);
 
 // returns warpout speed of ship
-float ship_get_warpout_speed(object *objp);
+float ship_get_warpout_speed(object *objp, ship_info *sip = nullptr, float half_length = 0.0f, float warping_dist = 0.0f);
 
 // returns true if ship is beginning to speed up in warpout
 int ship_is_beginning_warpout_speedup(object *objp);
 
 // return the length of the ship class
-float ship_class_get_length(ship_info *sip);
+float ship_class_get_length(const ship_info *sip);
+
+// return the actual center of the ship class
+void ship_class_get_actual_center(const ship_info *sip, vec3d *center_pos);
 
 // Goober5000 - used by change-ai-class
 extern void ship_set_new_ai_class(int ship_num, int new_ai_class);
@@ -1720,17 +1712,11 @@ extern bool ship_has_dock_bay(int shipnum);
 extern bool ship_useful_for_departure(int shipnum, int path_mask = 0);
 extern int ship_get_ship_for_departure(int team);
 
-// Goober5000 - moved here from hudbrackets.cpp
-extern bool ship_subsys_is_fighterbay(ship_subsys *ss);
-
 // Goober5000
 extern bool ship_fighterbays_all_destroyed(ship *shipp);
 
 // Goober5000
 extern bool ship_subsys_takes_damage(ship_subsys *ss);
-
-//phreak
-extern int ship_fire_tertiary(object *objp);
 
 // Goober5000 - handles submodel rotation, incorporating conditions such as gun barrels when firing
 extern void ship_do_submodel_rotation(ship *shipp, model_subsystem *psub, ship_subsys *pss);
@@ -1741,14 +1727,9 @@ extern int ship_has_engine_power(ship *shipp);
 
 // Swifty - Cockpit displays
 void ship_init_cockpit_displays(ship *shipp);
-void ship_add_cockpit_display(cockpit_display_info *display, int cockpit_model_num);
-void ship_set_hud_cockpit_targets();
 void ship_clear_cockpit_displays();
 int ship_start_render_cockpit_display(size_t cockpit_display_num);
 void ship_end_render_cockpit_display(size_t cockpit_display_num);
-
-//WMC - Warptype stuff
-int warptype_match(char *p);
 
 // Goober5000
 int ship_starting_wing_lookup(const char *wing_name);
@@ -1758,11 +1739,9 @@ int ship_tvt_wing_lookup(const char *wing_name);
 // Goober5000
 int ship_class_compare(int ship_class_1, int ship_class_2);
 
-int armor_type_get_idx(char* name);
+int armor_type_get_idx(const char* name);
 
 void armor_init();
-
-int thruster_glow_anim_load(generic_anim *ga);
 
 // Sushi - Path metadata
 void init_path_metadata(path_metadata& metadata);
@@ -1785,7 +1764,7 @@ extern SCP_vector<ship_effect> Ship_effects;
  *  
  *  @return An index into the Snds vector, if the specified index could not be found then the id itself will be returned
  */
-int ship_get_sound(object *objp, GameSoundsIndex id);
+gamesnd_id ship_get_sound(object *objp, GameSounds id);
 
 /**
  *  @brief Specifies if a ship has a custom sound for the specified id
@@ -1795,7 +1774,7 @@ int ship_get_sound(object *objp, GameSoundsIndex id);
  *  
  *  @return True if this object has the specified sound, false otherwise
  */
-bool ship_has_sound(object *objp, GameSoundsIndex id);
+bool ship_has_sound(object *objp, GameSounds id);
 
 /**
  * @brief Returns the index of the default player ship
@@ -1824,5 +1803,7 @@ inline bool should_be_ignored(ship* shipp) {
 extern void set_default_ignore_list();
 
 extern void toggle_ignore_list_flag(Ship::Ship_Flags flag);
+
+ship_subsys* ship_get_subsys_for_submodel(ship* shipp, int submodel);
 
 #endif

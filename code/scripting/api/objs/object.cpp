@@ -7,11 +7,13 @@
 #include "shields.h"
 #include "mc_info.h"
 
+#include "asteroid/asteroid.h"
+#include "debris/debris.h"
+#include "object/objectshield.h"
+#include "scripting/api/LuaEventCallback.h"
+#include "scripting/lua/LuaFunction.h"
 #include "ship/ship.h"
 #include "weapon/weapon.h"
-#include "object/objectshield.h"
-#include "debris/debris.h"
-#include "asteroid/asteroid.h"
 
 namespace scripting {
 namespace api {
@@ -52,7 +54,7 @@ ADE_FUNC(__tostring, l_Object, NULL, "Returns name of object (if any)", "string"
 			sprintf(buf, "%s", Ships[objh->objp->instance].ship_name);
 			break;
 		case OBJ_WEAPON:
-			sprintf(buf, "%s projectile", Weapon_info[Weapons[objh->objp->instance].weapon_info_index].name);
+			sprintf(buf, "%s projectile", Weapon_info[Weapons[objh->objp->instance].weapon_info_index].get_display_string());
 			break;
 		default:
 			sprintf(buf, "Object %d [%d]", OBJ_INDEX(objh->objp), objh->sig);
@@ -402,11 +404,58 @@ ADE_FUNC(checkRayCollision, l_Object, "vector Start Point, vector End Point, [bo
 	}
 
 	if (local)
-		return ade_set_args(L, "oo", l_Vector.Set(hull_check.hit_point), l_ColInfo.Set(mc_info_h(new mc_info(hull_check))));
+		return ade_set_args(L, "oo", l_Vector.Set(hull_check.hit_point), l_ColInfo.Set(mc_info_h(hull_check)));
 	else
-		return ade_set_args(L, "oo", l_Vector.Set(hull_check.hit_point_world),  l_ColInfo.Set(mc_info_h(new mc_info(hull_check))));
+		return ade_set_args(L, "oo", l_Vector.Set(hull_check.hit_point_world),  l_ColInfo.Set(mc_info_h(hull_check)));
 }
 
+ADE_FUNC(addPreMoveHook, l_Object, "function(object) callback",
+         "Registers a callback on this object which is called every time <i>before</i> the physics rules are applied "
+         "to the object. The callback is attached to this specific object and will not be called anymore once the "
+         "object is deleted. The parameter of the function is the object that is being moved.",
+         "nothing", "Returns nothing.")
+{
+	object_h* objh = nullptr;
+	luacpp::LuaFunction callback;
+	if (!ade_get_args(L, "ou", l_Object.GetPtr(&objh), &callback)) {
+		return ADE_RETURN_NIL;
+	}
 
+	if (!callback.isValid()) {
+		return ADE_RETURN_NIL;
+	}
+
+	if (!objh->IsValid())
+		return ADE_RETURN_NIL;
+
+	objh->objp->pre_move_event.add(make_lua_callback<void, object*>(callback));
+
+	return ADE_RETURN_NIL;
 }
+
+ADE_FUNC(addPostMoveHook, l_Object, "function(object) callback",
+         "Registers a callback on this object which is called every time <i>after</i> the physics rules are applied "
+         "to the object. The callback is attached to this specific object and will not be called anymore once the "
+         "object is deleted. The parameter of the function is the object that is being moved.",
+         "nothing", "Returns nothing.")
+{
+	object_h* objh = nullptr;
+	luacpp::LuaFunction callback;
+	if (!ade_get_args(L, "ou", l_Object.GetPtr(&objh), &callback)) {
+		return ADE_RETURN_NIL;
+	}
+
+	if (!callback.isValid()) {
+		return ADE_RETURN_NIL;
+	}
+
+	if (!objh->IsValid())
+		return ADE_RETURN_NIL;
+
+	objh->objp->post_move_event.add(make_lua_callback<void, object*>(callback));
+
+	return ADE_RETURN_NIL;
 }
+
+} // namespace api
+} // namespace scripting

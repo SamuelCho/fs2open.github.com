@@ -28,18 +28,24 @@ ADE_INDEXER(l_Tables_ShipClasses, "number Index/string Name", "Array of ship cla
 	if(!ships_inited)
 		return ade_set_error(L, "o", l_Shipclass.Set(-1));
 
-	char *name;
+	const char* name;
 	if(!ade_get_args(L, "*s", &name))
 		return ade_set_error(L, "o", l_Shipclass.Set(-1));
 
 	int idx = ship_info_lookup(name);
 
 	if(idx < 0) {
-		idx = atoi(name);
-		if(idx < 1 || idx >= static_cast<int>(Ship_info.size()))
+		try {
+			idx = std::stoi(name);
+			idx--; // Lua->FS2
+		} catch (const std::exception&) {
+			// Not a number
 			return ade_set_error(L, "o", l_Shipclass.Set(-1));
+		}
 
-		idx--;	//Lua->FS2
+		if (idx < 0 || idx >= static_cast<int>(Ship_info.size())) {
+			return ade_set_error(L, "o", l_Shipclass.Set(-1));
+		}
 	}
 
 	return ade_set_args(L, "o", l_Shipclass.Set(idx));
@@ -61,7 +67,7 @@ ADE_INDEXER(l_Tables_WeaponClasses, "number Index/string WeaponName", "Array of 
 	if(!Weapons_inited)
 		return ade_set_error(L, "o", l_Weaponclass.Set(-1));
 
-	char *name;
+	const char* name;
 	if(!ade_get_args(L, "*s", &name))
 		return 0;
 

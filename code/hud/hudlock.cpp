@@ -36,8 +36,8 @@ vec3d lock_world_pos;
 
 static float Lock_start_dist;
 
-int Missile_track_loop = -1;
-int Missile_lock_loop = -1;
+sound_handle Missile_track_loop = sound_handle::invalid();
+sound_handle Missile_lock_loop  = sound_handle::invalid();
 
 int Lock_target_box_width[GR_NUM_RESOLUTIONS] = {
 	19,
@@ -606,25 +606,25 @@ void hud_do_lock_indicator(float frametime)
 		return;
 
 	if (Player_ai->current_target_is_locked) {
-		if ( Missile_track_loop > -1 )	{
+		if (Missile_track_loop.isValid()) {
 			snd_stop(Missile_track_loop);
-			Missile_track_loop = -1;
+			Missile_track_loop = sound_handle::invalid();
 
-			if (wip->hud_locked_snd >= 0)
+			if (wip->hud_locked_snd.isValid())
 			{
 				Missile_lock_loop = snd_play(gamesnd_get_game_sound(wip->hud_locked_snd));
 			}
 			else
 			{
-				Missile_lock_loop = snd_play(gamesnd_get_game_sound(ship_get_sound(Player_obj, SND_MISSILE_LOCK)));
+				Missile_lock_loop = snd_play(gamesnd_get_game_sound(ship_get_sound(Player_obj, GameSounds::MISSILE_LOCK)));
 			}
 		}
 	}
 	else {
 		Player_ai->ai_flags.set(AI::AI_Flags::Seek_lock);		// set this flag so multiplayer's properly track lock on other ships
-		if ( Missile_lock_loop != -1 && snd_is_playing(Missile_lock_loop) ) {
+		if (Missile_lock_loop.isValid() && snd_is_playing(Missile_lock_loop)) {
 			snd_stop(Missile_lock_loop);
-			Missile_lock_loop = -1;
+			Missile_lock_loop = sound_handle::invalid();
 		}
 	}
 }
@@ -840,14 +840,14 @@ void hud_calculate_lock_position(float frametime)
 			accumulated_y_pixels -= int_portion;
 		}
 
-		if ( Missile_track_loop == -1 ) {
-			if (wip->hud_tracking_snd >= 0)
+		if (!Missile_track_loop.isValid()) {
+			if (wip->hud_tracking_snd.isValid())
 			{
 				Missile_track_loop = snd_play_looping( gamesnd_get_game_sound(wip->hud_tracking_snd), 0.0f , -1, -1);
 			}
 			else
 			{
-				Missile_track_loop = snd_play_looping( gamesnd_get_game_sound(ship_get_sound(Player_obj, SND_MISSILE_TRACKING)), 0.0f , -1, -1);
+				Missile_track_loop = snd_play_looping( gamesnd_get_game_sound(ship_get_sound(Player_obj, GameSounds::MISSILE_TRACKING)), 0.0f , -1, -1);
 			}
 		}
 
@@ -863,9 +863,9 @@ void hud_calculate_lock_position(float frametime)
 
 	} else {
 
-		if ( Missile_track_loop > -1 )	{
+		if (Missile_track_loop.isValid()) {
 			snd_stop(Missile_track_loop);
-			Missile_track_loop = -1;
+			Missile_track_loop = sound_handle::invalid();
 		}
 
 		Player_ai->current_target_is_locked = 0;
@@ -977,9 +977,9 @@ void hud_calculate_lock_start_pos()
 // hud_stop_looped_locking_sounds() will terminate any hud related looping sounds that are playing
 void hud_stop_looped_locking_sounds()
 {
-	if ( Missile_track_loop > -1 )	{
+	if (Missile_track_loop.isValid()) {
 		snd_stop(Missile_track_loop);
-		Missile_track_loop = -1;
+		Missile_track_loop = sound_handle::invalid();
 	}
 }
 

@@ -28,6 +28,8 @@ struct OpenALInformation {
 
 	SCP_vector<SCP_string> playback_devices;
 	SCP_vector<SCP_string> capture_devices;
+
+	SCP_vector<std::pair<SCP_string, bool>> efx_support;
 };
 
 OpenALInformation openal_get_platform_information();
@@ -40,7 +42,7 @@ OpenALInformation openal_get_platform_information();
 		nprintf(("Warning", "SOUND: %s:%d - OpenAL error = '%s'\n", __FILE__, __LINE__, error_text));	\
 		y;	\
 	}	\
-} while (0);
+} while (false);
 
 // like OpenAL_ErrorCheck() except that it gives the error message from x but does nothing about it
 #define OpenAL_ErrorPrint( x )	do {	\

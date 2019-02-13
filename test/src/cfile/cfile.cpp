@@ -1,6 +1,7 @@
 
-#include <gtest/gtest.h>
+#include <cfile/cfilesystem.h>
 #include <graphics/font.h>
+#include <gtest/gtest.h>
 
 #include "util/FSTestFixture.h"
 
@@ -11,10 +12,10 @@ class CFileInitTest : public test::FSTestFixture {
 	}
 
  protected:
-	virtual void SetUp() override {
+	void SetUp() override {
 		test::FSTestFixture::SetUp();
 	}
-	virtual void TearDown() override {
+	void TearDown() override {
 		test::FSTestFixture::TearDown();
 
 		cfile_close();
@@ -48,10 +49,10 @@ class CFileTest : public test::FSTestFixture {
 	}
 
  protected:
-	virtual void SetUp() override {
+	void SetUp() override {
 		test::FSTestFixture::SetUp();
 	}
-	virtual void TearDown() override {
+	void TearDown() override {
 		extern bool Skip_memory_files;
 		Skip_memory_files = false;
 
@@ -111,4 +112,43 @@ TEST_F(CFileTest, override_default_file) {
 	ASSERT_EQ(66, cfilelength(fp));
 
 	cfclose(fp);
+}
+
+TEST(CFileStandalone, test_check_location_flags) {
+	ASSERT_FALSE(cf_check_location_flags(CF_LOCATION_ROOT_GAME | CF_LOCATION_TYPE_ROOT, CF_LOCATION_ROOT_USER));
+	ASSERT_TRUE(cf_check_location_flags(CF_LOCATION_ROOT_GAME | CF_LOCATION_TYPE_ROOT, CF_LOCATION_ROOT_GAME));
+	ASSERT_TRUE(cf_check_location_flags(CF_LOCATION_ROOT_GAME | CF_LOCATION_TYPE_ROOT, CF_LOCATION_TYPE_ROOT));
+	ASSERT_FALSE(cf_check_location_flags(CF_LOCATION_ROOT_GAME | CF_LOCATION_TYPE_ROOT, CF_LOCATION_TYPE_PRIMARY_MOD));
+	ASSERT_FALSE(cf_check_location_flags(CF_LOCATION_ROOT_GAME | CF_LOCATION_TYPE_ROOT,
+	                                     CF_LOCATION_TYPE_SECONDARY_MODS));
+	ASSERT_FALSE(cf_check_location_flags(CF_LOCATION_ROOT_GAME | CF_LOCATION_TYPE_ROOT,
+	                                     CF_LOCATION_ROOT_GAME | CF_LOCATION_TYPE_PRIMARY_MOD));
+	ASSERT_TRUE(cf_check_location_flags(CF_LOCATION_ROOT_GAME | CF_LOCATION_TYPE_ROOT,
+	                                    CF_LOCATION_ROOT_GAME | CF_LOCATION_TYPE_ROOT));
+}
+TEST_F(CFileTest, test_get_path_type)
+{
+	SCP_string cfile_dir(TEST_DATA_PATH);
+	cfile_dir += DIR_SEPARATOR_CHAR;
+	cfile_dir += "test"; // Cfile expects something after the path
+
+	ASSERT_FALSE(cfile_init(cfile_dir.c_str()));
+
+	// Test simple case
+	ASSERT_EQ(CF_TYPE_DATA, cfile_get_path_type("data"));
+	ASSERT_EQ(CF_TYPE_DATA, cfile_get_path_type("///data"));
+	ASSERT_EQ(CF_TYPE_DATA, cfile_get_path_type("data\\\\\\"));
+	ASSERT_EQ(CF_TYPE_DATA, cfile_get_path_type("////data\\\\\\"));
+
+	// Test single subdirectory case
+	ASSERT_EQ(CF_TYPE_INTERFACE, cfile_get_path_type("data/interface"));
+	ASSERT_EQ(CF_TYPE_INTERFACE, cfile_get_path_type("///data/interface"));
+	ASSERT_EQ(CF_TYPE_INTERFACE, cfile_get_path_type("data/interface\\\\\\"));
+	ASSERT_EQ(CF_TYPE_INTERFACE, cfile_get_path_type("////data/interface\\\\\\"));
+
+	// Test nested subdirectory case
+	ASSERT_EQ(CF_TYPE_INTERFACE_MARKUP, cfile_get_path_type("data/interface/markup"));
+	ASSERT_EQ(CF_TYPE_INTERFACE_MARKUP, cfile_get_path_type("///data/interface/markup"));
+	ASSERT_EQ(CF_TYPE_INTERFACE_MARKUP, cfile_get_path_type("data/interface/markup\\\\\\"));
+	ASSERT_EQ(CF_TYPE_INTERFACE_MARKUP, cfile_get_path_type("////data/interface/markup\\\\\\"));
 }

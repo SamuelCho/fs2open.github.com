@@ -31,7 +31,25 @@ void SubtitleDecoder::decodePacket(AVPacket* packet) {
 	}
 }
 void SubtitleDecoder::finishDecoding() {
+	// Handle those decoders that have a delay
+	AVPacket nullPacket;
+	memset(&nullPacket, 0, sizeof(nullPacket));
+	nullPacket.data = nullptr;
+	nullPacket.size = 0;
 
+	AVSubtitle subtitle;
+	while (true) {
+		int finishedFrame = 1;
+		auto err = avcodec_decode_subtitle2(m_status->subtitleCodecCtx, &subtitle, &finishedFrame, &nullPacket);
+
+		if (err < 0 || !finishedFrame) {
+			break;
+		}
+
+		pushSubtitleFrame(&nullPacket, &subtitle);
+
+		avsubtitle_free(&subtitle);
+	}
 }
 void SubtitleDecoder::pushSubtitleFrame(AVPacket* packet, AVSubtitle* subtitle) {
 	if (subtitle->format != 1) {
@@ -110,6 +128,9 @@ void SubtitleDecoder::pushSubtitleFrame(AVPacket* packet, AVSubtitle* subtitle) 
 	frame->displayEndTime = end_time;
 
 	pushFrame(std::move(frame));
+}
+void SubtitleDecoder::flushBuffers() {
+	avcodec_flush_buffers(m_status->subtitleCodecCtx);
 }
 
 }

@@ -55,13 +55,13 @@ ADE_FUNC(__len, l_ShipTextures, NULL, "Number of textures on ship", "number", "N
 ADE_INDEXER(l_ShipTextures, "number Index/string TextureFilename", "Array of ship textures", "texture", "Texture, or invalid texture handle on failure")
 {
 	object_h *oh;
-	char *s;
-	int tdx=-1;
-	if (!ade_get_args(L, "os|o", l_ShipTextures.GetPtr(&oh), &s, l_Texture.Get(&tdx)))
-		return ade_set_error(L, "o", l_Texture.Set(-1));
+	const char* s;
+	texture_h* tdx = nullptr;
+	if (!ade_get_args(L, "os|o", l_ShipTextures.GetPtr(&oh), &s, l_Texture.GetPtr(&tdx)))
+		return ade_set_error(L, "o", l_Texture.Set(texture_h()));
 
 	if (!oh->IsValid() || s==NULL)
-		return ade_set_error(L, "o", l_Texture.Set(-1));
+		return ade_set_error(L, "o", l_Texture.Set(texture_h()));
 
 	ship *shipp = &Ships[oh->objp->instance];
 	polymodel *pm = model_get(Ship_info[shipp->ship_info_index].model_num);
@@ -100,7 +100,7 @@ ADE_INDEXER(l_ShipTextures, "number Index/string TextureFilename", "Array of shi
 		final_index = atoi(s) - 1;	//Lua->FS2
 
 		if (final_index < 0 || final_index >= MAX_REPLACEMENT_TEXTURES)
-			return ade_set_error(L, "o", l_Texture.Set(-1));
+			return ade_set_error(L, "o", l_Texture.Set(texture_h()));
 	}
 
 	if (ADE_SETTING_VAR) {
@@ -111,16 +111,18 @@ ADE_INDEXER(l_ShipTextures, "number Index/string TextureFilename", "Array of shi
 				shipp->ship_replacement_textures[i] = -1;
 		}
 
-		if(bm_is_valid(tdx))
-			shipp->ship_replacement_textures[final_index] = tdx;
-		else
-			shipp->ship_replacement_textures[final_index] = -1;
+		if (tdx != nullptr) {
+			if (tdx->isValid())
+				shipp->ship_replacement_textures[final_index] = tdx->handle;
+			else
+				shipp->ship_replacement_textures[final_index] = -1;
+		}
 	}
 
 	if (shipp->ship_replacement_textures != NULL && shipp->ship_replacement_textures[final_index] >= 0)
-		return ade_set_args(L, "o", l_Texture.Set(shipp->ship_replacement_textures[final_index]));
+		return ade_set_args(L, "o", l_Texture.Set(texture_h(shipp->ship_replacement_textures[final_index])));
 	else
-		return ade_set_args(L, "o", l_Texture.Set(pm->maps[final_index / TM_NUM_TYPES].textures[final_index % TM_NUM_TYPES].GetTexture()));
+		return ade_set_args(L, "o", l_Texture.Set(texture_h(pm->maps[final_index / TM_NUM_TYPES].textures[final_index % TM_NUM_TYPES].GetTexture())));
 }
 
 ADE_FUNC(isValid, l_ShipTextures, NULL, "Detects whether handle is valid", "boolean", "true if valid, false if handle is invalid, nil if a syntax/type error occurs")
@@ -138,7 +140,7 @@ ADE_OBJ_DERIV(l_Ship, object_h, "ship", "Ship handle", l_Object);
 ADE_INDEXER(l_Ship, "string Name/number Index", "Array of ship subsystems", "subsystem", "Subsystem handle, or invalid subsystem handle if index or ship handle is invalid")
 {
 	object_h *objh;
-	char *s = NULL;
+	const char* s      = nullptr;
 	ship_subsys_h *sub = nullptr;
 	if(!ade_get_args(L, "o|so", l_Ship.GetPtr(&objh), &s, l_Subsystem.GetPtr(&sub)))
 		return ade_set_error(L, "o", l_Subsystem.Set(ship_subsys_h()));
@@ -180,7 +182,7 @@ ADE_FUNC(__len, l_Ship, NULL, "Number of subsystems on ship", "number", "Subsyst
 ADE_VIRTVAR(ShieldArmorClass, l_Ship, "string", "Current Armor class of the ships' shield", "string", "Armor class name, or empty string if none is set")
 {
 	object_h *objh;
-	char *s = NULL;
+	const char* s    = nullptr;
 	const char *name = NULL;
 
 	if(!ade_get_args(L, "o|s", l_Ship.GetPtr(&objh), &s))
@@ -207,7 +209,7 @@ ADE_VIRTVAR(ShieldArmorClass, l_Ship, "string", "Current Armor class of the ship
 ADE_VIRTVAR(ArmorClass, l_Ship, "string", "Current Armor class", "string", "Armor class name, or empty string if none is set")
 {
 	object_h *objh;
-	char *s = NULL;
+	const char* s    = nullptr;
 	const char *name = NULL;
 
 	if(!ade_get_args(L, "o|s", l_Ship.GetPtr(&objh), &s))
@@ -231,10 +233,10 @@ ADE_VIRTVAR(ArmorClass, l_Ship, "string", "Current Armor class", "string", "Armo
 	return ade_set_args(L, "s", name);
 }
 
-ADE_VIRTVAR(Name, l_Ship, "string", "Ship name", "string", "Ship name, or empty string if handle is invalid")
+ADE_VIRTVAR(Name, l_Ship, "string", "Ship name. This is the actual name of the ship. Use <i>getDisplayString</i> to get the string which should be displayed to the player.", "string", "Ship name, or empty string if handle is invalid")
 {
 	object_h *objh;
-	char *s = NULL;
+	const char* s = nullptr;
 	if(!ade_get_args(L, "o|s", l_Ship.GetPtr(&objh), &s))
 		return ade_set_error(L, "s", "");
 
@@ -248,6 +250,25 @@ ADE_VIRTVAR(Name, l_Ship, "string", "Ship name", "string", "Ship name, or empty 
 	}
 
 	return ade_set_args(L, "s", shipp->ship_name);
+}
+
+ADE_VIRTVAR(DisplayName, l_Ship, "string", "Ship display name", "string", "The display name of the ship or empty if there is no display string")
+{
+	object_h *objh;
+	const char* s = nullptr;
+	if(!ade_get_args(L, "o|s", l_Ship.GetPtr(&objh), &s))
+		return ade_set_error(L, "s", "");
+
+	if(!objh->IsValid())
+		return ade_set_error(L, "s", "");
+
+	ship *shipp = &Ships[objh->objp->instance];
+
+	if(ADE_SETTING_VAR && s != nullptr) {
+		shipp->display_name = s;
+	}
+
+	return ade_set_args(L, "s", shipp->display_name.c_str());
 }
 
 ADE_VIRTVAR(AfterburnerFuelLeft, l_Ship, "number", "Afterburner fuel left", "number", "Afterburner fuel left, or 0 if handle is invalid")
@@ -632,7 +653,7 @@ ADE_VIRTVAR(TargetSubsystem, l_Ship, "subsystem", "Target subsystem of ship.", "
 				if (aip->target_signature != newh->sig)
 					hud_shield_hit_reset(newh->objp);
 
-				Ships[newh->ss->parent_objnum].last_targeted_subobject[Player_num] = newh->ss;
+				Ships[Objects[newh->ss->parent_objnum].instance].last_targeted_subobject[Player_num] = newh->ss;
 			}
 
 			aip->target_objnum = OBJ_INDEX(newh->objp);
@@ -923,7 +944,7 @@ ADE_FUNC(kill, l_Ship, "[object Killer]", "Kills the ship. Set \"Killer\" to the
 
 ADE_FUNC(addShipEffect, l_Ship, "string name, int duration (in milliseconds)", "Activates an effect for this ship. Effect names are defined in Post_processing.tbl, and need to be implemented in the main shader. This functions analogous to the ship-effect sexp. NOTE: only one effect can be active at any time, adding new effects will override effects already in progress.\n", "boolean", "Returns true if the effect was successfully added, false otherwise") {
 	object_h *shiph;
-	char* effect = NULL;
+	const char* effect = nullptr;
 	int duration;
 	int effect_num;
 
@@ -980,7 +1001,7 @@ ADE_FUNC(fireCountermeasure, l_Ship, NULL, "Launches a countermeasure from the s
 	if(!objh->IsValid())
 		return ade_set_error(L, "b", false);
 
-	return ade_set_args(L, "b", ship_launch_countermeasure(objh->objp));
+	return ade_set_args(L, "b", ship_launch_countermeasure(objh->objp) != 0);
 }
 
 ADE_FUNC(firePrimary, l_Ship, NULL, "Fires ship primary bank(s)", "number", "Number of primary banks fired")
@@ -1014,7 +1035,7 @@ ADE_FUNC(fireSecondary, l_Ship, NULL, "Fires ship secondary bank(s)", "number", 
 ADE_FUNC(getAnimationDoneTime, l_Ship, "number Type, number Subtype", "Gets time that animation will be done", "number", "Time (seconds), or 0 if ship handle is invalid")
 {
 	object_h *objh;
-	char *s = NULL;
+	const char* s = nullptr;
 	int subtype=-1;
 	if(!ade_get_args(L, "o|si", l_Ship.GetPtr(&objh), &s, &subtype))
 		return ade_set_error(L, "f", 0.0f);
@@ -1250,6 +1271,11 @@ ADE_FUNC(giveOrder, l_Ship, "enumeration Order, [object Target=nil, subsystem Ta
 			ai_mode = AI_GOAL_PLAY_DEAD;
 			break;
 		}
+		case LE_ORDER_PLAY_DEAD_PERSISTENT:
+		{
+			ai_mode = AI_GOAL_PLAY_DEAD_PERSISTENT;
+			break;
+		}
 		case LE_ORDER_FLY_TO:
 		{
 			if(tgh_valid && tgh->objp->type == OBJ_SHIP)
@@ -1383,7 +1409,7 @@ ADE_FUNC(triggerAnimation, l_Ship, "string Type, [number Subtype, boolean Forwar
 		 "True if successful, false or nil otherwise")
 {
 	object_h *objh;
-	char *s = NULL;
+	const char* s = nullptr;
 	bool b = true;
 	bool instant = false;
 	int subtype=-1;
@@ -1629,6 +1655,21 @@ ADE_FUNC(getWing, l_Ship, NULL, "Returns the ship's wing", "wing", "Wing handle,
 
 	shipp = &Ships[objh->objp->instance];
 	return ade_set_args(L, "o", l_Wing.Set(shipp->wingnum));
+}
+
+ADE_FUNC(getDisplayString, l_Ship, nullptr, "Returns the string which should be used when displaying the name of the ship to the player", "string", "The display string or empty if handle is invalid")
+{
+	object_h *objh = nullptr;
+	ship *shipp = nullptr;
+
+	if (!ade_get_args(L, "o", l_Ship.GetPtr(&objh)))
+		return ade_set_error(L, "s", "");
+
+	if(!objh->IsValid())
+		return ade_set_error(L, "s", "");
+
+	shipp = &Ships[objh->objp->instance];
+	return ade_set_args(L, "s", shipp->get_display_string());
 }
 
 

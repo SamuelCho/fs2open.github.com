@@ -3250,12 +3250,12 @@ int CFREDView::global_error_check_player_wings(int multi)
 			{
 				if (The_mission.game_type & MISSION_TYPE_MULTI_TEAMS) 
 				{
-					if (error("Player %s should be part of %s wing", Ships[ship_instance].ship_name, tvt_wing_list))
+					if (error("Player %s should be part of %s wing", Ships[ship_instance].ship_name, static_cast<LPCTSTR>(tvt_wing_list)))
 						return 1;
 				}
 				else
 				{
-					if (error("Player %s should be part of %s wing", Ships[ship_instance].ship_name, starting_wing_list))
+					if (error("Player %s should be part of %s wing", Ships[ship_instance].ship_name, static_cast<LPCTSTR>(starting_wing_list)))
 						return 1;
 				}
 			}
@@ -3411,6 +3411,7 @@ char *error_check_initial_orders(ai_goal *goals, int ship, int wing)
 			case AI_GOAL_UNDOCK:
 			case AI_GOAL_KEEP_SAFE_DISTANCE:
 			case AI_GOAL_PLAY_DEAD:
+			case AI_GOAL_PLAY_DEAD_PERSISTENT:
 			case AI_GOAL_WARP:
 				flag = 0;
 				break;
@@ -3542,7 +3543,7 @@ char *error_check_initial_orders(ai_goal *goals, int ship, int wing)
 		switch (goals[i].ai_mode) {
 			case AI_GOAL_DESTROY_SUBSYSTEM:
 				Assert(flag == 2 && inst >= 0);
-				if (ship_get_subsys_index(&Ships[inst], goals[i].docker.name, 1) < 0)
+				if (ship_get_subsys_index(&Ships[inst], goals[i].docker.name) < 0)
 					return "Unknown subsystem type";
 
 				break;

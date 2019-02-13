@@ -29,7 +29,7 @@ class object;
 #define TBOX_FLASH_STATUS			3
 #define TBOX_FLASH_SUBSYS			4
 
-extern int Target_static_looping;
+extern sound_handle Target_static_looping;
 extern int Target_display_cargo;
 extern char Cargo_string[256];
 
@@ -107,9 +107,9 @@ public:
 	void initDisabledStatusOffsets(int x, int y, bool activate);
 	void initDesaturate(bool desaturate);
 
-	void initialize();
-	void pageIn();
-	void render(float frametime);
+	void initialize() override;
+	void pageIn() override;
+	void render(float frametime) override;
 	void renderTargetShip(object *target_objp);
 	void renderTargetWeapon(object *target_objp);
 	void renderTargetDebris(object *target_objp);
@@ -148,17 +148,15 @@ public:
 	void initTimeOffsets(int x, int y);
 	void initOrderOffsets(int x, int y);
 	void initOrderMaxWidth(int width);
-	void updateFrame();
-	void render(float frametime);
-	void initialize();
+	void render(float frametime) override;
+	void initialize() override;
 	void initDockFlashTimer();
 	void startFlashDock(int duration=TBOX_FLASH_DURATION);
 	int maybeFlashDock(int flash_fast=0);
 	void endFlashDock();
-	void pageIn();
+	void pageIn() override;
 };
 
-void	hud_targetbox_init();
 void	hud_targetbox_init_flash();
 void	hud_get_target_strength(object *objp, float *shields, float *integrity);
 

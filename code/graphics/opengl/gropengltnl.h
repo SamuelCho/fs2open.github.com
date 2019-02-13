@@ -33,6 +33,8 @@ extern float shadow_middist;
 extern float shadow_fardist;
 extern bool Rendering_to_shadow_map;
 
+extern GLuint Shadow_map_texture;
+
 struct opengl_vertex_bind {
 	vertex_format_data::vertex_format format;
 	GLint size;
@@ -72,6 +74,7 @@ void opengl_tnl_set_material_movie(movie_material* material_info);
 void opengl_tnl_set_material_batched(batched_bitmap_material * material_info);
 void opengl_tnl_set_material_nanovg(nanovg_material * material_info);
 void opengl_tnl_set_material_decal(decal_material * material_info);
+void opengl_tnl_set_rocketui_material(interface_material* material_info);
 
 void opengl_tnl_set_model_material(model_material *material_info);
 

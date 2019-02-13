@@ -53,26 +53,6 @@ void cmeasure_set_ship_launch_vel(object *objp, object *parent_objp, int arand)
 	vm_vec_copy_scale(&objp->phys_info.desired_vel, &objp->orient.vec.fvec, objp->phys_info.max_vel.xyz.z );
 }
 
-void cmeasure_select_next(ship *shipp)
-{
-	Assert(shipp != NULL);
-	int i, new_index;
-
-	for (i = 1; i < Num_weapon_types; i++)
-	{
-		new_index = (shipp->current_cmeasure + i) % Num_weapon_types;
-
-		if(Weapon_info[new_index].wi_flags[Weapon::Info_Flags::Cmeasure])
-		{
-			shipp->current_cmeasure = new_index;
-			return;
-		}
-	}
-
-	mprintf(("Countermeasure type set to %i in frame %i\n", shipp->current_cmeasure, Framecount));
-}
-
-
 /** 
  * @brief If this is a player countermeasure, let the player know they evaded a missile.
  * @param objp [description]
@@ -92,7 +72,7 @@ void cmeasure_maybe_alert_success(object *objp)
 
 	if ( objp->parent == OBJ_INDEX(Player_obj) ) {
 		hud_start_text_flash(XSTR("Evaded", 1430), 800);
-		snd_play(gamesnd_get_game_sound(ship_get_sound(Player_obj, SND_MISSILE_EVADED_POPUP)));
+		snd_play(gamesnd_get_game_sound(ship_get_sound(Player_obj, GameSounds::MISSILE_EVADED_POPUP)));
 	} else if ( Objects[objp->parent].flags[Object::Object_Flags::Player_ship] ) {
 		send_countermeasure_success_packet( objp->parent );
 	}

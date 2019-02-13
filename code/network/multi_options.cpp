@@ -28,7 +28,7 @@
 #include "cfile/cfile.h"
 #include "fs2netd/fs2netd_client.h"
 
-#include <limits.h>
+#include <climits>
 
 
 
@@ -349,6 +349,9 @@ void multi_options_set_netgame_defaults(multi_server_options *options)
 
 	// set the default max voice record time
 	options->voice_record_time = 5000;
+
+	// Set default skill level to medium
+	options->skill_level = NUM_SKILL_LEVELS / 2;
 }
 
 // set local netplayer defaults
@@ -655,7 +658,7 @@ void multi_options_process_packet(unsigned char *data, header *hinfo)
 			GET_STRING(ng.campaign_name);
 
 			// set the netgame max players here if the filename has changed
-			if(strcmp(Netgame.campaign_name,ng.campaign_name)){				
+			if(strcmp(Netgame.campaign_name,ng.campaign_name) != 0){				
 				memset(title,0,NAME_LENGTH+1);			
 				if(!mission_campaign_get_info(ng.campaign_name,title,&campaign_type,&max_players)){
 					Netgame.max_players = 0;
@@ -680,7 +683,7 @@ void multi_options_process_packet(unsigned char *data, header *hinfo)
 		else {
 			GET_STRING(ng.mission_name);
 
-			if(strcmp(Netgame.mission_name,ng.mission_name)){
+			if(strcmp(Netgame.mission_name,ng.mission_name) != 0){
 				if(strlen(ng.mission_name)){
 					Netgame.max_players = mission_parse_get_multi_mission_info( ng.mission_name );
 				} else {

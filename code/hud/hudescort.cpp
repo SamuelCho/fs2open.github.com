@@ -51,95 +51,6 @@ escort_info		Escort_ships[MAX_COMPLETE_ESCORT_LIST];
 int				Num_escort_ships;
 int				Max_escort_ships = 3;
 
-//int Escort_gauge_y[MAX_ESCORT_SHIPS] = { 219, 230, 241 };
-
-/*
-int Escort_gauge_text_coords[GR_NUM_RESOLUTIONS][MAX_ESCORT_SHIPS][4][2] =
-{
-	{ // GR_640
-		{
-			{489,219}, 
-			{599,212}, 
-			{604,219}, 
-			{474,219}
-		},
-		{
-			{489,230}, 
-			{599,223},
-			{604,230},
-			{474,230}
-		},
-		{
-			{489,241}, 
-			{599,234}, 
-			{604,241},
-			{474,241} 
-		},
-	}, 
-	{ // GR_1024
-		{
-			{869,343},
-			{973,338}, 
-			{981,343}, 
-			{854,343} 
-		},
-		{
-			{869,354}, 
-			{973,349},
-			{981,354},
-			{854,354}
-		},
-		{
-			{869,365}, 
-			{973,360},
-			{981,365},
-			{854,365}
-		},
-	}
-};
-
-// escort gauge coords
-int Escort_coords[GR_NUM_RESOLUTIONS][4][2] = {
-	{ // GR_640
-		{486, 206},
-		{486, 219},
-		{486, 230},
-		{486, 241}
-	},
-	{ // GR_1024
-		{865, 330},
-		{865, 343},
-		{865, 354},
-		{865, 365}
-	}
-};
-
-// monitoring text coords
-int Monitoring_coords[GR_NUM_RESOLUTIONS][2] = {
-	{ // GR_640
-		489, 208
-	},
-	{ // GR_1024
-		869, 331
-	}
-};
-	
-char *Escort_gauge_filenames[GR_NUM_RESOLUTIONS][MAX_ESCORT_SHIPS] = 
-{
-//XSTR:OFF
-	{ // GR_640
-		"escort1",
-		"escort2",
-		"escort3"
-	}, 
-	{ // GR_1024
-		"escort1",
-		"escort2",
-		"escort3"
-	}
-//XSTR:ON
-};*/
-
 static int Last_target_index;	// index into Escort_gauges for last targeted via 'Next Escort Target' key
 
 HudGaugeEscort::HudGaugeEscort():
@@ -285,7 +196,7 @@ int HudGaugeEscort::setGaugeColorEscort(int index, int team)
 	return is_flashing;
 }
 
-void HudGaugeEscort::render(float frametime)
+void HudGaugeEscort::render(float  /*frametime*/)
 {
 	int	i = 0;
 
@@ -372,7 +283,7 @@ void HudGaugeEscort::renderIcon(int x, int y, int index)
 	}
 
 	// print out ship name
-	strcpy_s(buf, sp->ship_name);
+	strcpy_s(buf, sp->get_display_string());
 	font::force_fit_string(buf, 255, ship_name_max_width);
 	
     end_string_at_first_hash_symbol(buf);
@@ -386,7 +297,7 @@ void HudGaugeEscort::renderIcon(int x, int y, int index)
 
 	// show ship integrity
 	hud_get_target_strength(objp, &shields, &integrity);
-	screen_integrity = fl2i(integrity*100 + 0.5f);
+	screen_integrity = (int)std::lround(integrity * 100);
 	offset = 0;
 	if ( screen_integrity < 100 ) {
 		offset = 2;
@@ -905,7 +816,7 @@ void hud_add_ship_to_escort(int objnum, int supress_feedback)
 
 		if (!found) {
 			HUD_sourced_printf(HUD_SOURCE_HIDDEN, XSTR( "Escort list is full with %d ships", 288), Num_escort_ships);
-			snd_play( gamesnd_get_game_sound(SND_TARGET_FAIL));
+			snd_play( gamesnd_get_game_sound(GameSounds::TARGET_FAIL));
 		}
 	}
 
@@ -932,7 +843,7 @@ void hud_add_remove_ship_escort(int objnum, int supress_feedback)
 
 	if ( Objects[objnum].type != OBJ_SHIP ) {
 		if ( !supress_feedback ) {
-			snd_play( gamesnd_get_game_sound(SND_TARGET_FAIL));
+			snd_play( gamesnd_get_game_sound(GameSounds::TARGET_FAIL));
 		}
 		return;
 	}
@@ -988,7 +899,7 @@ void hud_remove_ship_from_escort(int objnum)
  * @param objp      The object hit
  * @param quadrant  Shield quadrant on the object that was hit, alternatively -1 if no shield
  */
-void hud_escort_ship_hit(object *objp, int quadrant)
+void hud_escort_ship_hit(object *objp, int  /*quadrant*/)
 {
 	// no ships on the escort list in multiplayer dogfight
 	if(MULTI_DOGFIGHT){
@@ -1010,7 +921,7 @@ void hud_escort_target_next()
 	int objnum;
 
 	if ( Num_escort_ships == 0 ) {
-		snd_play( gamesnd_get_game_sound(SND_TARGET_FAIL), 0.0f );
+		snd_play( gamesnd_get_game_sound(GameSounds::TARGET_FAIL), 0.0f );
 		return;
 	}
 

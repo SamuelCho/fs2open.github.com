@@ -32,7 +32,7 @@ class GenericShapeEffect : public ParticleEffect {
 	::util::UniformFloatRange m_velocity;
 	::util::UniformUIntRange m_particleNum;
 
-	ParticleEffectIndex m_particleTrail = -1;
+	ParticleEffectHandle m_particleTrail = ParticleEffectHandle::invalid();
 
 	util::EffectTiming m_timing;
 
@@ -84,7 +84,7 @@ class GenericShapeEffect : public ParticleEffect {
 	explicit GenericShapeEffect(const SCP_string& name) : ParticleEffect(name) {
 	}
 
-	virtual bool processSource(const ParticleSource* source) override {
+	bool processSource(const ParticleSource* source) override {
 		if (!m_timing.continueProcessing(source)) {
 			return false;
 		}
@@ -102,7 +102,6 @@ class GenericShapeEffect : public ParticleEffect {
 
 			particle_info info;
 
-			memset(&info, 0, sizeof(info));
 			source->getOrigin()->applyToParticleInfo(info);
 
 			info.vel = rotatedVel.vec.fvec;
@@ -114,20 +113,23 @@ class GenericShapeEffect : public ParticleEffect {
 			}
 			vm_vec_scale(&info.vel, m_velocity.next());
 
-			auto part = m_particleProperties.createParticle(info);
+			if (m_particleTrail.isValid()) {
+				auto part = m_particleProperties.createPersistentParticle(info);
 
-			if (m_particleTrail >= 0) {
 				auto trailSource = ParticleManager::get()->createSource(m_particleTrail);
 				trailSource.moveToParticle(part);
 
 				trailSource.finish();
+			} else {
+				// We don't have a trail so we don't need a persistent particle
+				m_particleProperties.createParticle(info);
 			}
 		}
 
 		return true;
 	}
 
-	virtual void parseValues(bool nocreate) override {
+	void parseValues(bool nocreate) override {
 		m_particleProperties.parse(nocreate);
 
 		m_shape.parse(nocreate);
@@ -161,20 +163,33 @@ class GenericShapeEffect : public ParticleEffect {
 			}
 		}
 
+		bool saw_deprecated_effect_location = false;
 		if (optional_string("+Trail effect:")) {
+			// This is the deprecated location since this introduces ambiguities in the parsing process
 			m_particleTrail = internal::parseEffectElement();
+			saw_deprecated_effect_location = true;
 		}
 
 		m_timing = util::EffectTiming::parseTiming();
+
+		if (optional_string("+Trail effect:")) {
+			// This is the new and correct location. This might create duplicate effects but the warning should be clear
+			// enough to avoid that
+			if (saw_deprecated_effect_location) {
+				error_display(0, "Found two trail effect options! Specifying '+Trail effect:' before '+Duration:' is "
+				                 "deprecated since that can cause issues with conflicting effect options.");
+			}
+			m_particleTrail = internal::parseEffectElement();
+		}
 	}
 
 	void initializeSource(ParticleSource& source) override {
 		m_timing.applyToSource(&source);
 	}
 
-	virtual EffectType getType() const override { return m_shape.getType(); }
+	EffectType getType() const override { return m_shape.getType(); }
 
-	virtual void pageIn() override {
+	void pageIn() override {
 		m_particleProperties.pageIn();
 	}
 

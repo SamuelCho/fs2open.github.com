@@ -75,6 +75,7 @@ static opengl_vertex_bind GL_array_binding_data[] =
 		{ vertex_format_data::SCREEN_POS,	2, GL_INT,				GL_FALSE, opengl_vert_attrib::POSITION	},
 		{ vertex_format_data::COLOR3,		3, GL_UNSIGNED_BYTE,	GL_TRUE,opengl_vert_attrib::COLOR		},
 		{ vertex_format_data::COLOR4,		4, GL_UNSIGNED_BYTE,	GL_TRUE, opengl_vert_attrib::COLOR		},
+		{ vertex_format_data::COLOR4F,		4, GL_FLOAT,			GL_FALSE, opengl_vert_attrib::COLOR		},
 		{ vertex_format_data::TEX_COORD2,	2, GL_FLOAT,			GL_FALSE, opengl_vert_attrib::TEXCOORD	},
 		{ vertex_format_data::TEX_COORD3,	3, GL_FLOAT,			GL_FALSE, opengl_vert_attrib::TEXCOORD	},
 		{ vertex_format_data::NORMAL,		3, GL_FLOAT,			GL_FALSE, opengl_vert_attrib::NORMAL	},
@@ -105,7 +106,7 @@ static GLenum convertBufferType(BufferType type) {
 		case BufferType::Uniform:
 			return GL_UNIFORM_BUFFER;
 		default:
-			Assertion(false, "Unhandled enum value!");
+			UNREACHABLE("Unhandled enum value!");
 			return GL_INVALID_ENUM;
 	}
 }
@@ -119,7 +120,7 @@ static GLenum convertUsageHint(BufferUsageHint usage) {
 		case BufferUsageHint::Streaming:
 			return GL_STREAM_DRAW;
 		default:
-			Assertion(false, "Unhandled enum value!");
+			UNREACHABLE("Unhandled enum value!");
 			return GL_INVALID_ENUM;
 	}
 }
@@ -143,7 +144,7 @@ static GLenum convertStencilOp(const StencilOperation stencil_op) {
 	case StencilOperation::Invert:
 		return GL_INVERT;
 	default:
-		Assertion(false, "Unhandled enum value encountered!");
+		UNREACHABLE("Unhandled enum value encountered!");
 		return GL_NONE;
 	}
 }
@@ -176,7 +177,7 @@ static GLenum convertComparisionFunction(ComparisionFunction func) {
 		mode = GL_NOTEQUAL;
 		break;
 	default:
-		Assertion(false, "Unhandled comparision function value!");
+		UNREACHABLE("Unhandled comparision function value!");
 		mode = GL_ALWAYS;
 		break;
 	}
@@ -293,6 +294,8 @@ void gr_opengl_update_buffer_data_offset(int handle, size_t offset, size_t size,
 
 void gr_opengl_delete_buffer(int handle)
 {
+	if (GL_buffer_objects.size() == 0) return;
+
 	GR_DEBUG_SCOPE("Deleting buffer");
 
 	Assert(handle >= 0);
@@ -409,68 +412,94 @@ void opengl_destroy_all_buffers()
 	GL_vertex_buffers_in_use = 0;
 }
 
+static bool opengl_init_shadow_framebuffer(int size, GLenum color_format)
+{
+	mprintf(("Trying to create %dx%d %d-bit shadow framebuffer\n", size, size, color_format == GL_RGBA32F ? 32 : 16));
+
+	glGenFramebuffers(1, &shadow_fbo);
+	GL_state.BindFrameBuffer(shadow_fbo);
+
+	glGenTextures(1, &Shadow_map_depth_texture);
+
+	GL_state.Texture.SetActiveUnit(0);
+	GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY);
+	GL_state.Texture.Enable(Shadow_map_depth_texture);
+
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT32, size, size, 4, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, Shadow_map_depth_texture, 0);
+
+	glGenTextures(1, &Shadow_map_texture);
+
+	GL_state.Texture.SetActiveUnit(0);
+	GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY);
+	GL_state.Texture.Enable(Shadow_map_texture);
+
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, color_format, size, size, 4, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, nullptr);
+
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, Shadow_map_texture, 0);
+
+	auto status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	GL_state.BindFrameBuffer(0);
+
+	if (status == GL_FRAMEBUFFER_COMPLETE) {
+		// Everything is fine
+		mprintf(("Shadow framebuffer created successfully.\n"));
+		return true;
+	}
+
+	// Clean up resources
+	glDeleteTextures(1, &Shadow_map_texture);
+	glDeleteTextures(1, &Shadow_map_depth_texture);
+	glDeleteFramebuffers(1, &shadow_fbo);
+
+	Shadow_map_texture       = 0;
+	Shadow_map_depth_texture = 0;
+	shadow_fbo               = 0;
+
+	const char* error;
+	switch (status) {
+	case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+		error = "Incomplete framebuffer attachment";
+		break;
+	case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+		error = "Framebuffer is missing an attachment";
+		break;
+	case GL_FRAMEBUFFER_UNSUPPORTED:
+		error = "Framebuffer configuration is unsupported";
+		break;
+	default:
+		error = "Unknown framebuffer status";
+		break;
+	}
+
+	mprintf(("Failed to create framebuffer: %s\n", error));
+	return false;
+}
+
 void opengl_tnl_init()
 {
 	Transform_buffer_handle = opengl_create_texture_buffer_object();
 
-	if(Cmdline_shadow_quality)
-	{
-		//Setup shadow map framebuffer
-		glGenFramebuffers(1, &shadow_fbo);
-		GL_state.BindFrameBuffer(shadow_fbo);
-
-		glGenTextures(1, &Shadow_map_depth_texture);
-
-		GL_state.Texture.SetActiveUnit(0);
-		GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY);
-		GL_state.Texture.Enable(Shadow_map_depth_texture);
-
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		//glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_REF_DEPTH_TO_TEXTURE_EXT);
-		//glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);
-		//glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY);
+	if (Cmdline_shadow_quality) {
 		int size = (Cmdline_shadow_quality == 2 ? 1024 : 512);
-		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT32, size, size, 4, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-		//glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, size, size, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 
-		glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, Shadow_map_depth_texture, 0);
-		//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, Shadow_map_depth_texture, 0);
-
-		glGenTextures(1, &Shadow_map_texture);
-
-		GL_state.Texture.SetActiveUnit(0);
-		GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY);
-		GL_state.Texture.Enable(Shadow_map_texture);
-
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGB32F, size, size, 4, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
-		//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, size, size, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
-
-		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, Shadow_map_texture, 0);
-		//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Shadow_map_texture, 0);
-
-		GL_state.BindFrameBuffer(0);
-
-		opengl_check_for_errors("post_init_framebuffer()");
+		if (!opengl_init_shadow_framebuffer(size, GL_RGBA32F)) {
+			if (!opengl_init_shadow_framebuffer(size, GL_RGBA16F)) {
+				mprintf(("Failed to create either 32 or 16-bit color shadow framebuffer. Disabling shadow support.\n"));
+				Cmdline_shadow_quality = 0;
+			}
+		}
 	}
 
 	gr_opengl_deferred_init();
@@ -655,7 +684,21 @@ void opengl_tnl_set_material(material* material_info, bool set_base_map, bool se
 
 	opengl_shader_set_current(shader_handle);
 
-	GL_state.SetAlphaBlendMode(material_info->get_blend_mode());
+	if (material_info->has_buffer_blend_modes()) {
+		Assertion(GLAD_GL_ARB_draw_buffers_blend != 0,
+				  "Buffer blend modes are not supported at the moment! Query the capability before using this feature.");
+
+		auto enable_blend = false;
+		for (auto i = 0; i < (int) material::NUM_BUFFER_BLENDS; ++i) {
+			auto mode = material_info->get_blend_mode(i);
+
+			GL_state.SetAlphaBlendModei(i, mode);
+			enable_blend = enable_blend || mode != ALPHA_BLEND_NONE;
+		}
+		GL_state.Blend(enable_blend ? GL_TRUE : GL_FALSE);
+	} else {
+		GL_state.SetAlphaBlendMode(material_info->get_blend_mode());
+	}
 	GL_state.SetZbufferType(material_info->get_depth_mode());
 
 	gr_set_cull(material_info->get_cull_mode() ? 1 : 0);
@@ -663,14 +706,6 @@ void opengl_tnl_set_material(material* material_info, bool set_base_map, bool se
 	gr_zbias(material_info->get_depth_bias());
 
 	gr_set_fill_mode(material_info->get_fill_mode());
-
-	auto& fog_params = material_info->get_fog();
-
-	if ( fog_params.enabled ) {
-		gr_fog_set(GR_FOGMODE_FOG, fog_params.r, fog_params.g, fog_params.b, fog_params.dist_near, fog_params.dist_far);
-	} else {
-		gr_fog_set(GR_FOGMODE_NONE, 0, 0, 0);
-	}
 
 	gr_set_texture_addressing(material_info->get_texture_addressing());
 
@@ -747,18 +782,10 @@ void opengl_tnl_set_model_material(model_material *material_info)
 
 	GL_state.Texture.SetShaderMode(GL_TRUE);
 
-	if (GL_workaround_clipping_planes) {
-		if (Current_shader->flags & SDR_FLAG_MODEL_CLIP) {
-			GL_state.ClipDistance(0, true);
-		} else {
-			GL_state.ClipDistance(0, false);
-		}
+	if (Current_shader->flags & SDR_FLAG_MODEL_CLIP) {
+		GL_state.ClipDistance(0, true);
 	} else {
-		if (Current_shader->flags & SDR_FLAG_MODEL_CLIP || Current_shader->flags & SDR_FLAG_MODEL_TRANSFORM) {
-			GL_state.ClipDistance(0, true);
-		} else {
-			GL_state.ClipDistance(0, false);
-		}
+		GL_state.ClipDistance(0, false);
 	}
 
 	uint32_t array_index;
@@ -971,24 +998,74 @@ void opengl_tnl_set_material_nanovg(nanovg_material* material_info) {
 
 	Current_shader->program->Uniforms.setUniformi("nvg_tex", 0);
 }
+
 void opengl_tnl_set_material_decal(decal_material* material_info) {
 	opengl_tnl_set_material(material_info, false);
 
 	float u_scale, v_scale;
 	uint32_t array_index;
 
-	gr_opengl_tcache_set(material_info->get_texture_map(TM_BASE_TYPE), material_info->get_texture_type(), &u_scale, &v_scale, &array_index, 0);
-	Current_shader->program->Uniforms.setUniformi("diffuseMap", 0);
+	if (gr_opengl_tcache_set(material_info->get_texture_map(TM_BASE_TYPE),
+							 material_info->get_texture_type(),
+							 &u_scale,
+							 &v_scale,
+							 &array_index,
+							 0)) {
+		Current_shader->program->Uniforms.setUniformi("diffuseMap", 0);
+	}
 
-	gr_opengl_tcache_set(material_info->get_texture_map(TM_NORMAL_TYPE), material_info->get_texture_type(), &u_scale, &v_scale, &array_index, 1);
-	Current_shader->program->Uniforms.setUniformi("normalMap", 1);
+	if (gr_opengl_tcache_set(material_info->get_texture_map(TM_GLOW_TYPE),
+							 material_info->get_texture_type(),
+							 &u_scale,
+							 &v_scale,
+							 &array_index,
+							 1)) {
+		Current_shader->program->Uniforms.setUniformi("glowMap", 1);
+	}
 
-	GL_state.Texture.Enable(2, GL_TEXTURE_2D, Scene_depth_texture);
-	Current_shader->program->Uniforms.setUniformi("gDepthBuffer", 2);
+	if (gr_opengl_tcache_set(material_info->get_texture_map(TM_NORMAL_TYPE),
+							 material_info->get_texture_type(),
+							 &u_scale,
+							 &v_scale,
+							 &array_index,
+							 2)) {
+		Current_shader->program->Uniforms.setUniformi("normalMap", 2);
+	}
+
+	GL_state.Texture.Enable(3, GL_TEXTURE_2D, Scene_depth_texture);
+	Current_shader->program->Uniforms.setUniformi("gDepthBuffer", 3);
 
 	if (Current_shader->flags & SDR_FLAG_DECAL_USE_NORMAL_MAP) {
-		GL_state.Texture.Enable(3, GL_TEXTURE_2D, Scene_normal_texture);
-		Current_shader->program->Uniforms.setUniformi("gNormalBuffer", 3);
+		GL_state.Texture.Enable(4, GL_TEXTURE_2D, Scene_normal_texture);
+		Current_shader->program->Uniforms.setUniformi("gNormalBuffer", 4);
+	}
+}
+
+void opengl_tnl_set_rocketui_material(interface_material* material_info)
+{
+	vec3d offset = vmd_zero_vector;
+	offset.xyz.x = material_info->get_offset().x;
+	offset.xyz.y = material_info->get_offset().y;
+
+	matrix4 modelViewMatrix;
+	vm_matrix4_set_transform(&modelViewMatrix, &vmd_identity_matrix, &offset);
+
+	opengl_tnl_set_material(material_info, false);
+
+	Current_shader->program->Uniforms.setUniformMatrix4f("modelViewMatrix", modelViewMatrix);
+	Current_shader->program->Uniforms.setUniformMatrix4f("projMatrix", gr_projection_matrix);
+
+	Current_shader->program->Uniforms.setUniformi("textured", material_info->is_textured() ? GL_TRUE : GL_FALSE);
+	Current_shader->program->Uniforms.setUniformi("baseMap", 0);
+
+	if (material_info->is_textured()) {
+		float u_scale, v_scale;
+		uint32_t array_index;
+		if (!gr_opengl_tcache_set(material_info->get_texture_map(TM_BASE_TYPE), material_info->get_texture_type(),
+		                          &u_scale, &v_scale, &array_index)) {
+			mprintf(("WARNING: Error setting bitmap texture (%i)!\n", material_info->get_texture_map(TM_BASE_TYPE)));
+		}
+		Current_shader->program->Uniforms.setUniformi("baseMapIndex", array_index);
 	}
 }
 

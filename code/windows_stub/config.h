@@ -5,7 +5,7 @@
 #ifndef _CONFIG_H
 #define _CONFIG_H
 
-#include <stdio.h>
+#include <cstdio>
 
 
 #include <SDL.h>
@@ -28,12 +28,6 @@
 #endif  // BYTE_ORDER
 
 #if defined _WIN32
-
-#include <direct.h> // for _mkdir, ...
-
-#ifndef snprintf
-#define snprintf _snprintf
-#endif
 
 #ifndef filelength
 #define filelength _filelength
@@ -87,7 +81,7 @@ int filelength(int fd);
 int _chdir(const char *path);
 int _getcwd(char *buffer, unsigned int len);
 int _mkdir(const char *path);
-void _splitpath(char *path, char *drive, char *dir, char *fname, char *ext);
+void _splitpath(const char *path, char *drive, char *dir, char *fname, char *ext);
 
 // other stuff
 #define _hypot(x, y)  hypot(x, y)

@@ -18,45 +18,38 @@
 #include "freespace.h"
 #include "gamesnd/gamesnd.h"
 #include "globalincs/linklist.h"
-#include "graphics/grbatch.h"
 #include "hud/hud.h"
 #include "hud/hudartillery.h"
 #include "iff_defs/iff_defs.h"
 #include "io/joy_ff.h"
 #include "io/timer.h"
-#include "localization/localize.h"
 #include "math/staticrand.h"
-#include "mod_table/mod_table.h"
-#include "model/modelrender.h"
 #include "missionui/missionweaponchoice.h"
 #include "network/multi.h"
 #include "network/multimsgs.h"
 #include "network/multiutil.h"
 #include "object/objcollide.h"
-#include "object/object.h"
-#include "parse/parselo.h"
 #include "scripting/scripting.h"
 #include "particle/particle.h"
 #include "playerman/player.h"
 #include "radar/radar.h"
-#include "radar/radarsetup.h"
 #include "render/3d.h"
 #include "render/batching.h"
 #include "ship/ship.h"
 #include "ship/shiphit.h"
-#include "stats/scoring.h"
 #include "weapon/beam.h"	// for BEAM_TYPE_? definitions
 #include "weapon/corkscrew.h"
 #include "weapon/emp.h"
 #include "weapon/flak.h"
 #include "weapon/muzzleflash.h"
 #include "weapon/swarm.h"
-#include "weapon/weapon.h"
 #include "particle/effects/SingleParticleEffect.h"
 #include "particle/effects/BeamPiercingEffect.h"
 #include "particle/effects/ParticleEmitterEffect.h"
 #include "tracing/Monitor.h"
 #include "tracing/tracing.h"
+#include "weapon.h"
+
 
 // Since SSMs are parsed after weapons, if we want to allow SSM strikes to be specified by name, we need to store those names until after SSMs are parsed.
 typedef struct delayed_ssm_data {
@@ -208,9 +201,6 @@ int		Weapon_impact_timer;			// timer, initialized at start of each mission
 // energy suck defines
 #define ESUCK_DEFAULT_WEAPON_REDUCE				(10.0f)
 #define ESUCK_DEFAULT_AFTERBURNER_REDUCE		(10.0f)
-
-// scale factor for supercaps taking damage from weapons which are not "supercap" weapons
-#define SUPERCAP_DAMAGE_SCALE			0.25f
 
 // scale factor for big ships getting hit by flak
 #define FLAK_DAMAGE_SCALE				0.05f
@@ -438,7 +428,7 @@ void parse_weapon_expl_tbl(const char *filename)
 
 			// only bother with this if we have 1 or more lods and less than max lods,
 			// otherwise the stardard level loading will take care of the different effects
-			if ((lod_check.num_lods > 0) || (lod_check.num_lods < MAX_WEAPON_EXPL_LOD)) {
+			if ((lod_check.num_lods > 0) && (lod_check.num_lods < MAX_WEAPON_EXPL_LOD)) {
 				// name check, update lod count if it already exists
 				for (i = 0; i < LOD_checker.size(); i++) {
 					if (!stricmp(LOD_checker[i].filename, lod_check.filename)) {
@@ -508,22 +498,6 @@ void missle_obj_list_remove(int index)
 	Assert(index >= 0 && index < MAX_MISSILE_OBJS);
 	list_remove(&Missile_obj_list, &Missile_objs[index]);	
 	Missile_objs[index].flags = 0;
-}
-
-/**
- * Called by the save/restore code to rebuild Missile_obj_list
- */
-void missile_obj_list_rebuild()
-{
-	object *objp;
-
-	missile_obj_list_init();
-
-	for ( objp = GET_FIRST(&obj_used_list); objp !=END_OF_LIST(&obj_used_list); objp = GET_NEXT(objp) ) {
-		if ( objp->type == OBJ_WEAPON && Weapon_info[Weapons[objp->instance].weapon_info_index].subtype == WP_MISSILE ) {
-			Weapons[objp->instance].missile_list_index = missile_obj_list_add(OBJ_INDEX(objp));
-		}
-	}
 }
 
 /**
@@ -1429,7 +1403,7 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 		nprintf(("Warning", "Ignoring free flight speed for weapon '%s'\n", wip->name));
 	}
 	//Optional one-shot sound to play at the beginning of firing
-	parse_sound("$PreLaunchSnd:", &wip->pre_launch_snd, wip->name);
+	parse_game_sound("$PreLaunchSnd:", &wip->pre_launch_snd);
 
 	//Optional delay for Pre-Launch sound
 	if(optional_string("+PreLaunchSnd Min Interval:"))
@@ -1438,21 +1412,21 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 	}
 
 	//Launch sound
-	parse_sound("$LaunchSnd:", &wip->launch_snd, wip->name);
+	parse_game_sound("$LaunchSnd:", &wip->launch_snd);
 
 	//Impact sound
-	parse_sound("$ImpactSnd:", &wip->impact_snd, wip->name);
+	parse_game_sound("$ImpactSnd:", &wip->impact_snd);
 
 	//Disarmed impact sound
-	parse_sound("$Disarmed ImpactSnd:", &wip->impact_snd, wip->name);
+	parse_game_sound("$Disarmed ImpactSnd:", &wip->impact_snd);
 
-	parse_sound("$FlyBySnd:", &wip->flyby_snd, wip->name);
+	parse_game_sound("$FlyBySnd:", &wip->flyby_snd);
 
-	parse_sound("$TrackingSnd:", &wip->hud_tracking_snd, wip->name);
+	parse_game_sound("$TrackingSnd:", &wip->hud_tracking_snd);
 	
-	parse_sound("$LockedSnd:", &wip->hud_locked_snd, wip->name);
+	parse_game_sound("$LockedSnd:", &wip->hud_locked_snd);
 
-	parse_sound("$InFlightSnd:", &wip->hud_in_flight_snd, wip->name);
+	parse_game_sound("$InFlightSnd:", &wip->hud_in_flight_snd);
 
 	if (optional_string("+Inflight sound type:"))
 	{
@@ -1678,8 +1652,7 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 
 		// Default value
 		wip->shield_impact_explosion_radius = 1.0f;
-		if (wip->impact_weapon_expl_effect >= 0)
-		{
+		if (wip->impact_weapon_expl_effect.isValid()) {
 			auto singleEffect = dynamic_cast<effects::SingleParticleEffect*>(ParticleManager::get()->getEffect(wip->impact_weapon_expl_effect));
 
 			if (singleEffect)
@@ -1753,7 +1726,7 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 		if (first_time)
 		{
 			// The secondary effect is only needed if the old effect got parsed
-			wip->piercing_impact_secondary_effect = -1;
+			wip->piercing_impact_secondary_effect = particle::ParticleEffectHandle::invalid();
 		}
 	}
 	else
@@ -2117,13 +2090,13 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 		}
 
 		// beam fire sound
-		parse_sound("+BeamSound:", &wip->b_info.beam_loop_sound, wip->name);
+		parse_game_sound("+BeamSound:", &wip->b_info.beam_loop_sound);
 
 		// warmup sound
-		parse_sound("+WarmupSound:", &wip->b_info.beam_warmup_sound, wip->name);
+		parse_game_sound("+WarmupSound:", &wip->b_info.beam_warmup_sound);
 
 		// warmdown sound
-		parse_sound("+WarmdownSound:", &wip->b_info.beam_warmdown_sound, wip->name);
+		parse_game_sound("+WarmdownSound:", &wip->b_info.beam_warmdown_sound);
 
 		// glow bitmap
 		if (optional_string("+Muzzleglow:") ) {
@@ -2695,6 +2668,14 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 	// if burst delay is longer than firewait skip the whole burst fire option
 	if (wip->burst_delay >= wip->fire_wait)
 		wip->burst_shots = 0;
+
+	// Set up weapon failure
+	if (optional_string("$Failure Rate:")) {
+		stuff_float(&wip->failure_rate);
+		if (optional_string("+Failure Substitute:")) {
+			stuff_string(wip->failure_sub_name, F_NAME);
+		}
+	}
 
 	/* Generate a substitution pattern for this weapon.
 	This pattern is very naive such that it calculates the lowest common denominator as being all of
@@ -3387,6 +3368,28 @@ void weapon_generate_indexes_for_substitution() {
 
 			memset(wip->weapon_substitution_pattern_names, 0, sizeof(char) * MAX_SUBSTITUTION_PATTERNS * NAME_LENGTH);
 		}
+
+		if (wip->failure_rate > 0.0f) {
+			if (VALID_FNAME(wip->failure_sub_name)) {
+				wip->failure_sub = weapon_info_lookup(wip->failure_sub_name.c_str());
+
+				if (wip->failure_sub == -1) { // invalid sub weapon
+					Warning(LOCATION, "Weapon '%s' requests substitution with '%s' which does not seem to exist",
+						wip->name, wip->failure_sub_name.c_str());
+					wip->failure_rate = 0.0f;
+				}
+
+				if (Weapon_info[wip->failure_sub].subtype != wip->subtype) {
+					// Check to make sure secondaries can't be launched by primaries and vice versa
+					Warning(LOCATION, "Weapon '%s' requests substitution with '%s' which is of a different subtype.",
+						wip->name, wip->failure_sub_name.c_str());
+					wip->failure_sub = -1;
+					wip->failure_rate = 0.0f;
+				}
+			}
+
+			wip->failure_sub_name.clear();
+		}
 	}
 }
 
@@ -3614,7 +3617,7 @@ void weapon_delete(object *obj)
 		wp->trail_ptr = NULL;
 	}
 
-	if (wp->hud_in_flight_snd_sig >= 0 && snd_is_playing(wp->hud_in_flight_snd_sig))
+	if (wp->hud_in_flight_snd_sig.isValid() && snd_is_playing(wp->hud_in_flight_snd_sig))
 		snd_stop(wp->hud_in_flight_snd_sig);
 
 	if (wp->model_instance_num >= 0)
@@ -3647,10 +3650,10 @@ void weapon_maybe_play_warning(weapon *wp)
 			// Possibly add an additional third sound later
 			if ( (Weapon_info[wp->weapon_info_index].wi_flags[Weapon::Info_Flags::Homing_heat]) ||
 				 (Weapon_info[wp->weapon_info_index].wi_flags[Weapon::Info_Flags::Homing_javelin]) ) {
-				snd_play(gamesnd_get_game_sound(ship_get_sound(Player_obj, SND_HEATLOCK_WARN)));
+				snd_play(gamesnd_get_game_sound(ship_get_sound(Player_obj, GameSounds::HEATLOCK_WARN)));
 			} else {
 				Assert(Weapon_info[wp->weapon_info_index].wi_flags[Weapon::Info_Flags::Homing_aspect]);
-				snd_play(gamesnd_get_game_sound(ship_get_sound(Player_obj, SND_ASPECTLOCK_WARN)));
+				snd_play(gamesnd_get_game_sound(ship_get_sound(Player_obj, GameSounds::ASPECTLOCK_WARN)));
 			}
 		}
 	}
@@ -4380,7 +4383,7 @@ void weapon_home(object *obj, int num, float frame_time)
 		// turn the missile towards the target only if non-swarm.  Homing swarm missiles choose
 		// a different vector to turn towards, this is done in swarm_update_direction().
 		if ( wp->swarm_index < 0 ) {
-			ai_turn_towards_vector(&target_pos, obj, frame_time, wip->turn_time, NULL, NULL, 0.0f, 0, NULL);
+			ai_turn_towards_vector(&target_pos, obj, wip->turn_time, nullptr, nullptr, 0.0f, 0, nullptr);
 			vel = vm_vec_mag(&obj->phys_info.desired_vel);
 
 			vm_vec_copy_scale(&obj->phys_info.desired_vel, &obj->orient.vec.fvec, vel);
@@ -4392,7 +4395,7 @@ void weapon_home(object *obj, int num, float frame_time)
 // as Mike K did with ships -- break weapon into process_pre and process_post for code to execute
 // before and after physics movement
 
-void weapon_process_pre( object *obj, float frame_time)
+void weapon_process_pre( object *obj, float  /*frame_time*/)
 {
 	if(obj->type != OBJ_WEAPON)
 		return;
@@ -4480,11 +4483,11 @@ void weapon_maybe_play_flyby_sound(object *weapon_objp, weapon *wp)
 			dot = vm_vec_dot(&vec_to_weapon, &weapon_objp->orient.vec.fvec);
 			
 			if ( (dot < -0.80) && (dot > -0.98) ) {
-				if(Weapon_info[wp->weapon_info_index].flyby_snd != -1) {
+				if(Weapon_info[wp->weapon_info_index].flyby_snd.isValid()) {
 					snd_play_3d( gamesnd_get_game_sound(Weapon_info[wp->weapon_info_index].flyby_snd), &weapon_objp->pos, &Eye_position );
 				} else {
 					if ( Weapon_info[wp->weapon_info_index].subtype == WP_LASER ) {
-						snd_play_3d( gamesnd_get_game_sound(SND_WEAPON_FLYBY), &weapon_objp->pos, &Eye_position );
+						snd_play_3d( gamesnd_get_game_sound(GameSounds::WEAPON_FLYBY), &weapon_objp->pos, &Eye_position );
 					}
 				}
 				Weapon_flyby_sound_timer = timestamp(200);
@@ -4737,7 +4740,7 @@ void weapon_process_post(object * obj, float frame_time)
 		
 		// If this is a swarm type missile,  
 		if ( wp->swarm_index >= 0 ) {
-			swarm_update_direction(obj, frame_time);
+			swarm_update_direction(obj);
 		}
 
 		if( wp->cscrew_index >= 0) {
@@ -4871,7 +4874,7 @@ void weapon_process_post(object * obj, float frame_time)
 		}
 	}
 
-	if (wip->hud_in_flight_snd >= 0 && obj->parent_sig == Player_obj->signature)
+	if (wip->hud_in_flight_snd.isValid() && obj->parent_sig == Player_obj->signature)
 	{
 		bool play_sound = false;
 		switch (wip->in_flight_play_type)
@@ -4892,8 +4895,7 @@ void weapon_process_post(object * obj, float frame_time)
 
 		if (play_sound)
 		{
-			if (wp->hud_in_flight_snd_sig < 0 || !snd_is_playing(wp->hud_in_flight_snd_sig))
-			{
+			if (!wp->hud_in_flight_snd_sig.isValid() || !snd_is_playing(wp->hud_in_flight_snd_sig)) {
 				wp->hud_in_flight_snd_sig = snd_play_looping(gamesnd_get_game_sound(wip->hud_in_flight_snd));
 			}
 		}
@@ -5113,6 +5115,19 @@ int weapon_create( vec3d * pos, matrix * porient, int weapon_type, int parent_ob
 		}
 	}
 
+	// Let's setup a fast failure check with a uniform distribution.
+	if (wip->failure_rate > 0.0f) {
+		util::UniformFloatRange rng(0.0f, 1.0f);
+		float test = rng.next();
+		if (test < wip->failure_rate) {
+			if (wip->failure_sub != -1) {
+				return weapon_create(pos, porient, wip->failure_sub, parent_objnum, group_id, is_locked, is_spawned, fof_cooldown);
+			} else {
+				return -1;
+			}
+		}
+	}
+
 	num_deleted = 0;
 	if (Num_weapons >= MAX_WEAPONS-5) {
 
@@ -5291,11 +5306,10 @@ int weapon_create( vec3d * pos, matrix * porient, int weapon_type, int parent_ob
 	if(wip->life_min < 0.0f && wip->life_max < 0.0f) {
 		wp->lifeleft = wip->lifetime;
 	} else {
-		wp->lifeleft = (rand_val) * (wip->life_max - wip->life_min) / wip->life_min;
+		wp->lifeleft = ((rand_val) * (wip->life_max - wip->life_min)) + wip->life_min;
 		if((wip->wi_flags[Weapon::Info_Flags::Cmeasure]) && (parent_objp != NULL) && (parent_objp->flags[Object::Object_Flags::Player_ship])) {
 			wp->lifeleft *= The_mission.ai_profile->cmeasure_life_scale[Game_skill_level];
 		}
-		wp->lifeleft = wip->life_min + wp->lifeleft * (wip->life_max - wip->life_min);
 	}
 
 	if(wip->wi_flags[Weapon::Info_Flags::Cmeasure]) {
@@ -5484,7 +5498,7 @@ int weapon_create( vec3d * pos, matrix * porient, int weapon_type, int parent_ob
 	wp->alpha_backward = 0;
 
 	wp->collisionInfo = nullptr;
-	wp->hud_in_flight_snd_sig = -1;
+	wp->hud_in_flight_snd_sig = sound_handle::invalid();
 
 	Num_weapons++;
 
@@ -5493,6 +5507,11 @@ int weapon_create( vec3d * pos, matrix * porient, int weapon_type, int parent_ob
 	}
 
 	weapon_update_state(wp);
+
+	object* weapon_obj = &Objects[objnum];
+	Script_system.SetHookObjects(1, "Weapon", weapon_obj);
+	Script_system.RunCondition(CHA_ONWEAPONCREATED, weapon_obj);
+	Script_system.RemHookVars(1, "Weapon");
 
 	return objnum;
 }
@@ -5637,13 +5656,13 @@ void weapon_play_impact_sound(weapon_info *wip, vec3d *hitpos, bool is_armed)
 {
 	if(is_armed)
 	{
-		if(wip->impact_snd != -1) {
+		if(wip->impact_snd.isValid()) {
 			snd_play_3d( gamesnd_get_game_sound(wip->impact_snd), hitpos, &Eye_position );
 		}
 	}
 	else
 	{
-		if(wip->disarmed_impact_snd != -1) {
+		if(wip->disarmed_impact_snd.isValid()) {
 			snd_play_3d(gamesnd_get_game_sound(wip->disarmed_impact_snd), hitpos, &Eye_position);
 		}
 	}
@@ -5708,27 +5727,27 @@ void weapon_hit_do_sound(object *hit_obj, weapon_info *wip, vec3d *hitpos, bool 
 		if ( shield_str > 0.1f ) {
 			// Play a shield impact sound effect
 			if ( hit_obj == Player_obj ) {
-				snd_play_3d( gamesnd_get_game_sound(SND_SHIELD_HIT_YOU), hitpos, &Eye_position );
+				snd_play_3d( gamesnd_get_game_sound(GameSounds::SHIELD_HIT_YOU), hitpos, &Eye_position );
 				// AL 12-15-97: Add missile impact sound even when shield is hit
 				if ( wip->subtype == WP_MISSILE ) {
-					snd_play_3d( gamesnd_get_game_sound(SND_PLAYER_HIT_MISSILE), hitpos, &Eye_position);
+					snd_play_3d( gamesnd_get_game_sound(GameSounds::PLAYER_HIT_MISSILE), hitpos, &Eye_position);
 				}
 			} else {
-				snd_play_3d( gamesnd_get_game_sound(SND_SHIELD_HIT), hitpos, &Eye_position );
+				snd_play_3d( gamesnd_get_game_sound(GameSounds::SHIELD_HIT), hitpos, &Eye_position );
 			}
 		} else {
 			// Play a hull impact sound effect
 			switch ( wip->subtype ) {
 				case WP_LASER:
 					if ( hit_obj == Player_obj )
-						snd_play_3d( gamesnd_get_game_sound(SND_PLAYER_HIT_LASER), hitpos, &Eye_position );
+						snd_play_3d( gamesnd_get_game_sound(GameSounds::PLAYER_HIT_LASER), hitpos, &Eye_position );
 					else {
 						weapon_play_impact_sound(wip, hitpos, is_armed);
 					}
 					break;
 				case WP_MISSILE:
 					if ( hit_obj == Player_obj ) 
-						snd_play_3d( gamesnd_get_game_sound(SND_PLAYER_HIT_MISSILE), hitpos, &Eye_position);
+						snd_play_3d( gamesnd_get_game_sound(GameSounds::PLAYER_HIT_MISSILE), hitpos, &Eye_position);
 					else {
 						weapon_play_impact_sound(wip, hitpos, is_armed);
 					}
@@ -5898,9 +5917,8 @@ int weapon_area_calc_damage(object *objp, vec3d *pos, float inner_rad, float out
  * @param blast				Force of blast
  * @param make_shockwave	Boolean, whether to create a shockwave or not
  */
-void weapon_area_apply_blast(vec3d *force_apply_pos, object *ship_objp, vec3d *blast_pos, float blast, int make_shockwave)
+void weapon_area_apply_blast(vec3d * /*force_apply_pos*/, object *ship_objp, vec3d *blast_pos, float blast, int make_shockwave)
 {
-	#define	SHAKE_CONST 3000
 	vec3d		force, vec_blast_to_ship, vec_ship_to_impact;
 	polymodel		*pm;
 
@@ -6007,12 +6025,7 @@ void weapon_do_area_effect(object *wobjp, shockwave_create_info *sci, vec3d *pos
 
 	}	// end for
 
-	// if this weapon has the "Electronics" flag set, then disrupt subsystems in sphere
-	if ( (other_obj != NULL) && (wip->wi_flags[Weapon::Info_Flags::Electronics]) ) {
-		if ( other_obj->type == OBJ_SHIP ) {
-			weapon_do_electronics_effect(other_obj, pos, Weapons[wobjp->instance].weapon_info_index);
-		}
-	}
+
 }
 
 //	----------------------------------------------------------------------
@@ -6114,8 +6127,7 @@ void weapon_hit( object * weapon_obj, object * other_obj, vec3d * hitpos, int qu
 		weapon_hit_do_sound(other_obj, wip, hitpos, armed_weapon, quadrant);
 	}
 
-	if ( wip->impact_weapon_expl_effect >= 0 && armed_weapon)
-	{
+	if (wip->impact_weapon_expl_effect.isValid() && armed_weapon) {
 		auto particleSource = particle::ParticleManager::get()->createSource(wip->impact_weapon_expl_effect);
 		particleSource.moveTo(hitpos);
 		particleSource.setOrientationFromVec(&weapon_obj->phys_info.vel);
@@ -6126,9 +6138,7 @@ void weapon_hit( object * weapon_obj, object * other_obj, vec3d * hitpos, int qu
 		}
 
 		particleSource.finish();
-	}
-	else if(wip->dinky_impact_weapon_expl_effect >= 0 && !armed_weapon)
-	{
+	} else if (wip->dinky_impact_weapon_expl_effect.isValid() && !armed_weapon) {
 		auto particleSource = particle::ParticleManager::get()->createSource(wip->dinky_impact_weapon_expl_effect);
 		particleSource.moveTo(hitpos);
 		particleSource.setOrientationFromVec(&weapon_obj->phys_info.vel);
@@ -6141,7 +6151,7 @@ void weapon_hit( object * weapon_obj, object * other_obj, vec3d * hitpos, int qu
 		particleSource.finish();
 	}
 
-	if((other_obj != NULL) && (quadrant == -1) && (wip->piercing_impact_effect > -1 && armed_weapon)) {
+	if ((other_obj != nullptr) && (quadrant == -1) && (wip->piercing_impact_effect.isValid() && armed_weapon)) {
 		if ((other_obj->type == OBJ_SHIP) || (other_obj->type == OBJ_DEBRIS)) {
 
 			int ok_to_draw = 1;
@@ -6183,8 +6193,7 @@ void weapon_hit( object * weapon_obj, object * other_obj, vec3d * hitpos, int qu
 
 				primarySource.finish();
 
-				if (wip->piercing_impact_secondary_effect >= 0)
-				{
+				if (wip->piercing_impact_secondary_effect.isValid()) {
 					auto secondarySource = ParticleManager::get()->createSource(wip->piercing_impact_secondary_effect);
 					secondarySource.moveTo(&weapon_obj->pos);
 					secondarySource.setOrientationMatrix(&weapon_obj->last_orient);
@@ -6262,6 +6271,13 @@ void weapon_hit( object * weapon_obj, object * other_obj, vec3d * hitpos, int qu
 	if(wip->wi_flags[Weapon::Info_Flags::Emp]){
 		emp_apply(&weapon_obj->pos, wip->shockwave.inner_rad, wip->shockwave.outer_rad, wip->emp_intensity, wip->emp_time, (wip->wi_flags[Weapon::Info_Flags::Use_emp_time_for_capship_turrets]) != 0);
 	}	
+
+	// if this weapon has the "Electronics" flag set, then disrupt subsystems in sphere
+	if ((other_obj != NULL) && (wip->wi_flags[Weapon::Info_Flags::Electronics])) {
+		if (other_obj->type == OBJ_SHIP) {
+			weapon_do_electronics_effect(other_obj, &weapon_obj->pos, Weapons[weapon_obj->instance].weapon_info_index);
+		}
+	}
 
 	// spawn weapons - note the change from FS 1 multiplayer.
 	if (wip->wi_flags[Weapon::Info_Flags::Spawn]){
@@ -6815,9 +6831,18 @@ void weapon_maybe_spew_particle(object *obj)
 
 						// emit the particle
 						if (wip->particle_spewers[psi].particle_spew_anim.first_frame < 0) {
-							particle::create(&particle_pos, &vel, wip->particle_spewers[psi].particle_spew_lifetime, wip->particle_spewers[psi].particle_spew_radius, particle::PARTICLE_SMOKE);
+							particle::create(&particle_pos,
+											 &vel,
+											 wip->particle_spewers[psi].particle_spew_lifetime,
+											 wip->particle_spewers[psi].particle_spew_radius,
+											 particle::PARTICLE_SMOKE);
 						} else {
-							particle::create(&particle_pos, &vel, wip->particle_spewers[psi].particle_spew_lifetime, wip->particle_spewers[psi].particle_spew_radius, particle::PARTICLE_BITMAP, wip->particle_spewers[psi].particle_spew_anim.first_frame);
+							particle::create(&particle_pos,
+											 &vel,
+											 wip->particle_spewers[psi].particle_spew_lifetime,
+											 wip->particle_spewers[psi].particle_spew_radius,
+											 particle::PARTICLE_BITMAP,
+											 wip->particle_spewers[psi].particle_spew_anim.first_frame);
 						}
 					}
 				} else if (wip->particle_spewers[psi].particle_spew_type == PSPEW_HELIX) { // helix
@@ -6850,9 +6875,18 @@ void weapon_maybe_spew_particle(object *obj)
 
 						//emit particles
 						if (wip->particle_spewers[psi].particle_spew_anim.first_frame < 0) {
-							particle::create(&output_pos, &output_vel, wip->particle_spewers[psi].particle_spew_lifetime, wip->particle_spewers[psi].particle_spew_radius, particle::PARTICLE_SMOKE);
+							particle::create(&output_pos,
+											 &output_vel,
+											 wip->particle_spewers[psi].particle_spew_lifetime,
+											 wip->particle_spewers[psi].particle_spew_radius,
+											 particle::PARTICLE_SMOKE);
 						} else {
-							particle::create(&output_pos, &output_vel, wip->particle_spewers[psi].particle_spew_lifetime, wip->particle_spewers[psi].particle_spew_radius, particle::PARTICLE_BITMAP, wip->particle_spewers[psi].particle_spew_anim.first_frame);
+							particle::create(&output_pos,
+											 &output_vel,
+											 wip->particle_spewers[psi].particle_spew_lifetime,
+											 wip->particle_spewers[psi].particle_spew_radius,
+											 particle::PARTICLE_BITMAP,
+											 wip->particle_spewers[psi].particle_spew_anim.first_frame);
 						}
 					}
 				} else if (wip->particle_spewers[psi].particle_spew_type == PSPEW_SPARKLER) { // sparkler
@@ -6884,9 +6918,18 @@ void weapon_maybe_spew_particle(object *obj)
 
 						// emit particles
 						if (wip->particle_spewers[psi].particle_spew_anim.first_frame < 0) {
-							particle::create(&output_pos, &output_vel, wip->particle_spewers[psi].particle_spew_lifetime, wip->particle_spewers[psi].particle_spew_radius, particle::PARTICLE_SMOKE);
+							particle::create(&output_pos,
+											 &output_vel,
+											 wip->particle_spewers[psi].particle_spew_lifetime,
+											 wip->particle_spewers[psi].particle_spew_radius,
+											 particle::PARTICLE_SMOKE);
 						} else {
-							particle::create(&output_pos, &output_vel, wip->particle_spewers[psi].particle_spew_lifetime, wip->particle_spewers[psi].particle_spew_radius, particle::PARTICLE_BITMAP, wip->particle_spewers[psi].particle_spew_anim.first_frame);
+							particle::create(&output_pos,
+											 &output_vel,
+											 wip->particle_spewers[psi].particle_spew_lifetime,
+											 wip->particle_spewers[psi].particle_spew_radius,
+											 particle::PARTICLE_BITMAP,
+											 wip->particle_spewers[psi].particle_spew_anim.first_frame);
 						}
 					}
 				} else if (wip->particle_spewers[psi].particle_spew_type == PSPEW_RING) {
@@ -6910,9 +6953,18 @@ void weapon_maybe_spew_particle(object *obj)
 
 						// emit particles
 						if (wip->particle_spewers[psi].particle_spew_anim.first_frame < 0) {
-							particle::create(&output_pos, &output_vel, wip->particle_spewers[psi].particle_spew_lifetime, wip->particle_spewers[psi].particle_spew_radius, particle::PARTICLE_SMOKE);
+							particle::create(&output_pos,
+											 &output_vel,
+											 wip->particle_spewers[psi].particle_spew_lifetime,
+											 wip->particle_spewers[psi].particle_spew_radius,
+											 particle::PARTICLE_SMOKE);
 						} else {
-							particle::create(&output_pos, &output_vel, wip->particle_spewers[psi].particle_spew_lifetime, wip->particle_spewers[psi].particle_spew_radius, particle::PARTICLE_BITMAP, wip->particle_spewers[psi].particle_spew_anim.first_frame);
+							particle::create(&output_pos,
+											 &output_vel,
+											 wip->particle_spewers[psi].particle_spew_lifetime,
+											 wip->particle_spewers[psi].particle_spew_radius,
+											 particle::PARTICLE_BITMAP,
+											 wip->particle_spewers[psi].particle_spew_anim.first_frame);
 						}
 					}
 				} else if (wip->particle_spewers[psi].particle_spew_type == PSPEW_PLUME) {
@@ -6946,9 +6998,18 @@ void weapon_maybe_spew_particle(object *obj)
 
 						//emit particles
 						if (wip->particle_spewers[psi].particle_spew_anim.first_frame < 0) {
-							particle::create(&output_pos, &output_vel, wip->particle_spewers[psi].particle_spew_lifetime, wip->particle_spewers[psi].particle_spew_radius, particle::PARTICLE_SMOKE);
+							particle::create(&output_pos,
+											 &output_vel,
+											 wip->particle_spewers[psi].particle_spew_lifetime,
+											 wip->particle_spewers[psi].particle_spew_radius,
+											 particle::PARTICLE_SMOKE);
 						} else {
-							particle::create(&output_pos, &output_vel, wip->particle_spewers[psi].particle_spew_lifetime, wip->particle_spewers[psi].particle_spew_radius, particle::PARTICLE_BITMAP, wip->particle_spewers[psi].particle_spew_anim.first_frame);
+							particle::create(&output_pos,
+											 &output_vel,
+											 wip->particle_spewers[psi].particle_spew_lifetime,
+											 wip->particle_spewers[psi].particle_spew_radius,
+											 particle::PARTICLE_BITMAP,
+											 wip->particle_spewers[psi].particle_spew_anim.first_frame);
 						}
 					}
 				}
@@ -7198,8 +7259,7 @@ void pause_in_flight_sounds()
 		{
 			weapon* wp = &Weapons[i];
 
-			if (wp->hud_in_flight_snd_sig >= 0 && snd_is_playing(wp->hud_in_flight_snd_sig))
-			{
+			if (wp->hud_in_flight_snd_sig.isValid() && snd_is_playing(wp->hud_in_flight_snd_sig)) {
 				// Stop sound, it will be restarted in the first frame after the game is unpaused
 				snd_stop(wp->hud_in_flight_snd_sig);
 			}
@@ -7224,7 +7284,13 @@ void weapon_unpause_sounds()
 
 void shield_impact_explosion(vec3d *hitpos, object *objp, float radius, int idx) {
 	int expl_ani_handle = Weapon_explosions.GetAnim(idx, hitpos, radius);
-	particle::create( hitpos, &vmd_zero_vector, 0.0f, radius, particle::PARTICLE_BITMAP_PERSISTENT, expl_ani_handle, objp );
+	particle::create(hitpos,
+					 &vmd_zero_vector,
+					 0.0f,
+					 radius,
+					 particle::PARTICLE_BITMAP_PERSISTENT,
+					 expl_ani_handle,
+					 objp);
 }
 
 void weapon_render(object* obj, model_draw_list *scene)
@@ -7459,6 +7525,7 @@ void weapon_info::reset()
 	this->render_type = WRT_NONE;
 
 	memset(this->name, 0, sizeof(this->name));
+	memset(this->alt_name, 0, sizeof(this->alt_name));
 	memset(this->title, 0, sizeof(this->title));
 	this->desc = NULL;
 
@@ -7549,13 +7616,13 @@ void weapon_info::reset()
 	// *Default is 150  -Et1
 	this->SwarmWait = SWARM_MISSILE_DELAY;
 
-	this->pre_launch_snd = -1;
+	this->pre_launch_snd = gamesnd_id();
 	this->pre_launch_snd_min_interval = 0;
 
-	this->launch_snd = -1;
-	this->impact_snd = -1;
-	this->disarmed_impact_snd = -1;
-	this->flyby_snd = -1;
+	this->launch_snd = gamesnd_id();
+	this->impact_snd = gamesnd_id();
+	this->disarmed_impact_snd = gamesnd_id();
+	this->flyby_snd = gamesnd_id();
 
 	this->rearm_rate = 1.0f;
 
@@ -7589,14 +7656,14 @@ void weapon_info::reset()
 
 	this->shield_impact_explosion_radius = 1.0f;
 
-	this->impact_weapon_expl_effect = -1;
+	this->impact_weapon_expl_effect = particle::ParticleEffectHandle::invalid();
 
-	this->dinky_impact_weapon_expl_effect = -1;
+	this->dinky_impact_weapon_expl_effect = particle::ParticleEffectHandle::invalid();
 
-	this->flash_impact_weapon_expl_effect = -1;
+	this->flash_impact_weapon_expl_effect = particle::ParticleEffectHandle::invalid();
 
-	this->piercing_impact_effect = -1;
-	this->piercing_impact_secondary_effect = -1;
+	this->piercing_impact_effect           = particle::ParticleEffectHandle::invalid();
+	this->piercing_impact_secondary_effect = particle::ParticleEffectHandle::invalid();
 
 	this->muzzle_flash = -1;
 
@@ -7642,9 +7709,9 @@ void weapon_info::reset()
 	this->b_info.beam_particle_count = -1;
 	this->b_info.beam_particle_radius = 0.0f;
 	this->b_info.beam_particle_angle = 0.0f;
-	this->b_info.beam_loop_sound = -1;
-	this->b_info.beam_warmup_sound = -1;
-	this->b_info.beam_warmdown_sound = -1;
+	this->b_info.beam_loop_sound = gamesnd_id();
+	this->b_info.beam_warmup_sound = gamesnd_id();
+	this->b_info.beam_warmdown_sound = gamesnd_id();
 	this->b_info.beam_num_sections = 0;
 	this->b_info.glow_length = 0;
 	this->b_info.directional_glow = false;
@@ -7723,12 +7790,26 @@ void weapon_info::reset()
 	this->thruster_glow_factor = 1.0f;
 	this->target_lead_scaler = 0.0f;
 
+	this->failure_rate = 0.0f;
+	this->failure_sub_name.clear();
+	this->failure_sub = -1;
+
 	this->selection_effect = Default_weapon_select_effect;
 
-	this->hud_locked_snd = -1;
-	this->hud_tracking_snd = -1;
-	this->hud_in_flight_snd = -1;
+	this->hud_locked_snd = gamesnd_id();
+	this->hud_tracking_snd = gamesnd_id();
+	this->hud_in_flight_snd = gamesnd_id();
 
 	// Reset using default constructor
 	this->impact_decal = decals::creation_info();
+}
+const char* weapon_info::get_display_string() {
+	if (has_alternate_name()) {
+		return alt_name;
+	} else {
+		return name;
+	}
+}
+bool weapon_info::has_alternate_name() {
+	return alt_name[0] != '\0';
 }

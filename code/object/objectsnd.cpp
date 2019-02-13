@@ -36,8 +36,8 @@
 typedef struct _obj_snd {
 	_obj_snd	*next, *prev;
 	int		objnum;			// object index of object that contains this sound
-	int		id;				// Index into Snds[] array
-	int		instance;		// handle of currently playing sound (a ds3d handle if USES_DS3D flag set)
+	gamesnd_id	id;				// Index into Snds[] array
+	sound_handle instance;      // handle of currently playing sound (a ds3d handle if USES_DS3D flag set)
 	int		next_update;	// timestamp that marks next allowed vol/pan change
 	float		vol;				// volume of sound (range: 0.0 -> 1.0)
 	float		pan;				// pan of sound (range: -1.0 -> 1.0)
@@ -47,15 +47,10 @@ typedef struct _obj_snd {
 	ship_subsys *ss;		//Associated subsystem
 } obj_snd;
 
-#define VOL_PAN_UPDATE			50						// time in ms to update a persistent sound vol/pan
-#define MIN_PERSISTANT_VOL		0.10f
-#define MIN_FORWARD_SPEED		5
 #define SPEED_SOUND				600.0f				// speed of sound in FreeSpace
 
 static int MAX_OBJ_SOUNDS_PLAYING = -1; // initialized in obj_snd_level_init()
 static int Num_obj_sounds_playing;
-
-#define OBJSND_CHANGE_FREQUENCY_THRESHOLD			10
 
 static	obj_snd	obj_snd_list;						// head of linked list of object sound structs
 static	int		Doppler_enabled = TRUE;
@@ -69,7 +64,6 @@ int		Obj_snd_level_inited=0;
 
 // ship flyby data
 #define	FLYBY_MIN_DISTANCE				90
-#define	FLYBY_MIN_SPEED					50
 #define	FLYBY_MIN_RELATIVE_SPEED		100
 #define	FLYBY_MIN_NEXT_TIME				1000	// in ms
 #define	FLYBY_MIN_REPEAT_TIME			4000	// in ms
@@ -118,7 +112,7 @@ DCF(objsnd, "Persistent sound stuff" )
 			float distance;
 
 			Assert(osp != NULL);
-			if ( osp->instance == -1 ) {
+			if (!osp->instance.isValid()) {
 				continue;
 				//sprintf(buf1,"OFF");
 			} else {
@@ -245,9 +239,9 @@ void obj_snd_stop(object *objp, int index)
 
 			osp = &Objsnds[*iter];
 
-			if ( osp->instance != -1 ) {
+			if (osp->instance.isValid()) {
 				snd_stop(osp->instance);
-				osp->instance = -1;
+				osp->instance = sound_handle::invalid();
 				switch(objp->type) {
 					case OBJ_SHIP:
 					case OBJ_GHOST:
@@ -270,9 +264,9 @@ void obj_snd_stop(object *objp, int index)
 
 		osp = &Objsnds[objp->objsnd_num[index]];
 
-		if ( osp->instance != -1 ) {
+		if (osp->instance.isValid()) {
 			snd_stop(osp->instance);
-			osp->instance = -1;
+			osp->instance = sound_handle::invalid();
 			switch(objp->type) {
 			case OBJ_SHIP:
 			case OBJ_GHOST:
@@ -305,30 +299,6 @@ void obj_snd_stop_all()
 	}
 }
 
-// ---------------------------------------------------------------------------------------
-// obj_snd_get_freq()
-//
-// Calculate the frequency of a sound to be played, based on the relative velocities
-// of the source and observor
-//
-//	returns:		frequency of the sound
-//
-int obj_snd_get_freq(int source_freq, object* source, object* observor, vec3d *source_pos)
-{
-	vec3d	v_os, v_so;	// os == observor to source, so == source to observor
-	float		vo, vs, freq;
-
-	vm_vec_normalized_dir(&v_os, source_pos, &observor->pos);
-	vm_vec_normalized_dir(&v_so, &observor->pos, source_pos);
-	
-	vo = vm_vec_dot(&v_os, &observor->phys_info.vel);
-	vs = vm_vec_dot(&v_so, &source->phys_info.vel);
-
-	freq = source_freq * ( (SPEED_SOUND + vo) / (SPEED_SOUND - vs) );
-	return fl2i(freq);
-}
-
-
 /**
  * Stop a playing object sound, if it is quieter than sound at new_distance
  *
@@ -350,7 +320,7 @@ int obj_snd_stop_lowest_vol(float new_vol)
 		Assert(osp->objnum != -1);
 		objp = &Objects[osp->objnum];
 
-		if ( (osp->instance != -1) && (osp->vol < lowest_vol) ) {
+		if ((osp->instance.isValid()) && (osp->vol < lowest_vol)) {
 			lowest_vol = osp->vol;
 			lowest_vol_osp = osp;
 		}
@@ -600,7 +570,7 @@ void obj_snd_do_frame()
 
 		go_ahead_flag = TRUE;
 		float max_vol,new_vol;
-		if ( osp->instance == -1 ) {
+		if (!osp->instance.isValid()) {
 			if ( distance < gs->max ) {
 				max_vol = gs->volume_range.max();
 				if ( distance <= gs->min ) {
@@ -631,7 +601,7 @@ void obj_snd_do_frame()
 
 				if ( go_ahead_flag ) {
 					osp->instance = snd_play_3d(gs, &source_pos, &View_position, add_distance, &objp->phys_info.vel, 1, 1.0f, SND_PRIORITY_TRIPLE_INSTANCE, NULL, 1.0f, 0, true);
-					if ( osp->instance != -1 ) {
+					if (osp->instance.isValid()) {
 						Num_obj_sounds_playing++;
 					}
 				}
@@ -657,7 +627,7 @@ void obj_snd_do_frame()
 			}
 		}
 
-		if ( osp->instance == -1 )
+		if (!osp->instance.isValid())
 			continue;
 
 		sp = NULL;
@@ -706,12 +676,12 @@ void obj_snd_do_frame()
 //										sound can be assigned per object).  
 //               >= 0			=> sound was successfully assigned
 //
-int obj_snd_assign(int objnum, int sndnum, vec3d *pos, int main, int flags, ship_subsys *associated_sub)
+int obj_snd_assign(int objnum, gamesnd_id sndnum, vec3d *pos, int main, int flags, ship_subsys *associated_sub)
 {
 	if(objnum < 0 || objnum > MAX_OBJECTS)
 		return -1;
 
-	if(sndnum < 0)
+	if(!sndnum.isValid())
 		return -1;
 
 	if ( Obj_snd_enabled == FALSE )
@@ -759,7 +729,7 @@ int obj_snd_assign(int objnum, int sndnum, vec3d *pos, int main, int flags, ship
 
 	snd->id = sndnum;
 
-	snd->instance = -1;
+	snd->instance    = sound_handle::invalid();
 	snd->vol = 0.0f;
 	snd->objnum = OBJ_INDEX(objp);
 	snd->next_update = 1;
@@ -813,7 +783,7 @@ void obj_snd_delete(int objnum, int index)
 //								-1 to delete all persistent sounds on ship.
 //
 //
-void	obj_snd_delete_type(int objnum, int sndnum, ship_subsys *ss)
+void	obj_snd_delete_type(int objnum, gamesnd_id sndnum, ship_subsys *ss)
 {
 	object	*objp;
 	obj_snd	*osp;
@@ -836,7 +806,7 @@ void	obj_snd_delete_type(int objnum, int sndnum, ship_subsys *ss)
 		// if we're just deleting a specific sound type
 		// and this is not one of them. skip it.
 		//Also check if this is assigned to the right subsystem, if one has been given.
-		if(((sndnum != -1) && (osp->id != sndnum))
+		if(((sndnum.isValid()) && (osp->id != sndnum))
 			|| ((ss != NULL) && (osp->ss != ss))){
 			continue;
 		}
@@ -872,56 +842,4 @@ void obj_snd_level_close()
 	}
 	obj_snd_delete_all();
 	Obj_snd_level_inited=0;
-}
-
-// ---------------------------------------------------------------------------------------
-// obj_snd_is_playing()
-//
-// Determines if a given object-linked sound is currently playing
-//
-int obj_snd_is_playing(int object, int index)
-{
-	if ( obj_snd_return_instance(object, index) < 0 ) 
-		return 0;
-
-	return 1;
-}
-
-// ---------------------------------------------------------------------------------------
-// obj_snd_return_instance()
-//
-// Returns the sound instance for a given object-linked sound
-//
-int obj_snd_return_instance(int objnum, int index)
-{
-	if ( objnum < 0 || objnum >= MAX_OBJECTS)
-		return -1;
-
-	if ( index < 0 || index >= MAX_OBJ_SNDS )
-		return -1;
-
-	object *objp = &Objects[objnum];
-	obj_snd *osp = &Objsnds[objp->objsnd_num[index]];
-
-	return osp->instance;
-}
-
-// ---------------------------------------------------------------------------------------
-// obj_snd_update_offset()
-//
-// Updates offset of the given object sound
-//
-int obj_snd_update_offset(int objnum, int index, vec3d *new_offset)
-{
-	if ( objnum < 0 || objnum >= MAX_OBJECTS)
-		return 0;
-
-	if ( index < 0 || index >= MAX_OBJ_SNDS )
-		return 0;
-
-	object *objp = &Objects[objnum];
-	obj_snd *osp = &Objsnds[objp->objsnd_num[index]];
-	osp->offset = *new_offset;
-
-	return 1;
 }

@@ -9,8 +9,8 @@
 
 
 
-#include <string.h>
-#include <ctype.h>
+#include <cstring>
+#include <cctype>
 #ifdef _WIN32
 #include <io.h>
 #include <direct.h>
@@ -773,7 +773,7 @@ void do_new_subsystem( int n_subsystems, model_subsystem *slist, int subobj_num,
 
 #ifndef NDEBUG
 		// Goober5000 - notify if there's a mismatch
-		if ( stricmp(subobj_name, subsystemp->subobj_name) && !subsystem_stricmp(subobj_name, subsystemp->subobj_name) )
+		if ( stricmp(subobj_name, subsystemp->subobj_name) != 0 && !subsystem_stricmp(subobj_name, subsystemp->subobj_name) )
 		{
 			nprintf(("Model", "NOTE: Subsystem \"%s\" in model \"%s\" is represented as \"%s\" in ships.tbl.  This works fine in FSO v3.6 and up, "
 				"but is not compatible with FS2 retail.\n", subobj_name, model_get(model_num)->filename, subsystemp->subobj_name));
@@ -1179,7 +1179,12 @@ int read_model_file(polymodel * pm, const char *filename, int n_subsystems, mode
 				}
 
 				pm->num_debris_objects = cfread_int(fp);
-				Assert( pm->num_debris_objects <= MAX_DEBRIS_OBJECTS );
+			    if (pm->num_debris_objects > MAX_DEBRIS_OBJECTS) {
+				    Error(LOCATION,
+				          "Model %s specified that it contains %d debris objects but only %d are supported by the "
+				          "engine.",
+				          filename, pm->num_debris_objects, MAX_DEBRIS_OBJECTS);
+			    }
 				// mprintf(( "There are %d debris objects\n", pm->num_debris_objects ));
 				for (i=0; i<pm->num_debris_objects;i++ )	{
 					pm->debris_objects[i] = cfread_int(fp);
@@ -2847,13 +2852,12 @@ int model_load(const  char *filename, int n_subsystems, model_subsystem *subsyst
 
 	model_octant_create( pm );
 
-	if ( !Cmdline_old_collision_sys ) {
-		TRACE_SCOPE(tracing::ModelParseAllBSPTrees);
+	TRACE_SCOPE(tracing::ModelParseAllBSPTrees);
 
-		for ( i = 0; i < pm->n_models; ++i ) {
+	for (i = 0; i < pm->n_models; ++i) {
+		if (!(pm->submodel[i].nocollide_this_only || pm->submodel[i].no_collisions)) {
 			pm->submodel[i].collision_tree_index = model_create_bsp_collision_tree();
-			bsp_collision_tree *tree = model_get_bsp_collision_tree(pm->submodel[i].collision_tree_index);
-
+			bsp_collision_tree* tree             = model_get_bsp_collision_tree(pm->submodel[i].collision_tree_index);
 			model_collide_parse_bsp(tree, pm->submodel[i].bsp_data, pm->version);
 		}
 	}
@@ -3322,51 +3326,6 @@ int submodel_find_2d_bound_min(int model_num,int submodel, matrix *orient, vec3d
 	return 0;
 }
 
-
-/**
- * Find 2D bound for model
- *
- * Note that x1,y1,x2,y2 aren't clipped to 2D screen coordinates.
- *
- * @return zero if x1,y1,x2,y2 are valid
- * @return 2 for point offscreen
- */
-int model_find_2d_bound(int model_num,matrix *orient, vec3d * pos,int *x1, int *y1, int *x2, int *y2 )
-{
-	float t,w,h;
-	vertex pnt;
-	polymodel * po;
-
-	po = model_get(model_num);
-	float width = po->rad;
-	float height = po->rad;
-
-	g3_rotate_vertex(&pnt,pos);
-
-	if ( pnt.flags & CC_BEHIND ) 
-		return 2;
-
-	if (!(pnt.flags&PF_PROJECTED))
-		g3_project_vertex(&pnt);
-
-	if (pnt.flags & PF_OVERFLOW)
-		return 2;
-
-	t = (width * Canv_w2)/pnt.world.xyz.z;
-	w = t*Matrix_scale.xyz.x;
-
-	t = (height*Canv_h2)/pnt.world.xyz.z;
-	h = t*Matrix_scale.xyz.y;
-
-	if (x1) *x1 = fl2i(pnt.screen.xyw.x - w);
-	if (y1) *y1 = fl2i(pnt.screen.xyw.y - h);
-
-	if (x2) *x2 = fl2i(pnt.screen.xyw.x + w);
-	if (y2) *y2 = fl2i(pnt.screen.xyw.y + h);
-
-	return 0;
-}
-
 /**
  * Find 2D bound for sub object
  *
@@ -3375,7 +3334,7 @@ int model_find_2d_bound(int model_num,matrix *orient, vec3d * pos,int *x1, int *
  * @return zero if x1,y1,x2,y2 are valid
  * @return 2 for point offscreen
  */
-int subobj_find_2d_bound(float radius ,matrix *orient, vec3d * pos,int *x1, int *y1, int *x2, int *y2 )
+int subobj_find_2d_bound(float radius ,matrix * /*orient*/, vec3d * pos,int *x1, int *y1, int *x2, int *y2 )
 {
 	float t,w,h;
 	vertex pnt;
@@ -3407,43 +3366,6 @@ int subobj_find_2d_bound(float radius ,matrix *orient, vec3d * pos,int *x1, int 
 	if (y2) *y2 = fl2i(pnt.screen.xyw.y + h);
 
 	return 0;
-}
-
-
-// Given a vector that is in sub_model_num's frame of
-// reference, and given the object's orient and position,
-// return the vector in the model's frame of reference.
-void model_find_obj_dir(vec3d *w_vec, vec3d *m_vec, int model_num, int submodel_num, matrix *objorient)
-{
-	vec3d tvec, vec;
-	matrix m;
-	int mn;
-
-	polymodel *pm = model_get(model_num);
-	vec = *m_vec;
-	mn = submodel_num;
-
-	// instance up the tree for this point
-	while ( (mn >= 0) && (pm->submodel[mn].parent >= 0) ) {
-		// By using this kind of computation, the rotational angles can always
-		// be computed relative to the submodel itself, instead of relative
-		// to the parent - KeldorKatarn
-		matrix rotation_matrix = pm->submodel[mn].orientation;
-		vm_rotate_matrix_by_angles(&rotation_matrix, &pm->submodel[mn].angs);
-
-		matrix inv_orientation;
-		vm_copy_transpose(&inv_orientation, &pm->submodel[mn].orientation);
-
-		vm_matrix_x_matrix(&m, &rotation_matrix, &inv_orientation);
-
-		vm_vec_unrotate(&tvec, &vec, &m);
-		vec = tvec;
-
-		mn = pm->submodel[mn].parent;
-	}
-
-	// now instance for the entire object
-	vm_vec_unrotate(w_vec, &vec, objorient);
 }
 
 void model_instance_find_obj_dir(vec3d *w_vec, vec3d *m_vec, int model_instance_num, int submodel_num, matrix *objorient)
@@ -3564,7 +3486,7 @@ void submodel_stepped_rotate(model_subsystem *psub, submodel_instance_info *sii)
 	// step_offset_time is TIME into current step
 	float step_offset_time = (float)fmod(rotation_time, step_time);
 	// subtract off fractional step part, round up  (ie, 1.999999 -> 2)
-	int cur_step = int( ((rotation_time - step_offset_time) / step_time) + 0.5f);
+	int cur_step = (int)std::lround((rotation_time - step_offset_time) / step_time);
 	// mprintf(("cur step %d\n", cur_step));
 	// Assert(step_offset_time >= 0);
 
@@ -4032,7 +3954,7 @@ int model_rotate_gun(int model_num, model_subsystem *turret, matrix *orient, ang
 	base_delta = vm_interp_angle(&base_angles->h, desired_angles.h, step_size, limited_base_rotation);
 	gun_delta = vm_interp_angle(&gun_angles->p, desired_angles.p, step_size);
 
-	if (turret->turret_base_rotation_snd != -1)	
+	if (turret->turret_base_rotation_snd.isValid())
 	{
 		if (step_size > 0)
 		{
@@ -4043,7 +3965,7 @@ int model_rotate_gun(int model_num, model_subsystem *turret, matrix *orient, ang
 		}
 	}
 
-	if (turret->turret_gun_rotation_snd != -1)
+	if (turret->turret_gun_rotation_snd.isValid())
 	{
 		if (step_size > 0)
 		{
@@ -4200,49 +4122,6 @@ void model_instance_find_world_point(vec3d *outpnt, vec3d *mpnt, int model_insta
 	//now instance for the entire object
 	vm_vec_unrotate(outpnt,&pnt,objorient);
 	vm_vec_add2(outpnt,objpos);
-}
-
-// Given a point in the world RF, find the corresponding point in the model RF.
-// This is special purpose code, specific for model collision.
-// NOTE - this code ASSUMES submodel is 1 level down from hull (detail[0])
-//
-// out - point in model RF
-// world_pt - point in world RF
-// pm - polygon model
-// submodel_num - submodel in whose RF we're trying to find the corresponding world point
-// orient - orient matrix of ship
-// pos - pos vector of ship
-void world_find_model_point(vec3d *out, vec3d *world_pt, const polymodel *pm, int submodel_num, const matrix *orient, const vec3d *pos)
-{
-	Assert( (pm->submodel[submodel_num].parent == pm->detail[0]) || (pm->submodel[submodel_num].parent == -1) );
-
-	vec3d tempv1, tempv2;
-	matrix m;
-
-	// get into ship RF
-	vm_vec_sub(&tempv1, world_pt, pos);
-	vm_vec_rotate(&tempv2, &tempv1, orient);
-
-	if (pm->submodel[submodel_num].parent == -1) {
-		*out  = tempv2;
-		return;
-	}
-
-	// put into submodel RF
-	vm_vec_sub2(&tempv2, &pm->submodel[submodel_num].offset);
-
-	// By using this kind of computation, the rotational angles can always
-	// be computed relative to the submodel itself, instead of relative
-	// to the parent - KeldorKatarn
-	matrix rotation_matrix = pm->submodel[submodel_num].orientation;
-	vm_rotate_matrix_by_angles(&rotation_matrix, &pm->submodel[submodel_num].angs);
-
-	matrix inv_orientation;
-	vm_copy_transpose(&inv_orientation, &pm->submodel[submodel_num].orientation);
-
-	vm_matrix_x_matrix(&m, &rotation_matrix, &inv_orientation);
-
-	vm_vec_rotate(out, &tempv2, &m);
 }
 
 void world_find_model_instance_point(vec3d *out, vec3d *world_pt, const polymodel_instance *pmi, int submodel_num, const matrix *orient, const vec3d *pos)
@@ -5092,7 +4971,7 @@ int model_find_dock_index(int modelnum, int dock_type, int index_to_start_at)
 // function to return an index into the docking_bays array which matches the string passed
 // Fred uses strings to identify docking positions.  This function also accepts generic strings
 // so that a desginer doesn't have to know exact names if building a mission from hand.
-int model_find_dock_name_index( int modelnum, char *name )
+int model_find_dock_name_index(int modelnum, const char* name)
 {
 	int i;
 	polymodel *pm;
@@ -5451,7 +5330,7 @@ void swap_bsp_sortnorms( polymodel * pm, ubyte * p )
 }
 #endif // BIG_ENDIAN
 
-void swap_bsp_data( polymodel * pm, void *model_ptr )
+void swap_bsp_data( polymodel *  /*pm*/, void * /*model_ptr*/ )
 {
 #if BYTE_ORDER == BIG_ENDIAN
 	ubyte *p = (ubyte *)model_ptr;
@@ -5507,7 +5386,7 @@ void swap_bsp_data( polymodel * pm, void *model_ptr )
 #endif
 }
 
-void swap_sldc_data(ubyte *buffer)
+void swap_sldc_data(ubyte * /*buffer*/)
 {
 #if BYTE_ORDER == BIG_ENDIAN
 	char *type_p = (char *)(buffer);
@@ -5655,7 +5534,7 @@ void parse_glowpoint_table(const char *filename)
 
 				gpo.glow_bitmap_override = true;
 
-				if (stricmp(glow_texture_name, "none")) {
+				if (stricmp(glow_texture_name, "none") != 0) {
 					gpo.glow_bitmap = bm_load(glow_texture_name);
 
 					if (gpo.glow_bitmap < 0)
@@ -5852,14 +5731,14 @@ void model_subsystem::reset()
         it->xyz.x = it->xyz.y = it->xyz.z = 0.0f;
     turret_gun_sobj = 0;
     turret_turning_rate = 0;
-    turret_base_rotation_snd = 0;
+    turret_base_rotation_snd = gamesnd_id();
     turret_base_rotation_snd_mult = 0;
-    turret_gun_rotation_snd = 0;
+    turret_gun_rotation_snd = gamesnd_id();
     turret_gun_rotation_snd_mult = 0;
 
-    alive_snd = 0;
-    dead_snd = 0;
-    rotation_snd = 0;
+    alive_snd = gamesnd_id();
+    dead_snd = gamesnd_id();
+    rotation_snd = gamesnd_id();
 
     engine_wash_pointer = NULL;
     turn_rate = 0; 

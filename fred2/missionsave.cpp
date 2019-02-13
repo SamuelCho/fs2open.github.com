@@ -354,7 +354,7 @@ void CFred_mission_save::parse_comments(int newlines) {
 	if (newlines)
 		same_line = 1;
 
-	if (fred_parse_flag || !Token_found_flag || !token_found || (token_found && (*Mission_text_raw == '\0'))) {
+	if (fred_parse_flag || !Token_found_flag || !token_found || (token_found && (*Parse_text_raw == '\0'))) {
 		while (newlines-- > 0)
 			fout("\n");
 
@@ -530,6 +530,9 @@ void CFred_mission_save::save_ai_goals(ai_goal *goalp, int ship) {
 
 		} else if (goalp[i].ai_mode == AI_GOAL_PLAY_DEAD) {
 			fout("( ai-play-dead %d ) ", goalp[i].priority);
+
+		} else if (goalp[i].ai_mode == AI_GOAL_PLAY_DEAD_PERSISTENT) {
+			fout("( ai-play-dead-persistent %d ) ", goalp[i].priority);
 
 		} else if (goalp[i].ai_mode == AI_GOAL_WARP) {
 			fout("( ai-warp-out %d ) ", goalp[i].priority);
@@ -2672,6 +2675,14 @@ int CFred_mission_save::save_objects() {
 		parse_comments(z ? 2 : 1);
 		fout(" %s\t\t;! Object #%d\n", shipp->ship_name, i);
 
+		// Display name
+		if (Format_fs2_open != FSO_FORMAT_RETAIL && shipp->has_display_name()) {
+			// The display name is only written if there was one at the start to avoid introducing inconsistencies
+			fout("\n$Display name:");
+			fout_ext(" ", "%s", shipp->display_name.c_str());
+			fout("\n");
+		}
+
 		required_string_fred("$Class:");
 		parse_comments(0);
 		fout(" %s", Ship_info[shipp->ship_info_index].name);
@@ -3748,12 +3759,16 @@ int CFred_mission_save::save_variables() {
 					fout("\t\t\"%s\"", "network-variable");
 				}
 
+				if (Sexp_variables[i].type & SEXP_VARIABLE_SAVE_TO_PLAYER_FILE) {
+					fout("\t\t\"%s\"", "eternal");
+				}
+
 				// player-persistent - Goober5000
-				if (Sexp_variables[i].type & SEXP_VARIABLE_PLAYER_PERSISTENT) {
-					fout("\t\t\"%s\"", "player-persistent");
+				if (Sexp_variables[i].type & SEXP_VARIABLE_SAVE_ON_MISSION_CLOSE) {
+					fout("\t\t\"%s\"", "save-on-mission-close");
 					// campaign-persistent - Goober5000
-				} else if (Sexp_variables[i].type & SEXP_VARIABLE_CAMPAIGN_PERSISTENT) {
-					fout("\t\t\"%s\"", "campaign-persistent");
+				} else if (Sexp_variables[i].type & SEXP_VARIABLE_SAVE_ON_MISSION_PROGRESS) {
+					fout("\t\t\"%s\"", "save-on-mission-progress");
 				}
 			}
 

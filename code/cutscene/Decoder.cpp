@@ -3,6 +3,12 @@
 #include <memory>
 
 namespace cutscene {
+FrameSize::FrameSize(size_t in_width, size_t in_height, size_t in_stride)
+		: width(in_width), height(in_height), stride(in_stride)
+{
+}
+FrameSize::FrameSize() = default;
+
 Decoder::Decoder() : m_decoding(true) {
 }
 
@@ -40,10 +46,6 @@ void Decoder::stopDecoder() {
 	m_subtitleQueue->close();
 }
 
-bool Decoder::canPushAudioData() {
-	return !isAudioQueueFull();
-}
-
 void Decoder::pushAudioData(AudioFramePtr&& data) {
 	Assertion(data, "Invalid audio data passed!");
 
@@ -55,9 +57,6 @@ void Decoder::pushAudioData(AudioFramePtr&& data) {
 	}
 }
 
-bool Decoder::canPushSubtitleData() {
-	return !isSubtitleQueueFull();
-}
 void Decoder::pushSubtitleData(SubtitleFramePtr&& data) {
 	Assertion(data, "Invalid audio data passed!");
 
@@ -67,10 +66,6 @@ void Decoder::pushSubtitleData(SubtitleFramePtr&& data) {
 	catch (sync_queue_is_closed&) {
 		// Ignore
 	}
-}
-
-bool Decoder::canPushVideoData() {
-	return !isVideoQueueFull();
 }
 
 void Decoder::pushFrameData(VideoFramePtr&& frame) {

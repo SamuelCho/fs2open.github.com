@@ -79,9 +79,9 @@ extern bool Cmdline_fb_thrusters;
 extern int Cmdline_shadow_quality;
 extern int Cmdline_no_deferred_lighting;
 extern int Cmdline_no_emissive;
+extern int Cmdline_aniso_level;
 
 // Game Speed related
-extern int Cmdline_cache_bitmaps;
 extern int Cmdline_NoFPSCap;
 extern int Cmdline_no_vsync;
 
@@ -101,7 +101,6 @@ extern int Cmdline_autopilot_interruptable;
 extern int Cmdline_stretch_menu;
 
 // Audio related
-extern int Cmdline_query_speech;
 extern int Cmdline_voice_recognition;
 extern int Cmdline_no_enhanced_sound;
 
@@ -140,7 +139,6 @@ extern bool Cmdline_alternate_registry_path;
 
 // Developer/Testing related
 extern char *Cmdline_start_mission;
-extern int Cmdline_old_collision_sys;
 extern int Cmdline_dis_collisions;
 extern int Cmdline_dis_weapons;
 extern bool Cmdline_output_sexp_info;
@@ -156,7 +154,6 @@ extern bool Cmdline_profile_write_file;
 extern bool Cmdline_no_unfocus_pause;
 extern bool Cmdline_benchmark_mode;
 extern bool Cmdline_noninteractive;
-extern bool Cmdline_json_pilot;
 extern bool Cmdline_json_profiling;
 extern bool Cmdline_frame_profile;
 extern bool Cmdline_show_video_info;

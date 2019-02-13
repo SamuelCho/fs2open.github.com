@@ -24,7 +24,7 @@
 // ----------------------------------------------------------
 // Global to file
 // ----------------------------------------------------------
-static int		Player_afterburner_loop_id;		// identifies the looping afterburner sound of the player ship
+static sound_handle Player_afterburner_loop_id; // identifies the looping afterburner sound of the player ship
 static int		Player_afterburner_loop_delay;	// timestamp used to time the start of the looping afterburner sound
 static int		Player_disengage_timer;
 static float	Player_afterburner_vol;
@@ -54,7 +54,7 @@ void afterburner_level_init()
 {
 	Player_disengage_timer = 1;
 	Player_afterburner_vol = AFTERBURNER_DEFAULT_VOL;
-	Player_afterburner_loop_id = -1;
+	Player_afterburner_loop_id    = sound_handle::invalid();
 	Player_afterburner_start_time = 0;
 }
 
@@ -93,7 +93,7 @@ void afterburners_start(object *objp)
 		now = timer_get_milliseconds();
 
 		if ( (now - Player_afterburner_start_time) < 1300 ) {
-			snd_play( gamesnd_get_game_sound(ship_get_sound(objp, SND_ABURN_FAIL)) );
+			snd_play( gamesnd_get_game_sound(ship_get_sound(objp, GameSounds::ABURN_FAIL)) );
 			return;
 		}
 
@@ -117,7 +117,7 @@ void afterburners_start(object *objp)
 	// Check if there is enough afterburner fuel
 	if ( (shipp->afterburner_fuel < MIN_AFTERBURNER_FUEL_TO_ENGAGE) && !MULTIPLAYER_CLIENT ) {
 		if ( objp == Player_obj ) {
-			snd_play( gamesnd_get_game_sound(ship_get_sound(objp, SND_ABURN_FAIL)) );
+			snd_play( gamesnd_get_game_sound(ship_get_sound(objp, GameSounds::ABURN_FAIL)) );
 		}
 		return;
 	}
@@ -143,14 +143,14 @@ void afterburners_start(object *objp)
 			Player_afterburner_loop_delay = 0;
 		}
 
-		snd_play( gamesnd_get_game_sound(ship_get_sound(objp, SND_ABURN_ENGAGE)), 0.0f, 1.0f, SND_PRIORITY_MUST_PLAY );
+		snd_play( gamesnd_get_game_sound(ship_get_sound(objp, GameSounds::ABURN_ENGAGE)), 0.0f, 1.0f, SND_PRIORITY_MUST_PLAY );
 		joy_ff_afterburn_on();
 	} else {
-		snd_play_3d( gamesnd_get_game_sound(ship_get_sound(objp, SND_ABURN_ENGAGE)), &objp->pos, &View_position, objp->radius );
+		snd_play_3d( gamesnd_get_game_sound(ship_get_sound(objp, GameSounds::ABURN_ENGAGE)), &objp->pos, &View_position, objp->radius );
 	}
 
 	Script_system.SetHookObjects(1, "Ship", objp);
-	Script_system.RunCondition(CHA_AFTERBURNSTART, 0, NULL, objp);
+	Script_system.RunCondition(CHA_AFTERBURNSTART, objp);
 	Script_system.RemHookVars(1, "Ship");
 	
 	objp->phys_info.flags |= PF_AFTERBURNER_WAIT;
@@ -251,8 +251,8 @@ void afterburners_update(object *objp, float fl_frametime)
 		if ( timestamp_elapsed(Player_afterburner_loop_delay) ) {
 			Player_afterburner_vol = AFTERBURNER_DEFAULT_VOL;
 			Player_afterburner_loop_delay = 0;
-			if ( Player_afterburner_loop_id == -1 ) {
-				Player_afterburner_loop_id = snd_play_looping( gamesnd_get_game_sound(ship_get_sound(objp, SND_ABURN_LOOP)), 0.0f , -1, -1);
+			if (!Player_afterburner_loop_id.isValid()) {
+				Player_afterburner_loop_id = snd_play_looping( gamesnd_get_game_sound(ship_get_sound(objp, GameSounds::ABURN_LOOP)), 0.0f , -1, -1);
 				snd_set_volume(Player_afterburner_loop_id, Player_afterburner_vol);
 			}
 		}
@@ -303,7 +303,7 @@ void afterburners_stop(object *objp, int key_released)
 	}
 
 	Script_system.SetHookObjects(1, "Ship", objp);
-	Script_system.RunCondition(CHA_AFTERBURNEND, 0, NULL, objp);
+	Script_system.RunCondition(CHA_AFTERBURNEND, objp);
 	Script_system.RemHookVars(1, "Ship");
 
 	objp->phys_info.flags &= ~PF_AFTERBURNER_ON;
@@ -314,10 +314,10 @@ void afterburners_stop(object *objp, int key_released)
 	if ( objp == Player_obj ) {
 
 		if ( !key_released ) {
-			snd_play( gamesnd_get_game_sound(ship_get_sound(objp, SND_ABURN_FAIL)) );
+			snd_play( gamesnd_get_game_sound(ship_get_sound(objp, GameSounds::ABURN_FAIL)) );
 		}
 
-		if ( Player_afterburner_loop_id > -1 )	{
+		if (Player_afterburner_loop_id.isValid()) {
 			Player_disengage_timer = timestamp(DISENGAGE_TIME);
 		}
 
@@ -331,11 +331,11 @@ void afterburners_stop(object *objp, int key_released)
  */
 void afterburner_stop_sounds()
 {
-	if ( Player_afterburner_loop_id != -1 ) {
+	if (Player_afterburner_loop_id.isValid()) {
 		snd_stop(Player_afterburner_loop_id);
 	}
 
-	Player_afterburner_loop_id = -1;
+	Player_afterburner_loop_id    = sound_handle::invalid();
 	Player_disengage_timer = 1;
 	Player_afterburner_loop_delay = 0;
 }

@@ -12,7 +12,9 @@
 #ifndef _MODELANIM_H
 #define _MODELANIM_H
 
-#include <limits.h>
+#include "gamesnd/gamesnd.h"
+#include "globalincs/pstypes.h"
+#include <climits>
 
 #define MAX_TRIGGERED_ANIMATIONS 15
 
@@ -70,9 +72,9 @@ struct queued_animation {
 	int instance;
 	int real_end_time;
 
-	int start_sound;
-	int loop_sound;
-	int end_sound;
+	gamesnd_id start_sound;
+	gamesnd_id loop_sound;
+	gamesnd_id end_sound;
 	float snd_rad;
 
 	char sub_name[NAME_LENGTH];
@@ -96,11 +98,11 @@ struct trigger_instance{
 class triggered_rotation
 {
 	private:
-		int start_sound;
-		int loop_sound;
-		int end_sound;
-		int current_snd;
-		int current_snd_index;
+		gamesnd_id start_sound;
+		gamesnd_id loop_sound;
+		gamesnd_id end_sound;
+		gamesnd_id current_snd;
+		gamesnd_id current_snd_index;
 		float snd_rad;
 		int obj_num;
 
@@ -149,7 +151,7 @@ void model_anim_set_initial_states(ship *shipp);
 void model_anim_fix_reverse_times(ship_info *sip);
 
 // gets animation type index from string name
-int model_anim_match_type(char *p);
+int model_anim_match_type(const char* p);
 
 // starts an animation of a certan type that may be assosiated with a submodel of a ship (returns true if an animation was started)
 bool model_anim_start_type(ship_subsys *pss, int animation_type, int subtype, int direction, bool instant = false);	// for a specific subsystem

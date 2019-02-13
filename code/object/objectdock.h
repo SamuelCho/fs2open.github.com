@@ -88,8 +88,11 @@ object *dock_find_object_at_dockpoint(object *objp, int dockpoint);
 // find objp's dockpoint being occupied by other_objp
 int dock_find_dockpoint_used_by_object(object *objp, object *other_objp);
 
-// calculate the center of all docked objects (returned in dest)
-void dock_calc_docked_center(vec3d *dest, object *objp);
+// calculate the local center of all docked objects (returned in dest)
+void dock_calc_docked_actual_center(vec3d *dest, object *objp);
+
+// calculate the local mins and maxs of all docked objects
+void dock_calc_docked_extents(vec3d *mins, vec3d *maxs, object *objp);
 
 // calculate the center of mass of all docked objects (returned in dest)
 // currently the game assumes the center of mass is the center of an object; this will need to
@@ -114,7 +117,7 @@ float dock_calc_docked_fspeed(object *objp);
 // calculate the overall speed of the entire docked mass
 float dock_calc_docked_speed(object *objp);
 
-// Überfunction for evaluating all objects that could possibly be docked to objp.  This will
+// Ãœberfunction for evaluating all objects that could possibly be docked to objp.  This will
 // call "function" for each docked object.  The function should store its intermediate and
 // return values in the dock_function_info class.
 void dock_evaluate_all_docked_objects(object *objp, dock_function_info *infop, void (*function)(object *, dock_function_info *));

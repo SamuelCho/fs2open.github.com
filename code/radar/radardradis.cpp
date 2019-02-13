@@ -81,7 +81,7 @@ xy_plane(-1), xz_yz_plane(-1), sweep_plane(-1), target_brackets(-1), unknown_con
 	fx_guides2_1.a1d[1] = 0.0f;
 	fx_guides2_1.a1d[2] = 1.0f;
 
-	this->loop_sound_handle = -1;
+	this->loop_sound_handle = sound_handle::invalid();
 }
 
 void HudGaugeRadarDradis::initBitmaps(char* fname_xy, char* fname_xz_yz, char* fname_sweep, char* fname_target_brackets, char* fname_unknown)
@@ -143,7 +143,7 @@ void HudGaugeRadarDradis::plotBlip(blip* b, vec3d *pos, float *alpha)
 	}
 }
 
-void HudGaugeRadarDradis::drawContact(vec3d *pnt, int idx, int clr_idx, float dist, float alpha, float scale_factor)
+void HudGaugeRadarDradis::drawContact(vec3d *pnt, int idx, int clr_idx, float  /*dist*/, float alpha, float scale_factor)
 {
 	vec3d  p;
 	int h, w;
@@ -484,7 +484,7 @@ void HudGaugeRadarDradis::drawBlipsSorted(int distort)
 }
 
 
-void HudGaugeRadarDradis::render(float frametime)
+void HudGaugeRadarDradis::render(float  /*frametime*/)
 {
 	float sensors_str;
 	int   ok_to_blit_radar;
@@ -551,26 +551,24 @@ void HudGaugeRadarDradis::render(float frametime)
 		{
 			drawBlipsSorted(1);	// passing 1 means to draw distorted
 
-			if (Radar_static_looping == -1)
-				Radar_static_looping = snd_play_looping(gamesnd_get_game_sound(SND_STATIC));
+			if (!Radar_static_looping.isValid())
+				Radar_static_looping = snd_play_looping(gamesnd_get_game_sound(GameSounds::STATIC));
 		}
 		else
 		{
 			drawBlipsSorted(0);
 
-			if (Radar_static_looping != -1)
-			{
+			if (Radar_static_looping.isValid()) {
 				snd_stop(Radar_static_looping);
-				Radar_static_looping = -1;
+				Radar_static_looping = sound_handle::invalid();
 			}
 		}
 	}
 	else
 	{
-		if (Radar_static_looping != -1)
-		{
+		if (Radar_static_looping.isValid()) {
 			snd_stop(Radar_static_looping);
-			Radar_static_looping = -1;
+			Radar_static_looping = sound_handle::invalid();
 		}
 	}
 
@@ -591,21 +589,18 @@ void HudGaugeRadarDradis::pageIn()
 
 void HudGaugeRadarDradis::doLoopSnd()
 {
-	if (this->m_loop_snd < 0)
+	if (!this->m_loop_snd.isValid())
 	{
 		return;
 	}
 
 	if (!this->shouldDoSounds())
 	{
-		if (loop_sound_handle >= 0 && snd_is_playing(loop_sound_handle))
-		{
+		if (loop_sound_handle.isValid() && snd_is_playing(loop_sound_handle)) {
 			snd_stop(loop_sound_handle);
-			loop_sound_handle = -1;
+			loop_sound_handle = sound_handle::invalid();
 		}
-	}
-	else if (this->loop_sound_handle < 0 || !snd_is_playing(this->loop_sound_handle))
-	{
+	} else if (!this->loop_sound_handle.isValid() || !snd_is_playing(this->loop_sound_handle)) {
 		loop_sound_handle = snd_play(gamesnd_get_game_sound(m_loop_snd), 0.0f, loop_sound_volume);
 	}
 }
@@ -623,10 +618,10 @@ void HudGaugeRadarDradis::doBeeps()
 		return;
 	}
 
-	if (arrival_beep_snd < 0 &&
-		departure_beep_snd < 0 &&
-		m_stealth_arrival_snd < 0 &&
-		stealth_departure_snd < 0)
+	if (!arrival_beep_snd.isValid() &&
+		!departure_beep_snd.isValid() &&
+		!m_stealth_arrival_snd.isValid() &&
+		!stealth_departure_snd.isValid())
 	{
 		return;
 	}
@@ -673,13 +668,13 @@ void HudGaugeRadarDradis::doBeeps()
 	
 	if (timestamp_elapsed(arrival_beep_next_check))
 	{
-		if (arrival_beep_snd >= 0 && arrival_happened)
+		if (arrival_beep_snd.isValid() && arrival_happened)
 		{
 			snd_play(gamesnd_get_game_sound(arrival_beep_snd));
 
 			arrival_beep_next_check = timestamp(arrival_beep_delay);
 		}
-		else if (m_stealth_arrival_snd >= 0 && stealth_arrival_happened)
+		else if (m_stealth_arrival_snd.isValid() && stealth_arrival_happened)
 		{
 			snd_play(gamesnd_get_game_sound(m_stealth_arrival_snd));
 
@@ -690,13 +685,13 @@ void HudGaugeRadarDradis::doBeeps()
 
 	if (timestamp_elapsed(departure_beep_next_check))
 	{
-		if (departure_beep_snd >= 0 && departure_happened)
+		if (departure_beep_snd.isValid() && departure_happened)
 		{
 			snd_play(gamesnd_get_game_sound(departure_beep_snd));
 
 			departure_beep_next_check = timestamp(departure_beep_delay);
 		}
-		else if (stealth_departure_snd >= 0 && stealth_departure_happened)
+		else if (stealth_departure_snd.isValid() && stealth_departure_happened)
 		{
 			snd_play(gamesnd_get_game_sound(stealth_departure_snd));
 
@@ -705,10 +700,10 @@ void HudGaugeRadarDradis::doBeeps()
 	}
 }
 
-void HudGaugeRadarDradis::initSound(int loop_snd, float _loop_snd_volume, int arrival_snd, int departure_snd, int stealth_arrival_snd, int stealth_departue_snd, float arrival_delay, float departure_delay)
+void HudGaugeRadarDradis::initSound(gamesnd_id loop_snd, float _loop_snd_volume, gamesnd_id arrival_snd, gamesnd_id departure_snd, gamesnd_id stealth_arrival_snd, gamesnd_id stealth_departue_snd, float arrival_delay, float departure_delay)
 {
 	this->m_loop_snd = loop_snd;
-	this->loop_sound_handle = -1;
+	this->loop_sound_handle = sound_handle::invalid();
 	this->loop_sound_volume = _loop_snd_volume;
 
 	this->arrival_beep_snd = arrival_snd;
@@ -721,7 +716,7 @@ void HudGaugeRadarDradis::initSound(int loop_snd, float _loop_snd_volume, int ar
 	this->departure_beep_delay = fl2i(departure_delay * 1000.0f);
 }
 
-void HudGaugeRadarDradis::onFrame(float frametime)
+void HudGaugeRadarDradis::onFrame(float  /*frametime*/)
 {
 	// Play the specified radar sound
 	this->doLoopSnd();

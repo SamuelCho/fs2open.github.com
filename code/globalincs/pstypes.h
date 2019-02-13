@@ -19,10 +19,10 @@
 #include "globalincs/toolchain.h"
 #include "utils/strings.h"
 
-#include <stdio.h>	// For NULL, etc
-#include <stdlib.h>
+#include <cstdio>    // For NULL, etc
+#include <cstdlib>
 #include <memory.h>
-#include <string.h>
+#include <cstring>
 #include <algorithm>
 #include <cstdint>
 
@@ -102,15 +102,6 @@ typedef struct vec3d {
 		float a1d[3];
 	};
 } vec3d;
-
-/** Compares two vec3ds */
-inline bool operator==(const vec3d &self, const vec3d &other)
-{
-	return (self.xyz.x == other.xyz.x
-		&& self.xyz.y == other.xyz.y
-		&& self.xyz.z == other.xyz.z
-	);
-}
 
 typedef struct vec2d {
 	float x, y;
@@ -256,14 +247,14 @@ extern int Global_error_count;
 // Disabling this functionality is dangerous, crazy values can run rampent unchecked and the longer its disabled
 // the more likely you are to have problems getting it working again.
 #if defined(NDEBUG)
-#	define Assert(expr) do { ASSUME(expr); } while (0)
+#	define Assert(expr) do { ASSUME(expr); } while (false)
 #else
 #	define Assert(expr) do {\
 		if (!(expr)) {\
 			os::dialogs::AssertMessage(#expr,__FILE__,__LINE__);\
 		}\
 		ASSUME( expr );\
-	} while (0)
+	} while (false)
 #endif
 /*******************NEVER COMMENT Assert ************************************************/
 
@@ -398,7 +389,7 @@ template <class T> void CAP( T& v, T mn, T mx )
 }
 
 // faster version of CAP()
-#define CLAMP(x, min, max) do { if ( (x) < (min) ) (x) = (min); else if ((x) > (max)) (x) = (max); } while(0)
+#define CLAMP(x, min, max) do { if ( (x) < (min) ) (x) = (min); else if ((x) > (max)) (x) = (max); } while(false)
 
 //=========================================================
 // Memory management functions
@@ -429,7 +420,7 @@ public:
 //  - is not "none"
 //  - is not "<none>"
 inline bool VALID_FNAME(const char* x) {
-	return strlen((x)) && stricmp((x), "none") && stricmp((x), "<none>");
+	return strlen((x)) && stricmp((x), "none") != 0 && stricmp((x), "<none>") != 0;
 }
 /**
  * @brief Checks if the specified string may be a valid file name
@@ -457,7 +448,8 @@ inline bool VALID_FNAME(const SCP_string& x) {
 SCP_string dump_stacktrace();
 
 // DEBUG compile time catch for dangerous uses of memset/memcpy/memmove
-#ifndef NDEBUG
+// This is disabled for VS2013 and lower since that doesn't support the necessary features
+#if !defined(NDEBUG) && !defined(USING_THIRD_PARTY_LIBS) && (!defined(_MSC_VER) || _MSC_VER >= 1900)
 	#if SCP_COMPILER_CXX_AUTO_TYPE && SCP_COMPILER_CXX_STATIC_ASSERT && defined(HAVE_STD_IS_TRIVIALLY_COPYABLE)
 	// feature support seems to be: gcc   clang   msvc
 	// auto                         4.4   2.9     2010
@@ -473,15 +465,8 @@ SCP_string dump_stacktrace();
 // Put into std to be compatible with code that uses std::mem*
 namespace std
 {
-
-// This is a separate check which also checks if arrays are trivially copyable since Visual Studio 2013 thinks they are not
-#if SCP_COMPILER_IS_MSVC && _MSC_VER <= 1800
-template<typename T>
-using trivial_check = std::is_trivial<T>;
-#else
-template<typename T>
-using trivial_check = std::is_trivially_copyable<T>;
-#endif
+	template<typename T>
+	using trivial_check = std::is_trivially_copyable<T>;
 
 	template<typename T>
 	void *memset_if_trivial_else_error(T *memset_data, int ch, size_t count)

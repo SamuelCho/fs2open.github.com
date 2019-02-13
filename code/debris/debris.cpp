@@ -31,7 +31,6 @@
 #include "weapon/weapon.h"
 #include "tracing/Monitor.h"
 
-#define MAX_LIFE									10.0f
 #define MIN_RADIUS_FOR_PERSISTANT_DEBRIS	50		// ship radius at which debris from it becomes persistant
 #define DEBRIS_SOUND_DELAY						2000	// time to start debris sound after created
 #define MAX_HULL_PIECES			MAX_DEBRIS_PIECES // limit the number of hull debris chunks that can exist. 
@@ -52,10 +51,6 @@ int Debris_num_submodels = 0;
 #define	DEBRIS_DISTANCE_CHECK_TIME		(10*1000)		//	Check every 10 seconds.
 #define	DEBRIS_INDEX(dp) (int)(dp-Debris)
 
-#define	MAX_SPEED_SMALL_DEBRIS		200					// maximum velocity of small debris piece
-#define	MAX_SPEED_BIG_DEBRIS			150					// maximum velocity of big debris piece
-#define	MAX_SPEED_CAPITAL_DEBRIS	100					// maximum velocity of capital debris piece
-
 /**
  * Start the sequence of a piece of debris writhing in unholy agony!!!
  */
@@ -74,7 +69,7 @@ static void debris_start_death_roll(object *debris_obj, debris *debris_p)
 
 		// only play debris destroy sound if hull piece and it has been around for at least 2 seconds
 		if ( Missiontime > debris_p->time_started + 2*F1_0 ) {
-			snd_play_3d( gamesnd_get_game_sound(SND_MISSILE_IMPACT1), &debris_obj->pos, &View_position, debris_obj->radius );
+			snd_play_3d( gamesnd_get_game_sound(gamesnd_id(GameSounds::MISSILE_IMPACT1)), &debris_obj->pos, &View_position, debris_obj->radius );
 			
 		}
 	}
@@ -238,7 +233,7 @@ void debris_process_post(object * obj, float frame_time)
 		radar_plot_object( obj );
 
 		if ( timestamp_elapsed(db->sound_delay) ) {
-			obj_snd_assign(objnum, SND_DEBRIS, &vmd_zero_vector, 0);
+			obj_snd_assign(objnum, GameSounds::DEBRIS, &vmd_zero_vector, 0);
 			db->sound_delay = 0;
 		}
 	} else {
@@ -270,13 +265,8 @@ void debris_process_post(object * obj, float frame_time)
 
 			vec3d v1, v2, v3, v4;
 
-			if ( Cmdline_old_collision_sys ) {
-				submodel_get_two_random_points( db->model_num, db->submodel_num, &v1, &v2 );
-				submodel_get_two_random_points( db->model_num, db->submodel_num, &v3, &v4 );
-			} else {
-				submodel_get_two_random_points_better( db->model_num, db->submodel_num, &v1, &v2 );
-				submodel_get_two_random_points_better( db->model_num, db->submodel_num, &v3, &v4 );
-			}
+			submodel_get_two_random_points_better(db->model_num, db->submodel_num, &v1, &v2);
+			submodel_get_two_random_points_better(db->model_num, db->submodel_num, &v3, &v4);
 
 			n = 0;
 
@@ -324,19 +314,19 @@ void debris_process_post(object * obj, float frame_time)
 			//Play a sound effect
 			if ( lifetime > 750 )	{
 				// 1.00 second effect
-				snd_play_3d( gamesnd_get_game_sound(SND_DEBRIS_ARC_05), &snd_pos, &View_position, obj->radius );
+				snd_play_3d( gamesnd_get_game_sound(GameSounds::DEBRIS_ARC_05), &snd_pos, &View_position, obj->radius );
 			} else if ( lifetime >  500 )	{
 				// 0.75 second effect
-				snd_play_3d( gamesnd_get_game_sound(SND_DEBRIS_ARC_04), &snd_pos, &View_position, obj->radius );
+				snd_play_3d( gamesnd_get_game_sound(GameSounds::DEBRIS_ARC_04), &snd_pos, &View_position, obj->radius );
 			} else if ( lifetime >  250 )	{
 				// 0.50 second effect
-				snd_play_3d( gamesnd_get_game_sound(SND_DEBRIS_ARC_03), &snd_pos, &View_position, obj->radius );
+				snd_play_3d( gamesnd_get_game_sound(GameSounds::DEBRIS_ARC_03), &snd_pos, &View_position, obj->radius );
 			} else if ( lifetime >  100 )	{
 				// 0.25 second effect
-				snd_play_3d( gamesnd_get_game_sound(SND_DEBRIS_ARC_02), &snd_pos, &View_position, obj->radius );
+				snd_play_3d( gamesnd_get_game_sound(GameSounds::DEBRIS_ARC_02), &snd_pos, &View_position, obj->radius );
 			} else {
 				// 0.10 second effect
-				snd_play_3d( gamesnd_get_game_sound(SND_DEBRIS_ARC_01), &snd_pos, &View_position, obj->radius );
+				snd_play_3d( gamesnd_get_game_sound(GameSounds::DEBRIS_ARC_01), &snd_pos, &View_position, obj->radius );
 			}
 		}
 	}
@@ -352,12 +342,8 @@ void debris_process_post(object * obj, float frame_time)
 				if ( mr < RAND_MAX/5 )	{
 					vec3d v1, v2;
 
-					if ( Cmdline_old_collision_sys ) {
-						submodel_get_two_random_points( db->model_num, db->submodel_num, &v1, &v2 );
-					} else {
-						submodel_get_two_random_points_better( db->model_num, db->submodel_num, &v1, &v2 );
-					}
-					
+					submodel_get_two_random_points_better(db->model_num, db->submodel_num, &v1, &v2);
+
 					db->arc_pts[i][mr % 2] = v1;
 				}
 			}
@@ -505,7 +491,6 @@ object *debris_create(object *source_obj, int model_num, int submodel_num, vec3d
 	db->flags |= DEBRIS_USED;
 	db->is_hull = hull_flag;
 	db->source_objnum = parent_objnum;
-	db->source_sig = source_obj->signature;
 	db->damage_type_idx = shipp->debris_damage_type_idx;
 	db->ship_info_index = shipp->ship_info_index;
 	db->team = shipp->team;
@@ -693,7 +678,7 @@ object *debris_create(object *source_obj, int model_num, int submodel_num, vec3d
  * Alas, poor debris_obj got whacked.  Fortunately, we know who did it, where and how hard, so we
  * can do something about it.
  */
-void debris_hit(object *debris_obj, object *other_obj, vec3d *hitpos, float damage)
+void debris_hit(object *debris_obj, object * /*other_obj*/, vec3d *hitpos, float damage)
 {
 	debris	*debris_p = &Debris[debris_obj->instance];
 

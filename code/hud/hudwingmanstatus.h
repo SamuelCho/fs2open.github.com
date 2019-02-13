@@ -20,9 +20,7 @@ class p_object;
 
 void	hud_init_wingman_status_gauge();
 void	hud_wingman_status_update();
-void	hud_wingman_status_render();
 void	hud_wingman_status_init_flash();
-int	hud_wingman_status_maybe_flash(int wing_index, int wing_pos);
 void	hud_set_wingman_status_dead(int wing_index, int wing_pos);
 void	hud_set_wingman_status_departed(int wing_index, int wing_pos);
 void	hud_set_wingman_status_alive( int wing_index, int wing_pos);
@@ -74,9 +72,9 @@ public:
 	void initWingmate5Offsets(int x, int y);
 	void initWingmate6Offsets(int x, int y);
 	void initGrowMode(int mode);
-	void pageIn();
-	void initialize();
-	void render(float frametime);
+	void pageIn() override;
+	void initialize() override;
+	void render(float frametime) override;
 	void renderBackground(int num_wings_to_draw);
 	void renderDots(int wing_index, int screen_index, int num_wings_to_draw);
 	void initFlash();

@@ -19,6 +19,24 @@
 // This code was adapted from the original NanoVG OpenGL renderer to work with the FreeSpace Open graphics API
 
 #include "NanoVGRenderer.h"
+#include "tracing/tracing.h"
+
+
+#ifndef NDEBUG
+// That is a wrapper function for log prints to be availiable for nanovg components. For now it is stb_truetype.h
+// Planted by ksotar with blessing from asarium
+extern "C" {
+	void nvgOldCPrintf(SCP_FORMAT_STRING const char *message, ...) {
+		SCP_string buf;
+		va_list args;
+		va_start(args, message);
+		vsprintf(buf, message, args);
+		va_end(args);
+		outwnd_printf2("%s", message);
+	}
+}
+#endif
+
 
 namespace {
 using namespace graphics::paths;
@@ -269,6 +287,12 @@ void NanoVGRenderer::renderFill(NVGpaint* paint,
 								const float* bounds,
 								const NVGpath* paths,
 								int npaths) {
+	if (npaths <= 0) {
+		// Ignore irrelevant render calls
+		mprintf(("NanoVG asked us to render filled triangles but no paths were supplied!\n"));
+		return;
+	}
+
 	auto call = addDrawCall();
 
 	call->type = CallType::Fill;
@@ -330,6 +354,12 @@ void NanoVGRenderer::renderFill(NVGpaint* paint,
 	}
 }
 void NanoVGRenderer::renderTriangles(NVGpaint* paint, NVGscissor* scissor, const NVGvertex* verts, int nverts) {
+	if (nverts <= 0) {
+		// Ignore irrelevant render calls
+		mprintf(("NanoVG asked us to render triangles but no vertices were supplied!\n"));
+		return;
+	}
+
 	_vertices.insert(_vertices.end(), verts, verts + nverts);
 
 	auto call = addDrawCall();
@@ -353,6 +383,12 @@ void NanoVGRenderer::renderStroke(NVGpaint* paint,
 								  float strokeWidth,
 								  const NVGpath* paths,
 								  int npaths) {
+	if (npaths <= 0) {
+		// Ignore irrelevant render calls
+		mprintf(("NanoVG asked us to render stroke triangles but no paths were supplied!\n"));
+		return;
+	}
+
 	auto call = addDrawCall();
 
 	call->type = CallType::Stroke;
@@ -386,7 +422,9 @@ void NanoVGRenderer::renderFlush() {
 		return;
 	}
 
+	TRACE_SCOPE(tracing::NanoVGFlushFrame);
 	GR_DEBUG_SCOPE("NanoVG flush");
+
 	gr_set_viewport(0, 0, gr_screen.max_w, gr_screen.max_h);
 
 	_uniformBuffer = gr_get_uniform_buffer(uniform_block_type::NanoVGData);
@@ -459,7 +497,7 @@ int NanoVGRenderer::createTexture(int type, int w, int h, int imageFlags, const 
 
 	return id;
 }
-int NanoVGRenderer::updateTexture(int image, int x, int y, int w, int h, const unsigned char* data) {
+int NanoVGRenderer::updateTexture(int image, int  /*x*/, int  /*y*/, int  /*w*/, int  /*h*/, const unsigned char* data) {
 	auto texture = getTexture(image);
 	if (texture == nullptr) {
 		return 0;
@@ -616,6 +654,7 @@ NanoVGRenderer::Image* NanoVGRenderer::getTexture(int id) {
 
 void NanoVGRenderer::drawTriangles(const DrawCall& call) {
 	GR_DEBUG_SCOPE("Draw triangles");
+	TRACE_SCOPE(tracing::NanoVGDrawTriangles);
 
 	auto mat = _trianglesMaterial;
 	materialSetTexture(mat, call.image);
@@ -629,6 +668,7 @@ void NanoVGRenderer::drawTriangles(const DrawCall& call) {
 }
 void NanoVGRenderer::drawFill(const DrawCall& call) {
 	GR_DEBUG_SCOPE("Draw fill");
+	TRACE_SCOPE(tracing::NanoVGDrawFill);
 
 	auto mat = _fillShapeMaterial;
 	mat.set_texture_map(TM_BASE_TYPE, -1);
@@ -672,6 +712,7 @@ void NanoVGRenderer::drawFill(const DrawCall& call) {
 }
 void NanoVGRenderer::drawConvexFill(const DrawCall& call) {
 	GR_DEBUG_SCOPE("Draw convex fill");
+	TRACE_SCOPE(tracing::NanoVGDrawConvexFill);
 
 	auto mat = _triangleFillMaterial;
 	materialSetTexture(mat, call.image);
@@ -704,6 +745,7 @@ void NanoVGRenderer::drawConvexFill(const DrawCall& call) {
 }
 void NanoVGRenderer::drawStroke(const DrawCall& call) {
 	GR_DEBUG_SCOPE("Draw stroke");
+	TRACE_SCOPE(tracing::NanoVGDrawStroke);
 
 	auto mat = _strokeFillMaterial;
 	materialSetTexture(mat, call.image);

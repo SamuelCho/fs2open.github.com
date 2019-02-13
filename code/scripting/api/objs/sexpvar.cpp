@@ -26,25 +26,25 @@ ADE_VIRTVAR(Persistence, l_SEXPVariable, "enumeration", "SEXP Variable persistan
 	{
 		if(type->index == LE_SEXPVAR_PLAYER_PERSISTENT)
 		{
-			sv->type &= ~(SEXP_VARIABLE_CAMPAIGN_PERSISTENT);
-			sv->type |= SEXP_VARIABLE_PLAYER_PERSISTENT;
+			sv->type &= ~(SEXP_VARIABLE_SAVE_ON_MISSION_PROGRESS);
+			sv->type |= SEXP_VARIABLE_SAVE_ON_MISSION_CLOSE;
 		}
 		else if(type->index == LE_SEXPVAR_CAMPAIGN_PERSISTENT)
 		{
-			sv->type |= SEXP_VARIABLE_CAMPAIGN_PERSISTENT;
-			sv->type &= ~(SEXP_VARIABLE_PLAYER_PERSISTENT);
+			sv->type |= SEXP_VARIABLE_SAVE_ON_MISSION_PROGRESS;
+			sv->type &= ~(SEXP_VARIABLE_SAVE_ON_MISSION_CLOSE);
 		}
 		else if(type->index == LE_SEXPVAR_NOT_PERSISTENT)
 		{
-			sv->type &= ~(SEXP_VARIABLE_CAMPAIGN_PERSISTENT);
-			sv->type &= ~(SEXP_VARIABLE_PLAYER_PERSISTENT);
+			sv->type &= ~(SEXP_VARIABLE_SAVE_ON_MISSION_PROGRESS);
+			sv->type &= ~(SEXP_VARIABLE_SAVE_ON_MISSION_CLOSE);
 		}
 	}
 
 	enum_h ren;
-	if(sv->type & SEXP_VARIABLE_PLAYER_PERSISTENT)
+	if(sv->type & SEXP_VARIABLE_SAVE_ON_MISSION_CLOSE)
 		ren.index = LE_SEXPVAR_PLAYER_PERSISTENT;
-	else if(sv->type & SEXP_VARIABLE_CAMPAIGN_PERSISTENT)
+	else if(sv->type & SEXP_VARIABLE_SAVE_ON_MISSION_PROGRESS)
 		ren.index = LE_SEXPVAR_CAMPAIGN_PERSISTENT;
 	else
 		ren.index = LE_SEXPVAR_NOT_PERSISTENT;
@@ -90,7 +90,7 @@ ADE_VIRTVAR(Type, l_SEXPVariable, "enumeration", "SEXP Variable type, uses SEXPV
 ADE_VIRTVAR(Value, l_SEXPVariable, "number/string", "SEXP variable value", "string", "SEXP variable contents, or nil if the variable is of an invalid type or the handle is invalid")
 {
 	sexpvar_h *svh = NULL;
-	char *newvalue = NULL;
+	const char* newvalue = nullptr;
 	char number_as_str[TOKEN_LENGTH];
 
 	if(lua_type(L, 2) == LUA_TNUMBER)

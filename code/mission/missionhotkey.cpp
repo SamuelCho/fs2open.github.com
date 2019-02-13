@@ -260,7 +260,7 @@ static UI_XSTR Hotkey_text[GR_NUM_RESOLUTIONS][HOTKEY_NUM_TEXT] = {
 
 
 static struct {
-	const char *label;
+	SCP_string label;
 	int type;
 	int index;
 	int y;  // Y coordinate of line
@@ -524,7 +524,7 @@ int hotkey_line_add(const char *text, int type, int index, int y)
 }
 
 // insert a line of hotkey smuck before line 'n'.
-int hotkey_line_insert(int n, char *text, int type, int index)
+int hotkey_line_insert(int n, const char *text, int type, int index)
 {
 	int z;
 
@@ -545,7 +545,7 @@ int hotkey_line_insert(int n, char *text, int type, int index)
 
 // insert a line of hotkey smuck somewhere between 'start' and end of list such that it is
 // sorted by name
-int hotkey_line_add_sorted(char *text, int type, int index, int start)
+int hotkey_line_add_sorted(const char *text, int type, int index, int start)
 {
 	int z;
 
@@ -553,7 +553,7 @@ int hotkey_line_add_sorted(char *text, int type, int index, int start)
 		return -1;
 
 	z = Num_lines - 1;
-	while ((z >= start) && ((Hotkey_lines[z].type == HOTKEY_LINE_SUBSHIP) || (stricmp(text, Hotkey_lines[z].label) < 0)))
+	while ((z >= start) && ((Hotkey_lines[z].type == HOTKEY_LINE_SUBSHIP) || (stricmp(text, Hotkey_lines[z].label.c_str()) < 0)))
 		z--;
 
 	z++;
@@ -620,7 +620,7 @@ int hotkey_build_team_listing(int enemy_team_mask, int y, bool list_enemies)
 
 		// be sure this ship isn't in a wing, and that the teams match
 		if ( iff_matches_mask(Ships[shipnum].team, team_mask) && (Ships[shipnum].wingnum < 0) ) {
-			hotkey_line_add_sorted(Ships[shipnum].ship_name, HOTKEY_LINE_SHIP, shipnum, start);
+			hotkey_line_add_sorted(Ships[shipnum].get_display_string(), HOTKEY_LINE_SHIP, shipnum, start);
 		}
 	}
 
@@ -652,7 +652,7 @@ int hotkey_build_team_listing(int enemy_team_mask, int y, bool list_enemies)
 			if (Wings[i].flags[Ship::Wing_Flags::Expanded]) {
 				for (j=0; j<Wings[i].current_count; j++) {
 					s = Wings[i].ship_index[j];
-					z = hotkey_line_insert(z + 1, Ships[s].ship_name, HOTKEY_LINE_SUBSHIP, s);
+					z = hotkey_line_insert(z + 1, Ships[s].get_display_string(), HOTKEY_LINE_SUBSHIP, s);
 				}
 			}
 		}
@@ -705,10 +705,10 @@ void hotkey_scroll_screen_up()
 		while (!hotkey_line_query_visible(Selected_line) || (Hotkey_lines[Selected_line].type == HOTKEY_LINE_HEADING))
 			Selected_line--;
 
-		gamesnd_play_iface(SND_SCROLL);
+		gamesnd_play_iface(InterfaceSounds::SCROLL);
 
 	} else
-		gamesnd_play_iface(SND_GENERAL_FAIL);
+		gamesnd_play_iface(InterfaceSounds::GENERAL_FAIL);
 }
 
 void hotkey_scroll_line_up()
@@ -721,10 +721,10 @@ void hotkey_scroll_line_up()
 		if (Selected_line < Scroll_offset)
 			Scroll_offset = Selected_line;
 
-		gamesnd_play_iface(SND_SCROLL);
+		gamesnd_play_iface(InterfaceSounds::SCROLL);
 
 	} else
-		gamesnd_play_iface(SND_GENERAL_FAIL);
+		gamesnd_play_iface(InterfaceSounds::GENERAL_FAIL);
 }
 
 void hotkey_scroll_screen_down()
@@ -736,10 +736,10 @@ void hotkey_scroll_screen_down()
 			Assert(Selected_line < Num_lines);
 		}
 
-		gamesnd_play_iface(SND_SCROLL);
+		gamesnd_play_iface(InterfaceSounds::SCROLL);
 
 	} else
-		gamesnd_play_iface(SND_GENERAL_FAIL);
+		gamesnd_play_iface(InterfaceSounds::GENERAL_FAIL);
 }
 
 void hotkey_scroll_line_down()
@@ -753,10 +753,10 @@ void hotkey_scroll_line_down()
 		while (!hotkey_line_query_visible(Selected_line))
 			Scroll_offset++;
 
-		gamesnd_play_iface(SND_SCROLL);
+		gamesnd_play_iface(InterfaceSounds::SCROLL);
 
 	} else
-		gamesnd_play_iface(SND_GENERAL_FAIL);
+		gamesnd_play_iface(InterfaceSounds::GENERAL_FAIL);
 }
 
 void expand_wing()
@@ -869,12 +869,12 @@ void hotkey_button_pressed(int n)
 
 		case ADD_HOTKEY_BUTTON:
 			add_hotkey(Cur_hotkey);
-			gamesnd_play_iface(SND_USER_SELECT);
+			gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 			break;
 
 		case REMOVE_HOTKEY_BUTTON:
 			remove_hotkey();
-			gamesnd_play_iface(SND_USER_SELECT);
+			gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 			break;
 
 		case ACCEPT_BUTTON:
@@ -884,27 +884,27 @@ void hotkey_button_pressed(int n)
 
 		case CANCEL_BUTTON:			
 			mission_hotkey_exit();
-			gamesnd_play_iface(SND_USER_SELECT);
+			gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 			break;
 
 		case HELP_BUTTON:
 			launch_context_help();
-			gamesnd_play_iface(SND_HELP_PRESSED);
+			gamesnd_play_iface(InterfaceSounds::HELP_PRESSED);
 			break;
 
 		case OPTIONS_BUTTON:			
 			gameseq_post_event(GS_EVENT_OPTIONS_MENU);
-			gamesnd_play_iface(SND_USER_SELECT);
+			gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 			break;
 
 		case CLEAR_BUTTON:
 			clear_hotkeys();
-			gamesnd_play_iface(SND_USER_SELECT);
+			gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 			break;
 
 		case RESET_BUTTON:
 			reset_hotkeys();
-			gamesnd_play_iface(SND_USER_SELECT);
+			gamesnd_play_iface(InterfaceSounds::USER_SELECT);
 			break;
 	}
 }
@@ -1006,7 +1006,7 @@ void mission_hotkey_close()
 //
 // Called once per frame to process user input for the Hotkey Assignment Screen
 //
-void mission_hotkey_do_frame(float frametime)
+void mission_hotkey_do_frame(float  /*frametime*/)
 {
 	char buf[256];
 	int i, k, w, h, y, z, line, hotkeys;
@@ -1172,7 +1172,7 @@ void mission_hotkey_do_frame(float frametime)
 			case HOTKEY_LINE_HEADING:
 				gr_set_color_fast(&Color_text_heading);
 
-				gr_get_string_size(&w, &h, Hotkey_lines[line].label);
+				gr_get_string_size(&w, &h, Hotkey_lines[line].label.c_str());
 				i = y + h / 2 - 1;
 				gr_line(Hotkey_list_coords[gr_screen.res][0], i, Hotkey_ship_x[gr_screen.res] - 2, i, GR_RESIZE_MENU);
 				gr_line(Hotkey_ship_x[gr_screen.res] + w + 1, i, Hotkey_list_coords[gr_screen.res][0] + Hotkey_list_coords[gr_screen.res][2], i, GR_RESIZE_MENU);
@@ -1251,7 +1251,7 @@ void mission_hotkey_do_frame(float frametime)
 		}
 	
 		// draw ship/wing name
-		strcpy_s(buf, Hotkey_lines[line].label);
+		strcpy_s(buf, Hotkey_lines[line].label.c_str());
 		end_string_at_first_hash_symbol(buf);
 		if (Hotkey_lines[line].type == HOTKEY_LINE_SUBSHIP) {
 			// indent

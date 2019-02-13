@@ -27,7 +27,6 @@ class object;
 #define AI_MODIFY_ETS_INTERVAL 500	// time between ets modifications for ai's (in milliseconds)
 
 #define ZERO_INDEX			0
-#define ONE_THIRD_INDEX		4
 #define ONE_HALF_INDEX		6
 #define ALL_INDEX			12
 
@@ -81,30 +80,30 @@ public:
 	void initLetter(char _letter);	// obligatory PC Load Letter joke. (Swifty)
 	void initBarHeight(int _ets_bar_h);
 	void initBitmaps(char *fname);
-	virtual void blitGauge(int index);
-	virtual void render(float frametime);
-	void pageIn();
+	void blitGauge(int index);
+	void render(float frametime) override;
+	void pageIn() override;
 };
 
 class HudGaugeEtsWeapons: public HudGaugeEts
 {
 public:
 	HudGaugeEtsWeapons();
-	void render(float frametime);
+	void render(float frametime) override;
 };
 
 class HudGaugeEtsShields: public HudGaugeEts
 {
 public:
 	HudGaugeEtsShields();
-	void render(float frametime);
+	void render(float frametime) override;
 };
 
 class HudGaugeEtsEngines: public HudGaugeEts
 {
 public:
 	HudGaugeEtsEngines();
-	void render(float frametime);
+	void render(float frametime) override;
 };
 
 class HudGaugeEtsRetail: public HudGaugeEts
@@ -114,7 +113,7 @@ protected:
 	int Gauge_positions[num_retail_ets_gauges];
 public:
 	HudGaugeEtsRetail();
-	void render(float frametime);
+	void render(float frametime) override;
 	void initLetters(char *_letters);
 	void initGaugePositions(int *_gauge_positions);
 };

@@ -15,7 +15,7 @@
 #include "ship/ship.h"
 #include "ship/subsysdamage.h"
 
-#include <limits.h>
+#include <climits>
 
 // Private variables
 static const float shield_scale_factor = static_cast<float>(1.0 / (log(50.0) - log(1.0)));	// Factor used in Goober5000's scale_quad
@@ -322,26 +322,6 @@ float shield_get_strength(object *objp)
 	return strength;
 }
 
-int shield_is_up(object *objp, int quadrant_num) {
-	Assert(objp);
-
-	if ((quadrant_num >= 0) && (quadrant_num < objp->n_quadrants)) {
-		// Just check one quadrant
-		float quad = shield_get_quad(objp, quadrant_num);
-
-		if (quad > MAX(2.0f, 0.1f * shield_get_max_quad(objp)))	// [z64555] Where the heck does this 2HP come from?
-			return 1;
-	} else {
-		// Check all quadrants
-		float strength = shield_get_strength(objp);
-
-		if (strength > MAX(2.0f * objp->n_quadrants, 0.1f * shield_get_max_strength(objp)))	// [z64555] Where the heck does this 2HP come from?
-			return 1;
-	}
-
-	return 0;	// no shield strength
-}
-
 void shield_set_max_strength(object *objp, float newmax) {
 	Assert(objp);
 
@@ -402,7 +382,7 @@ void shield_transfer(object *objp, int quadrant, float rate) {
 		return;
 	
 	} else if (objp == Player_obj) {
-		snd_play(gamesnd_get_game_sound(SND_SHIELD_XFER_OK));
+		snd_play(gamesnd_get_game_sound(GameSounds::SHIELD_XFER_OK));
 	}
 
 	float energy_avail = 0.0f;	// Energy available from the other quadrants that we can transfer

@@ -14,12 +14,8 @@
 
 #include "hud/hud.h"
 #include "hud/hudconfig.h"
+#include "sound/sound.h"
 
-//which radar type are we using
-//to add another radar type, begin by adding a RADAR_MODE_* define and increment MAX_RADAR_MODES
-#define RADAR_MODE_STANDARD 0
-#define RADAR_MODE_ORB 1
-#define MAX_RADAR_MODES 2
 
 //structures
 #define NUM_FLICKER_TIMERS	2
@@ -97,7 +93,7 @@ void radar_mission_init();
 void radar_plot_object( object *objp );
 RadarVisibility radar_is_visible( object *objp );
 
-extern int Radar_static_looping;
+extern sound_handle Radar_static_looping;
 
 class HudGaugeRadar: public HudGauge
 {
@@ -131,9 +127,9 @@ public:
 	void initInfinityIcon();
 
 	void drawRange();
-	virtual void render(float frametime);
-	virtual void initialize();
-	virtual void pageIn();
+	void render(float frametime) override;
+	void initialize() override;
+	void pageIn() override;
 };
 
 #endif //_FS2OPEN_RADARSETUP_H

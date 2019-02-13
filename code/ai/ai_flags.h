@@ -87,6 +87,7 @@ namespace AI {
         Fix_heat_seeker_stealth_bug,
         Fix_linked_primary_bug,
         Force_beam_turret_fov,
+		Free_afterburner_use,
         Glide_decay_requires_thrust,
         Hack_improve_non_homing_swarm_turret_fire_accuracy,
         Huge_turret_weapons_ignore_bombs,
@@ -109,7 +110,9 @@ namespace AI {
         Smart_shield_management,
         Smart_subsystem_targeting_for_turrets,
         Strict_turred_tagged_only_targeting,
+		Support_dont_add_primaries, //Prevents support ship from equipping new primary as requested in http://scp.indiegames.us/mantis/view.php?id=3198
         Turrets_ignore_target_radius,
+        Use_actual_primary_range,
         Use_additive_weapon_velocity,
         Use_newtonian_dampening,
         Use_only_single_fov_for_turrets,

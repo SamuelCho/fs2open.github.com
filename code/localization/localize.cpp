@@ -10,7 +10,7 @@
 
 
 
-#include <ctype.h>
+#include <cctype>
 #include "cfile/cfile.h"
 #include "localization/localize.h"
 #include "osapi/osregistry.h"
@@ -91,9 +91,6 @@ int lcl_ext_get_text(const SCP_string &xstr, SCP_string &out);
 int lcl_ext_get_id(const char *xstr, int *out);
 int lcl_ext_get_id(const SCP_string &xstr, int *out);
 
-// if the char is a valid char for a signed integer value string
-int lcl_is_valid_numeric_char(char c);
-
 // parses the string.tbl and reports back only on the languages it found
 void parse_stringstbl_quick(const char *filename);
 
@@ -171,12 +168,6 @@ void lcl_init(int lang_init)
 
 void lcl_close() {
 	lcl_xstr_close();
-}
-
-// determine what language we're running in, see LCL_* defines above
-int lcl_get_language()
-{
-	return Lcl_current_lang;
 }
 
 // parses the string.tbl to see which languages are supported. Doesn't read in any strings.
@@ -278,7 +269,6 @@ void parse_stringstbl_common(const char *filename, const bool external)
 			if (external) {
 				ignore_white_space();
 				get_string(buf, sizeof(buf));
-				drop_trailing_white_space(buf);
 			} else {
 				stuff_string(buf, F_RAW, sizeof(buf));
 			}
@@ -527,38 +517,6 @@ ubyte lcl_get_font_index(int font_num)
 	}
 }
 
-// maybe add on an appropriate subdirectory when opening a localized file
-void lcl_add_dir(char *current_path)
-{
-	char last_char;
-	size_t path_len;
-
-	// if the disk extension is 0 length, don't add enything
-	if (strlen(Lcl_languages[Lcl_current_lang].lang_ext) <= 0) {
-		return;
-	}
-
-	// get the length of the string so far
-	path_len = strlen(current_path);
-	if (path_len <= 0) {
-		return;
-	}
-	
-	// get the current last char
-	last_char = current_path[path_len - 1];
-
-	// if the last char is a slash, just copy in the disk extension
-	if (last_char == DIR_SEPARATOR_CHAR) {
-		strcat(current_path, Lcl_languages[Lcl_current_lang].lang_ext);
-		strcat(current_path, DIR_SEPARATOR_STR);
-	} 
-	// otherwise add a slash, then copy in the disk extension
-	else {
-		strcat(current_path, DIR_SEPARATOR_STR);
-		strcat(current_path, Lcl_languages[Lcl_current_lang].lang_ext);
-	}
-}
-
 // maybe add localized directory to full path with file name when opening a localized file
 int lcl_add_dir_to_path_with_filename(char *current_path, size_t path_max)
 {
@@ -698,7 +656,7 @@ void lcl_ext_localize_sub(const char *in, char *out, size_t max_len, int *id)
 	}
 
 	// otherwise, check to see if it's an XSTR() tag
-	if (strnicmp(in, "XSTR", 4)) {
+	if (strnicmp(in, "XSTR", 4) != 0) {
 		// NOT an XSTR() tag
 		if (str_len > max_len)
 			error_display(0, "Token too long: [%s].  Length = " SIZE_T_ARG ".  Max is " SIZE_T_ARG ".\n", in, str_len, max_len);
@@ -1130,13 +1088,6 @@ int lcl_ext_get_id(const SCP_string &xstr, int *out)
 
 	// success
 	return 1;
-}
-
-// if the char is a valid char for a signed integer value
-int lcl_is_valid_numeric_char(char c)
-{
-	return ( (c == '-') || (c == '0') || (c == '1') || (c == '2') || (c == '3') || (c == '4') ||
-				(c == '5') || (c == '6') || (c == '7') || (c == '8') || (c == '9') ) ? 1 : 0;
 }
 
 void lcl_get_language_name(char *lang_name)

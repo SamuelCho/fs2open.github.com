@@ -8,6 +8,7 @@ const int MIN_LOG_LEVEL = AV_LOG_WARNING;
 
 bool initialized = false;
 
+#ifndef NDEBUG
 void log_callback_report(void* ptr, int level, const char* fmt, va_list vl) {
 	if (level > MIN_LOG_LEVEL) {
 		return;
@@ -19,6 +20,7 @@ void log_callback_report(void* ptr, int level, const char* fmt, va_list vl) {
 
 	mprintf(("FFMPEG Log: %s", buffer)); // no \n, ffmpeg handles that
 }
+#endif
 
 void check_version(const char* libname, uint32_t current, uint32_t compiled)
 {
@@ -55,7 +57,10 @@ void initialize() {
 		return;
 	}
 
+	// This is deprecated since 58.9.100 and not needed anymore
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 9, 100)
 	av_register_all();
+#endif
 
 	check_version("libavcodec", avcodec_version(), LIBAVCODEC_VERSION_INT);
 	check_version("libavformat", avformat_version(), LIBAVFORMAT_VERSION_INT);

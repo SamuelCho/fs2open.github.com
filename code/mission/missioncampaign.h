@@ -13,6 +13,7 @@
 #define _MISSION_CAMPAIGN_H
 
 #include "stats/scoring.h"
+#include "parse/sexp.h"
 
 struct sexp_variable;
 
@@ -124,13 +125,11 @@ public:
 	ubyte	ships_allowed[MAX_SHIP_CLASSES];		// which ships the player can use
 	ubyte	weapons_allowed[MAX_WEAPON_TYPES];		// which weapons the player can use
 	cmission	missions[MAX_CAMPAIGN_MISSIONS];	// decription of the missions
-	int				num_variables;					// number of variables this campaign had - Goober5000
-	sexp_variable	*variables;						// malloced array of sexp_variables (of num_variables size) containing campaign-persistent variables - Goober5000
-	int				redalert_num_variables;			// These two variables hold the previous state of the above for restoration
-	sexp_variable	*redalert_variables;			// if you replay the previous mission in a Red Alert scenario. -MageKing17
+	SCP_vector<sexp_variable> persistent_variables;		// These variables will be saved at the end of a mission
+	SCP_vector<sexp_variable> red_alert_variables;		// state of the variables in the previous mission of a Red Alert scenario.
 
 	campaign()
-		: desc(NULL), num_missions(0), variables(NULL)
+		: desc(nullptr), num_missions(0)
 	{
 		name[0] = 0;
 		filename[0] = 0;
@@ -141,16 +140,6 @@ extern campaign Campaign;
 
 // campaign wasn't ended
 extern int Campaign_ending_via_supernova;
-
-// structure for players.  Holds the campaign name, number of missions flown in the campaign, and result
-// of the missions flown.  This structure is stored in the player file and thus is persistent across
-// games
-typedef struct campaign_info
-{
-	int		num_missions_completed;
-	char	filename[NAME_LENGTH];
-	ubyte	missions_completed[MAX_CAMPAIGN_MISSIONS];
-} campaign_info;
 
 // extern'ed so the mission loading can get a list of campains.  Only use this
 // data after mission_campaign_build_list() is called
@@ -175,16 +164,10 @@ void player_loadout_init();
 // called at game startup time to load the default single player campaign
 void mission_campaign_init( void );
 
-// called to reload the default campaign
-int mission_campaign_load_by_name( char *filename );
-int mission_campaign_load_by_name_csfe( char *filename, char *callsign );
-
-
 // load up and initialize a new campaign
 int mission_campaign_load( char *filename, player *pl = NULL, int load_savefile = 1, bool reset_stats = true );
 
-// function to save the state of the campaign between missions or to load a campaign save file
-extern int mission_campaign_save( void );
+bool campaign_is_ignored(const char *filename);
 
 // declaration for local campaign save game load function
 extern void mission_campaign_savefile_delete( char *cfilename );
@@ -201,9 +184,6 @@ extern void mission_campaign_mission_over( bool do_next_mission = true );
 
 // frees all memory at game close time
 extern void mission_campaign_clear( void );
-
-// read in a campaign file.  Used by Fred.
-int mission_campaign_load_fred(char *filename, char *name_verify = NULL);
 
 // used by Fred to get a mission's list of goals.
 void read_mission_goal_list(int num);
@@ -222,17 +202,8 @@ extern void mission_campaign_save_persistent( int type, int index );
 
 void mission_campaign_savefile_generate_root(char *filename, player *pl = NULL);
 
-int mission_campaign_savefile_save();
-
 // The following are functions I added to set up the globals and then
 // execute the corresponding mission_campaign_savefile functions.
-
-// Saves the campaign camp under the player name pname
-int campaign_savefile_save(char *pname);
-// Deletes the campaign save camp under the player name pname
-void campaign_delete_save( char *cfn, char *pname);
-// Loads campaign camp from fname under player name pname
-void campaign_savefile_load(char *fname, char *pname);
 
 // get name and type of specified campaign file
 int mission_campaign_get_info(const char *filename, char *name, int *type, int *max_players, char **desc = NULL);
@@ -246,8 +217,8 @@ int mission_load_up_campaign( player *p = NULL );
 // stores mission goals and events in Campaign struct
 void mission_campaign_store_goals_and_events();
 
-// stores campaign-persistent variables
-void mission_campaign_store_variables();
+// stores variables which will be saved only on mission progression
+void mission_campaign_store_variables(int persistence_type, bool store_red_alert = true);
 
 // does both of the above
 void mission_campaign_store_goals_and_events_and_variables();
@@ -265,17 +236,19 @@ void mission_campaign_skip_to_next(int start_game = 1);
 void mission_campaign_exit_loop();
 
 // jump to specified mission
-void mission_campaign_jump_to_mission(char *name, bool no_skip = false);
+void mission_campaign_jump_to_mission(const char* name, bool no_skip = false);
 
 // stuff for the end of the campaign of the single player game
 void mission_campaign_end_init();
 void mission_campaign_end_close();
 void mission_campaign_end_do();
 
-// Goober5000 - save persistent variables
-extern void mission_campaign_save_player_persistent_variables();
+// save eternal variables
+extern void mission_campaign_save_on_close_variables();
 
 extern void mission_campaign_load_failure_popup();
+
+SCP_string mission_campaign_get_name(const char* filename);
 
 // End CSFE stuff
 #endif

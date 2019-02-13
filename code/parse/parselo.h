@@ -21,10 +21,10 @@
 #include <exception>
 
 // NOTE: although the main game doesn't need this anymore, FRED2 still does
-#define	MISSION_TEXT_SIZE	1000000
+#define	PARSE_TEXT_SIZE	1000000
 
-extern char	*Mission_text;
-extern char	*Mission_text_raw;
+extern char	*Parse_text;
+extern char	*Parse_text_raw;
 extern char	*Mp;
 extern const char	*token_found;
 extern int fred_parse_flag;
@@ -285,9 +285,9 @@ int split_str(const char* src,
 			  bool strip_leading_whitespace = true);
 
 // fred
-extern int required_string_fred(char *pstr, char *end = NULL);
+extern int required_string_fred(const char *pstr, const char *end = NULL);
 extern int required_string_either_fred(const char *str1, const char *str2);
-extern int optional_string_fred(char *pstr, char *end = NULL, char *end2 = NULL);
+extern int optional_string_fred(const char *pstr, const char *end = NULL, const char *end2 = NULL);
 
 // Goober5000 - returns position of replacement or -1 for exceeded length (SCP_string variants return the result)
 extern ptrdiff_t replace_one(char *str, const char *oldstr, const char *newstr, size_t max_len, ptrdiff_t range = 0);
@@ -351,8 +351,8 @@ namespace parse
 	class ParseException : public std::runtime_error
 	{
 	public:
-		ParseException(const std::string& msg) : std::runtime_error(msg) {}
-		~ParseException() throw() {}
+		explicit ParseException(const std::string& msg) : std::runtime_error(msg) {}
+		~ParseException() SCP_NOEXCEPT override {}
 	};
 }
 

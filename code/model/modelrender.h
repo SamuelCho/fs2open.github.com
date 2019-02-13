@@ -97,8 +97,7 @@ class model_render_params
 	float Normal_alpha_min;
 	float Normal_alpha_max;
 
-	bool Normal_extrude;
-	float Normal_extrude_width;
+	float Outline_thickness = -1.0f;
 
 	model_render_params(const model_render_params&) = delete;
 	model_render_params& operator=(const model_render_params&) = delete;
@@ -125,12 +124,12 @@ public:
 	void set_animated_effect(int effect_num, float timer);
 	void set_thruster_info(mst_info &info);
 	void set_normal_alpha(float min, float max);
-	void set_normal_extrude_width(float width);
+	void set_outline_thickness(float thick);
 
 	bool is_clip_plane_set();
 	bool is_team_color_set();
 	bool is_normal_alpha_set();
-	bool is_normal_extrude_set();
+	bool uses_thick_outlines();
 
 	uint get_model_flags();
 	uint get_debug_flags();
@@ -153,7 +152,7 @@ public:
 	const mst_info& get_thruster_info();
 	float get_normal_alpha_min();
 	float get_normal_alpha_max();
-	float get_normal_extrude_width();
+	float get_outline_thickness();
 };
 
 struct arc_effect
@@ -302,8 +301,6 @@ void model_render_queue(model_render_params *render_info, model_draw_list* scene
 void submodel_render_immediate(model_render_params *render_info, int model_num, int submodel_num, matrix *orient, vec3d * pos);
 void submodel_render_queue(model_render_params *render_info, model_draw_list *scene, int model_num, int submodel_num, matrix *orient, vec3d * pos);
 void model_render_buffers(model_draw_list* scene, model_material *rendering_material, model_render_params* interp, vertex_buffer *buffer, polymodel *pm, int mn, int detail_level, uint tmap_flags);
-void model_render_set_thrust(model_render_params *interp, int model_num, mst_info *mst);
-void model_render_set_clip_plane(model_render_params *interp, vec3d *pos = NULL, vec3d *normal = NULL);
 fix model_render_determine_base_frametime(int objnum, uint flags);
 bool model_render_check_detail_box(vec3d *view_pos, polymodel *pm, int submodel_num, uint flags);
 void model_render_arc(vec3d *v1, vec3d *v2, color *primary, color *secondary, float arc_width);

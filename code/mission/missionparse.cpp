@@ -13,12 +13,12 @@
 #include <windows.h>
 #endif
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-#include <stdarg.h>
-#include <setjmp.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cassert>
+#include <cstdarg>
+#include <csetjmp>
 
 
 #include "ai/aigoals.h"
@@ -58,6 +58,7 @@
 #include "network/multi_respawn.h"
 #include "network/multimsgs.h"
 #include "network/multiutil.h"
+#include "object/objectdock.h"
 #include "object/parseobjectdock.h"
 #include "object/objectshield.h"
 #include "object/waypoint.h"
@@ -75,6 +76,8 @@
 #include "starfield/starfield.h"
 #include "weapon/weapon.h"
 #include "tracing/Monitor.h"
+#include "missionparse.h"
+
 
 LOCAL struct {
 	char docker[NAME_LENGTH];
@@ -424,11 +427,11 @@ void parse_custom_bitmap(const char *expected_string_640, const char *expected_s
 	// error testing
 	if (Fred_running && (found640) && !(found1024))
 	{
-		Warning(LOCATION, "Mission: found an entry for %s but not a corresponding entry for %s!", expected_string_640, expected_string_1024);
+		mprintf(("Mission: found an entry for %s but not a corresponding entry for %s!", expected_string_640, expected_string_1024));
 	}
 	if (Fred_running && !(found640) && (found1024))
 	{
-		Warning(LOCATION, "Mission: found an entry for %s but not a corresponding entry for %s!", expected_string_1024, expected_string_640);
+		mprintf(("Mission: found an entry for %s but not a corresponding entry for %s!", expected_string_1024, expected_string_640));
 	}
 }
 
@@ -1006,7 +1009,7 @@ void parse_cutscenes(mission *pm)
 	}
 }
 
-void parse_plot_info(mission *pm)
+void parse_plot_info(mission * /*pm*/)
 {
 	if (optional_string("#Plot Info"))
 	{
@@ -1033,7 +1036,7 @@ void parse_plot_info(mission *pm)
 	}
 }
 
-void parse_briefing_info(mission *pm)
+void parse_briefing_info(mission * /*pm*/)
 {
 	char junk[4096];
 
@@ -1255,7 +1258,7 @@ done_briefing_music:
 /**
  * Parse fiction viewer
  */
-void parse_fiction(mission *pm)
+void parse_fiction(mission * /*pm*/)
 {
 	fiction_viewer_reset();
 
@@ -1310,7 +1313,7 @@ void parse_fiction(mission *pm)
 /**
  * Parse command briefing
  */
-void parse_cmd_brief(mission *pm)
+void parse_cmd_brief(mission * /*pm*/)
 {
 	int stage;
 
@@ -1359,7 +1362,7 @@ void parse_cmd_briefs(mission *pm)
  *
  * NOTE: This updates the global Briefing struct with all the data necessary to drive the briefing
  */
-void parse_briefing(mission *pm, int flags)
+void parse_briefing(mission * /*pm*/, int flags)
 {
 	int nt, i, j, stage_num = 0, icon_num = 0;
 	brief_stage *bs;
@@ -1391,6 +1394,13 @@ void parse_briefing(mission *pm, int flags)
 		while (required_string_either("$end_briefing", "$start_stage")) {
 			required_string("$start_stage");
 			Assert(stage_num < MAX_BRIEF_STAGES);
+
+			if (stage_num >= bp->num_stages) {
+				error_display(1,
+							  "$num_stages did not match the number of specified stages! %d stages were specified but there is at least one more.",
+							  bp->num_stages);
+			}
+
 			bs = &bp->stages[stage_num++];
 			required_string("$multi_text");
 			stuff_string(bs->text, F_MULTITEXT, NULL);
@@ -1459,6 +1469,12 @@ void parse_briefing(mission *pm, int flags)
 			{
 				required_string("$start_icon");
 				Assert(icon_num < MAX_STAGE_ICONS);
+				// Make sure we don't cause a buffer overflow if $num_icons is wrong
+				if (icon_num >= bs->num_icons) {
+					error_display(1,
+								  "$num_icons did not match the number of specified icons! %d icons were specified but there is at least one more.",
+								  bs->num_icons);
+				}
 				bi = &bs->icons[icon_num++];
 
 				required_string("$type:");
@@ -1561,12 +1577,21 @@ void parse_briefing(mission *pm, int flags)
 				stuff_string(not_used_text, F_MULTITEXT, MAX_ICON_TEXT_LEN);
 				required_string("$end_icon");
 			} // end while
-			Assert(bs->num_icons == icon_num);
+			if (icon_num != bs->num_icons) {
+				error_display(1,
+							  "$num_icons did not match the number of specified icons! %d icons were specified but only %d were parsed.",
+							  bs->num_icons,
+							  icon_num);
+			}
 			icon_num = 0;
 			required_string("$end_stage");
 		}	// end while
-
-		Assert(bp->num_stages == stage_num);
+		if (stage_num != bp->num_stages) {
+			error_display(1,
+						  "$num_stages did not match the number of specified icons! %d stages were specified but only %d were parsed.",
+						  bp->num_stages,
+						  stage_num);
+		}
 		required_string("$end_briefing");
 	}
 
@@ -1577,7 +1602,7 @@ void parse_briefing(mission *pm, int flags)
 /**
  * Parse the data required for the mission debriefings
  */
-void parse_debriefing_new(mission *pm)
+void parse_debriefing_new(mission * /*pm*/)
 {
 	int				stage_num, nt;
 	debriefing		*db;
@@ -1622,51 +1647,73 @@ void parse_debriefing_new(mission *pm)
 		Error(LOCATION, "Not enough debriefings for mission.  There are %d teams and only %d debriefings;\n", Num_teams, nt );
 }
 
-void position_ship_for_knossos_warpin(p_object *p_objp)
+void position_ship_for_knossos_warpin(object *objp)
 {
-	object *objp = p_objp->created_object;
 	ship *shipp = &Ships[objp->instance];
-	object *knossos_objp = NULL;
+	ship_info *sip = &Ship_info[shipp->ship_info_index];
+	object *knossos_objp = nullptr;
+	float half_length, min_dist = -1.0f;
+	vec3d center_pos, actual_local_center;
+	vec3d new_point, new_center_pos, offset;
 
 	// Assume no valid knossos device
 	shipp->special_warpin_objnum = -1;
 
-	// find knossos device
+	// find closest knossos device (allow multiple knossoses)
 	for (ship_obj *so = GET_FIRST(&Ship_obj_list); so != END_OF_LIST(&Ship_obj_list); so = GET_NEXT(so))
 	{
 		object *ship_objp = &Objects[so->objnum];
 
 		if (Ship_info[Ships[ship_objp->instance].ship_info_index].flags[Ship::Info_Flags::Knossos_device])
 		{
-			// be close to the right device (allow multiple knossoses)
-			if ( vm_vec_dist_quick(&ship_objp->pos, &p_objp->pos) < 2.0f*(ship_objp->radius + objp->radius) )
+			// is this the closest?  (can use dist_squared since we're only comparing)
+			float dist = vm_vec_dist_squared(&ship_objp->pos, &objp->pos);
+			if (min_dist < 0.0f || dist < min_dist)
 			{
 				knossos_objp = ship_objp;
-				break;
+				min_dist = dist;
 			}
 		}
 	}
 
-	if (knossos_objp == NULL)
+	if (knossos_objp == nullptr)
 		return;
 
 	// set ship special_warpin_objnum
 	shipp->special_warpin_objnum = OBJ_INDEX(knossos_objp);
 
-	// position self for warp on plane of device
-	vec3d new_point;
-	polymodel *pm = model_get(Ship_info[shipp->ship_info_index].model_num);
+	// determine the correct center of the model (which may not be the model's origin)
+	if (object_is_docked(objp))
+		dock_calc_docked_actual_center(&actual_local_center, objp);
+	else
+		ship_class_get_actual_center(sip, &actual_local_center);
 
-	float dist = fvi_ray_plane(&new_point, &knossos_objp->pos, &knossos_objp->orient.vec.fvec, &p_objp->pos, &p_objp->orient.vec.fvec, 0.0f);
-	float desired_dist = -pm->mins.xyz.z;
-	vm_vec_scale_add2(&objp->pos, &objp->orient.vec.fvec, (dist - desired_dist));
+	// find world position of the center of the ship assembly
+	vm_vec_unrotate(&center_pos, &actual_local_center, &objp->orient);
+	vm_vec_add2(&center_pos, &objp->pos);
+
+	// determine the half-length
+	if (object_is_docked(objp))
+	{
+		// we need to get the longitudinal radius of our ship, so find the semilatus rectum along the Z-axis
+		half_length = dock_calc_max_semilatus_rectum_parallel_to_axis(objp, Z_AXIS);
+	}
+	else
+		half_length = 0.5f * ship_class_get_length(sip);
+
+	// position self for warp on plane of device
+	float dist = fvi_ray_plane(&new_point, &knossos_objp->pos, &knossos_objp->orient.vec.fvec, &center_pos, &objp->orient.vec.fvec, 0.0f);
+	vm_vec_scale_add(&new_center_pos, &center_pos, &objp->orient.vec.fvec, (dist - half_length));
+
+	// now move the actual ship based on how we moved the center
+	vm_vec_sub(&offset, &new_center_pos, &center_pos);
+	vm_vec_add2(&objp->pos, &offset);
 	
 	// if ship is HUGE, make it go through the center of the knossos
-	if (Ship_info[shipp->ship_info_index].is_huge_ship())
+	if (sip->is_huge_ship())
 	{
-		vec3d offset;
 		vm_vec_sub(&offset, &knossos_objp->pos, &new_point);
-		vm_vec_add2(&knossos_objp->pos, &offset);
+		vm_vec_add2(&objp->pos, &offset);
 	}
 }
 
@@ -1708,7 +1755,11 @@ void parse_dock_one_docked_object(p_object *pobjp, p_object *parent_pobjp)
 	// check valid
 	if ((dockpoint < 0) || (parent_dockpoint < 0))
 	{
-		Int3();
+		if (dockpoint < 0)
+			ReleaseWarning(LOCATION, "Dockpoint %s could not be found on model %s", dockpoint_name, model_get(Ship_info[Ships[objp->instance].ship_info_index].model_num)->filename);
+		if (parent_dockpoint < 0)
+			ReleaseWarning(LOCATION, "Dockpoint %s could not be found on model %s", parent_dockpoint_name, model_get(Ship_info[Ships[parent_objp->instance].ship_info_index].model_num)->filename);
+
 		return;
 	}
 
@@ -1786,6 +1837,14 @@ int parse_create_object(p_object *pobjp)
 	// get the main object
 	objp = pobjp->created_object;
 
+	// if arriving through knossos, adjust objp->pos to plane of knossos and set object reference
+	// special warp is single player only
+	if ((pobjp->flags[Mission::Parse_Object_Flags::Knossos_warp_in]) && !(Game_mode & GM_MULTIPLAYER))
+	{
+		if (!Fred_running)
+			position_ship_for_knossos_warpin(objp);
+	}
+
 	// warp it in (moved from parse_create_object_sub)
 	if ((Game_mode & GM_IN_MISSION) && (!Fred_running) && (!Game_restoring))
 	{
@@ -1809,6 +1868,7 @@ int parse_create_object_sub(p_object *p_objp)
 {
 	int	i, j, k, objnum, shipnum;
 	int anchor_objnum = -1;
+	bool brought_in_docked_wing = false;
 	ai_info *aip;
 	ship_subsys *ptr;
 	ship *shipp;
@@ -1837,20 +1897,16 @@ int parse_create_object_sub(p_object *p_objp)
 	if (object_is_docked(p_objp) && !(p_objp->flags[Mission::Parse_Object_Flags::SF_Dock_leader]) && (p_objp->wingnum >= 0))
 	{
 		if (!Fred_running)
+		{
 			parse_bring_in_docked_wing(p_objp, p_objp->wingnum, shipnum);
-	}
-
-	// if arriving through knossos, adjust objpj->pos to plane of knossos and set flag
-	// special warp is single player only
-	if ((p_objp->flags[Mission::Parse_Object_Flags::Knossos_warp_in]) && !(Game_mode & GM_MULTIPLAYER))
-	{
-		if (!Fred_running)
-			position_ship_for_knossos_warpin(p_objp);
+			brought_in_docked_wing = true;
+		}
 	}
 
 	shipp->group = p_objp->group;
 	shipp->team = p_objp->team;
 	strcpy_s(shipp->ship_name, p_objp->name);
+	shipp->display_name = p_objp->display_name;
 	shipp->escort_priority = p_objp->escort_priority;
 	shipp->use_special_explosion = p_objp->use_special_explosion;
 	shipp->special_exp_damage = p_objp->special_exp_damage;
@@ -2170,8 +2226,8 @@ int parse_create_object_sub(p_object *p_objp)
 							"Primary weapon cargo size <= 0. Ship (%s) Subsystem (%s) Bank (%i) Weapon (%s)",
 							shipp->ship_name, sssp->name, j, Weapon_info[wp->primary_bank_weapons[j]].name);
 
-					int capacity = fl2i(sssp->primary_ammo[j]/100.0f * sip->primary_bank_ammo_capacity[j] + 0.5f);
-					wp->primary_bank_ammo[j] = fl2i(capacity / Weapon_info[wp->primary_bank_weapons[j]].cargo_size + 0.5f);
+					int capacity = (int)std::lround(sssp->primary_ammo[j]/100.0f * sip->primary_bank_ammo_capacity[j]);
+					wp->primary_bank_ammo[j] = (int)std::lround(capacity / Weapon_info[wp->primary_bank_weapons[j]].cargo_size);
 				}
 			}
 
@@ -2187,8 +2243,8 @@ int parse_create_object_sub(p_object *p_objp)
 							"Secondary weapon cargo size <= 0. Ship (%s) Subsystem (%s) Bank (%i) Weapon (%s)",
 							shipp->ship_name, sssp->name, j, Weapon_info[wp->secondary_bank_weapons[j]].name);
 
-					int capacity = fl2i(sssp->secondary_ammo[j]/100.0f * sip->secondary_bank_ammo_capacity[j] + 0.5f);
-					wp->secondary_bank_ammo[j] = fl2i(capacity / Weapon_info[wp->secondary_bank_weapons[j]].cargo_size + 0.5f);
+					int capacity = (int)std::lround(sssp->secondary_ammo[j]/100.0f * sip->secondary_bank_ammo_capacity[j]);
+					wp->secondary_bank_ammo[j] = (int)std::lround(capacity / Weapon_info[wp->secondary_bank_weapons[j]].cargo_size);
 				}
 			}
 
@@ -2263,8 +2319,8 @@ int parse_create_object_sub(p_object *p_objp)
 								"Primary weapon cargo size <= 0. Ship (%s) Subsystem (%s) Bank (%i) Weapon (%s)",
 								shipp->ship_name, sssp->name, j, Weapon_info[ptr->weapons.primary_bank_weapons[j]].name);
 
-						int capacity = fl2i(sssp->primary_ammo[j]/100.0f * ptr->weapons.primary_bank_capacity[j] + 0.5f);
-						ptr->weapons.primary_bank_ammo[j] = fl2i(capacity / Weapon_info[ptr->weapons.primary_bank_weapons[j]].cargo_size + 0.5f);
+						int capacity = (int)std::lround(sssp->primary_ammo[j]/100.0f * ptr->weapons.primary_bank_capacity[j]);
+						ptr->weapons.primary_bank_ammo[j] = (int)std::lround(capacity / Weapon_info[ptr->weapons.primary_bank_weapons[j]].cargo_size);
 					}
 				}
 
@@ -2277,8 +2333,8 @@ int parse_create_object_sub(p_object *p_objp)
 								"Secondary weapon cargo size <= 0. Ship (%s) Subsystem (%s) Bank (%i) Weapon (%s)",
 								shipp->ship_name, sssp->name, j, Weapon_info[ptr->weapons.secondary_bank_weapons[j]].name);
 
-						int capacity = fl2i(sssp->secondary_ammo[j]/100.0f * ptr->weapons.secondary_bank_capacity[j] + 0.5f);
-						ptr->weapons.secondary_bank_ammo[j] = fl2i(capacity / Weapon_info[ptr->weapons.secondary_bank_weapons[j]].cargo_size + 0.5f);
+						int capacity = (int)std::lround(sssp->secondary_ammo[j]/100.0f * ptr->weapons.secondary_bank_capacity[j]);
+						ptr->weapons.secondary_bank_ammo[j] = (int)std::lround(capacity / Weapon_info[ptr->weapons.secondary_bank_weapons[j]].cargo_size);
 					}
 				}
 
@@ -2344,11 +2400,7 @@ int parse_create_object_sub(p_object *p_objp)
 			vec3d v1, v2;
 
 			// DA 10/20/98 - sparks must be chosen on the hull and not any submodel
-			if ( Cmdline_old_collision_sys ) {
-				submodel_get_two_random_points(sip->model_num, pm->detail[0], &v1, &v2);
-			} else {
-				submodel_get_two_random_points_better(sip->model_num, pm->detail[0], &v1, &v2);
-			}
+			submodel_get_two_random_points_better(sip->model_num, pm->detail[0], &v1, &v2);
 			ship_hit_sparks_no_rotate(&Objects[objnum], &v1);
 		}
 	}
@@ -2410,13 +2462,14 @@ int parse_create_object_sub(p_object *p_objp)
 	}
 
 	// If the ship is in a wing, this will be done in mission_set_wing_arrival_location() instead
-	if (Game_mode & GM_IN_MISSION && shipp->wingnum == -1) {
+	// If the ship is in a wing, but the wing is docked then addition of bool brought_in_docked_wing accounts for that status --wookieejedi
+	if (Game_mode & GM_IN_MISSION && ((shipp->wingnum == -1) || (brought_in_docked_wing))) {
 		if (anchor_objnum >= 0)
 			Script_system.SetHookObjects(2, "Ship", &Objects[objnum], "Parent", &Objects[anchor_objnum]);
 		else
 			Script_system.SetHookObjects(2, "Ship", &Objects[objnum], "Parent", NULL);
 
-		Script_system.RunCondition(CHA_ONSHIPARRIVE, 0, NULL, &Objects[objnum]);
+		Script_system.RunCondition(CHA_ONSHIPARRIVE, &Objects[objnum]);
 		Script_system.RemHookVars(2, "Ship", "Parent");
 	}
 
@@ -2711,6 +2764,16 @@ p_object::~p_object()
 {
 	dock_free_dock_list(this);
 }
+const char* p_object::get_display_string() {
+	if (has_display_string()) {
+		return display_name.c_str();
+	} else {
+		return name;
+	}
+}
+bool p_object::has_display_string() {
+	return !display_name.empty();
+}
 
 /**
  * Mp points at the text of an object, which begins with the "$Name:" field.
@@ -2721,7 +2784,7 @@ p_object::~p_object()
  * if we are just getting player starts, then don't create the objects
  * @param p_objp Object
  */
-int parse_object(mission *pm, int flag, p_object *p_objp)
+int parse_object(mission *pm, int  /*flag*/, p_object *p_objp)
 {
 	int	i, j, count, delay;
     char name[NAME_LENGTH];
@@ -2738,6 +2801,9 @@ int parse_object(mission *pm, int flag, p_object *p_objp)
 	if (mission_parse_get_parse_object(p_objp->name))
 		error_display(0, NOX("Redundant ship name: %s\n"), p_objp->name);
 
+	if (optional_string("$Display Name:")) {
+		stuff_string(p_objp->display_name, F_NAME);
+	}
 
 	find_and_stuff("$Class:", &p_objp->ship_class, F_NAME, Ship_class_names, Ship_info.size(), "ship class");
 	if (p_objp->ship_class < 0)
@@ -4741,7 +4807,7 @@ void post_process_ships_wings()
 	// Now set up the wings.  This must be done after both dock stuff and ship stuff.
 
 	// error checking for custom wings
-	if (strcmp(Starting_wing_names[0], TVT_wing_names[0]))
+	if (strcmp(Starting_wing_names[0], TVT_wing_names[0]) != 0)
 	{
 		Error(LOCATION, "The first starting wing and the first team-versus-team wing must have the same wing name.\n");
 	}
@@ -4784,7 +4850,7 @@ void post_process_ships_wings()
 // of other events in a mission.  Essentially scripting the different things that can happen
 // in a mission
 
-void parse_event(mission *pm)
+void parse_event(mission * /*pm*/)
 {
 	char buf[NAME_LENGTH];
 	mission_event *event;
@@ -5473,41 +5539,55 @@ void parse_variables()
 		return;
 	}
 
-	// Goober5000 - now set the default value, if it's a campaign-persistent variable
+	// Goober5000 - now set the default value, if it's a variable saved on mission progress
 	// loop through the current mission's variables
 	for (j = 0; j < num_variables; j++) {
 		// check against existing variables
-		for (i = 0; i < Campaign.num_variables; i++) {
-			// if the active mission has a variable with the same name as a campaign
-			// variable AND it is not a block variable, override its initial value
-			// with the previous mission's value
-			if ( !stricmp(Sexp_variables[j].variable_name, Campaign.variables[i].variable_name) ) {
-				if (Sexp_variables[j].type  & SEXP_VARIABLE_CAMPAIGN_PERSISTENT) {
-					Sexp_variables[j].type = Campaign.variables[i].type;
-					strcpy_s(Sexp_variables[j].text, Campaign.variables[i].text);
+		for (auto& current_pv : Campaign.persistent_variables) {
+			// if the active mission has a variable with the same name as a variable saved to the campaign file override its initial value with the previous mission's value
+			if ( !stricmp(Sexp_variables[j].variable_name, current_pv.variable_name) ) {
+				// if this is an eternal that shares the same name as a non-eternal warn but do nothing
+				if (Sexp_variables[j].type & SEXP_VARIABLE_SAVE_TO_PLAYER_FILE) {
+					error_display(0, "Variable %s is marked eternal but has the same name as another persistent variable. One of these should be renamed to avoid confusion", Sexp_variables[j].text);
+				}
+				else if (Sexp_variables[j].type  & SEXP_VARIABLE_IS_PERSISTENT) {
+					Sexp_variables[j].type = current_pv.type;
+					strcpy_s(Sexp_variables[j].text, current_pv.text);
 					break;
 				} else {
-					WarningEx(LOCATION, "Variable %s has the same name as a campaign persistent variable. One of these should be renamed to avoid confusion", Sexp_variables[j].text);
+					error_display(0, "Variable %s has the same name as another persistent variable. One of these should be renamed to avoid confusion", Sexp_variables[j].text);
 				}
 			}
 		}
 	}
 
-	// Goober5000 - next, see if any player-persistent variables are set
-	// loop through the current mission's variables
+	// next, see if any eternal variables are set loop through the current mission's variables
 	for (j = 0; j < num_variables; j++) {
 		// check against existing variables
 		for (i = 0; i < (int)Player->variables.size(); i++) {
-			// if the active mission has a variable with the same name as a player
-			// variable AND it is not a block variable, override its initial value
-			// with the previous mission's value
+			// if the active mission has a variable with the same name as a variable saved to the player file override its initial value with the previous mission's value
 			if ( !stricmp(Sexp_variables[j].variable_name, Player->variables[i].variable_name) ) {
-				if (Sexp_variables[j].type & SEXP_VARIABLE_PLAYER_PERSISTENT) {
+				if (Sexp_variables[j].type & SEXP_VARIABLE_IS_PERSISTENT) {
+					// if the variable in the player file is marked as eternal but the version in the mission file is not, we assume that the player file one is rogue
+					// and use the one in the mission file instead.
+					if ((Player->variables[i].type & SEXP_VARIABLE_SAVE_TO_PLAYER_FILE) && !(Sexp_variables[j].type & SEXP_VARIABLE_SAVE_TO_PLAYER_FILE)) {
+						break;
+					}
+					// replace the default values with the ones saved to the player file
 					Sexp_variables[j].type = Player->variables[i].type;
 					strcpy_s(Sexp_variables[j].text, Player->variables[i].text);
+
+					/*
+					// check that the eternal flag has been set. Players using a player file from before the eternal flag was added may have old player-persistent variables
+					// these should be converted to non-eternals
+					if (!(Player->variables[i].type & SEXP_VARIABLE_SAVE_TO_PLAYER_FILE)) {
+						Sexp_variables[j].type &= ~SEXP_VARIABLE_SAVE_TO_PLAYER_FILE;
+					}
+					*/
+
 					break;
 				} else {
-					WarningEx(LOCATION, "Variable %s has the same name as a player persistent variable. One of these should be renamed to avoid confusion", Sexp_variables[j].text);
+					error_display(0, "Variable %s has the same name as an eternal variable. One of these should be renamed to avoid confusion", Sexp_variables[j].text);
 				}
 			}
 		}
@@ -6086,7 +6166,7 @@ void mission_set_wing_arrival_location( wing *wingp, int num_to_set )
 			else
 				Script_system.SetHookObjects(2, "Ship", objp, "Parent", NULL);
 
-			Script_system.RunCondition(CHA_ONSHIPARRIVE, 0, NULL, objp);
+			Script_system.RunCondition(CHA_ONSHIPARRIVE, objp);
 			Script_system.RemHookVars(2, "Ship", "Parent");
 
 			if (wingp->arrival_location != ARRIVE_FROM_DOCK_BAY) {
@@ -6176,9 +6256,12 @@ void reset_arrival_to_false(p_object *pobjp, bool reset_wing)
 
 /**
  * In both retail and SCP, the dock "leader" is defined as the only guy in his
- * group with a non-false arrival cue
+ * group with a non-false arrival cue.
+ *
+ * If we are forcing a leader, that means *none* of the ships in this dock group
+ * have a non-false arrival cue, so we just need to pick one
  */
-void parse_object_mark_dock_leader_helper(p_object *pobjp, p_dock_function_info *infop)
+void parse_object_mark_dock_leader_sub(p_object *pobjp, p_dock_function_info *infop, bool force_a_leader)
 {
 	int cue_to_check;
 
@@ -6194,7 +6277,7 @@ void parse_object_mark_dock_leader_helper(p_object *pobjp, p_dock_function_info 
 	}
 
 	// is he a leader (using the definition above)?
-	if (!sexp_is_locked_false(cue_to_check))
+	if (!sexp_is_locked_false(cue_to_check) || force_a_leader)
 	{
 		p_object *existing_leader;
 
@@ -6224,14 +6307,24 @@ void parse_object_mark_dock_leader_helper(p_object *pobjp, p_dock_function_info 
 	}
 }
 
+void parse_object_mark_dock_leader_helper(p_object *pobjp, p_dock_function_info *infop)
+{
+	parse_object_mark_dock_leader_sub(pobjp, infop, false);
+}
+
+void parse_object_choose_arbitrary_dock_leader_helper(p_object *pobjp, p_dock_function_info *infop)
+{
+	parse_object_mark_dock_leader_sub(pobjp, infop, true);
+}
+
 // Goober5000
-void parse_object_set_handled_flag_helper(p_object *pobjp, p_dock_function_info *infop)
+void parse_object_set_handled_flag_helper(p_object *pobjp, p_dock_function_info * /*infop*/)
 {
     pobjp->flags.set(Mission::Parse_Object_Flags::Already_handled);
 }
 
 // Goober5000
-void parse_object_clear_handled_flag_helper(p_object *pobjp, p_dock_function_info *infop)
+void parse_object_clear_handled_flag_helper(p_object *pobjp, p_dock_function_info * /*infop*/)
 {
     pobjp->flags.remove(Mission::Parse_Object_Flags::Already_handled);
 }
@@ -6333,6 +6426,10 @@ void mission_parse_set_up_initial_docks()
 		if (dfi.maintained_variables.int_value == 0)
 		{
 			Warning(LOCATION, "No dock leaders found in the docking group containing %s.  The group will not appear in-mission!\n", pobjp->name);
+
+			// for FRED, we must arbitrarily choose a dock leader, otherwise the entire docked group will not be loaded
+			if (Fred_running)
+				dock_evaluate_all_docked_objects(pobjp, &dfi, parse_object_choose_arbitrary_dock_leader_helper);
 		}
 		else if (dfi.maintained_variables.int_value > 1)
 		{
@@ -7389,7 +7486,7 @@ int add_path_restriction()
 		for (j = 0; j < temp.num_paths; j++)
 		{
 			// no match, so skip this
-			if (stricmp(temp.path_names[j], Path_restrictions[i].path_names[j]))
+			if (stricmp(temp.path_names[j], Path_restrictions[i].path_names[j]) != 0)
 				goto continue_outer_loop;
 		}
 
@@ -7425,7 +7522,7 @@ int get_special_anchor(char *name)
 	const char *iff_name;
 	int iff_index;
 	
-	if (strnicmp(name, "<any ", 5))
+	if (strnicmp(name, "<any ", 5) != 0)
 		return -1;
 
 	strcpy_s(tmp, name+5);
@@ -7979,7 +8076,7 @@ void conv_fix_punctuation_section(char *str, const char *section_start, const ch
 		t2 = strstr(t1, text_end);
 		if (!t2 || t2 > s2) return;
 
-		replace_all(t1, "\"", "$quote", MISSION_TEXT_SIZE - (str - Mission_text), (t2 - t1));
+		replace_all(t1, "\"", "$quote", PARSE_TEXT_SIZE - (str - Parse_text), (t2 - t1));
 	}	
 }
 	
@@ -7987,16 +8084,16 @@ void conv_fix_punctuation_section(char *str, const char *section_start, const ch
 void conv_fix_punctuation()
 {
 	// command briefings
-	conv_fix_punctuation_section(Mission_text, "#Command Briefing", "#Briefing", "$Stage Text:", "$end_multi_text");
+	conv_fix_punctuation_section(Parse_text, "#Command Briefing", "#Briefing", "$Stage Text:", "$end_multi_text");
 
 	// briefings
-	conv_fix_punctuation_section(Mission_text, "#Briefing", "#Debriefing_info", "$multi_text", "$end_multi_text");
+	conv_fix_punctuation_section(Parse_text, "#Briefing", "#Debriefing_info", "$multi_text", "$end_multi_text");
 
 	// debriefings
-	conv_fix_punctuation_section(Mission_text, "#Debriefing_info", "#Players", "$Multi text", "$end_multi_text");
+	conv_fix_punctuation_section(Parse_text, "#Debriefing_info", "#Players", "$Multi text", "$end_multi_text");
 
 	// messages
-	conv_fix_punctuation_section(Mission_text, "#Messages", "#Reinforcements", "$Message:", "\n");
+	conv_fix_punctuation_section(Parse_text, "#Messages", "#Reinforcements", "$Message:", "\n");
 }
 
 // Goober5000

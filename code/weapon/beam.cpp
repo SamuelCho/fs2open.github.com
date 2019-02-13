@@ -86,9 +86,6 @@ int Beam_good_shot_octants[BEAM_NUM_GOOD_OCTANTS][4] = {
 	{ 4, 0, 1, 0 },
 };
 
-// beam lighting effects
-int Beam_lighting = 1;
-
 // debug stuff - keep track of how many collision tests we perform a second and how many we toss a second
 #define BEAM_TEST_STAMP_TIME		4000	// every 4 seconds
 int Beam_test_stamp = -1;
@@ -309,14 +306,14 @@ int beam_fire(beam_fire_info *fire_info)
 
 	// make sure the beam_info_index is valid
 	if ((fire_info->beam_info_index < 0) || (fire_info->beam_info_index >= Num_weapon_types) || !(Weapon_info[fire_info->beam_info_index].wi_flags[Weapon::Info_Flags::Beam])) {
-		Assertion(false, "beam_info_index (%d) invalid (either <0, >= %d, or not actually a beam)!\n", fire_info->beam_info_index, Num_weapon_types);
+		UNREACHABLE("beam_info_index (%d) invalid (either <0, >= %d, or not actually a beam)!\n", fire_info->beam_info_index, Num_weapon_types);
 		return -1;
 	}
 
 	wip = &Weapon_info[fire_info->beam_info_index];	
 	// make sure a ship is firing this
 	if (!(fire_info->bfi_flags & BFIF_FLOATING_BEAM) && ((fire_info->shooter->type != OBJ_SHIP) || (fire_info->shooter->instance < 0) || (fire_info->shooter->instance >= MAX_SHIPS)) ) {
-		Assertion(false, "Fixed beam fired without a valid ship!\n");
+		UNREACHABLE("Fixed beam fired without a valid ship!\n");
 		return -1;
 	}
 	if (fire_info->shooter != NULL) {
@@ -360,7 +357,7 @@ int beam_fire(beam_fire_info *fire_info)
 	new_item->target = fire_info->target;
 	new_item->target_subsys = fire_info->target_subsys;
 	new_item->target_sig = (fire_info->target != NULL) ? fire_info->target->signature : 0;
-	new_item->beam_sound_loop = -1;
+	new_item->beam_sound_loop        = sound_handle::invalid();
 	new_item->type = wip->b_info.beam_type;
 	new_item->targeting_laser_offset = fire_info->targeting_laser_offset;
 	new_item->framecount = 0;
@@ -545,8 +542,8 @@ int beam_fire_targeting(fighter_beam_fire_info *fire_info)
 	new_item->f_collision_count = 0;
 	new_item->target = NULL;
 	new_item->target_subsys = NULL;
-	new_item->target_sig = 0;	
-	new_item->beam_sound_loop = -1;
+	new_item->target_sig = 0;
+	new_item->beam_sound_loop        = sound_handle::invalid();
 	new_item->type = BEAM_TYPE_C;	
 	new_item->targeting_laser_offset = fire_info->targeting_laser_offset;
 	new_item->framecount = 0;
@@ -697,7 +694,7 @@ void beam_pause_sounds()
 	}
 	while(moveup != END_OF_LIST(&Beam_used_list)){				
 		// set the volume to 0, if he has a looping beam sound
-		if(moveup->beam_sound_loop >= 0){
+		if (moveup->beam_sound_loop.isValid()) {
 			snd_set_volume(moveup->beam_sound_loop, 0.0f);
 		}
 
@@ -720,7 +717,7 @@ void beam_unpause_sounds()
 		if (Cmdline_no_3d_sound) {
 			beam_recalc_sounds(moveup);
 		} else {
-			if (moveup->beam_sound_loop >= 0) {
+			if (moveup->beam_sound_loop.isValid()) {
 				snd_set_volume(moveup->beam_sound_loop, 1.0f);
 			}
 		}
@@ -1281,7 +1278,6 @@ void beam_generate_muzzle_particles(beam *b)
 	weapon_info *wip;
 	vec3d turret_norm, turret_pos, particle_pos, particle_dir;
 	matrix m;
-	particle::particle_info pinfo;
 
 	// if our hack stamp has expired
 	if(!((b->Beam_muzzle_stamp == -1) || timestamp_elapsed(b->Beam_muzzle_stamp))){
@@ -1331,7 +1327,7 @@ void beam_generate_muzzle_particles(beam *b)
 			vm_vec_add2(&particle_dir, &b->objp->phys_info.vel);	//move along with our parent
 		}
 
-		memset(&pinfo, 0, sizeof(particle::particle_info));
+		particle::particle_info pinfo;
 		pinfo.pos = particle_pos;
 		pinfo.vel = particle_dir;
 		pinfo.lifetime = p_life;
@@ -1574,7 +1570,7 @@ void beam_render_all()
 // fvec == forward vector (eye viewpoint basically. in world coords)
 // pos == world coordinate of the point we're calculating "around"
 // w == width of the diff between top and bottom around pos
-void beam_calc_facing_pts( vec3d *top, vec3d *bot, vec3d *fvec, vec3d *pos, float w, float z_add )
+void beam_calc_facing_pts( vec3d *top, vec3d *bot, vec3d *fvec, vec3d *pos, float w, float  /*z_add*/ )
 {
 	vec3d uvec, rvec;
 	vec3d temp;
@@ -1607,7 +1603,7 @@ void beam_add_light_small(beam *bm, object *objp, vec3d *pt_override = NULL)
 	float noise;
 
 	// no lighting 
-	if(!Beam_lighting){
+	if(Detail.lighting < 2){
 		return;
 	}
 
@@ -1677,7 +1673,7 @@ void beam_add_light_large(beam *bm, object *objp, vec3d *pt0, vec3d *pt1)
 	float noise;
 
 	// no lighting 
-	if(!Beam_lighting){
+	if(Detail.lighting < 2){
 		return;
 	}
 
@@ -1801,9 +1797,9 @@ void beam_delete(beam *b)
 	b->objnum = -1;
 
 	// kill the beam looping sound
-	if(b->beam_sound_loop != -1){
+	if (b->beam_sound_loop.isValid()) {
 		snd_stop(b->beam_sound_loop);
-		b->beam_sound_loop = -1;
+		b->beam_sound_loop = sound_handle::invalid();
 	}	
 
 	// handle model animation reversal (closing)
@@ -1874,7 +1870,7 @@ void beam_start_warmup(beam *b)
 	b->warmup_stamp = timestamp(Weapon_info[b->weapon_info_index].b_info.beam_warmup);
 
 	// start playing warmup sound
-	if(!(Game_mode & GM_STANDALONE_SERVER) && (Weapon_info[b->weapon_info_index].b_info.beam_warmup_sound >= 0)){		
+	if(!(Game_mode & GM_STANDALONE_SERVER) && (Weapon_info[b->weapon_info_index].b_info.beam_warmup_sound.isValid())){
 		snd_play_3d(gamesnd_get_game_sound(Weapon_info[b->weapon_info_index].b_info.beam_warmup_sound), &b->last_start, &View_position);
 	}
 }
@@ -1916,18 +1912,18 @@ int beam_start_firing(beam *b)
 		return 1;
 	}				
 
-	// start the beam firing sound now, if we haven't already		
-	if((b->beam_sound_loop == -1) && (Weapon_info[b->weapon_info_index].b_info.beam_loop_sound >= 0)){				
+	// start the beam firing sound now, if we haven't already
+	if ((!b->beam_sound_loop.isValid()) && (Weapon_info[b->weapon_info_index].b_info.beam_loop_sound.isValid())) {
 		b->beam_sound_loop = snd_play_3d(gamesnd_get_game_sound(Weapon_info[b->weapon_info_index].b_info.beam_loop_sound), &b->last_start, &View_position, 0.0f, NULL, 1, 1.0, SND_PRIORITY_SINGLE_INSTANCE, NULL, 1.0f, 1);
 
 		// "shot" sound
-		if (Weapon_info[b->weapon_info_index].launch_snd >= 0)
+		if (Weapon_info[b->weapon_info_index].launch_snd.isValid())
 			snd_play_3d(gamesnd_get_game_sound(Weapon_info[b->weapon_info_index].launch_snd), &b->last_start, &View_position);
 		// niffwan - if launch_snd < 0, don't play any sound
 	}	
 
 	Script_system.SetHookObjects(3, "Beam", &Objects[b->objnum], "User", b->objp, "Target", b->target);
-	Script_system.RunCondition(CHA_BEAMFIRE, 0, NULL, &Objects[b->objnum], b->weapon_info_index);
+	Script_system.RunCondition(CHA_BEAMFIRE, &Objects[b->objnum], b->weapon_info_index);
 	Script_system.RemHookVars(3, "Beam", "User", "Target");
 
 	// success
@@ -1941,15 +1937,15 @@ void beam_start_warmdown(beam *b)
 	b->warmdown_stamp = timestamp(Weapon_info[b->weapon_info_index].b_info.beam_warmdown);			
 
 	// start the warmdown sound
-	if(Weapon_info[b->weapon_info_index].b_info.beam_warmdown_sound >= 0){				
+	if(Weapon_info[b->weapon_info_index].b_info.beam_warmdown_sound.isValid()){
 		snd_play_3d(gamesnd_get_game_sound(Weapon_info[b->weapon_info_index].b_info.beam_warmdown_sound), &b->last_start, &View_position);
 	}
 
-	// kill the beam looping sound 
-	if(b->beam_sound_loop != -1){
+	// kill the beam looping sound
+	if (b->beam_sound_loop.isValid()) {
 		snd_stop(b->beam_sound_loop);
-		b->beam_sound_loop = -1;
-	}						
+		b->beam_sound_loop = sound_handle::invalid();
+	}
 }
 
 // recalculate beam sounds (looping sounds relative to the player)
@@ -1965,7 +1961,7 @@ void beam_recalc_sounds(beam *b)
 	bwi = &Weapon_info[b->weapon_info_index].b_info;
 
 	// update the sound position relative to the player
-	if(b->beam_sound_loop != -1){
+	if (b->beam_sound_loop.isValid()) {
 		// get the point closest to the player's viewing position
 		switch(vm_vec_dist_to_line(&View_position, &b->last_start, &b->last_shot, &pos, NULL)){
 		// behind the beam, so use the start pos
@@ -2061,11 +2057,7 @@ void beam_get_binfo(beam *b, float accuracy, int num_shots)
 			vm_vec_zero(&b->binfo.dir_b);
 		} else {
 			// get random model points, this is useful for big ships, because we never miss when shooting at them
-			if ( Cmdline_old_collision_sys ) {
-				submodel_get_two_random_points(model_num, 0, &b->binfo.dir_a, &b->binfo.dir_b);
-			} else {
-				submodel_get_two_random_points_better(model_num, 0, &b->binfo.dir_a, &b->binfo.dir_b);
-			}
+			submodel_get_two_random_points_better(model_num, 0, &b->binfo.dir_a, &b->binfo.dir_b);
 		}
 		break;
 
@@ -2274,7 +2266,7 @@ void beam_aim(beam *b)
 		break;
 
 	default:
-		Assertion(false, "Impossible beam type (%d); get a coder!\n", b->type);
+		UNREACHABLE("Impossible beam type (%d); get a coder!\n", b->type);
 	}
 
 	// recalculate object pairs
@@ -2552,11 +2544,11 @@ int beam_collide_ship(obj_pair *pair)
 
 		Script_system.SetHookObjects(2, "Self",ship_objp, "Object", weapon_objp);
 		if(!(weapon_override && !ship_override))
-			Script_system.RunCondition(CHA_COLLIDEBEAM, '\0', NULL, ship_objp);
+			Script_system.RunCondition(CHA_COLLIDEBEAM, ship_objp);
 
 		Script_system.SetHookObjects(2, "Self",weapon_objp, "Object", ship_objp);
 		if((weapon_override && !ship_override) || (!weapon_override && !ship_override))
-			Script_system.RunCondition(CHA_COLLIDESHIP, '\0', NULL, weapon_objp);
+			Script_system.RunCondition(CHA_COLLIDESHIP, weapon_objp);
 
 		Script_system.RemHookVars(4, "Ship", "Beam", "Self","Object");
 
@@ -2646,11 +2638,11 @@ int beam_collide_asteroid(obj_pair *pair)
 
 		Script_system.SetHookObjects(2, "Self",pair->a, "Object", pair->b);
 		if(!(asteroid_override && !weapon_override))
-			Script_system.RunCondition(CHA_COLLIDEASTEROID, '\0', NULL, pair->a);
+			Script_system.RunCondition(CHA_COLLIDEASTEROID, pair->a);
 
 		Script_system.SetHookObjects(2, "Self",pair->b, "Object", pair->a);
 		if((asteroid_override && !weapon_override) || (!asteroid_override && !weapon_override))
-			Script_system.RunCondition(CHA_COLLIDEBEAM, '\0', NULL, pair->b);
+			Script_system.RunCondition(CHA_COLLIDEBEAM, pair->b);
 
 		Script_system.RemHookVars(4, "Beam", "Asteroid", "Self","Object");
 		return 0;
@@ -2738,13 +2730,13 @@ int beam_collide_missile(obj_pair *pair)
 		if(!(b_override && !a_override))
 		{
 			Script_system.SetHookObjects(4, "Beam", pair->a, "Weapon", pair->b, "Self",pair->a, "Object", pair->b);
-			Script_system.RunCondition(CHA_COLLIDEWEAPON, '\0', NULL, pair->a);
+			Script_system.RunCondition(CHA_COLLIDEWEAPON, pair->a);
 		}
 		if((b_override && !a_override) || (!b_override && !a_override))
 		{
 			//Should be reversed
 			Script_system.SetHookObjects(4, "Weapon", pair->b, "Beam", pair->a, "Self",pair->b, "Object", pair->a);
-			Script_system.RunCondition(CHA_COLLIDEBEAM, '\0', NULL, pair->b);
+			Script_system.RunCondition(CHA_COLLIDEBEAM, pair->b);
 		}
 
 		Script_system.RemHookVars(4, "Weapon", "Beam", "Self","Object");
@@ -2829,11 +2821,11 @@ int beam_collide_debris(obj_pair *pair)
 
 		Script_system.SetHookObjects(2, "Self", pair->a, "Object", pair->b);
 		if(!(debris_override && !weapon_override))
-			Script_system.RunCondition(CHA_COLLIDEDEBRIS, '\0', NULL, pair->a);
+			Script_system.RunCondition(CHA_COLLIDEDEBRIS, pair->a);
 
 		Script_system.SetHookObjects(2, "Self", pair->b, "Object", pair->a);
 		if((debris_override && !weapon_override) || (!debris_override && !weapon_override))
-			Script_system.RunCondition(CHA_COLLIDEBEAM, '\0', NULL, pair->b);
+			Script_system.RunCondition(CHA_COLLIDEBEAM, pair->b);
 
 		Script_system.RemHookVars(4, "Beam", "Debris", "Self","Object");
 
@@ -3076,17 +3068,18 @@ void beam_handle_collisions(beam *b)
 		r_coll_count++;		
 
 		// play the impact sound
-		if ( first_hit && (wi->impact_snd >= 0) ) {
+		if ( first_hit && (wi->impact_snd.isValid()) ) {
 			snd_play_3d( gamesnd_get_game_sound(wi->impact_snd), &b->f_collisions[idx].cinfo.hit_point_world, &Eye_position );
 		}
 
 		// KOMET_EXT -->
 
 		// draw flash, explosion
-		if (draw_effects && ((wi->piercing_impact_effect >= 0) || (wi->flash_impact_weapon_expl_effect >= 0))) {
+		if (draw_effects &&
+		    ((wi->piercing_impact_effect.isValid()) || (wi->flash_impact_weapon_expl_effect.isValid()))) {
 			float rnd = frand();
 			int do_expl = 0;
-			if((rnd < 0.2f || apply_beam_physics) && wi->impact_weapon_expl_effect >= 0){
+			if ((rnd < 0.2f || apply_beam_physics) && wi->impact_weapon_expl_effect.isValid()) {
 				do_expl = 1;
 			}
 			vec3d temp_pos, temp_local_pos;
@@ -3107,7 +3100,7 @@ void beam_handle_collisions(beam *b)
 				vm_vec_unrotate(&worldNormal, &b->f_collisions[idx].cinfo.hit_normal, &Objects[target].orient);
 			}
 
-			if (wi->flash_impact_weapon_expl_effect >= 0) {
+			if (wi->flash_impact_weapon_expl_effect.isValid()) {
 				auto particleSource = particle::ParticleManager::get()->createSource(wi->flash_impact_weapon_expl_effect);
 				particleSource.moveToObject(&Objects[target], &temp_local_pos);
 				particleSource.setOrientationNormal(&worldNormal);
@@ -3136,8 +3129,8 @@ void beam_handle_collisions(beam *b)
 
 				particleSource.finish();
 			}
-			
-			if (wi->piercing_impact_effect > 0) {
+
+			if (wi->piercing_impact_effect.isValid()) {
 				vec3d fvec;
 				vm_vec_sub(&fvec, &b->last_shot, &b->last_start);
 
@@ -3204,7 +3197,7 @@ void beam_handle_collisions(beam *b)
 		} else {
 			if(draw_effects && apply_beam_physics && !physics_paused){
 				// maybe draw an explosion, if we aren't hitting shields
-				if ( (wi->impact_weapon_expl_effect >= 0) && (b->f_collisions[idx].quadrant < 0) ) {
+				if ((wi->impact_weapon_expl_effect.isValid()) && (b->f_collisions[idx].quadrant < 0)) {
 					vec3d worldNormal;
 					if (Objects[target].type == OBJ_SHIP) {
 						auto shipp = &Ships[Objects[target].instance];

@@ -113,6 +113,7 @@ class waypoint_list;
 #define OPF_NEBULA_PATTERN		86		// Axem - Full Nebula Background Patterns, as defined in nebula.tbl
 #define OPF_SKYBOX_FLAGS		87		// niffiwan - valid skybox flags
 #define OPF_GAME_SND			88		// m!m - A game sound
+#define OPF_FIREBALL			89		// Goober5000 - an entry in fireball.tbl
 
 // Operand return types
 #define	OPR_NUMBER				1	// returns number
@@ -388,6 +389,7 @@ class waypoint_list;
 
 #define OP_TURRET_GET_SECONDARY_AMMO		(0x0050 | OP_CATEGORY_STATUS | OP_NONCAMPAIGN_FLAG)	// DahBlount, part of the turret ammo code
 #define OP_IS_DOCKED						(0x0051 | OP_CATEGORY_STATUS | OP_NONCAMPAIGN_FLAG)	// Goober5000
+#define OP_IS_IN_TURRET_FOV					(0x0052 | OP_CATEGORY_STATUS | OP_NONCAMPAIGN_FLAG)	// Goober5000
 
 // conditional sexpressions
 #define OP_WHEN								(0x0000 | OP_CATEGORY_CONDITIONAL)
@@ -735,7 +737,9 @@ class waypoint_list;
 #define OP_TURRET_SET_SECONDARY_AMMO		(0x002d | OP_CATEGORY_CHANGE2 | OP_NONCAMPAIGN_FLAG)	// DahBlount, part of the turret ammo changes
 #define OP_JETTISON_CARGO_NEW				(0x002e | OP_CATEGORY_CHANGE2 | OP_NONCAMPAIGN_FLAG)	// Goober5000
 #define OP_STRING_CONCATENATE_BLOCK			(0x002f | OP_CATEGORY_CHANGE2 | OP_NONCAMPAIGN_FLAG)	// Goober5000
+
 #define OP_MODIFY_VARIABLE_XSTR				(0X0030 | OP_CATEGORY_CHANGE2 | OP_NONCAMPAIGN_FLAG)	// m!m
+#define OP_RESET_POST_EFFECTS				(0x0031 | OP_CATEGORY_CHANGE2 | OP_NONCAMPAIGN_FLAG)	// Goober5000
 
 // defined for AI goals
 #define OP_AI_CHASE							(0x0000 | OP_CATEGORY_AI | OP_NONCAMPAIGN_FLAG)
@@ -758,6 +762,7 @@ class waypoint_list;
 #define OP_AI_IGNORE_NEW					(0x0011 | OP_CATEGORY_AI | OP_NONCAMPAIGN_FLAG)	// Goober5000
 #define OP_AI_FORM_ON_WING					(0x0012 | OP_CATEGORY_AI | OP_NONCAMPAIGN_FLAG) // The E
 #define OP_AI_CHASE_SHIP_CLASS				(0x0013 | OP_CATEGORY_AI | OP_NONCAMPAIGN_FLAG)	// Goober5000
+#define OP_AI_PLAY_DEAD_PERSISTENT			(0x0014 | OP_CATEGORY_AI | OP_NONCAMPAIGN_FLAG)	// Goober5000
 
 #define OP_GOALS_ID							(0x0000 | OP_CATEGORY_UNLISTED)
 #define OP_NEXT_MISSION						(0x0001 | OP_CATEGORY_UNLISTED)		// used in campaign files for branching
@@ -900,12 +905,15 @@ char *CTEXT(int n);
 #define SEXP_VARIABLE_BLOCK_EXP				(1<<1)	//	(0x0002)
 #define SEXP_VARIABLE_BLOCK_HIT				(1<<2)	//	(0x0004)
 */
-#define SEXP_VARIABLE_PLAYER_PERSISTENT		(1<<3)	//	(0x0008)
+#define SEXP_VARIABLE_SAVE_ON_MISSION_CLOSE		(1<<3)	//	(0x0008)
 
 // Goober5000 - hopefully this should work and not conflict with anything
-#define SEXP_VARIABLE_CAMPAIGN_PERSISTENT	(1<<29)	//	(0x0100)
+#define SEXP_VARIABLE_SAVE_ON_MISSION_PROGRESS	(1<<29)	//	(0x0100)
 //Karajorma
 #define SEXP_VARIABLE_NETWORK				(1<<28)
+#define SEXP_VARIABLE_SAVE_TO_PLAYER_FILE	(1<<27)
+
+#define SEXP_VARIABLE_IS_PERSISTENT (SEXP_VARIABLE_SAVE_ON_MISSION_PROGRESS|SEXP_VARIABLE_SAVE_ON_MISSION_CLOSE)
 
 #define BLOCK_EXP_SIZE					6
 #define INNER_RAD							0
@@ -1014,6 +1022,7 @@ char *CTEXT(int n);
 #define SEXP_CHECK_INVALID_SKYBOX_FLAG			-158
 #define SEXP_CHECK_INVALID_GAME_SND				-159
 #define SEXP_CHECK_INVALID_SSM_CLASS			-160
+#define SEXP_CHECK_INVALID_FIREBALL				-161
 
 #define TRAINING_CONTEXT_SPEED		(1<<0)
 #define TRAINING_CONTEXT_FLY_PATH	(1<<1)
@@ -1158,7 +1167,7 @@ extern int query_operator_return_type(int op);
 extern int query_operator_argument_type(int op, int argnum);
 extern void update_sexp_references(const char *old_name, const char *new_name);
 extern void update_sexp_references(const char *old_name, const char *new_name, int format);
-extern int query_referenced_in_sexp(int mode, char *name, int *node);
+extern int query_referenced_in_sexp(int mode, const char *name, int *node);
 extern int verify_vector(char *text);
 extern void skip_white(char **str);
 extern int validate_float(char **str);
@@ -1191,7 +1200,7 @@ bool sexp_replace_variable_names_with_values(char *text, int max_len);	// Goober
 bool sexp_replace_variable_names_with_values(SCP_string &text);	// Goober5000
 int get_nth_variable_index(int nth, int variable_type);	// Karajorma
 int sexp_variable_count();
-int sexp_campaign_persistent_variable_count();	// Goober5000
+int sexp_campaign_file_variable_count();	// Goober5000
 int sexp_variable_typed_count(int sexp_variables_index, int variable_type); // Karajorma
 void sexp_variable_delete(int index);
 void sexp_variable_sort();
@@ -1270,7 +1279,7 @@ variable:
 extern int Sexp_hud_display_warpout;
 
 //Needed for scripting access to ship effects
-int get_effect_from_name(char* name);
+int get_effect_from_name(const char* name);
 
 void maybe_write_to_event_log(int result);
 

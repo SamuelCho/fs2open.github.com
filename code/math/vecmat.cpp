@@ -9,12 +9,13 @@
 
 
 
-#include <stdio.h>
+#include <cstdio>
 #if _M_IX86_FP >= 1
 	#include <xmmintrin.h>
 #endif
 
 #include "math/vecmat.h"
+#include "utils/RandomRange.h"
 
 
 #define	SMALL_NUM	1e-7
@@ -428,13 +429,8 @@ float vm_vec_copy_normalize(vec3d *dest, const vec3d *src)
 
 	//	Mainly here to trap attempts to normalize a null vector.
 	if (m <= 0.0f) {
-//		static int been_warned2 = false;//added this so the warning could be sounded and you can still get on with playing-Bobboau
-//		if(!been_warned2)
-		{
-			Warning(LOCATION, "Null vec3d in vec3d normalize.\n"
-							  "Trace out of vecmat.cpp and find offending code.\n");
-//			been_warned2 = true;
-		}
+		mprintf(("Null vec3d in vec3d normalize.\n"
+				 "Trace out of vecmat.cpp and find offending code.\n"));
 
 		dest->xyz.x = 1.0f;
 		dest->xyz.y = 0.0f;
@@ -2376,7 +2372,7 @@ void vm_vec_interp_constant(vec3d *out, const vec3d *v0, const vec3d *v1, float 
 // randomly perturb a vector around a given (normalized vector) or optional orientation matrix
 void vm_vec_random_cone(vec3d *out, const vec3d *in, float max_angle, const matrix *orient)
 {
-	vec3d t1, t2;
+	vec3d temp;
 	const matrix *rot;
 	matrix m;
 
@@ -2387,21 +2383,25 @@ void vm_vec_random_cone(vec3d *out, const vec3d *in, float max_angle, const matr
 		vm_vector_2_matrix(&m, in, NULL, NULL);
 		rot = &m;
 	}
-	
-	// axis 1
-	vm_rot_point_around_line(&t1, in, fl_radians(frand_range(-max_angle, max_angle)), &vmd_zero_vector, &rot->vec.fvec);
-	
-	// axis 2
-	vm_rot_point_around_line(&t2, &t1, fl_radians(frand_range(-max_angle, max_angle)), &vmd_zero_vector, &rot->vec.rvec);
 
-	// axis 3
-	vm_rot_point_around_line(out, &t2, fl_radians(frand_range(-max_angle, max_angle)), &vmd_zero_vector, &rot->vec.uvec);
+	// Get properly distributed spherical coordinates (DahBlount)
+	float z = util::UniformFloatRange(cosf(fl_radians(max_angle)), 1.0f).next(); // Take a 2-sphere slice
+	float phi = util::UniformFloatRange(0.0f, PI2).next();
+	vm_vec_make( &temp, sqrtf(1.0f - z*z)*cosf(phi), sqrtf(1.0f - z*z)*sinf(phi), z ); // Using the z-vec as the starting point
+
+	vm_vec_unrotate(out, &temp, rot); // We find the final vector by rotating temp to the correct orientation
 }
 
 void vm_vec_random_cone(vec3d *out, const vec3d *in, float min_angle, float max_angle, const matrix *orient){
-	vec3d t1, t2;
+	vec3d temp;
 	const matrix *rot;
 	matrix m;
+
+	if (max_angle < min_angle) {
+		auto tmp  = min_angle;
+		min_angle = max_angle;
+		max_angle = tmp;
+	}
 
 	// get an orientation matrix
 	if(orient != NULL){
@@ -2410,28 +2410,14 @@ void vm_vec_random_cone(vec3d *out, const vec3d *in, float min_angle, float max_
 		vm_vector_2_matrix(&m, in, NULL, NULL);
 		rot = &m;
 	}
-	float dif_angle = max_angle - min_angle;
 	
-	// axis 1
-	float temp_ang = (frand_range(-dif_angle, dif_angle));
-	if(temp_ang < 0)temp_ang -= (min_angle);
-	else temp_ang += (min_angle);
+	// Get properly distributed spherical coordinates (DahBlount)
+	// This might not seem intuitive, but the min_angle is the angle that will have a larger z coordinate
+	float z = util::UniformFloatRange(cosf(fl_radians(max_angle)), cosf(fl_radians(min_angle))).next(); // Take a 2-sphere slice
+	float phi = util::UniformFloatRange(0.0f, PI2).next();
+	vm_vec_make( &temp, sqrtf(1.0f - z*z)*cosf(phi), sqrtf(1.0f - z*z)*sinf(phi), z ); // Using the z-vec as the starting point
 
-	vm_rot_point_around_line(&t1, in, fl_radians(temp_ang), &vmd_zero_vector, &rot->vec.fvec);
-	
-	// axis 2
-	temp_ang = (frand_range(-dif_angle, dif_angle));
-	if(temp_ang < 0)temp_ang -= (min_angle);
-	else temp_ang += (min_angle);
-
-	vm_rot_point_around_line(&t2, &t1, fl_radians(temp_ang), &vmd_zero_vector, &rot->vec.rvec);
-
-	// axis 3
-	temp_ang = (frand_range(-dif_angle, dif_angle));
-	if(temp_ang < 0)temp_ang -= (min_angle);
-	else temp_ang += (min_angle);
-
-	vm_rot_point_around_line(out, &t2, fl_radians(temp_ang), &vmd_zero_vector, &rot->vec.uvec);
+	vm_vec_unrotate(out, &temp, rot); // We find the final vector by rotating temp to the correct orientation
 }
 
 
@@ -2450,11 +2436,15 @@ void vm_vec_random_in_circle(vec3d *out, const vec3d *in, const matrix *orient, 
 
 // given a start vector, an orientation, and a radius, give a point in a spherical volume
 // if on_edge is 1, the point is on the very edge of the sphere
-void vm_vec_random_in_sphere(vec3d *out, const vec3d *in, const matrix *orient, float radius, int on_edge)
+void vm_vec_random_in_sphere(vec3d *out, const vec3d *in, float radius, int on_edge)
 {
 	vec3d temp;
-	vm_vec_random_in_circle(&temp, in, orient, radius, on_edge);
-	vm_rot_point_around_line(out, &temp, fl_radians(frand_range(0.0f, 359.0f)), in, &orient->vec.rvec);
+	// Uniformly distributing each coordinate of a vector then normalizing results in a uniform sphere distribution
+	util::UniformFloatRange coords(-1.0f,1.0f);
+	vm_vec_make( &temp, coords.next(), coords.next(), coords.next() );
+	vm_vec_normalize(&temp);
+	// We then add the scaled result to the initial position to get the final position
+	vm_vec_scale_add(out, in, &temp, on_edge ? radius : util::UniformFloatRange(0.0f,radius).next());
 }
 
 // find the nearest point on the line to p. if dist is non-NULL, it is filled in
@@ -2528,7 +2518,7 @@ void vm_vec_dist_squared_to_line(const vec3d *p, const vec3d *l0, const vec3d *l
 
 //SUSHI: 2D vector "box" scaling
 //Scales the vector in-place so that the longest dimension = scale
-void vm_vec_boxscale(vec2d *vec, float scale)
+void vm_vec_boxscale(vec2d *vec, float  /*scale*/)
 {
 	float ratio = 1.0f / MAX(fl_abs(vec->x), fl_abs(vec->y));
 	vec->x *= ratio;

@@ -17,6 +17,7 @@
 #include "io/key.h"
 #include "io/timer.h"
 
+#include "player.h"
 #include "parse/parselo.h"
 
 using namespace cutscene::player;
@@ -26,10 +27,10 @@ using namespace cutscene;
 
 const int MAX_AUDIO_BUFFERS = 15;
 
-std::unique_ptr<Decoder> findDecoder(const SCP_string& name) {
+std::unique_ptr<Decoder> findDecoder(const SCP_string& name, const PlaybackProperties& properties) {
 	{
-		std::unique_ptr<Decoder> ffmpeg(new ffmpeg::FFMPEGDecoder());
-		if (ffmpeg->initialize(name)) {
+		std::unique_ptr<Decoder> ffmpeg(new ::cutscene::ffmpeg::FFMPEGDecoder());
+		if (ffmpeg->initialize(name, properties)) {
 			return ffmpeg;
 		}
 	}
@@ -49,7 +50,8 @@ void videoPlaybackInit(PlayerState* state) {
 
 	Assert(state != NULL);
 
-	if (gr_screen.mode == GR_OPENGL) {
+	if (gr_screen.mode != GR_STUB) {
+		// The video presenter is independent of the underlying graphics API
 		state->videoPresenter.reset(new VideoPresenter(state->props));
 	}
 
@@ -121,6 +123,15 @@ void processVideoData(PlayerState* state) {
 	}
 
 	while (currentTime >= state->nextFrame->frameTime) {
+		if (state->currentFrame) {
+			if (state->nextFrame->frameTime < state->currentFrame->frameTime) {
+				// We reached the end of the movie and just looped to the beginning. Now we need to reset the playback
+				// time
+				state->playback_time = 0;
+				currentTime = playbackGetTime(state);
+			}
+		}
+
 		// Move the next frame to the current frame slot
 		state->currentFrame = std::move(state->nextFrame);
 
@@ -272,8 +283,22 @@ bool shouldBeginPlayback(Decoder* decoder) {
 }
 
 namespace cutscene {
-Player::Player(std::unique_ptr<Decoder>&& decoder) : m_decoder(std::move(decoder)) {
-	initPlayback();
+Player::Player(std::unique_ptr<Decoder>&& decoder, const PlaybackProperties& properties)
+    : m_decoder(std::move(decoder))
+{
+	Assertion(!m_state.videoInited,
+	          "Internal State has been initialized before! Create a new player for replaying a movie.");
+
+	m_decoderThread.reset(new std::thread(std::bind(&Player::decoderThread, this)));
+
+	m_state.props   = m_decoder->getProperties();
+	m_state.decoder = m_decoder.get();
+
+	videoPlaybackInit(&m_state);
+
+	if (properties.with_audio) {
+		audioPlaybackInit(&m_state);
+	}
 }
 
 Player::~Player() {
@@ -315,19 +340,6 @@ bool Player::processDecoderData() {
 
 	return decoding || pendingAudio || pendingVideo;
 }
-
-void Player::initPlayback() {
-	Assertion(!m_state.videoInited, "Internal State has been initialized before! Create a new player for replaying a movie.");
-
-	m_decoderThread.reset(new std::thread(std::bind(&Player::decoderThread, this)));
-
-	m_state.props = m_decoder->getProperties();
-	m_state.decoder = m_decoder.get();
-
-	videoPlaybackInit(&m_state);
-
-	audioPlaybackInit(&m_state);
-}
 bool Player::update(uint64_t diff_time_micro) {
 	if (m_state.playbackHasBegun) {
 		m_state.playback_time += diff_time_micro;
@@ -354,15 +366,16 @@ void Player::decoderThread() {
 	}
 }
 
-std::unique_ptr<Player> Player::newPlayer(const SCP_string& name) {
+std::unique_ptr<Player> Player::newPlayer(const SCP_string& name, const PlaybackProperties& properties)
+{
 	mprintf(("Creating player for movie '%s'.\n", name.c_str()));
 
-	auto decoder = findDecoder(name);
+	auto decoder = findDecoder(name, properties);
 
 	if (decoder == nullptr) {
 		return nullptr;
 	}
-	return std::unique_ptr<Player>(new Player(std::move(decoder)));
+	return std::unique_ptr<Player>(new Player(std::move(decoder), properties));
 }
 const PlayerState& Player::getInternalState() const {
 	return m_state;
@@ -386,4 +399,5 @@ SCP_string Player::getCurrentSubtitle() {
 		return m_state.currentSubtitle->text;
 	}
 }
+bool Player::isPlaybackReady() const { return m_state.playbackHasBegun || shouldBeginPlayback(m_decoder.get()); }
 }

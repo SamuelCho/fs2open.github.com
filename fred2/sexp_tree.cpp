@@ -717,7 +717,7 @@ void sexp_tree::right_clicked(int mode)
 						}
 
 						// Goober5000 - certain types accept both integers and a list of strings
-						if (op_type == OPF_GAME_SND || op_type == OPF_WEAPON_BANK_NUMBER)
+						if (op_type == OPF_GAME_SND || op_type == OPF_FIREBALL || op_type == OPF_WEAPON_BANK_NUMBER)
 						{
 							type = SEXPT_NUMBER | SEXPT_STRING;
 						}
@@ -1115,8 +1115,9 @@ void sexp_tree::right_clicked(int mode)
 				replace_type = OPR_FLEXIBLE_ARGUMENT;
 			}
 			// Goober5000
-			else if (type == OPF_GAME_SND || type == OPF_WEAPON_BANK_NUMBER) {
-				// enable number even though we are also going to default to string
+			else if (type == OPF_GAME_SND || type == OPF_FIREBALL || type == OPF_WEAPON_BANK_NUMBER) {
+				// even though these default to strings, we allow replacing them with index values
+				replace_type = OPR_POSITIVE;
 				menu.EnableMenuItem(ID_REPLACE_NUMBER, MF_ENABLED);
 			}
 
@@ -1586,10 +1587,14 @@ BOOL sexp_tree::OnCommand(WPARAM wParam, LPARAM lParam)
 				type |= SEXP_VARIABLE_NETWORK;
 			}
 
-			if ( dlg.m_type_campaign_persistent ) {
-				type |= SEXP_VARIABLE_CAMPAIGN_PERSISTENT;
-			} else if ( dlg.m_type_player_persistent ) {
-				type |= SEXP_VARIABLE_PLAYER_PERSISTENT;
+			if ( dlg.m_type_on_mission_progress) {
+				type |= SEXP_VARIABLE_SAVE_ON_MISSION_PROGRESS;
+			} else if ( dlg.m_type_on_mission_close) {
+				type |= SEXP_VARIABLE_SAVE_ON_MISSION_CLOSE;
+			}
+
+			if (dlg.m_type_eternal) {
+				type |= SEXP_VARIABLE_SAVE_TO_PLAYER_FILE;
 			}
 
 			// add variable
@@ -1655,10 +1660,14 @@ BOOL sexp_tree::OnCommand(WPARAM wParam, LPARAM lParam)
 				type |= SEXP_VARIABLE_NETWORK;
 			}
 
-			if ( dlg.m_type_campaign_persistent ) {
-				type |= SEXP_VARIABLE_CAMPAIGN_PERSISTENT;
-			} else if ( dlg.m_type_player_persistent ) {
-				type |= SEXP_VARIABLE_PLAYER_PERSISTENT;
+			if ( dlg.m_type_on_mission_progress) {
+				type |= SEXP_VARIABLE_SAVE_ON_MISSION_PROGRESS;
+			} else if ( dlg.m_type_on_mission_close) {
+				type |= SEXP_VARIABLE_SAVE_ON_MISSION_CLOSE;
+			}
+
+			if (dlg.m_type_eternal) {
+				type |= SEXP_VARIABLE_SAVE_TO_PLAYER_FILE;
 			}
 
 			// update sexp_variable
@@ -2423,18 +2432,19 @@ int sexp_tree::get_default_value(sexp_list_item *item, char *text_buf, int op, i
 
 		// Goober5000 - special cases that used to be numbers but are now hybrids
 		case OPF_GAME_SND:
-			int sound_index = -1;
+		{
+			gamesnd_id sound_index;
 
-			if ( (Operators[op].value == OP_EXPLOSION_EFFECT) )
+			if ((Operators[op].value == OP_EXPLOSION_EFFECT))
 			{
-				sound_index = SND_SHIP_EXPLODE_1;
+				sound_index = GameSounds::SHIP_EXPLODE_1;
 			}
-			else if ( (Operators[op].value == OP_WARP_EFFECT) )
+			else if ((Operators[op].value == OP_WARP_EFFECT))
 			{
-				sound_index = (i == 8) ? SND_CAPITAL_WARP_IN : SND_CAPITAL_WARP_OUT;
+				sound_index = (i == 8) ? GameSounds::CAPITAL_WARP_IN : GameSounds::CAPITAL_WARP_OUT;
 			}
 
-			if (sound_index >= 0)
+			if (sound_index.isValid())
 			{
 				game_snd *snd = gamesnd_get_game_sound(sound_index);
 				if (can_construe_as_integer(snd->name.c_str()))
@@ -2446,6 +2456,39 @@ int sexp_tree::get_default_value(sexp_list_item *item, char *text_buf, int op, i
 
 			// if no hardcoded default, just use the listing default
 			break;
+		}
+
+		// Goober5000 - ditto
+		case OPF_FIREBALL:
+		{
+			int fireball_index = -1;
+
+			if (Operators[op].value == OP_EXPLOSION_EFFECT)
+			{
+				fireball_index = FIREBALL_MEDIUM_EXPLOSION;
+			}
+			else if (Operators[op].value == OP_WARP_EFFECT)
+			{
+				fireball_index = FIREBALL_WARP;
+			}
+
+			if (fireball_index >= 0)
+			{
+				char *unique_id = Fireball_info[fireball_index].unique_id;
+				if (strlen(unique_id) > 0)
+					item->set_data(unique_id, (SEXPT_STRING | SEXPT_VALID));
+				else
+				{
+					char num_str[NAME_LENGTH];
+					sprintf(num_str, "%d", fireball_index);
+					item->set_data(num_str, (SEXPT_NUMBER | SEXPT_VALID));
+				}
+				return 0;
+			}
+
+			// if no hardcoded default, just use the listing default
+			break;
+		}
 	}
 
 	list = get_listing_opf(type, index, i);
@@ -2690,6 +2733,7 @@ int sexp_tree::query_default_argument_available(int op, int i)
 		case OPF_NAV_POINT:
 		case OPF_TEAM_COLOR:
 		case OPF_GAME_SND:
+		case OPF_FIREBALL:
 			return 1;
 
 		case OPF_SHIP:
@@ -4450,6 +4494,10 @@ sexp_list_item *sexp_tree::get_listing_opf(int opf, int parent_node, int arg_ind
 			list = get_listing_opf_game_snds();
 			break;
 
+		case OPF_FIREBALL:
+			list = get_listing_opf_fireball();
+			break;
+
 		default:
 			Int3();  // unknown OPF code
 			list = NULL;
@@ -4816,6 +4864,7 @@ sexp_list_item *sexp_tree::get_listing_opf_subsystem(int parent_node, int arg_in
 			{
 				special_subsys = OPS_STRENGTH;
 
+				// iterate to the next field two times
 				child = tree_nodes[child].next;
 				Assert(child >= 0);			
 				child = tree_nodes[child].next;			
@@ -4838,12 +4887,30 @@ sexp_list_item *sexp_tree::get_listing_opf_subsystem(int parent_node, int arg_in
 		case OP_IS_AI_CLASS:
 		case OP_MISSILE_LOCKED:
 		case OP_SHIP_SUBSYS_GUARDIAN_THRESHOLD:
+		case OP_IS_IN_TURRET_FOV:
 			// iterate to the next field
 			child = tree_nodes[child].next;
 			break;
 
 		// this sexp checks the subsystem of the *fourth entry* on the list
 		case OP_QUERY_ORDERS:
+			// iterate to the next field three times
+			child = tree_nodes[child].next;
+			Assert(child >= 0);
+			child = tree_nodes[child].next;
+			Assert(child >= 0);
+			child = tree_nodes[child].next;
+			break;
+
+		// this sexp checks the subsystem of the *seventh entry* on the list
+		case OP_BEAM_FLOATING_FIRE:
+			// iterate to the next field six times
+			child = tree_nodes[child].next;
+			Assert(child >= 0);
+			child = tree_nodes[child].next;
+			Assert(child >= 0);
+			child = tree_nodes[child].next;
+			Assert(child >= 0);
 			child = tree_nodes[child].next;
 			Assert(child >= 0);
 			child = tree_nodes[child].next;
@@ -5595,7 +5662,7 @@ sexp_list_item *sexp_tree::get_listing_opf_ai_order()
 	sexp_list_item head;
 
 	for (i=0; i<NUM_COMM_ORDER_ITEMS; i++)
-		head.add_data(Comm_orders[i].name);
+		head.add_data(Comm_orders[i].name.c_str());
 
 	return head.next;
 }
@@ -6008,6 +6075,21 @@ sexp_list_item *sexp_tree::get_listing_opf_game_snds()
 		if (!can_construe_as_integer(iter->name.c_str())) {
 			head.add_data(iter->name.c_str());
 		}
+	}
+
+	return head.next;
+}
+
+sexp_list_item *sexp_tree::get_listing_opf_fireball()
+{
+	sexp_list_item head;
+
+	for (int i = 0; i < Num_fireball_types; ++i)
+	{
+		char *unique_id = Fireball_info[i].unique_id;
+
+		if (strlen(unique_id) > 0)
+			head.add_data(unique_id);
 	}
 
 	return head.next;

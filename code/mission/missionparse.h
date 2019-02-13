@@ -10,7 +10,7 @@
 #ifndef _PARSE_H
 #define _PARSE_H
 
-#include <setjmp.h>
+#include <csetjmp>
 
 #include "ai/ai.h"
 #include "ai/ai_profiles.h"
@@ -284,6 +284,9 @@ extern int    Current_file_length;
 
 #define SUBSYS_STATUS_NO_CHANGE	-999
 
+// Squadron Default Name
+#define NO_SQUAD	"<none>"
+
 typedef struct subsys_status {
 	char	name[NAME_LENGTH];
 	float	percent;  // percent damaged
@@ -319,6 +322,7 @@ class p_object
 {
 public:
 	char	name[NAME_LENGTH];
+	SCP_string display_name;
 	p_object *next, *prev;
 
 	vec3d	pos;
@@ -410,6 +414,9 @@ public:
 
 	p_object();
 	~p_object();
+
+	const char* get_display_string();
+	bool has_display_string();
 };
 
 // Goober5000 - this is now dynamic

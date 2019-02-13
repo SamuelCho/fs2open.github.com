@@ -59,8 +59,6 @@ object obj_create_list;
 object *Player_obj = NULL;
 object *Viewer_obj = NULL;
 
-extern int Cmdline_old_collision_sys;
-
 //Data for objects
 object Objects[MAX_OBJECTS];
 
@@ -148,6 +146,9 @@ void object::clear()
 	shield_quadrant.clear();
 	objsnd_num.clear();
 	net_signature = 0;
+
+	pre_move_event.clear();
+	post_move_event.clear();
 
 	// just in case nobody called obj_delete last mission
 	dock_free_dock_list(this);
@@ -349,10 +350,13 @@ void obj_init()
 	Num_objects = 0;
 	Highest_object_index = 0;
 
-	if ( Cmdline_old_collision_sys ) {
-		obj_reset_pairs();
-	} else {
-		obj_reset_colliders();
+	obj_reset_colliders();
+}
+
+void obj_shutdown()
+{
+	for (auto& obj : Objects) {
+		obj.clear();
 	}
 }
 
@@ -513,7 +517,22 @@ int obj_create(ubyte type,int parent_obj,int instance, matrix * orient,
 
 	obj->n_quadrants = DEFAULT_SHIELD_SECTIONS; // Might be changed by the ship creation code
 	obj->shield_quadrant.resize(obj->n_quadrants);
+
 	return objnum;
+}
+
+void obj_delete_all() 
+{
+	int counter = 0;
+	for (int i = 0; i < MAX_OBJECTS; ++i) 
+	{
+		if (Objects[i].type == OBJ_NONE)
+			continue;
+		++counter;
+		obj_delete(i);
+	}
+
+	mprintf(("Cleanup: Deleted %i objects\n", counter));
 }
 
 /**
@@ -534,12 +553,8 @@ void obj_delete(int objnum)
 	};	
 
 	// Remove all object pairs
-	if ( Cmdline_old_collision_sys ) {
-		obj_remove_pairs( objp );
-	} else {
-		obj_remove_collider(objnum);
-	}
-	
+	obj_remove_collider(objnum);
+
 	switch( objp->type )	{
 	case OBJ_WEAPON:
 		weapon_delete( objp );
@@ -574,7 +589,6 @@ void obj_delete(int objnum)
 	case OBJ_START:
 	case OBJ_WAYPOINT:
 	case OBJ_POINT:
-		Assert(Fred_running);
 		break;  // requires no action, handled by the Fred code.
 	case OBJ_JUMP_NODE:
 		break;  // requires no further action, handled by jumpnode deconstructor.
@@ -661,11 +675,7 @@ void obj_merge_created_list(void)
 		list_remove( obj_create_list, objp );
 
 		// Add it to the object pairs array
-		if ( Cmdline_old_collision_sys ) {
-			obj_add_pairs(OBJ_INDEX(objp));
-		} else {
-			obj_add_collider(OBJ_INDEX(objp));
-		}
+		obj_add_collider(OBJ_INDEX(objp));
 
 		// Then add it to the object used list
 		list_append( &obj_used_list, objp );
@@ -944,8 +954,6 @@ obj_maybe_fire:
 }
 
 
-#define IMPORTANT_FLAGS (OF_COLLIDES)
-
 #ifdef OBJECT_CHECK 
 
 void obj_check_object( object *obj )
@@ -1009,11 +1017,7 @@ void obj_set_flags( object *obj, const flagset<Object::Object_Flags>& new_flags 
 	// turning collision detection off
 	if ( (obj->flags[Object::Object_Flags::Collides]) && (!(new_flags[Object::Object_Flags::Collides])))	{
 		// Remove all object pairs
-		if ( Cmdline_old_collision_sys ) {
-			obj_remove_pairs( obj );
-		} else {
-			obj_remove_collider(objnum);
-		}
+		obj_remove_collider(objnum);
 
 		// update object flags properly		
 		obj->flags = new_flags;
@@ -1039,12 +1043,8 @@ void obj_set_flags( object *obj, const flagset<Object::Object_Flags>& new_flags 
 		obj->flags.set(Object::Object_Flags::Collides);
 
 		// Turn on collision detection
-		if ( Cmdline_old_collision_sys ) {
-			obj_add_pairs(objnum);
-		} else {
-			obj_add_collider(objnum);
-		}
-				
+		obj_add_collider(objnum);
+
 		obj->flags = new_flags;
         obj->flags.remove(Object::Object_Flags::Not_in_coll);
 #ifdef OBJECT_CHECK
@@ -1152,8 +1152,10 @@ void obj_move_all_pre(object *objp, float frametime)
 		Int3();
 		break;
 	default:
-		Error( LOCATION, "Unhandled object type %d in obj_move_one\n", objp->type );
-	}	
+		Error(LOCATION, "Unhandled object type %d in obj_move_all_pre\n", objp->type);
+	}
+
+	objp->pre_move_event(objp);
 }
 
 // Used to tell if a particular group of lasers has cast light yet.
@@ -1183,7 +1185,7 @@ void obj_move_all_post(object *objp, float frametime)
 				weapon_process_post( objp, frametime );
 
 			// Cast light
-			if ( Detail.lighting > 2 ) {
+			if ( Detail.lighting > 3 ) {
 				// Weapons cast light
 
 				int group_id = Weapons[objp->instance].group_id;
@@ -1233,7 +1235,7 @@ void obj_move_all_post(object *objp, float frametime)
 
 			// Make any electrical arcs on ships cast light
 			if (Arc_light)	{
-				if ( (Detail.lighting > 2) && (objp != Viewer_obj) ) {
+				if ( (Detail.lighting > 3) && (objp != Viewer_obj) ) {
 					int i;
 					ship		*shipp;
 					shipp = &Ships[objp->instance];
@@ -1257,7 +1259,7 @@ void obj_move_all_post(object *objp, float frametime)
 
 			//Check for changing team colors
 			ship* shipp = &Ships[objp->instance];
-			if (Ship_info[shipp->ship_info_index].uses_team_colors && stricmp(shipp->secondary_team_name.c_str(), "none")) {
+			if (Ship_info[shipp->ship_info_index].uses_team_colors && stricmp(shipp->secondary_team_name.c_str(), "none") != 0) {
 				if (f2fl(Missiontime) * 1000 > f2fl(shipp->team_change_timestamp) * 1000 + shipp->team_change_time) {
 					shipp->team_name = shipp->secondary_team_name;
 					shipp->team_change_timestamp = 0;
@@ -1276,7 +1278,7 @@ void obj_move_all_post(object *objp, float frametime)
 			if ( !physics_paused )
 				fireball_process_post(objp,frametime);
 
-			if (Detail.lighting > 3) {
+			if (Detail.lighting > 2) {
 				float r = 0.0f, g = 0.0f, b = 0.0f;
 
 				fireball_get_color(Fireballs[objp->instance].fireball_info_index, &r, &g, &b);
@@ -1295,9 +1297,9 @@ void obj_move_all_post(object *objp, float frametime)
 					float rad = p * (1.0f + frand() * 0.05f) * objp->radius;
 					
 					float intensity = 1.0f;
-					if(fireball_is_warp(objp))
+					if (fireball_is_warp(objp))
 					{
-						intensity = fireball_wormhole_intensity(objp); // Valathil: Get wormhole radius for lighting
+						intensity = fireball_wormhole_intensity(&Fireballs[objp->instance]); // Valathil: Get wormhole radius for lighting
 						rad = objp->radius;
 					}
 					// P goes from 0 to 1 to 0 over the life of the explosion
@@ -1323,7 +1325,7 @@ void obj_move_all_post(object *objp, float frametime)
 
 			// Make any electrical arcs on debris cast light
 			if (Arc_light)	{
-				if ( Detail.lighting > 2 ) {
+				if ( Detail.lighting > 3 ) {
 					int i;
 					debris		*db;
 					db = &Debris[objp->instance];
@@ -1383,8 +1385,10 @@ void obj_move_all_post(object *objp, float frametime)
 			break;
 
 		default:
-			Error( LOCATION, "Unhandled object type %d in obj_move_one\n", objp->type );
-	}	
+		    Error(LOCATION, "Unhandled object type %d in obj_move_all_post\n", objp->type);
+	    }
+
+	    objp->post_move_event(objp);
 }
 
 
@@ -1493,7 +1497,7 @@ void obj_move_all(float frametime)
 				target = &Objects[Player_ai->target_objnum];
 
 			Script_system.SetHookObjects(2, "User", objp, "Target", target);
-			Script_system.RunCondition(CHA_ONWPEQUIPPED, 0, NULL, objp);
+			Script_system.RunCondition(CHA_ONWPEQUIPPED, objp);
 		}
 		Script_system.RemHookVars(2, "User", "Target");
 	}
@@ -1553,11 +1557,7 @@ void obj_move_all(float frametime)
 
 	if ( Collisions_enabled ) {
 		TRACE_SCOPE(tracing::CollisionDetection);
-		if ( Cmdline_old_collision_sys ) {
-			obj_check_all_collisions();
-		} else {
-			obj_sort_and_collide();
-		}
+		obj_sort_and_collide();
 	}
 
 	turret_swarm_check_validity();
@@ -1610,8 +1610,8 @@ void obj_queue_render(object* obj, model_draw_list* scene)
 	auto skip_render = Script_system.IsConditionOverride(CHA_OBJECTRENDER, obj);
 	
 	// Always execute the hook content
-	Script_system.RunCondition(CHA_OBJECTRENDER, '\0', NULL, obj);
-	
+	Script_system.RunCondition(CHA_OBJECTRENDER, obj);
+
 	Script_system.RemHookVar("Self");
 
 	if (skip_render) {
@@ -1742,11 +1742,7 @@ void obj_client_post_interpolate()
 	}	
 
 	// check collisions
-	if ( Cmdline_old_collision_sys ) {
-		obj_check_all_collisions();
-	} else {
-		obj_sort_and_collide();
-	}
+	obj_sort_and_collide();
 
 	// do post-collision stuff for beam weapons
 	beam_move_all_post();
@@ -1957,11 +1953,7 @@ void obj_reset_all_collisions()
 #endif
 
 	// clear object pairs
-	if ( Cmdline_old_collision_sys ) {
-		obj_reset_pairs();
-	} else {
-		obj_reset_colliders();
-	}
+	obj_reset_colliders();
 
 	// now add every object back into the object collision pairs
 	object *moveup;
@@ -1971,11 +1963,7 @@ void obj_reset_all_collisions()
 		moveup->flags.set(Object::Object_Flags::Not_in_coll);
 
 		// recalc pairs for this guy
-		if ( Cmdline_old_collision_sys ) {
-			obj_add_pairs(OBJ_INDEX(moveup));
-		} else {
-			obj_add_collider(OBJ_INDEX(moveup));
-		}
+		obj_add_collider(OBJ_INDEX(moveup));
 
 		// next
 		moveup = GET_NEXT(moveup);
@@ -2085,4 +2073,16 @@ int object_get_model(object *objp)
 	}
 
 	return -1;
+}
+bool obj_compare(object* left, object* right) {
+	if (left == right) {
+		// Same pointer
+		return true;
+	}
+	if (left == nullptr || right == nullptr) {
+		// Only one is nullptr and the other is not (since they are not equal)
+		return false;
+	}
+
+	return OBJ_INDEX(left) == OBJ_INDEX(right);
 }

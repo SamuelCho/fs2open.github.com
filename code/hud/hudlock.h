@@ -15,10 +15,8 @@
 #include "hud/hud.h"
 
 void hud_init_missile_lock();
-void hud_draw_lock_triangles(int center_x, int center_y, float frametime);
 void hud_calculate_lock_position(float frametime);
 void hud_calculate_lock_start_pos();
-void hud_show_lock_indicator(float frametime, vec3d *lock_point_pos);
 void hud_do_lock_indicator(float frametime);
 void hud_stop_looped_locking_sounds();
 void hud_lock_reset(float lock_time_scale=1.0f);
@@ -55,11 +53,11 @@ public:
 	void initTargetBoxSize(int w, int h);
 	void initLoopLockedAnim(bool loop);
 
-	void render(float frametime);
+	void render(float frametime) override;
 	void renderLockTriangles(int center_x, int center_y, float frametime);
 	void renderLockTrianglesOld(int center_x, int center_y, int radius);
-	void pageIn();
-	void initialize();
+	void pageIn() override;
+	void initialize() override;
 };
 
 #endif

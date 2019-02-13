@@ -4,6 +4,8 @@
 #include "graphics/grinternal.h"
 #include "model/model.h"
 
+#include <array>
+
 enum class ComparisionFunction
 {
 	Never,
@@ -30,16 +32,6 @@ enum class StencilOperation {
 class material
 {
 public:
-	struct fog 
-	{
-		bool enabled;
-		int r;
-		int g;
-		int b;
-		float dist_near;
-		float dist_far;
-	};
-
 	struct clip_plane
 	{
 		bool enabled;
@@ -66,7 +58,9 @@ public:
 		StencilOperation successOperation = StencilOperation::Keep;
 	};
 
-private:
+	static const size_t NUM_BUFFER_BLENDS = 8;
+
+ private:
 	shader_type Sdr_type;
 
 	int Texture_maps[TM_NUM_TYPES];
@@ -74,9 +68,12 @@ private:
 
 	clip_plane Clip_params;
 	int Texture_addressing;
-	fog Fog_params;
 	gr_zbuffer_type Depth_mode;
+
 	gr_alpha_blend Blend_mode;
+	bool Has_buffer_blends = false;
+	std::array<gr_alpha_blend, NUM_BUFFER_BLENDS> Buffer_blend_mode;
+
 	bool Cull_mode;
 	int Fill_mode;
 	vec4 Clr;
@@ -112,11 +109,6 @@ public:
 	void set_texture_addressing(int addressing);
 	int get_texture_addressing() const;
 
-	void set_fog(int r, int g, int b, float near, float far);
-	void set_fog();
-	bool is_fogged() const;
-	const fog& get_fog() const;
-
 	void set_depth_mode(gr_zbuffer_type mode);
 	gr_zbuffer_type get_depth_mode() const;
 
@@ -130,7 +122,9 @@ public:
 	const bvec4& get_color_mask() const;
 
 	void set_blend_mode(gr_alpha_blend mode);
-	gr_alpha_blend get_blend_mode() const;
+	void set_blend_mode(int buffer, gr_alpha_blend mode);
+	bool has_buffer_blend_modes() const;
+	gr_alpha_blend get_blend_mode(int buffer = 0) const;
 
 	void set_depth_bias(int bias);
 	int get_depth_bias() const;
@@ -152,6 +146,10 @@ public:
 	void set_stencil_func(ComparisionFunction compare, int ref, uint32_t mask);
 	const StencilFunc& get_stencil_func() const;
 
+	void set_stencil_op(StencilOperation stencilFailOperation,
+						StencilOperation depthFailOperation,
+						StencilOperation successOperation);
+
 	void set_front_stencil_op(StencilOperation stencilFailOperation,
 							  StencilOperation depthFailOperation,
 							  StencilOperation successOperation);
@@ -165,9 +163,22 @@ public:
 
 class model_material : public material
 {
+ public:
+	struct fog
+	{
+		bool enabled = false;
+		int r = 0;
+		int g = 0;
+		int b = 0;
+		float dist_near = -1.0f;
+		float dist_far = -1.0f;
+	};
+
+ private:
 	bool Desaturate = false;
 
 	bool Shadow_casting = false;
+	bool Shadow_receiving = false;
 	bool Batched = false;
 
 	bool Deferred = false;
@@ -189,8 +200,9 @@ class model_material : public material
 	float Normal_alpha_min = 0.0f;
 	float Normal_alpha_max = 1.0f;
 
-	bool Normal_extrude = false;
-	float Normal_extrude_width = -1.0f;
+	fog Fog_params;
+
+	float Outline_thickness = -1.0f;
 
 public:
 	model_material();
@@ -200,6 +212,9 @@ public:
 
 	void set_shadow_casting(bool enabled);
 	bool is_shadow_casting() const;
+
+	void set_shadow_receiving(bool enabled);
+	bool is_shadow_receiving() const;
 
 	void set_light_factor(float factor);
 	float get_light_factor() const;
@@ -231,15 +246,19 @@ public:
 	float get_normal_alpha_min() const;
 	float get_normal_alpha_max() const;
 
-	void set_normal_extrude(float width);
-	void set_normal_extrude();
-	bool is_normal_extrude_active() const;
-	float get_normal_extrude_width() const;
+	void set_outline_thickness(float thickness = -1.0f);
+	float get_outline_thickness() const;
+	bool uses_thick_outlines() const;
 
 	void set_batching(bool enabled);
 	bool is_batched() const;
 
-	virtual uint get_shader_flags() const override;
+	uint get_shader_flags() const override;
+
+	void set_fog(int r, int g, int b, float near, float far);
+	void set_fog();
+	bool is_fogged() const;
+	const fog& get_fog() const;
 };
 
 class particle_material : public material
@@ -296,9 +315,8 @@ class movie_material : public material {
 	void setVtex(int _Vtex);
 };
 
-class batched_bitmap_material : public material
-{
- public:
+class batched_bitmap_material : public material {
+  public:
 	batched_bitmap_material();
 };
 
@@ -307,12 +325,21 @@ class nanovg_material : public material {
 	nanovg_material();
 };
 
-class decal_material : public material
-{
- public:
+class decal_material : public material {
+  public:
 	decal_material();
 
 	uint get_shader_flags() const override;
+};
+
+class interface_material : public material {
+	vec2d offset;
+
+  public:
+	interface_material();
+
+	void set_offset(const vec2d& new_offset);
+	vec2d get_offset();
 };
 
 gr_alpha_blend material_determine_blend_mode(int base_bitmap, bool is_transparent);
@@ -320,6 +347,7 @@ gr_alpha_blend material_determine_blend_mode(int base_bitmap, bool is_transparen
 gr_zbuffer_type material_determine_depth_mode(bool depth_testing, bool is_transparent);
 
 void material_set_interface(material* mat_info, int texture, bool blended, float alpha);
+void material_set_rocket_interface(interface_material* mat_info, int texture, const vec2d& offset);
 void material_set_unlit(material* mat_info, int texture, float alpha, bool blending, bool depth_testing);
 void material_set_unlit_emissive(material* mat_info, int texture, float alpha, float color_scale);
 void material_set_unlit_color(material* mat_info, int texture, color *clr, bool blending, bool depth_testing);
@@ -329,6 +357,6 @@ void material_set_distortion(distortion_material *mat_info, int texture, bool th
 void material_set_movie(movie_material *mat_info, int y_bm, int u_bm, int v_bm);
 void material_set_batched_bitmap(batched_bitmap_material* mat_info, int base_tex, float alpha, float color_scale);
 void material_set_nanovg(nanovg_material* mat_info, int base_tex);
-void material_set_decal(material* mat_info, int diffuse_tex, int normal_tex);
+void material_set_decal(material* mat_info, int diffuse_tex, int glow_tex, int normal_tex);
 
 #endif

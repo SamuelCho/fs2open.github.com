@@ -357,6 +357,8 @@ void parse_ai_profiles_tbl(const char *filename)
 
 				set_flag(profile, "$smart afterburner management:", AI::Profile_Flags::Smart_afterburner_management);
 
+				set_flag(profile, "$free afterburner use:", AI::Profile_Flags::Free_afterburner_use);
+
 				set_flag(profile, "$allow rapid secondary dumbfire:", AI::Profile_Flags::Allow_rapid_secondary_dumbfire);
 
 				set_flag(profile, "$huge turret weapons ignore bombs:", AI::Profile_Flags::Huge_turret_weapons_ignore_bombs);
@@ -433,6 +435,8 @@ void parse_ai_profiles_tbl(const char *filename)
 
 				set_flag(profile, "$ai guards specific ship in wing:", AI::Profile_Flags::Ai_guards_specific_ship_in_wing);
 
+				set_flag(profile, "$support don't add primaries:", AI::Profile_Flags::Support_dont_add_primaries);
+
 				profile->ai_path_mode = AI_PATH_MODE_NORMAL;
 				if (optional_string("$ai path mode:"))
 				{
@@ -457,6 +461,8 @@ void parse_ai_profiles_tbl(const char *filename)
 				set_flag(profile, "$glide decay requires thrust:", AI::Profile_Flags::Glide_decay_requires_thrust);
 
 				set_flag(profile, "$ai can slow down when attacking big ships:", AI::Profile_Flags::Ai_can_slow_down_attacking_big_ships);
+
+				set_flag(profile, "$use actual primary range:", AI::Profile_Flags::Use_actual_primary_range);
 
 				profile->bay_arrive_speed_mult = 1.0f;
 				profile->bay_depart_speed_mult = 1.0f;

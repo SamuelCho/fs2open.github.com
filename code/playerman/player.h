@@ -13,15 +13,14 @@
 #define _PLAYER_H
 
 #include "globalincs/globals.h"
-#include "hud/hudtarget.h"				// for targeting hotkey lists
-#include "io/keycontrol.h"				// for button_info
+#include "hud/hudtarget.h" // for targeting hotkey lists
+#include "io/keycontrol.h" // for button_info
 #include "localization/localize.h"
 #include "network/multi_options.h"
 #include "parse/sexp.h"
 #include "physics/physics.h"
-#include "stats/scoring.h"             // for scoring/stats
-
-struct campaign_info;
+#include "sound/sound.h"
+#include "stats/scoring.h" // for scoring/stats
 
 #define MAX_KEYED_TARGETS			8		// number of hot keys available to assign targets to
 
@@ -76,17 +75,13 @@ struct campaign_info;
 // having the opportunity to skip it
 #define PLAYER_MISSION_FAILURE_LIMIT		5
 
-
-typedef struct campaign_stats {
-	char campaign_name[MAX_FILENAME_LEN+1];	// insurance
-	scoring_struct stats;
-} campaign_stats;
-
 class player
 {
 public:
 	void reset();
 	void assign(const player *pl);
+	friend bool operator==(const player& lhs, const player& rhs);
+	friend bool operator!=(const player& lhs, const player& rhs);
 
 	char				callsign[CALLSIGN_LEN + 1];
 	char				short_callsign[CALLSIGN_LEN + 1];	// callsign truncated to SHORT_CALLSIGN_PIXEL_W pixels
@@ -145,9 +140,9 @@ public:
 	int				warn_count;									// number of attack warnings player has received this mission
 	float				damage_this_burst;						// amount of damage done this frame to friendly craft
 
-	int				repair_sound_loop;						// Sound id for ship repair looping sound, this is in the player 
-																		// file since the repair sound only plays when Player ship is getting repaired
-	int				cargo_scan_loop;							// Sound id for scanning cargo looping sound
+	sound_handle repair_sound_loop; // Sound id for ship repair looping sound, this is in the player
+	                                // file since the repair sound only plays when Player ship is getting repaired
+	sound_handle cargo_scan_loop;   // Sound id for scanning cargo looping sound
 
 	int				praise_count;								// number of praises received this mission
 	int				allow_praise_timestamp;					// timestamp marking time until next praise is allowed
@@ -220,11 +215,9 @@ extern player Players[MAX_PLAYERS];
 
 extern int Player_num;								// player num of person playing on this machine
 extern player *Player;								// pointer to my information
-//extern control_info PlayerControls;
 
 extern int Player_use_ai;
-extern int view_centering;
-extern angles chase_slew_angles;					// The viewing angles in which viewer_slew_angles will chase to. 				
+extern angles chase_slew_angles;					// The viewing angles in which viewer_slew_angles will chase to.
 
 extern void player_init();							// initialization per level
 extern void player_level_init();
@@ -264,11 +257,9 @@ extern void player_control_reset_ci( control_info *ci );
 
 void player_generate_death_message(player *player_p);
 void player_show_death_message();
-void player_maybe_fire_turret(object *objp);
 void player_maybe_play_all_alone_msg();
 void player_set_next_all_alone_msg_timestamp();
 
-void player_get_padlock_orient(matrix *eye_orient);
 void player_display_padlock_view();
 
 // get the player's eye position and orient
@@ -276,9 +267,9 @@ camid player_get_cam();
 
 //=============================================================
 //===================== PLAYER WARPOUT STUFF ==================
-#define PLAYER_WARPOUT_SPEED 40.0f		// speed you need to be going to warpout
-#define TARGET_WARPOUT_MATCH_PERCENT 0.05f	// how close to TARGET_WARPOUT_SPEED you need to be
-#define MINIMUM_PLAYER_WARPOUT_TIME	3.0f		// How long before you can press 'ESC' to abort warpout
+extern float Player_warpout_speed;	// speed you need to be going to warpout
+extern float Target_warpout_match_percent;	// how close to TARGET_WARPOUT_SPEED you need to be
+extern float Minimum_player_warpout_time;		// How long before you can press 'ESC' to abort warpout
 
 extern float Warpout_time;							// Declared in freespace.cpp
 extern int Warpout_forced;							// If non-zero, bash the player to speed and go through effect

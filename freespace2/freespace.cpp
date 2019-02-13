@@ -27,6 +27,9 @@
  #include <sys/stat.h>
 #endif
 
+#include "freespace.h"
+#include "freespaceresource.h"
+#include "levelpaging.h"
 #include "anim/animplay.h"
 #include "asteroid/asteroid.h"
 #include "autopilot/autopilot.h"
@@ -35,15 +38,14 @@
 #include "cmdline/cmdline.h"
 #include "cmeasure/cmeasure.h"
 #include "cutscene/cutscenes.h"
-#include "cutscene/player.h"
 #include "cutscene/movie.h"
+#include "cutscene/player.h"
 #include "debris/debris.h"
 #include "debugconsole/console.h"
+#include "decals/decals.h"
+#include "events/events.h"
 #include "exceptionhandler/exceptionhandler.h"
 #include "fireball/fireballs.h"
-#include "freespace.h"
-#include "freespaceresource.h"
-#include "levelpaging.h"
 #include "fs2netd/fs2netd_client.h"
 #include "gamehelp/contexthelp.h"
 #include "gamehelp/gameplayhelp.h"
@@ -54,9 +56,9 @@
 #include "globalincs/mspdb_callstack.h"
 #include "globalincs/version.h"
 #include "graphics/font.h"
-#include "graphics/shadows.h"
-#include "graphics/matrix.h"
 #include "graphics/light.h"
+#include "graphics/matrix.h"
+#include "graphics/shadows.h"
 #include "headtracking/headtracking.h"
 #include "hud/hud.h"
 #include "hud/hudconfig.h"
@@ -68,16 +70,17 @@
 #include "hud/hudsquadmsg.h"
 #include "hud/hudtargetbox.h"
 #include "iff_defs/iff_defs.h"
+#include "io/cursor.h"
 #include "io/joy.h"
 #include "io/joy_ff.h"
 #include "io/key.h"
 #include "io/mouse.h"
-#include "io/cursor.h"
 #include "io/timer.h"
 #include "jumpnode/jumpnode.h"
-#include "libs/ffmpeg/FFmpeg.h"
 #include "lab/lab.h"
-#include "lab/wmcgui.h"	//So that GUI_System can be initialized
+#include "lab/wmcgui.h" //So that GUI_System can be initialized
+#include "libs/discord/discord.h"
+#include "libs/ffmpeg/FFmpeg.h"
 #include "lighting/lighting.h"
 #include "localization/localize.h"
 #include "math/staticrand.h"
@@ -136,11 +139,10 @@
 #include "parse/encrypt.h"
 #include "parse/generic_log.h"
 #include "parse/parselo.h"
-#include "scripting/scripting.h"
 #include "parse/sexp.h"
 #include "parse/sexp/sexp_lookup.h"
-#include "particle/particle.h"
 #include "particle/ParticleManager.h"
+#include "particle/particle.h"
 #include "pilotfile/pilotfile.h"
 #include "playerman/managepilot.h"
 #include "playerman/player.h"
@@ -150,6 +152,9 @@
 #include "radar/radarsetup.h"
 #include "render/3d.h"
 #include "render/batching.h"
+#include "scpui/rocket_ui.h"
+#include "scripting/api/objs/gamestate.h"
+#include "scripting/scripting.h"
 #include "ship/afterburner.h"
 #include "ship/awacs.h"
 #include "ship/ship.h"
@@ -165,15 +170,14 @@
 #include "starfield/supernova.h"
 #include "stats/medals.h"
 #include "stats/stats.h"
+#include "tracing/Monitor.h"
 #include "tracing/tracing.h"
 #include "weapon/beam.h"
-#include "decals/decals.h"
 #include "weapon/emp.h"
 #include "weapon/flak.h"
 #include "weapon/muzzleflash.h"
 #include "weapon/shockwave.h"
 #include "weapon/weapon.h"
-#include "tracing/Monitor.h"
 
 #include "SDLGraphicsOperations.h"
 
@@ -249,7 +253,7 @@ int	Game_skill_level = DEFAULT_SKILL_LEVEL;
 // Needs to be cleaned up.
 float Warpout_time = 0.0f;
 int Warpout_forced = 0;		// Set if this is a forced warpout that cannot be cancelled.
-int Warpout_sound = -1;
+sound_handle Warpout_sound = sound_handle::invalid();
 int Use_joy_mouse = 0;
 int Use_palette_flash = 1;
 #ifndef NDEBUG
@@ -888,9 +892,10 @@ void game_level_close()
 	if(!Script_system.IsConditionOverride(CHA_MISSIONEND))
 	{
 		// save player-persistent variables
-		mission_campaign_save_player_persistent_variables();	// Goober5000
+		mission_campaign_save_on_close_variables();	// Goober5000
 
 		// De-Initialize the game subsystems
+		obj_delete_all();
 		sexp_music_close();	// Goober5000
 		event_music_level_close();
 		game_stop_looped_sounds();
@@ -932,6 +937,8 @@ void game_level_close()
 		gr_set_ambient_light(120, 120, 120);
 
 		stars_level_close();
+
+		Pilot.save_savefile();
 	}
 	else
 	{
@@ -1185,7 +1192,7 @@ void game_loading_callback(int count)
 
 	auto progress = static_cast<float>(count) / static_cast<float>(COUNT_ESTIMATE);
 	CLAMP(progress, 0.0f, 1.0f);
-	Script_system.SetHookVar("Progress", 'f', &progress);
+	Script_system.SetHookVar("Progress", 'f', progress);
 
 	if (Script_system.RunCondition(CHA_LOADSCREEN)) {
 		// At least one script exeuted so we probably need to do a flip now
@@ -1703,7 +1710,7 @@ void game_init()
 #endif
 
 	// init os stuff next
-	if ( !Is_standalone ) {		
+	if ( !Is_standalone ) {
 		os_init( Osreg_class_name, Window_title.c_str(), Osreg_app_name );
 	}
 	else {
@@ -1784,20 +1791,8 @@ void game_init()
 		snd_init();
 	}
 
-	if(fsspeech_init() == false) {
+	if(!fsspeech_init()) {
 		mprintf(("Failed to init speech\n"));
-
-		if(Cmdline_query_speech)
-		{
-			if (!fsspeech_was_compiled())
-				os::dialogs::Message(os::dialogs::MESSAGEBOX_WARNING, "Speech is not compiled in this build in code.lib");
-			else
-				os::dialogs::Message(os::dialogs::MESSAGEBOX_WARNING, "Speech is compiled, but failed to init");
-		}
-	} else if(Cmdline_query_speech) {
-		// Its bad practice to use a negative type, this is an exceptional case
-		fsspeech_play(-1,"Welcome to FS2 open");
-		os::dialogs::Message(os::dialogs::MESSAGEBOX_INFORMATION, "Speech is compiled and initialised and should be working");
 	}
 
 /////////////////////////////
@@ -1956,6 +1951,10 @@ void game_init()
 
 	decals::initialize();
 
+	// fireballs need to be parsed before parsing ships.
+	// they don't need to be inited (data loaded etc.) until the mission starts
+	fireball_parse_tbl();
+
 	obj_init();	
 	mflash_game_init();	
 	armor_init();
@@ -2013,6 +2012,9 @@ void game_init()
 	Viewer_mode = 0;
 	Game_paused = 0;
 
+	// Do this before the initial scripting hook runs in case that hook does something with the UI
+	scpui::initialize();
+
 	Script_system.RunCondition(CHA_GAMEINIT);
 
 	game_title_screen_close();
@@ -2021,6 +2023,8 @@ void game_init()
 	convert_pilot_files();
 	
 	libs::ffmpeg::initialize();
+
+	libs::discord::init();
 
 	nprintf(("General", "Ships.tbl is : %s\n", Game_ships_tbl_valid ? "VALID" : "INVALID!!!!"));
 	nprintf(("General", "Weapons.tbl is : %s\n", Game_weapons_tbl_valid ? "VALID" : "INVALID!!!!"));
@@ -2134,7 +2138,7 @@ void game_show_framerate()
 		}
 
 		if (Cmdline_bmpman_usage) {
-			gr_printf_no_resize( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 - line_height, "BMPMAN: %d/%d", bmpman_count_bitmaps(), MAX_BITMAPS );
+			gr_printf_no_resize( gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 100 - line_height, "BMPMAN: %d/%d", bmpman_count_bitmaps(), bmpman_count_available_slots() );
 		}
 	}
 
@@ -2158,11 +2162,11 @@ void game_show_framerate()
 		process_stats.cb = sizeof(process_stats);
 
 		if (GetProcessMemoryInfo(GetCurrentProcess(), reinterpret_cast<PPROCESS_MEMORY_COUNTERS>(&process_stats), sizeof(process_stats))) {
-			sprintf(mem_buffer, "Private Usage: " SIZE_T_ARG " Meg", process_stats.PrivateUsage / 1024 / 1024);
+			sprintf(mem_buffer, "Private Usage: " SIZE_T_ARG " Meg", static_cast<size_t>(process_stats.PrivateUsage) / 1024 / 1024);
 			gr_string(sx, sy, mem_buffer.c_str(), GR_RESIZE_NONE);
 			sy += line_height;
 
-			sprintf(mem_buffer, "Working set size: " SIZE_T_ARG " Meg", process_stats.WorkingSetSize / 1024 / 1024);
+			sprintf(mem_buffer, "Working set size: " SIZE_T_ARG " Meg", static_cast<size_t>(process_stats.WorkingSetSize) / 1024 / 1024);
 			gr_string(sx, sy, mem_buffer.c_str(), GR_RESIZE_NONE);
 			sy += line_height;
 			sy += line_height;
@@ -2470,7 +2474,7 @@ void game_reset_view_clip()
 	Cutscene_bars_progress = 1.0f;
 }
 
-void game_set_view_clip(float frametime)
+void game_set_view_clip(float  /*frametime*/)
 {
 	if ((Game_mode & GM_DEAD) || (supernova_active() >= 2))
 	{
@@ -2629,7 +2633,7 @@ void game_tst_frame()
 		// tst y
 		tst_y = frand_range(0.0f, (float)gr_screen.max_h - h);
 
-		snd_play(gamesnd_get_game_sound(SND_VASUDAN_BUP));
+		snd_play(gamesnd_get_interface_sound(InterfaceSounds::VASUDAN_BUP));
 
 		// tst x and direction
 		tst_mode = 0;
@@ -2748,7 +2752,7 @@ void do_timing_test(float frame_time)
 	static int test_running = 0;
 	static float test_time = 0.0f;
 
-	static int snds[NUM_MIXED_SOUNDS];
+	static sound_handle snds[NUM_MIXED_SOUNDS];
 	int i;
 
 	if ( test_running ) {
@@ -2769,11 +2773,11 @@ void do_timing_test(float frame_time)
 		Test_begin = 0;
 
 		for ( i = 0; i < NUM_MIXED_SOUNDS; i++ )
-			snds[i] = -1;
+			snds[i] = sound_handle::invalid();
 
 		// start looping digital sounds
 		for ( i = 0; i < NUM_MIXED_SOUNDS; i++ )
-			snds[i] = snd_play_looping( gamesnd_get_game_sound(i), 0.0f, -1, -1);
+			snds[i] = snd_play_looping( gamesnd_get_game_sound(gamesnd_id(i)), 0.0f, -1, -1);
 	}
 	
 
@@ -2891,11 +2895,11 @@ void say_view_target()
 				if (Ships[Objects[Player_ai->target_objnum].instance].flags[Ship::Ship_Flags::Hide_ship_name]) {
 					strcpy_s(view_target_name, "targeted ship");
 				} else {
-					strcpy_s(view_target_name, Ships[Objects[Player_ai->target_objnum].instance].ship_name);
+					strcpy_s(view_target_name, Ships[Objects[Player_ai->target_objnum].instance].get_display_string());
 				}
 				break;
 			case OBJ_WEAPON:
-				strcpy_s(view_target_name, Weapon_info[Weapons[Objects[Player_ai->target_objnum].instance].weapon_info_index].name);
+				strcpy_s(view_target_name, Weapon_info[Weapons[Objects[Player_ai->target_objnum].instance].weapon_info_index].get_display_string());
 				Viewer_mode &= ~VM_OTHER_SHIP;
 				break;
 			case OBJ_JUMP_NODE: {
@@ -3500,10 +3504,10 @@ void game_render_frame( camid cid )
 	Shadow_override = true;
 	//Draw the viewer 'cause we didn't before.
 	//This is so we can change the minimum clipping distance without messing everything up.
-	if ( Viewer_obj
-		&& (Viewer_obj->type == OBJ_SHIP)
+	if (Viewer_obj && (Viewer_obj->type == OBJ_SHIP)
 		&& (Ship_info[Ships[Viewer_obj->instance].ship_info_index].flags[Ship::Info_Flags::Show_ship_model])
-		&& (!Viewer_mode || (Viewer_mode & VM_PADLOCK_ANY) || (Viewer_mode & VM_OTHER_SHIP) || (Viewer_mode & VM_TRACK)) )
+		&& (!Viewer_mode || (Viewer_mode & VM_PADLOCK_ANY) || (Viewer_mode & VM_OTHER_SHIP) || (Viewer_mode & VM_TRACK)
+			|| !(Viewer_mode & VM_EXTERNAL)))
 	{
 		gr_post_process_save_zbuffer();
 		ship_render_show_ship_cockpit(Viewer_obj);
@@ -3915,7 +3919,7 @@ void game_reset_shade_frame()
 	gr_create_shader(&Viewer_shader, 0, 0, 0, 0);
 }
 
-void game_shade_frame(float frametime)
+void game_shade_frame(float  /*frametime*/)
 {
 	// only do frame shade if we are actually in a game play state
 	if ( !game_actually_playing() ) {
@@ -4190,7 +4194,7 @@ void game_frame(bool paused)
 			{
 				TRACE_SCOPE(tracing::RenderHUDHook);
 
-				Script_system.RunCondition(CHA_HUDDRAW, '\0', NULL, Viewer_obj);
+				Script_system.RunCondition(CHA_HUDDRAW, Viewer_obj);
 			}
 			Script_system.RemHookVar("Self");
 			
@@ -5053,7 +5057,7 @@ void game_process_event( int current_state, int event )
 			// Same code as in GS_EVENT_PLAYER_WARPOUT_START only ignores current mode
 			Player->saved_viewer_mode = Viewer_mode;
 			Player->control_mode = PCM_WARPOUT_STAGE1;
-			Warpout_sound = snd_play(gamesnd_get_game_sound(SND_PLAYER_WARP_OUT));
+			Warpout_sound = snd_play(gamesnd_get_game_sound(GameSounds::PLAYER_WARP_OUT));
 			Warpout_time = 0.0f;			// Start timer!
 			break;
 
@@ -5063,7 +5067,7 @@ void game_process_event( int current_state, int event )
 			} else {
 				Player->saved_viewer_mode = Viewer_mode;
 				Player->control_mode = PCM_WARPOUT_STAGE1;
-				Warpout_sound = snd_play(gamesnd_get_game_sound(SND_PLAYER_WARP_OUT));
+				Warpout_sound = snd_play(gamesnd_get_game_sound(GameSounds::PLAYER_WARP_OUT));
 				Warpout_time = 0.0f;			// Start timer!
 				Warpout_forced = 0;				// If non-zero, bash the player to speed and go through effect
 			}
@@ -5076,10 +5080,10 @@ void game_process_event( int current_state, int event )
 					Viewer_mode = Player->saved_viewer_mode;
 					hud_subspace_notify_abort();
 					mprintf(( "Player put back to normal mode.\n" ));
-					if ( Warpout_sound > -1 )	{
-						snd_stop( Warpout_sound );
-						Warpout_sound = -1;
-					}
+				    if (Warpout_sound.isValid()) {
+					    snd_stop( Warpout_sound );
+					    Warpout_sound = sound_handle::invalid();
+				    }
 				}
 			}
 			break;
@@ -5115,9 +5119,9 @@ void game_process_event( int current_state, int event )
 			mprintf(( "Player warped out.  Going to debriefing!\n" ));
 			Player->control_mode = PCM_NORMAL;
 			Viewer_mode = Player->saved_viewer_mode;
-			Warpout_sound = -1;
+		    Warpout_sound        = sound_handle::invalid();
 
-			send_debrief_event();
+		    send_debrief_event();
 			break;
 
 		case GS_EVENT_STANDALONE_POSTGAME:
@@ -5189,6 +5193,8 @@ void game_process_event( int current_state, int event )
 // need to post an event, not change the state.
 void game_leave_state( int old_state, int new_state )
 {
+	events::GameLeaveState(old_state, new_state);
+
 	int end_mission = 1;
 
 	switch (new_state) {
@@ -5216,8 +5222,15 @@ void game_leave_state( int old_state, int new_state )
 	}
 	*/
 
-	if(Script_system.IsConditionOverride(CHA_ONSTATEEND)) {
+	using namespace scripting::api;
+
+	Script_system.SetHookVar("OldState", 'o', l_GameState.Set(gamestate_h(old_state)));
+	Script_system.SetHookVar("NewState", 'o', l_GameState.Set(gamestate_h(new_state)));
+
+    if (Script_system.IsConditionOverride(CHA_ONSTATEEND))
+	{
 		Script_system.RunCondition(CHA_ONSTATEEND);
+		Script_system.RemHookVars(2, "OldState", "NewState");
 		return;
 	}
 
@@ -5597,6 +5610,7 @@ void game_leave_state( int old_state, int new_state )
 
 	//WMC - Now run scripting stuff
 	Script_system.RunCondition(CHA_ONSTATEEND);
+	Script_system.RemHookVars(2, "OldState", "NewState");
 }
 
 // variable used for automatic netgame starting/joining
@@ -5611,14 +5625,23 @@ int Main_hall_netgame_started = 0;
 
 void game_enter_state( int old_state, int new_state )
 {
+	events::GameEnterState(old_state, new_state);
+
 	//WMC - Scripting override
 	/*
 	if(script_hook_valid(&GS_state_hooks[new_state]) && Script_system.IsOverride(GS_state_hooks[new_state])) {
 		return;
 	}
 	*/
+
+	using namespace scripting::api;
+
+	Script_system.SetHookVar("OldState", 'o', l_GameState.Set(gamestate_h(old_state)));
+	Script_system.SetHookVar("NewState", 'o', l_GameState.Set(gamestate_h(new_state)));
+
 	if(Script_system.IsConditionOverride(CHA_ONSTATESTART)) {
 		Script_system.RunCondition(CHA_ONSTATESTART);
+		Script_system.RemHookVars(2, "OldState", "NewState");
 		return;
 	}
 
@@ -5725,6 +5748,7 @@ void game_enter_state( int old_state, int new_state )
 		case GS_STATE_DEBRIEF:
 			game_stop_looped_sounds();
 			mission_goal_fail_incomplete();				// fail all incomplete goals before entering debriefing
+			hud_config_as_player();
 			if ( (old_state != GS_STATE_VIEW_MEDALS) && (old_state != GS_STATE_OPTIONS_MENU) ){
 				common_maybe_play_cutscene(MOVIE_PRE_DEBRIEF); 	
 				debrief_init();
@@ -6128,6 +6152,7 @@ void mouse_force_pos(int x, int y);
 
 	//WMC - now do user scripting stuff
 	Script_system.RunCondition(CHA_ONSTATESTART);
+	Script_system.RemHookVars(2, "OldState", "NewState");
 }
 
 // do stuff that may need to be done regardless of state
@@ -6182,6 +6207,9 @@ void game_do_state(int state)
 
 	if(Script_system.IsConditionOverride(CHA_ONFRAME)) {
 		game_set_frametime(state);
+
+		game_check_key();
+
 		gr_clear();
 		gr_flip();	//Does state hook automagically
 		return;
@@ -6769,6 +6797,8 @@ int game_main(int argc, char *argv[])
 		// only important for non THREADED mode
 		os_poll();
 
+		events::EngineUpdate();
+
 		state = gameseq_process_events();
 		if ( state == GS_STATE_QUIT_GAME ) {
 			break;
@@ -6827,6 +6857,8 @@ void game_launch_launcher_on_exit()
 //
 void game_shutdown(void)
 {
+	events::EngineShutdown();
+
 	headtracking::shutdown();
 
 	fsspeech_deinit();
@@ -6844,7 +6876,17 @@ void game_shutdown(void)
 		gr_flip();
 	}
 
-   // if the player has left the "player select" screen and quit the game without actually choosing
+	// Free the scripting resources of the new UI first
+	scpui::shutdown_scripting();
+
+	// Everything after this should be done without scripting so we can free those resources here
+	Script_system.Clear();
+
+	// Deinitialize the new UI system, needs to be done after scripting shutdown to make sure the resources were
+	// released properly
+	scpui::shutdown();
+
+	// if the player has left the "player select" screen and quit the game without actually choosing
 	// a player, Player will be NULL, in which case we shouldn't write the player file out!
 	if (!(Game_mode & GM_STANDALONE_SERVER) && (Player!=NULL) && !Is_standalone){
 		Pilot.save_player();
@@ -6881,11 +6923,7 @@ void game_shutdown(void)
 	// Free SEXP resources
 	sexp_shutdown();
 
-	if ( Cmdline_old_collision_sys ) {
-		obj_pairs_close();		// free memory from object collision pairs
-	} else {
-		obj_reset_colliders();
-	}
+	obj_reset_colliders();
 	stars_close();			// clean out anything used by stars code
 
 	// the menu close functions will unload the bitmaps if they were displayed during the game
@@ -6903,6 +6941,8 @@ void game_shutdown(void)
 	event_music_close();
 	gamesnd_close();		// close out gamesnd, needs to happen *after* other sounds are closed
 	psnet_close();
+
+	obj_shutdown();
 
 	model_free_all();
 	bm_unload_all();			// unload/free bitmaps, has to be called *after* model_free_all()!
@@ -6954,10 +6994,10 @@ void game_stop_looped_sounds()
 	obj_snd_stop_all();		// stop all object-linked persistant sounds
 	game_stop_subspace_ambient_sound();
 	snd_stop(Radar_static_looping);
-	Radar_static_looping = -1;
+	Radar_static_looping = sound_handle::invalid();
 	snd_stop(Target_static_looping);
 	shipfx_stop_engine_wash_sound();
-	Target_static_looping = -1;
+	Target_static_looping = sound_handle::invalid();
 }
 
 void game_do_training_checks()
@@ -6990,7 +7030,7 @@ void game_do_training_checks()
 					Training_context_at_waypoint = i;
 					if (Training_context_goal_waypoint == i) {
 						Training_context_goal_waypoint++;
-						snd_play(gamesnd_get_game_sound(SND_CARGO_REVEAL), 0.0f);
+						snd_play(gamesnd_get_game_sound(GameSounds::CARGO_REVEAL), 0.0f);
 					}
 
 					break;
@@ -7062,7 +7102,7 @@ void game_event_debug_init()
 	}
 }
 
-void game_show_event_debug(float frametime) 
+void game_show_event_debug(float  /*frametime*/) 
 {
 	char buf[256];
 	int i, k, z;
@@ -7405,58 +7445,37 @@ void game_format_time(fix m_time,char *time_str)
 	strcat(time_str,tmp);
 }
 
-//	Stuff version string in *str.
-void get_version_string(char *str, int max_size)
-{
-//XSTR:OFF
-	Assert( max_size > 6 );
-
-	sprintf(str, "FreeSpace 2 Open v%s", FS_VERSION_FULL);
-
-#ifndef NDEBUG
-	strcat_s( str, max_size, " Debug" );
-#endif
-
-	// Lets get some more info in here
-	switch(gr_screen.mode)
-	{
-		case GR_OPENGL:
-			strcat_s( str, max_size, " OpenGL" );
-			break;
-	}
-}
-
 // ----------------------------------------------------------------
 //
 // Subspace Ambient Sound START
 //
 // ----------------------------------------------------------------
 
-static int Subspace_ambient_left_channel = -1;
-static int Subspace_ambient_right_channel = -1;
+static sound_handle Subspace_ambient_left_channel  = sound_handle::invalid();
+static sound_handle Subspace_ambient_right_channel = sound_handle::invalid();
 
 // 
 void game_start_subspace_ambient_sound()
 {
-	if ( Subspace_ambient_left_channel < 0 ) {
-		Subspace_ambient_left_channel = snd_play_looping(gamesnd_get_game_sound(SND_SUBSPACE_LEFT_CHANNEL), -1.0f);
+	if (!Subspace_ambient_left_channel.isValid()) {
+		Subspace_ambient_left_channel = snd_play_looping(gamesnd_get_game_sound(GameSounds::SUBSPACE_LEFT_CHANNEL), -1.0f);
 	}
 
-	if ( Subspace_ambient_right_channel < 0 ) {
-		Subspace_ambient_right_channel = snd_play_looping(gamesnd_get_game_sound(SND_SUBSPACE_RIGHT_CHANNEL), 1.0f);
+	if (!Subspace_ambient_right_channel.isValid()) {
+		Subspace_ambient_right_channel = snd_play_looping(gamesnd_get_game_sound(GameSounds::SUBSPACE_RIGHT_CHANNEL), 1.0f);
 	}
 }
 
 void game_stop_subspace_ambient_sound()
 {
-	if ( Subspace_ambient_left_channel >= 0 ) {
+	if (Subspace_ambient_left_channel.isValid()) {
 		snd_stop(Subspace_ambient_left_channel);
-		Subspace_ambient_left_channel = -1;
+		Subspace_ambient_left_channel = sound_handle::invalid();
 	}
 
-	if ( Subspace_ambient_right_channel >= 0 ) {
+	if (Subspace_ambient_right_channel.isValid()) {
 		snd_stop(Subspace_ambient_right_channel);
-		Subspace_ambient_right_channel = -1;
+		Subspace_ambient_right_channel = sound_handle::invalid();
 	}
 }
 
@@ -7928,7 +7947,6 @@ void game_unpause()
 	}
 }
 
-
 int actual_main(int argc, char *argv[])
 {
 	int result = -1;
@@ -7959,9 +7977,6 @@ int actual_main(int argc, char *argv[])
         SDL_free(path_name);
     }
 #endif
-
-	// create user's directory	
-	_mkdir(os_get_config_path().c_str());
 #endif
 
 #if defined(GAME_ERRORLOG_TXT) && defined(_MSC_VER)
@@ -7999,7 +8014,7 @@ int actual_main(int argc, char *argv[])
 
 	::CoUninitialize();
 
-#ifndef _MINGW
+#ifndef __MINGW32__
 	_CrtDumpMemoryLeaks();
 #endif
 #endif

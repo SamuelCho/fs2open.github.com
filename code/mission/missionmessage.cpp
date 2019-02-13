@@ -322,7 +322,7 @@ int add_avi( char *avi_name )
 	// would have returned if a slot existed.
 	generic_anim_init( &extra.anim_data, avi_name );
 	strcpy_s( extra.name, avi_name );
-	extra.num = -1;
+	extra.num    = sound_load_id::invalid();
 	extra.exists = (generic_anim_load(&extra.anim_data) == 0); // load only to validate the anim
 	generic_anim_unload(&extra.anim_data); // unload to not waste bmpman slots
 	Message_avis.push_back(extra); 
@@ -345,7 +345,7 @@ int add_wave( const char *wave_name )
 
 	generic_anim_init( &extra.anim_data );
 	strcpy_s( extra.name, wave_name );
-	extra.num = -1;
+	extra.num = sound_load_id::invalid();
 	Message_waves.push_back(extra);
 	Num_message_waves++;
 	return ((int)Message_waves.size() - 1);
@@ -438,7 +438,7 @@ void message_parse(bool importing_from_fsm)
 
 		stuff_string(buf, F_NAME); 
 		for (SCP_vector<SCP_string>::iterator iter = Builtin_moods.begin(); iter != Builtin_moods.end(); ++iter) {
-			if (iter->compare(buf) == 0) {
+			if (*iter == buf) {
 				msg.mood = (int)std::distance(Builtin_moods.begin(), iter);
 				found = true;
 				break;
@@ -637,7 +637,7 @@ void parse_msgtbl()
 				}
 
 				// test extension
-				if (stricmp(ptr, ".ogg") && stricmp(ptr, ".wav"))
+				if (stricmp(ptr, ".ogg") != 0 && stricmp(ptr, ".wav") != 0)
 				{
 					Warning(LOCATION, "Simulated speech override file '%s' was provided with an extension other than .wav or .ogg!", filename);
 					continue;
@@ -710,7 +710,7 @@ void messages_init()
 	}
 
 	for (i = 0; i < Num_builtin_waves; i++ ){
-		Message_waves[i].num = -1;
+		Message_waves[i].num = sound_load_id::invalid();
 	}
 
 	Message_shipnum = -1;
@@ -720,7 +720,7 @@ void messages_init()
 		Playing_messages[i].anim_data = NULL;
 		Playing_messages[i].start_frame = -1;
 		Playing_messages[i].play_anim = false;
-		Playing_messages[i].wave = -1;
+		Playing_messages[i].wave         = sound_handle::invalid();
 		Playing_messages[i].id = -1;
 		Playing_messages[i].priority = -1;
 		Playing_messages[i].shipnum = -1;
@@ -767,7 +767,7 @@ void message_mission_shutdown()
 
 	// remove the wave sounds from memory
 	for (i = 0; i < Num_message_waves; i++ ) {
-		if ( Message_waves[i].num != -1 ){
+		if (Message_waves[i].num.isValid()) {
 			snd_unload( Message_waves[i].num );
 		}
 	}
@@ -844,7 +844,7 @@ void message_kill_all( int kill_all )
 		}
 
 		if ( kill_all ) {
-			if ( (Playing_messages[i].wave != -1 ) && snd_is_playing(Playing_messages[i].wave) ){
+			if ((Playing_messages[i].wave.isValid()) && snd_is_playing(Playing_messages[i].wave)) {
 				snd_stop( Playing_messages[i].wave );
 			}
 
@@ -872,7 +872,7 @@ void message_kill_playing( int message_num )
 		Playing_messages[message_num].play_anim = false;
 	}
 
-	if ( (Playing_messages[message_num].wave != -1 ) && snd_is_playing(Playing_messages[message_num].wave) )
+	if ((Playing_messages[message_num].wave.isValid()) && snd_is_playing(Playing_messages[message_num].wave))
 		snd_stop( Playing_messages[message_num].wave );
 
 	Playing_messages[message_num].shipnum = -1;
@@ -996,12 +996,12 @@ void message_load_wave(int index, const char *filename)
 {
 	Assertion(index >= 0, "Invalid index passed!");
 
-	if ( Message_waves[index].num >= 0) {
+	if (Message_waves[index].num.isValid()) {
 		return;
 	}
 
 	if ( !Sound_enabled ) {
-		Message_waves[index].num = -1;
+		Message_waves[index].num = sound_load_id::invalid();
 		return;
 	}
 
@@ -1009,7 +1009,7 @@ void message_load_wave(int index, const char *filename)
 	strcpy_s( tmp_gs.filename, filename );
 	Message_waves[index].num = snd_load( &tmp_gs, 0, 0 );
 
-	if (Message_waves[index].num == -1)
+	if (!Message_waves[index].num.isValid())
 		nprintf(("messaging", "Cannot load message wave: %s.  Will not play\n", Message_waves[index].name));
 }
 
@@ -1023,7 +1023,7 @@ bool message_filename_is_generic(char *filename)
 	char *ptr = strchr(truncated_filename, '.');
 
 	// extension must be a recognized sound file
-	if ((ptr == NULL) || (stricmp(ptr, ".ogg") && stricmp(ptr, ".wav")))
+	if ((ptr == NULL) || (stricmp(ptr, ".ogg") != 0 && stricmp(ptr, ".wav") != 0))
 		return false;
 
 	// truncate it
@@ -1063,7 +1063,7 @@ bool message_play_wave( message_q *q )
 		if ( q->flags & MQF_CONVERT_TO_COMMAND ) {
 			char *p, new_filename[MAX_FILENAME_LEN];
 
-			Message_waves[index].num = -1;					// forces us to reload the message
+			Message_waves[index].num = sound_load_id::invalid(); // forces us to reload the message
 
 			// bash the filename here. Look for "[1-6]_" at the front of the message.  If found, then
 			// convert to TC_*
@@ -1082,7 +1082,7 @@ bool message_play_wave( message_q *q )
 
 		// load the sound file into memory
 		message_load_wave(index, filename);
-		if ( Message_waves[index].num == -1 ) {
+		if (!Message_waves[index].num.isValid()) {
 			m->wave_info.index = -1;
 		}
 
@@ -1091,7 +1091,7 @@ bool message_play_wave( message_q *q )
 			Message_wave_duration = snd_get_duration(Message_waves[index].num);
 			Playing_messages[Num_messages_playing].wave = snd_play_raw( Message_waves[index].num, 0.0f );
 
-			return (Playing_messages[Num_messages_playing].wave != -1);
+			return Playing_messages[Num_messages_playing].wave.isValid();
 		}
 	}
 
@@ -1125,10 +1125,10 @@ void message_calc_anim_start_frame(int time, generic_anim *ani, int reverse)
 
 	float fps = ani->num_frames / ani->total_time;
 	if ( reverse ) {
-		start_frame = (ani->num_frames-1) - fl2i(fps * wave_time + 0.5f);
+		start_frame = (ani->num_frames-1) - (int)std::lround(fps * wave_time);
 	} else {
 		int num_frames_extra;
-		num_frames_extra = fl2i(fps * (anim_time - wave_time) + 0.5f);
+		num_frames_extra = (int)std::lround(fps * (anim_time - wave_time));
 		if ( num_frames_extra > 0 ) {
 			start_frame=rand()%num_frames_extra;
 		}
@@ -1207,7 +1207,7 @@ void message_play_anim( message_q *q )
 					rand_index = ((int) Missiontime % MAX_WINGMAN_HEADS);
 				}
 				strcpy_s(temp, ani_name);
-				sprintf(ani_name, "%s%c", temp, 'a'+rand_index);
+				sprintf_safe(ani_name, "%s%c", temp, 'a'+rand_index);
 				subhead_selected = TRUE;
 			} else if ( Personas[persona_index].flags & (PERSONA_FLAG_COMMAND | PERSONA_FLAG_LARGE) ) {
 				// get a random head
@@ -1221,7 +1221,7 @@ void message_play_anim( message_q *q )
 				}
 
 				strcpy_s(temp, ani_name);
-				sprintf(ani_name, "%s%c", temp, 'a'+rand_index);
+				sprintf_safe(ani_name, "%s%c", temp, 'a'+rand_index);
 				subhead_selected = TRUE;
 			} else {
 				mprintf(("message '%s' uses an unrecognized persona type\n", m->name));
@@ -1232,7 +1232,7 @@ void message_play_anim( message_q *q )
 			// choose between a and b
 			rand_index = ((int) Missiontime % MAX_WINGMAN_HEADS);
 			strcpy_s(temp, ani_name);
-			sprintf(ani_name, "%s%c", temp, 'a'+rand_index);
+			sprintf_safe(ani_name, "%s%c", temp, 'a'+rand_index);
 			mprintf(("message '%s' with invalid head.  Fix by assigning persona to the message.\n", m->name));
 		}
 		nprintf(("Messaging", "playing head %s for %s\n", ani_name, q->who_from));
@@ -1311,7 +1311,7 @@ void message_queue_process()
 			wave_done = 1;
 
 //			if ( (Playing_messages[i].wave != -1) && snd_is_playing(Playing_messages[i].wave) )
-			if ( (Playing_messages[i].wave != -1) && (snd_time_remaining(Playing_messages[i].wave) > 250) )
+			if ((Playing_messages[i].wave.isValid()) && (snd_time_remaining(Playing_messages[i].wave) > 250))
 				wave_done = 0;
 
 			// Goober5000
@@ -1319,7 +1319,7 @@ void message_queue_process()
 				wave_done = 0;
 
 			// AL 1-20-98: If voice message is done, kill the animation early
-			if ( (Playing_messages[i].wave != -1) && wave_done ) {
+			if ((Playing_messages[i].wave.isValid()) && wave_done) {
 				/*if ( !ani_done ) {
 					anim_stop_playing( Playing_messages[i].anim );
 				}*/
@@ -1358,7 +1358,9 @@ void message_queue_process()
 
 			// if both ani and wave are done, mark internal variable so we can do next message on queue, and
 			// global variable to clear voice brackets on hud
-			if ( wave_done && ani_done && ( timestamp_elapsed(Message_expire) || (Playing_messages[i].wave != -1) || (Playing_messages[i].shipnum == -1) ) ) {
+			if (wave_done && ani_done &&
+			    (timestamp_elapsed(Message_expire) || (Playing_messages[i].wave.isValid()) ||
+			     (Playing_messages[i].shipnum == -1))) {
 				nprintf(("messaging", "Message %d is done playing\n", i));
 				Message_shipnum = -1;
 				Num_messages_playing--;
@@ -1520,7 +1522,7 @@ void message_queue_process()
 	// set up module globals for this message
 	m = &Messages[q->message_num];
 	Playing_messages[Num_messages_playing].anim_data = NULL;
-	Playing_messages[Num_messages_playing].wave  = -1;
+	Playing_messages[Num_messages_playing].wave         = sound_handle::invalid();
 	Playing_messages[Num_messages_playing].id  = q->message_num;
 	Playing_messages[Num_messages_playing].priority = q->priority;
 	Playing_messages[Num_messages_playing].shipnum = Message_shipnum;
@@ -1567,9 +1569,9 @@ void message_queue_process()
 
 #ifndef NDEBUG
 	// debug only -- if the message is a builtin message, put in parens whether or not the voice played
-	if ( Sound_enabled && (Playing_messages[Num_messages_playing].wave == -1) ) {
+	if (Sound_enabled && !Playing_messages[Num_messages_playing].wave.isValid()) {
 		strcat_s( buf, NOX("..(no wavefile for voice)"));
-		snd_play(gamesnd_get_game_sound(SND_CUE_VOICE));
+		snd_play(gamesnd_get_game_sound(GameSounds::CUE_VOICE));
 	}
 #endif
 	
@@ -1600,14 +1602,14 @@ void message_queue_process()
 	Script_system.SetHookVar("SenderString", 's', who_from);
 
 	builtinMessage = q->builtin_type != -1;
-	Script_system.SetHookVar("Builtin", 'b', &builtinMessage);
+	Script_system.SetHookVar("Builtin", 'b', builtinMessage);
 
 	if (Message_shipnum >= 0) {
 		sender = &Objects[Ships[Message_shipnum].objnum];
 	}
 	Script_system.SetHookObject("Sender", sender);
 
-	Script_system.RunCondition(CHA_MSGRECEIVED, 0, NULL, sender);
+	Script_system.RunCondition(CHA_MSGRECEIVED, sender);
 
 	Script_system.RemHookVars(5, "Name", "Message", "SenderString", "Builtin", "Sender");
 
@@ -2153,7 +2155,7 @@ int message_is_playing()
 // Functions below pertain only to personas!!!!
 
 // given a character string, try to find the persona index
-int message_persona_name_lookup( char *name )
+int message_persona_name_lookup(const char* name)
 {
 	int i;
 
@@ -2182,7 +2184,7 @@ void message_maybe_distort()
 
 	// distort the number of voices currently playing
 	for ( i = 0; i < Num_messages_playing; i++ ) {
-		Assert(Playing_messages[i].wave >= 0 );
+		Assert(Playing_messages[i].wave.isValid());
 
 		was_muted = 0;
 
@@ -2221,26 +2223,40 @@ void message_maybe_distort_text(char *text, int shipnum)
 {
 	int voice_duration;
 
-	if ( comm_between_player_and_ship(shipnum) == COMM_OK ) { 
+	if (comm_between_player_and_ship(shipnum) == COMM_OK) {
 		return;
 	}
 
-	auto len = strlen(text);
-	if ( Message_wave_duration == 0 ) {
-		size_t next_distort = 5+myrand()%5;
-		for ( size_t i = 0; i < len; i++ ) {
-			if ( i == next_distort ) {
-				size_t run = 3+myrand()%5;
-				if ( i+run > len )
-					run = len-i;
-				for ( size_t j = 0; j < run; j++) {
-					text[i++] = '-';
-					if ( i >= len )
-						break;
-				}
-				next_distort = i + (5+myrand()%5);
+	auto buffer_size = strlen(text);
+	auto len         = unicode::num_codepoints(text, text + buffer_size);
+	if (Message_wave_duration == 0) {
+		SCP_string result_str;
+
+		size_t next_distort = 5 + myrand() % 5;
+		size_t i            = 0;
+		size_t run = 0;
+		for (auto cp : unicode::codepoint_range(text)) {
+			if (i == next_distort) {
+				run = 3 + myrand() % 5;
+				if (i + run > len)
+					run = len - i;
 			}
+
+			if (run > 0) {
+				unicode::encode(UNICODE_CHAR('-'), std::back_inserter(result_str));
+				--run;
+
+				if (run <= 0) {
+					next_distort = i + (5+myrand()%5);
+				}
+			} else {
+				unicode::encode(cp, std::back_inserter(result_str));
+			}
+
+			++i;
 		}
+		Assertion(result_str.size() <= buffer_size, "Buffer after scrambling message is bigger than before!");
+		strcpy(text, result_str.c_str());
 		return;
 	}
 
@@ -2249,19 +2265,31 @@ void message_maybe_distort_text(char *text, int shipnum)
 	// distort text
 	Distort_num = myrand()%MAX_DISTORT_PATTERNS;
 	Distort_next = 0;
+	unicode::codepoint_range range(text);
+	auto curr_iter = range.begin();
 	size_t curr_offset = 0;
+	SCP_string result_str;
 	while (voice_duration > 0) {
 		size_t run = fl2i(Distort_patterns[Distort_num][Distort_next] * len);
+		auto upper_limit = std::min(len, curr_offset + run);
+		auto num_chars = upper_limit - curr_offset;
 		if (Distort_next & 1) {
-			size_t i;
-			for ( i = curr_offset; i < MIN(len, curr_offset+run); i++ ) {
-				if ( text[i] != ' ' ) 
-					text[i] = '-';
+			for (size_t i = 0; i < num_chars; ++i, ++curr_iter) {
+				if (*curr_iter != UNICODE_CHAR(' ')) {
+					unicode::encode(UNICODE_CHAR('-'), std::back_inserter(result_str));
+				} else {
+					unicode::encode(UNICODE_CHAR(' '), std::back_inserter(result_str));
+				}
 			}
-			curr_offset = i;
-			if ( i >= len )
+
+			curr_offset += num_chars;
+			if ( upper_limit >= len )
 				break;
 		} else {
+			for (size_t i = 0; i < num_chars; ++i) {
+				unicode::encode(*curr_iter, std::back_inserter(result_str));
+				++curr_iter;
+			}
 			curr_offset += run;
 		}
 
@@ -2269,23 +2297,11 @@ void message_maybe_distort_text(char *text, int shipnum)
 		Distort_next++;
 		if ( Distort_next >= MAX_DISTORT_LEVELS )
 			Distort_next = 0;
-	};
+	}
+	Assertion(result_str.size() <= buffer_size, "Buffer after scrambling message is bigger than before!");
+	strcpy(text, result_str.c_str());
 	
 	Distort_next = 0;
-}
-
-// return 1 if a talking head animation is playing, otherwise return 0
-int message_anim_is_playing()
-{
-	int i;
-
-	for (i = 0; i < Num_messages_playing; i++ ) {
-		//if ( (Playing_messages[i].anim != NULL) && anim_playing(Playing_messages[i].anim) )
-		if(Playing_messages[i].play_anim)
-			return 1;
-	}
-
-	return 0;
 }
 
 // Load mission messages (this is called by the level paging code when running with low memory)
@@ -2312,7 +2328,7 @@ void message_pagein_mission_messages()
 // ---------------------------------------------------
 // Add and remove messages - used by autopilot code now, but useful elswhere
 
-bool add_message(const char *name, char *message, int persona_index, int multi_team)
+bool add_message(const char* name, const char* message, int persona_index, int multi_team)
 {
 	MissionMessage msg; 
 	strcpy_s(msg.name, name);
@@ -2327,7 +2343,7 @@ bool add_message(const char *name, char *message, int persona_index, int multi_t
 	return true;
 }
 
-bool change_message(const char *name, char *message, int persona_index, int multi_team)
+bool change_message(const char* name, const char* message, int persona_index, int multi_team)
 {
 	for (int i = Num_builtin_messages; i < Num_messages; i++) 
 	{

@@ -15,14 +15,14 @@ ADE_OBJ(l_Weaponclass, int, "weaponclass", "Weapon class handle");
 ADE_FUNC(__tostring, l_Weaponclass, NULL, "Weapon class name", "string", "Weapon class name, or an empty string if handle is invalid")
 {
 	int idx;
-	char *s = NULL;
+	const char* s = nullptr;
 	if(!ade_get_args(L, "o|s", l_Weaponclass.Get(&idx), &s))
 		return ade_set_error(L, "s", "");
 
 	if(idx < 0 || idx >= Num_weapon_types)
 		return ade_set_error(L, "s", "");
 
-	return ade_set_args(L, "s", Weapon_info[idx].name);
+	return ade_set_args(L, "s", Weapon_info[idx].get_display_string());
 }
 
 ADE_FUNC(__eq, l_Weaponclass, "weaponclass, weaponclass", "Checks if the two classes are equal", "boolean", "true if equal false otherwise")
@@ -40,11 +40,10 @@ ADE_FUNC(__eq, l_Weaponclass, "weaponclass, weaponclass", "Checks if the two cla
 	return ade_set_args(L, "b", idx1 == idx2);
 }
 
-ADE_VIRTVAR(Name, l_Weaponclass, "string", "Weapon class name", "string", "Weapon class name, or empty string if handle is invalid")
-
+ADE_VIRTVAR(Name, l_Weaponclass, "string", "Weapon class name. This is the possibly untranslated name. Use tostring(class) to get the string which should be shown to the user.", "string", "Weapon class name, or empty string if handle is invalid")
 {
 	int idx;
-	char *s = NULL;
+	const char* s = nullptr;
 	if(!ade_get_args(L, "o|s", l_Weaponclass.Get(&idx), &s))
 		return ade_set_error(L, "s", "");
 
@@ -58,10 +57,27 @@ ADE_VIRTVAR(Name, l_Weaponclass, "string", "Weapon class name", "string", "Weapo
 	return ade_set_args(L, "s", Weapon_info[idx].name);
 }
 
+ADE_VIRTVAR(AltName, l_Weaponclass, "string", "The alternate weapon class name.", "string", "Alternate weapon class name, or empty string if handle is invalid")
+{
+	int idx;
+	const char* s = nullptr;
+	if(!ade_get_args(L, "o|s", l_Weaponclass.Get(&idx), &s))
+		return ade_set_error(L, "s", "");
+
+	if(idx < 0 || idx >= Num_weapon_types)
+		return ade_set_error(L, "s", "");
+
+	if(ADE_SETTING_VAR && s != nullptr) {
+		strncpy(Weapon_info[idx].alt_name, s, sizeof(Weapon_info[idx].alt_name)-1);
+	}
+
+	return ade_set_args(L, "s", Weapon_info[idx].alt_name);
+}
+
 ADE_VIRTVAR(Title, l_Weaponclass, "string", "Weapon class title", "string", "Weapon class title, or empty string if handle is invalid")
 {
 	int idx;
-	char *s = NULL;
+	const char* s = nullptr;
 	if(!ade_get_args(L, "o|s", l_Weaponclass.Get(&idx), &s))
 		return ade_set_error(L, "s", "");
 
@@ -78,7 +94,7 @@ ADE_VIRTVAR(Title, l_Weaponclass, "string", "Weapon class title", "string", "Wea
 ADE_VIRTVAR(Description, l_Weaponclass, "string", "Weapon class description string", "string", "Description string, or empty string if handle is invalid")
 {
 	int idx;
-	char *s = NULL;
+	const char* s = nullptr;
 	if(!ade_get_args(L, "o|s", l_Weaponclass.Get(&idx), &s))
 		return ade_set_error(L, "s", "");
 
@@ -106,7 +122,7 @@ ADE_VIRTVAR(Description, l_Weaponclass, "string", "Weapon class description stri
 ADE_VIRTVAR(TechTitle, l_Weaponclass, "string", "Weapon class tech title", "string", "Tech title, or empty string if handle is invalid")
 {
 	int idx;
-	char *s = NULL;
+	const char* s = nullptr;
 	if(!ade_get_args(L, "o|s", l_Weaponclass.Get(&idx), &s))
 		return ade_set_error(L, "s", "");
 
@@ -123,7 +139,7 @@ ADE_VIRTVAR(TechTitle, l_Weaponclass, "string", "Weapon class tech title", "stri
 ADE_VIRTVAR(TechAnimationFilename, l_Weaponclass, "string", "Weapon class animation filename", "string", "Filename, or empty string if handle is invalid")
 {
 	int idx;
-	char *s = NULL;
+	const char* s = nullptr;
 	if(!ade_get_args(L, "o|s", l_Weaponclass.Get(&idx), &s))
 		return ade_set_error(L, "s", "");
 
@@ -140,7 +156,7 @@ ADE_VIRTVAR(TechAnimationFilename, l_Weaponclass, "string", "Weapon class animat
 ADE_VIRTVAR(TechDescription, l_Weaponclass, "string", "Weapon class tech description string", "string", "Description string, or empty string if handle is invalid")
 {
 	int idx;
-	char *s = NULL;
+	const char* s = nullptr;
 	if(!ade_get_args(L, "o|s", l_Weaponclass.Get(&idx), &s))
 		return ade_set_error(L, "s", "");
 

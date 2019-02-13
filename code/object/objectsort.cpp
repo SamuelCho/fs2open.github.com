@@ -30,7 +30,6 @@
 #include "weapon/weapon.h"
 #include "decals/decals.h"
 
-
 class sorted_obj
 {
 public:
@@ -168,8 +167,14 @@ inline bool obj_render_is_model(object *obj)
 		|| obj->type == OBJ_JUMP_NODE;
 }
 
+// Are there reasons to hide objects base on distance?
+bool is_full_nebula()
+{
+	return (The_mission.flags[Mission::Mission_Flags::Fullneb]) && (Neb2_render_mode != NEB2_RENDER_NONE) && !Fred_running;
+}
+
 // Sorts all the objects by Z and renders them
-void obj_render_all(void (*render_function)(object *objp), bool *draw_viewer_last )
+void obj_render_all(const std::function<void(object*)>& render_function, bool *draw_viewer_last )
 {
 	object *objp;
 	int i;
@@ -239,7 +244,7 @@ void obj_render_all(void (*render_function)(object *objp), bool *draw_viewer_las
 
 	gr_zbuffer_set( GR_ZBUFF_FULL );	
 
-	bool full_neb = ((The_mission.flags[Mission::Mission_Flags::Fullneb]) && (Neb2_render_mode != NEB2_RENDER_NONE) && !Fred_running);
+	bool full_neb = is_full_nebula();
 	bool c_viewer = (!Viewer_mode || (Viewer_mode & VM_PADLOCK_ANY) || (Viewer_mode & VM_OTHER_SHIP) || (Viewer_mode & VM_TRACK));
 
 	// now draw them
@@ -265,12 +270,6 @@ void obj_render_all(void (*render_function)(object *objp), bool *draw_viewer_las
 			// get the fog values
 			neb2_get_adjusted_fog_values(&fog_near, &fog_far, obj);
 
-			// only reset fog if the fog mode has changed - since regenerating a fog table takes
-			// a bit of time
-			if((fog_near != gr_screen.fog_near) || (fog_far != gr_screen.fog_far)){
-		 		gr_fog_set(GR_FOGMODE_FOG, gr_screen.current_fog_color.red, gr_screen.current_fog_color.green, gr_screen.current_fog_color.blue, fog_near, fog_far);
-			}
-
 			// maybe skip rendering an object because its obscured by the nebula
 			if(neb2_skip_render(obj, os->z)){
 				continue;
@@ -281,7 +280,7 @@ void obj_render_all(void (*render_function)(object *objp), bool *draw_viewer_las
 			if( ((obj->type == OBJ_SHIP) && Ships[obj->instance].shader_effect_active) || (obj->type == OBJ_FIREBALL) )
 				effect_ships.push_back(obj);
 			else 
-				(*render_function)(obj);
+				render_function(obj);
 		}
 		if(object_had_transparency)
 		{
@@ -304,15 +303,9 @@ void obj_render_all(void (*render_function)(object *objp), bool *draw_viewer_las
 			continue;
 
 		// if we're fullneb, fire up the fog - this also generates a fog table
-		if((The_mission.flags[Mission::Mission_Flags::Fullneb]) && (Neb2_render_mode != NEB2_RENDER_NONE) && !Fred_running){
+		if(full_neb){
 			// get the fog values
 			neb2_get_adjusted_fog_values(&fog_near, &fog_far, obj);
-
-			// only reset fog if the fog mode has changed - since regenerating a fog table takes
-			// a bit of time
-			if((GR_FOGMODE_FOG != gr_screen.current_fog_mode) || (fog_near != gr_screen.fog_near) || (fog_far != gr_screen.fog_far)) {
-				gr_fog_set(GR_FOGMODE_FOG, gr_screen.current_fog_color.red, gr_screen.current_fog_color.green, gr_screen.current_fog_color.blue, fog_near, fog_far);
-			}
 
 			// maybe skip rendering an object because its obscured by the nebula
 			if(neb2_skip_render(obj, os->z)){
@@ -320,18 +313,13 @@ void obj_render_all(void (*render_function)(object *objp), bool *draw_viewer_las
 			}
 		}
 
-		(*render_function)(obj);
+		render_function(obj);
 	}
 
 	Sorted_objects.clear();
 	
 	batching_render_all();
 	batching_render_all(true);
-
-	// if we're fullneb, switch off the fog effet
-	if((The_mission.flags[Mission::Mission_Flags::Fullneb]) && (Neb2_render_mode != NEB2_RENDER_NONE)){
-		gr_fog_set(GR_FOGMODE_NONE, 0, 0, 0);
-	}
 }
 
 void obj_render_queue_all()
@@ -349,6 +337,8 @@ void obj_render_queue_all()
 
 	scene.init();
 
+	bool full_neb = is_full_nebula();
+
 	for ( i = 0; i <= Highest_object_index; i++,objp++ ) {
 		if ( (objp->type != OBJ_NONE) && ( objp->flags [Object::Object_Flags::Renders] ) )	{
             objp->flags.remove(Object::Object_Flags::Was_rendered);
@@ -357,7 +347,7 @@ void obj_render_queue_all()
 				continue;
 			}
 
-			if ( (The_mission.flags[Mission::Mission_Flags::Fullneb]) && (Neb2_render_mode != NEB2_RENDER_NONE) && !Fred_running ) {
+			if ( full_neb ) {
 				vec3d to_obj;
 				vm_vec_sub( &to_obj, &objp->pos, &Eye_position );
 				float z = vm_vec_dot( &Eye_matrix.vec.fvec, &to_obj );
@@ -367,11 +357,10 @@ void obj_render_queue_all()
 				}
 			}
 
-			if ( obj_render_is_model(objp) ) {
-				if( (objp->type == OBJ_SHIP) && Ships[objp->instance].shader_effect_active ) {
-					effect_ships.push_back(objp);
-					continue;
-				}
+
+			if ( (objp->type == OBJ_SHIP) && Ships[objp->instance].shader_effect_active ) {
+				effect_ships.push_back(objp);
+				continue;
 			}
 
             objp->flags.set(Object::Object_Flags::Was_rendered);
@@ -417,11 +406,6 @@ void obj_render_queue_all()
 
 	gr_reset_lighting();
 	gr_set_lighting(false, false);
-	
-	// if we're fullneb, switch off the fog effet
-	if((The_mission.flags[Mission::Mission_Flags::Fullneb]) && (Neb2_render_mode != NEB2_RENDER_NONE)){
-		gr_fog_set(GR_FOGMODE_NONE, 0, 0, 0);
-	}
 
 	batching_render_all();
 

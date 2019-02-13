@@ -41,7 +41,7 @@ typedef struct tline {
 
 extern grid Global_grid;
 extern grid	*The_grid;
-extern int	double_fine_gridlines;
+extern bool double_fine_gridlines;
 
 void grid_read_camera_controls( control_info * ci, float frametime );
 void maybe_create_new_grid(grid *gridp, vec3d *pos, matrix *orient, int force = 0);
@@ -50,6 +50,5 @@ grid *create_default_grid(void);
 void render_grid(grid *gridp);
 void modify_grid(grid *gridp);
 void rpd_line(vec3d *v0, vec3d *v1);
-void grid_render_elevation_line(vec3d *pos, grid* gridp);
 
 #endif

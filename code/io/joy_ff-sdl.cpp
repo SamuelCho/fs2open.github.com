@@ -443,7 +443,7 @@ static int joy_ff_create_effects()
 	return 0;
 }
 
-static void joy_ff_start_effect(haptic_effect_t *eff, const char *name)
+static void joy_ff_start_effect(haptic_effect_t *eff, const char* /* name */)
 {
 	if ( !eff->loaded ) {
 		return;
@@ -476,14 +476,6 @@ void joy_ff_mission_init(vec3d v)
 	v.xyz.z = 0.0f;
 
 	joy_ff_handling_scaler = (int) ((vm_vec_mag(&v) + 1.3f) * 5.0f);
-}
-
-void joy_reacquire_ff()
-{
-}
-
-void joy_unacquire_ff()
-{
 }
 
 void joy_ff_play_vector_effect(vec3d *v, float scaler)

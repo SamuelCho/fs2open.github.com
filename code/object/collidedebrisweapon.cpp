@@ -19,19 +19,6 @@
 
 
 
-// placeholder struct for ship_debris collisions
-typedef struct ship_weapon_debris_struct {
-	object	*ship_object;
-	object	*debris_object;
-	vec3d	ship_collision_cm_pos;
-	vec3d	r_ship;
-	vec3d	collision_normal;
-	int		shield_hit_tri;
-	vec3d	shield_hit_tri_point;
-	float		impulse;
-} ship_weapon_debris_struct;
-
-
 /**
  * Checks debris-weapon collisions.  
  * @param pair obj_pair pointer to the two objects. pair->a is debris and pair->b is weapon.
@@ -69,11 +56,11 @@ int collide_debris_weapon( obj_pair * pair )
 
 		Script_system.SetHookObjects(2, "Self", weapon_obj, "Object", pdebris);
 		if(!(debris_override && !weapon_override))
-			Script_system.RunCondition(CHA_COLLIDEDEBRIS, '\0', NULL, weapon_obj);
+			Script_system.RunCondition(CHA_COLLIDEDEBRIS, weapon_obj);
 
 		Script_system.SetHookObjects(2, "Self", pdebris, "Object", weapon_obj);
 		if((debris_override && !weapon_override) || (!debris_override && !weapon_override))
-			Script_system.RunCondition(CHA_COLLIDEWEAPON, '\0', NULL, pdebris, Weapons[weapon_obj->instance].weapon_info_index);
+			Script_system.RunCondition(CHA_COLLIDEWEAPON, pdebris, Weapons[weapon_obj->instance].weapon_info_index);
 
 		Script_system.RemHookVars(4, "Weapon", "Debris", "Self", "Object");
 		return 0;
@@ -124,11 +111,11 @@ int collide_asteroid_weapon( obj_pair * pair )
 
 		Script_system.SetHookObjects(2, "Self", weapon_obj, "Object", pasteroid);
 		if(!(asteroid_override && !weapon_override))
-			Script_system.RunCondition(CHA_COLLIDEASTEROID, '\0', NULL, weapon_obj);
+			Script_system.RunCondition(CHA_COLLIDEASTEROID, weapon_obj);
 
 		Script_system.SetHookObjects(2, "Self", pasteroid, "Object", weapon_obj);
 		if((asteroid_override && !weapon_override) || (!asteroid_override && !weapon_override))
-			Script_system.RunCondition(CHA_COLLIDEWEAPON, '\0', NULL, pasteroid, Weapons[weapon_obj->instance].weapon_info_index);
+			Script_system.RunCondition(CHA_COLLIDEWEAPON, pasteroid, Weapons[weapon_obj->instance].weapon_info_index);
 
 		Script_system.RemHookVars(4, "Weapon", "Asteroid", "Self", "Object");
 		return 0;

@@ -9,11 +9,13 @@
 #include "globalincs/version.h"
 #include "localization/localize.h"
 #include "mission/missioncampaign.h"
+#include "mission/missionload.h"
 #include "mission/missionmessage.h"
 #include "missionui/fictionviewer.h"
 #include "mod_table/mod_table.h"
 #include "parse/parselo.h"
 #include "sound/sound.h"
+#include "playerman/player.h"
 
 int Directive_wait_time;
 bool True_loop_argument_sexps;
@@ -25,6 +27,7 @@ int Default_ship_select_effect;
 int Default_weapon_select_effect;
 int Default_fiction_viewer_ui;
 bool Enable_external_shaders;
+bool Enable_external_default_scripts;
 int Default_detail_level;
 bool Full_color_head_anis;
 bool Weapons_inherit_parent_collision_group;
@@ -41,6 +44,9 @@ SCP_string Window_title;
 bool Unicode_text_mode;
 SCP_string Movie_subtitle_font;
 bool Enable_scripts_in_fred; // By default FRED does not initialize the scripting system
+SCP_string Window_icon_path;
+bool Disable_built_in_translations;
+bool Weapon_shockwaves_respect_huge;
 
 void parse_mod_table(const char *filename)
 {
@@ -72,6 +78,10 @@ void parse_mod_table(const char *filename)
 
 		if (optional_string("$Window title:")) {
 			stuff_string(Window_title, F_NAME);
+		}
+
+		if (optional_string("$Window icon:")) {
+			stuff_string(Window_icon_path, F_NAME);
 		}
 		
 		if (optional_string("$Unicode mode:")) {
@@ -113,7 +123,31 @@ void parse_mod_table(const char *filename)
 					mprintf(("Game Settings Table: Removed extension on ignored campaign file name %s\n", campaign_name.c_str()));
 				}
 
+				// we want case-insensitive matching, so make this lowercase
+				std::transform(campaign_name.begin(), campaign_name.end(), campaign_name.begin(),
+				               [](char c) { return (char)::tolower(c); });
+
 				Ignored_campaigns.push_back(campaign_name);
+			}
+		}
+
+		// Note: this feature does not ignore missions that are contained in campaigns
+		if (optional_string("#Ignored Mission File Names")) {
+			SCP_string mission_name;
+
+			while (optional_string("$Mission File Name:")) {
+				stuff_string(mission_name, F_NAME);
+
+				// remove extension?
+				if (drop_extension(mission_name)) {
+					mprintf(("Game Settings Table: Removed extension on ignored mission file name %s\n", mission_name.c_str()));
+				}
+
+				// we want case-insensitive matching, so make this lowercase
+				std::transform(mission_name.begin(), mission_name.end(), mission_name.begin(),
+				               [](char c) { return (char)::tolower(c); });
+
+				Ignored_missions.push_back(mission_name);
 			}
 		}
 
@@ -226,14 +260,10 @@ void parse_mod_table(const char *filename)
 		}
 
 		if (optional_string("$BMPMAN Slot Limit:")) {
-			int slots;
-			stuff_int(&slots);
-			if (slots < 3500) {
-				error_display(0, "Invalid BMPMAN slot limit [%d]; must be at least 3500.", slots);
-			} else {
-				mprintf(("Game Settings Table: Setting BMPMAN slot limit to %d\n", slots));
-				MAX_BITMAPS = slots;
-			}
+			int tmp;
+			stuff_int(&tmp);
+
+			mprintf(("Game Settings Table: $BMPMAN Slot Limit is deprecated and should be removed. It is not needed anymore.\n"));
 		}
 
 		optional_string("#NETWORK SETTINGS");
@@ -354,6 +384,36 @@ void parse_mod_table(const char *filename)
 			stuff_string(Movie_subtitle_font, F_NAME);
 		}
 
+		if (optional_string("$Disable built-in translations:")) {
+			stuff_boolean(&Disable_built_in_translations);
+		}
+
+		if (optional_string("$Weapon shockwave damage respects huge ship flags:")) {
+			stuff_boolean(&Weapon_shockwaves_respect_huge);
+		}
+
+		if (optional_string("$Enable external default scripts:")) {
+			stuff_boolean(&Enable_external_default_scripts);
+
+			if (Enable_external_default_scripts) {
+				mprintf(("Game Settings Table: Enabled external default scripts.\n"));
+			} else {
+				mprintf(("Game Settings Table: Disabled external default scripts.\n"));
+			}
+		}
+
+		if (optional_string("$Player warpout speed:")) {
+			stuff_float(&Player_warpout_speed);
+		}
+		
+		if (optional_string("$Target warpout match percent:")) {
+			stuff_float(&Target_warpout_match_percent);
+		}
+
+		if (optional_string("$Minimum player warpout time:")) {
+			stuff_float(&Minimum_player_warpout_time);
+		}
+
 		required_string("#END");
 	}
 	catch (const parse::ParseException& e)
@@ -393,6 +453,7 @@ void mod_table_reset() {
 	Default_weapon_select_effect = 2;
 	Default_fiction_viewer_ui = -1;
 	Enable_external_shaders = false;
+	Enable_external_default_scripts             = false;
 	Default_detail_level = 3; // "very high" seems a reasonable default in 2012 -zookeeper
 	Full_color_head_anis = false;
 	Weapons_inherit_parent_collision_group = false;
@@ -409,4 +470,7 @@ void mod_table_reset() {
 	Unicode_text_mode = false;
 	Movie_subtitle_font = "font01.vf";
 	Enable_scripts_in_fred = false;
+	Window_icon_path = "app_icon_sse";
+	Disable_built_in_translations = false;
+	Weapon_shockwaves_respect_huge = false;
 }

@@ -15,8 +15,11 @@
 #include "globalincs/globals.h"
 #include "globalincs/pstypes.h"
 #include "math/vecmat.h"
-#include "physics/physics.h"
 #include "object/object_flags.h"
+#include "physics/physics.h"
+#include "utils/event.h"
+
+#include <functional>
 
 /*
  *		CONSTANTS
@@ -142,6 +145,9 @@ public:
 
 	int				collision_group_id; // This is a bitfield. Collision checks will be skipped if A->collision_group_id & B->collision_group_id returns nonzero
 
+	util::event<void, object*> pre_move_event;
+	util::event<void, object*> post_move_event;
+
 	object();
 	~object();
 	void clear();
@@ -218,6 +224,8 @@ extern object *Player_obj;	// Which object is the player. Has to be valid.
 //do whatever setup needs to be done
 void obj_init();
 
+void obj_shutdown();
+
 //initialize a new object.  adds to the list for the given segment.
 //returns the object number.  The object will be a non-rendering, non-physics
 //object.  Returns 0 if failed, otherwise object index.
@@ -230,16 +238,15 @@ void obj_render(object* obj);
 void obj_queue_render(object* obj, model_draw_list* scene);
 
 //Sorts and renders all the ojbects
-void obj_render_all(void (*render_function)(object *objp), bool* render_viewer_last );
+void obj_render_all(const std::function<void(object*)>& render_function, bool* render_viewer_last );
 
 //move all objects for the current frame
 void obj_move_all(float frametime);		// moves all objects
 
-//move an object for the current frame
-void obj_move_one(object * obj, float frametime);
-
 // function to delete an object -- should probably only be called directly from editor code
 void obj_delete(int objnum);
+
+void obj_delete_all();
 
 // should only be used by the editor!
 void obj_merge_created_list(void);
@@ -345,5 +352,16 @@ int obj_get_by_signature(int sig);
 int object_get_model(object *objp);
 
 void obj_render_queue_all();
+
+/**
+ * @brief Compares two object pointers and determines if they refer to the same object
+ *
+ * @note Two @c nullptr parameters are considered equal
+ *
+ * @param left The first object pointer, may be @c nullptr
+ * @param right The second object pointer, may be @c nullptr
+ * @return @c true if the two pointers refer to the same object
+ */
+bool obj_compare(object *left, object *right);
 
 #endif

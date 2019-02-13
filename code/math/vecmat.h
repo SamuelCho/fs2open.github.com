@@ -69,7 +69,7 @@ extern matrix vmd_identity_matrix;
 #define vm_angvec_make(v,_p,_b,_h) (((v)->p=(_p), (v)->b=(_b), (v)->h=(_h)), (v))
 
 //negate a vector
-#define vm_vec_negate(v) do {(v)->xyz.x = - (v)->xyz.x; (v)->xyz.y = - (v)->xyz.y; (v)->xyz.z = - (v)->xyz.z;} while (0);
+#define vm_vec_negate(v) do {(v)->xyz.x = - (v)->xyz.x; (v)->xyz.y = - (v)->xyz.y; (v)->xyz.z = - (v)->xyz.z;} while (false);
 
 typedef struct plane {
 	float	A, B, C, D;
@@ -445,7 +445,7 @@ void vm_vec_random_in_circle(vec3d *out, const vec3d *in, const matrix *orient, 
 
 // given a start vector, an orientation, and a radius, give a point in a spherical volume
 // if on_edge is 1, the point is on the very edge of the sphere
-void vm_vec_random_in_sphere(vec3d *out, const vec3d *in, const matrix *orient, float radius, int on_edge);
+void vm_vec_random_in_sphere(vec3d *out, const vec3d *in, float radius, int on_edge);
 
 // find the nearest point on the line to p. if dist is non-NULL, it is filled in
 // returns 0 if the point is inside the line segment, -1 if "before" the line segment and 1 ir "after" the line segment
@@ -494,6 +494,79 @@ vec3d vm_vec4_to_vec3(const vec4& vec);
  * @return The 4 component vector
  */
 vec4 vm_vec3_to_ve4(const vec3d& vec, float w = 1.0f);
+
+/** Compares two vec3ds */
+inline bool operator==(const vec3d& left, const vec3d& right) { return vm_vec_same(&left, &right) != 0; }
+inline bool operator!=(const vec3d& left, const vec3d& right) { return !(left == right); }
+
+inline vec3d operator+(const vec3d& left, const vec3d& right)
+{
+	vec3d res;
+	vm_vec_add(&res, &left, &right);
+	return res;
+}
+inline vec3d& operator+=(vec3d& left, const vec3d& right)
+{
+	vm_vec_add2(&left, &right);
+	return left;
+}
+
+inline vec3d operator-(const vec3d& left, const vec3d& right)
+{
+	vec3d res;
+	vm_vec_sub(&res, &left, &right);
+	return res;
+}
+inline vec3d& operator-=(vec3d& left, const vec3d& right)
+{
+	vm_vec_sub2(&left, &right);
+	return left;
+}
+
+inline vec3d operator*(vec3d& left, float right)
+{
+	vec3d out;
+	vm_vec_copy_scale(&out, &left, right);
+	return out;
+}
+inline vec3d& operator*=(vec3d& left, float right)
+{
+	vm_vec_scale(&left, right);
+	return left;
+}
+
+inline vec3d operator/(vec3d& left, float right)
+{
+	vec3d out;
+	vm_vec_copy_scale(&out, &left, 1.0f / right);
+	return out;
+}
+inline vec3d& operator/=(vec3d& left, float right)
+{
+	vm_vec_scale(&left, 1.0f / right);
+	return left;
+}
+
+/**
+ * @brief Rotates a vector into the orientation specified by the matrix
+ * @param left The matrix
+ * @param right The vector
+ * @return The rotated vector
+ *
+ * @note This actually follows the definition of the * operator in linear algebra. The standard vm_vec_rotate actually
+ * implements a multiplication with the transpose of the matrix.
+ */
+inline vec3d operator*(const matrix& left, const vec3d& right) {
+	vec3d out;
+	vm_vec_unrotate(&out, &right, &left);
+	return out;
+}
+
+inline matrix operator*(const matrix& left, const matrix& right) {
+	matrix out;
+	vm_matrix_x_matrix(&out, &left, &right);
+	return out;
+}
 
 #endif
 

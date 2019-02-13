@@ -131,7 +131,8 @@ ai_goal_list Ai_goal_list[] = {
 	{ "Stay near ship",			AI_GOAL_STAY_NEAR_SHIP,		0 },
 	{ "Keep safe distance",		AI_GOAL_KEEP_SAFE_DISTANCE,	0 },
 	{ "Stay still",				AI_GOAL_STAY_STILL,			0 },
-	{ "Play dead",				AI_GOAL_PLAY_DEAD,			0 }
+	{ "Play dead",				AI_GOAL_PLAY_DEAD,			0 },
+	{ "Play dead (persistent)",	AI_GOAL_PLAY_DEAD_PERSISTENT,		0 }
 };
 
 int Ai_goal_list_size = sizeof(Ai_goal_list) / sizeof(ai_goal_list);
@@ -203,6 +204,18 @@ void deconvert_multiline_string(SCP_string &dest, const CString &str)
 {
 	dest = str;
 	replace_all(dest, "\r\n", "\n");
+}
+
+void strip_quotation_marks(CString& str) { str.Remove('\"'); }
+
+void pad_with_newline(CString& str, int max_size) {
+	int len = str.GetLength();
+	if (!len) {
+		len = 1;
+	}
+	if (str[len - 1] != '\n' && len < max_size) {
+		str += _T("\n");
+	}
 }
 
 // medal_stuff Medals[NUM_MEDALS];
@@ -296,7 +309,10 @@ bool fred_init(std::unique_ptr<os::GraphicsOperations>&& graphicsOps)
 	cfile_chdir(Fred_base_dir);
 
 	// this should enable mods - Kazan
-	parse_cmdline(__argc, __argv);
+	if (!parse_cmdline(__argc, __argv)) {
+		// Command line contained an option that terminates the program immediately
+		exit(1);
+	}
 
 #ifndef NDEBUG
 	#if FS_VERSION_REVIS == 0
@@ -401,6 +417,10 @@ bool fred_init(std::unique_ptr<os::GraphicsOperations>&& graphicsOps)
 	ship_init();
 	parse_init();
 	techroom_intel_init();
+
+	// get fireball IDs for sexpression usage
+	// (we don't need to init the entire system via fireball_init, we just need the information)
+	fireball_parse_tbl();
 
 	// initialize and activate external string hash table
 	// make sure to do here so that we don't parse the table files into the hash table - waste of space
@@ -792,8 +812,8 @@ void clear_mission()
 		Briefing_dialog->reset_editor();
 	}
 
-	extern void allocate_mission_text(size_t size);
-	allocate_mission_text( MISSION_TEXT_SIZE );
+	extern void allocate_parse_text(size_t size);
+	allocate_parse_text( PARSE_TEXT_SIZE );
 
 	The_mission.cutscenes.clear(); 
 	fiction_viewer_reset();
@@ -909,8 +929,8 @@ void clear_mission()
 		Team_data[i].num_weapon_choices = count; 
 	}
 
-	*Mission_text = *Mission_text_raw = '\0';
-	Mission_text[1] = Mission_text_raw[1] = 0;
+	*Parse_text = *Parse_text_raw = '\0';
+	Parse_text[1] = Parse_text_raw[1] = 0;
 
 	waypoint_parse_init();
 	Num_mission_events = 0;

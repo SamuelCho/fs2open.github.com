@@ -32,23 +32,6 @@
  * @{
  */
 
-/**
- * @brief How many bitmaps the game can handle by default
- *
- * @attention  MAX_BITMAPS shouldn't need to be bumped again.  With the fixed bm_release() and it's proper use even the
- *   largest missions should stay under this number.  With the largest retail missions and wasteful content we should
- *   still have about 20% of the slots free.  If it still goes over then it's something the artists need to fix.
- *   For instance the Terran Mara fighter, with -spec and -glow and using the Shinepack, needs 117 bitmap slots alone.
- *   111 of those is just for the glowmaps.  This number can be greatly reduced if the number of ani frames for another
- *   LOD than LOD0 has fewer or no ani frames.  A 37 frame glow ani for LOD2 is little more than a waste of resources.
- *   Future reports of texture corruption should be initially approached with content as the cause and not code.
- *   If anything we could/should reduce MAX_BITMAPS in the future.  Where it's at now should accomidate even the
- *   largest mods.  --  Taylor
- */
-#define DEFAULT_MAX_BITMAPS 4750
-
-extern int MAX_BITMAPS;
-
 // Flag positions for bitmap.flags
 // ***** NOTE:  bitmap.flags is an 8-bit value, no more BMP_TEX_* flags can be added unless the type is changed!! ******
 #define	BMP_AABITMAP        (1<<0)      //!< antialiased bitmap
@@ -115,6 +98,10 @@ struct bitmap
 	                     */
 };
 
+// Forward definition for the graphics API
+struct bitmap_entry;
+struct bitmap_slot;
+
 extern size_t bm_texture_ram;  //!< how many bytes of textures are used.
 
 extern int Bm_paging;   //!< Bool type that indicates if BMPMAN is currently paging.
@@ -126,12 +113,7 @@ extern const BM_TYPE bm_ani_type_list[];   //!< List of valid bitmap animation t
 extern const char *bm_ani_ext_list[];    //!< List of extensions for those types
 extern const int BM_ANI_NUM_TYPES;       //!< Calculated number of bitmap animation types
 
-extern int GLOWMAP;     //!< References a map that is a fully lit version of its index -Bobboau
-extern int SPECMAP;     //!< References a map that is for specular mapping -Bobboau
 extern int ENVMAP;      //!< References a map that is for environment mapping -Bobboau
-extern int NORMMAP;     //!< Normal mapping
-extern int HEIGHTMAP;   //!< Height map for normal mapping
-extern int MISCMAP;     //!< Utility map, to be utilized for various things shader authors can come up with
 
 /**
  * @brief Initilizes the bitmap manager
@@ -142,22 +124,6 @@ void bm_init();
  * @brief Closes the bitmap manager, freeing any allocated memory used by bitmaps. Is called at program close.
  */
 void bm_close();
-
-/**
- * Gets the cache slot of the bitmap indexed by handle.
- *
- * @details if the bitmap is an ani, gets the first frame
- *
- * @returns The cache slot index of the bitmap if handle is valid
- *
- * @note If the handle is invalid, an Assert() fails
- */
-int bm_get_cache_slot(int bitmap_id, int separate_ani_frames);
-
-/**
- * @brief Gets the next available bitmap slot.
- */
-int bm_get_next_handle();
 
 #define BMP_FLAG_RENDER_TARGET_STATIC		(1<<0)
 #define BMP_FLAG_RENDER_TARGET_DYNAMIC		(1<<1)
@@ -196,9 +162,6 @@ public:
 
 	bool valid();
 
-	float get_channel_red(float u, float v);
-	float get_channel_green(float u, float v);
-	float get_channel_blue(float u, float v);
 	float get_channel_alpha(float u, float v);
 };
 
@@ -341,13 +304,6 @@ int bm_load_either(const char *filename, int *nframes = NULL, int *fps = NULL, i
 bitmap* bm_lock(int handle, int bpp, ubyte flags, bool nodebug = false);
 
 /**
- * @brief Returns a unique signiature for the bitmap indexed by handle
- *
- * @details A signature will change when the bitmap's data changes
- */
-uint bm_get_signature(int handle);
-
-/**
  * @brief Returns the image type of the given bitmap handle
  */
 BM_TYPE bm_get_type(int handle);
@@ -413,13 +369,6 @@ void bm_get_filename(int bitmapnum, char *filename);
 const char *bm_get_filename(int handle);
 
 /**
- * @brief Loads all data for all bitmaps that have been requested to be loaded
- *
- * @note This function is not defined.
- */
-void bm_gfx_load_all();
-
-/**
  * @brief Unloads all used bitmaps, should only ever be called by game_shutdown()
  *
  * @todo Maybe move this declaration into bmpman.cpp and then extern this function within game_shutdown() to
@@ -436,15 +385,6 @@ void bm_unload_all();
  * @todo Maybe get rid of the optional filename and have the callers call bm_get_filename. Less efficient, however.
  */
 void bm_get_palette(int handle, ubyte *pal, char *name);
-
-/**
- * @brief Hack to get a pixel from a bitmap
- *
- * @details only works good in 8bpp mode
- *
- * @note This function is not defined.
- */
-void bm_gfx_get_pixel(int bitmap, float u, float v, ubyte *r, ubyte *g, ubyte *b);
 
 /**
  * @brief (DEBUG) Gets memory size, in bytes, of the locked bitmaps
@@ -505,15 +445,6 @@ void bm_page_in_xparent_texture(int bitmapnum, int num_frames = 1);
 void bm_page_in_aabitmap(int bitmapnum, int num_frames = 1);
 
 /**
- * @brief Unloads the bitmap indexed by handle that was previously paged-in
- *
- * @returns 0 If the bitmap had already been released, or
- * @returns 0 If the handle is invalid, or
- * @returns 1 If successful
- */
-bool bm_page_out(int handle);
-
-/**
  * @brief Sets BMPMAN's memory mode
  *
  * @details 0 = High memory;
@@ -562,28 +493,11 @@ void BM_SELECT_ALPHA_TEX_FORMAT();
 extern void(*bm_set_components)(ubyte *pixel, ubyte *r, ubyte *g, ubyte *b, ubyte *a);
 
 /**
- * @brief Functional pointer that references any of the bm_set_components_32 functions.
- *
- * @details The bm_set_components functions packs the RGBA values into the ubyte array referenced by pixel, whose
- * format differs according to its bpp value and presence of an alpha channel. The RGBA values are scaled accordingly.
- *
- * @see bm_set_components
- */
-extern void(*bm_set_components_32)(ubyte *pixel, ubyte *r, ubyte *g, ubyte *b, ubyte *a);
-
-/**
  * @brief Sets the 16bpp screen pixel to the specified RGBA value
  *
  * @see bm_set_components
  */
 void bm_set_components_argb_16_screen(ubyte *pixel, ubyte *r, ubyte *g, ubyte *b, ubyte *a);
-
-/**
- * @brief Sets the 32bpp screen pixel to the specified RGBA value
- *
- * @see bm_set_components
- */
-void bm_set_components_argb_32_screen(ubyte *pixel, ubyte *r, ubyte *g, ubyte *b, ubyte *a);
 
 /**
  * @brief Sets the 16bpp texture pixel to the specified RGBA value
@@ -606,15 +520,7 @@ void bm_set_components_argb_32_tex(ubyte *pixel, ubyte *r, ubyte *g, ubyte *b, u
  */
 void bm_get_components(ubyte *pixel, ubyte *r, ubyte *g, ubyte *b, ubyte *a);
 
-extern int UNLITMAP; //this holds a reference to a map that is optional used instead of the base map for unlit rendering
-extern int GLOWMAP;	//this holds a reference to a map that is a fully lit version of its index -Bobboau
-extern int SPECMAP;	//this holds a reference to a map that is for specular mapping -Bobboau
-extern int SPECGLOSSMAP;	//this holds a reference to a map that is for specular mapping -Bobboau
 extern int ENVMAP;	//this holds a reference to a map that is for environment mapping -Bobboau
-extern int NORMMAP;	// normal mapping
-extern int HEIGHTMAP;	// height map for normal mapping
-extern int AMBIENTMAP; // ambient occluion map. red channel affects ambient lighting, green channel affects diffuse and specular
-extern int MISCMAP; // Utility map, to be utilized for various things shader authors can come up with
 
 /**
  * @brief Returns the compression type of the bitmap indexed by handle
@@ -626,10 +532,6 @@ int bm_is_compressed(int handle);
  */
 int bm_get_tcache_type(int handle);
 
-/**
- * @brief Gets the size, in bytes, taken up by the bitmap indexed by handle
- */
-size_t bm_get_size(int handle);
 
 /**
  * @brief Gets the number of mipmaps of the indexed texture
@@ -742,6 +644,18 @@ int bm_get_array_index(const int handle);
 int bmpman_count_bitmaps();
 
 /**
+ * @brief Counts how many slots are available to the bmpman system
+ *
+ * Since the number of slots is dynamic now, this should be used for determining the total amount of available slots at
+ * the moment.
+ *
+ * @warning This is entirely for debugging and logging purposes. It should not be used in actual engine code.
+ *
+ * @return The number of available slots
+ */
+int bmpman_count_available_slots();
+
+/**
  * @brief Checks if the given filename is a valid effect or texture file name
  *
  * @note At least one of @c single_frame or @c animation must be true since the result would make no sense otherwise. It
@@ -756,5 +670,6 @@ int bmpman_count_bitmaps();
  */
 bool bm_validate_filename(const SCP_string& file, bool single_frame, bool animation);
 
+SDL_Surface* bm_to_sdl_surface(int handle);
 
 #endif

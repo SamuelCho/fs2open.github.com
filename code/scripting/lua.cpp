@@ -8,58 +8,63 @@
  * do this is to declare the API elements in the header with the DECLARE_* macros and then include them here
  */
 
+#include "scripting/api/objs/asteroid.h"
+#include "scripting/api/objs/background_element.h"
+#include "scripting/api/objs/beam.h"
+#include "scripting/api/objs/camera.h"
+#include "scripting/api/objs/cockpit_display.h"
+#include "scripting/api/objs/control_info.h"
+#include "scripting/api/objs/controls.h"
+#include "scripting/api/objs/debris.h"
 #include "scripting/api/objs/enums.h"
-#include "scripting/api/objs/vecmath.h"
 #include "scripting/api/objs/event.h"
+#include "scripting/api/objs/eye.h"
 #include "scripting/api/objs/file.h"
 #include "scripting/api/objs/font.h"
 #include "scripting/api/objs/gameevent.h"
 #include "scripting/api/objs/gamestate.h"
 #include "scripting/api/objs/hudgauge.h"
-#include "scripting/api/objs/eye.h"
+#include "scripting/api/objs/mc_info.h"
+#include "scripting/api/objs/message.h"
 #include "scripting/api/objs/model.h"
+#include "scripting/api/objs/object.h"
+#include "scripting/api/objs/order.h"
+#include "scripting/api/objs/particle.h"
 #include "scripting/api/objs/physics_info.h"
+#include "scripting/api/objs/player.h"
 #include "scripting/api/objs/sexpvar.h"
 #include "scripting/api/objs/shields.h"
+#include "scripting/api/objs/ship.h"
+#include "scripting/api/objs/ship_bank.h"
+#include "scripting/api/objs/shipclass.h"
 #include "scripting/api/objs/shiptype.h"
+#include "scripting/api/objs/sound.h"
 #include "scripting/api/objs/species.h"
-#include "scripting/api/objs/team.h"
 #include "scripting/api/objs/streaminganim.h"
+#include "scripting/api/objs/subsystem.h"
+#include "scripting/api/objs/team.h"
 #include "scripting/api/objs/texture.h"
 #include "scripting/api/objs/texturemap.h"
-#include "scripting/api/objs/weaponclass.h"
-#include "scripting/api/objs/mc_info.h"
-#include "scripting/api/objs/object.h"
-#include "scripting/api/objs/asteroid.h"
-#include "scripting/api/objs/cockpit_display.h"
-#include "scripting/api/objs/shipclass.h"
-#include "scripting/api/objs/debris.h"
+#include "scripting/api/objs/time_obj.h"
+#include "scripting/api/objs/vecmath.h"
 #include "scripting/api/objs/waypoint.h"
-#include "scripting/api/objs/ship_bank.h"
-#include "scripting/api/objs/subsystem.h"
-#include "scripting/api/objs/order.h"
-#include "scripting/api/objs/ship.h"
-#include "scripting/api/objs/sound.h"
-#include "scripting/api/objs/message.h"
-#include "scripting/api/objs/wing.h"
-#include "scripting/api/objs/beam.h"
-#include "scripting/api/objs/player.h"
-#include "scripting/api/objs/camera.h"
-#include "scripting/api/objs/control_info.h"
-#include "scripting/api/objs/particle.h"
 #include "scripting/api/objs/weapon.h"
-#include "scripting/api/objs/controls.h"
-#include "scripting/api/objs/graphics.h"
+#include "scripting/api/objs/weaponclass.h"
+#include "scripting/api/objs/wing.h"
 
-#include "scripting/api/libs/bitops.h"
 #include "scripting/api/libs/audio.h"
 #include "scripting/api/libs/base.h"
+#include "scripting/api/libs/bitops.h"
 #include "scripting/api/libs/cfile.h"
-#include "scripting/api/libs/hud.h"
+#include "scripting/api/libs/graphics.h"
 #include "scripting/api/libs/hookvars.h"
+#include "scripting/api/libs/hud.h"
 #include "scripting/api/libs/mission.h"
+#include "scripting/api/libs/parse.h"
 #include "scripting/api/libs/tables.h"
 #include "scripting/api/libs/testing.h"
+#include "scripting/api/libs/time_lib.h"
+#include "scripting/api/libs/ui.h"
 #include "scripting/api/libs/utf8.h"
 
 // End of definitions includes
@@ -194,7 +199,9 @@ int script_state::CreateLuaState()
 	mprintf(("ADE: Assigning Lua session...\n"));
 	SetLuaSession(L);
 
-//	(void)l_BitOps.GetName();
+	//***** LOAD DEFAULT SCRIPTS
+	mprintf(("ADE: Loading default scripts...\n"));
+	load_default_script(L, "cfile_require.lua");
 
 	return 1;
 }
@@ -247,10 +254,12 @@ static bool sort_table_entries(const ade_table_entry* left, const ade_table_entr
 	}
 
 	SCP_string leftStr(leftCmp);
-	std::transform(std::begin(leftStr), std::end(leftStr), std::begin(leftStr), ::tolower);
+	std::transform(std::begin(leftStr), std::end(leftStr), std::begin(leftStr),
+	               [](char c) { return (char)::tolower(c); });
 
 	SCP_string rightStr(rightCmp);
-	std::transform(std::begin(rightStr), std::end(rightStr), std::begin(rightStr), ::tolower);
+	std::transform(std::begin(rightStr), std::end(rightStr), std::begin(rightStr),
+	               [](char c) { return (char)::tolower(c); });
 
 	return leftStr < rightStr;
 }

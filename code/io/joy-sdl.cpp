@@ -20,14 +20,6 @@ Joystick *currentJoystick = nullptr;
 bool initialized = false;
 
 /**
- * @brief Compatibility conversion from HatPosition to array index
- */
-inline
-int hatEnumToIdx(HatPosition in) {
-	return static_cast<int>(in - JOY_NUM_BUTTONS);
-}
-
-/**
 * @brief Compatibility conversion from Button index to HatPosition
 */
 inline
@@ -81,7 +73,8 @@ SCP_string getJoystickGUID(SDL_Joystick *stick)
 	joystickGUID.resize(GUID_STR_SIZE - 1);
 
 	// Make sure the GUID is upper case
-	std::transform(begin(joystickGUID), end(joystickGUID), begin(joystickGUID), toupper);
+	std::transform(begin(joystickGUID), end(joystickGUID), begin(joystickGUID),
+	               [](char c) { return (char)::toupper(c); });
 
 	return joystickGUID;
 }
@@ -96,7 +89,7 @@ bool isCurrentJoystick(Joystick* testStick) {
 	}
 
 	SCP_string guidStr(currentGUID);
-	std::transform(begin(guidStr), end(guidStr), begin(guidStr), toupper);
+	std::transform(begin(guidStr), end(guidStr), begin(guidStr), [](char c) { return (char)::toupper(c); });
 
 	if (testStick->getGUID() != guidStr) {
 		return false; // GUID doesn't match
@@ -326,7 +319,7 @@ namespace joystick
 		fillValues();
 	}
 
-	Joystick::Joystick(Joystick &&other) :
+	Joystick::Joystick(Joystick &&other) SCP_NOEXCEPT :
 			_joystick(nullptr)
 	{
 		*this = std::move(other);
@@ -341,7 +334,7 @@ namespace joystick
 		}
 	}
 
-	Joystick &Joystick::operator=(Joystick &&other)
+	Joystick &Joystick::operator=(Joystick &&other) SCP_NOEXCEPT
 	{
 		std::swap(_device_id, other._device_id);
 		std::swap(_joystick, other._joystick);

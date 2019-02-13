@@ -83,7 +83,7 @@ camid dead_get_camera()
 }
 */
 
-bool is_subsys_destroyed(ship *shipp, int submodel)
+static bool is_subsys_destroyed(ship *shipp, int submodel)
 {
 	ship_subsys *subsys;
 
@@ -235,7 +235,7 @@ void do_subobj_destroyed_stuff( ship *ship_p, ship_subsys *subsys, vec3d* hitpos
 		if ( ship_objp == Player_obj )
 		{
 			if (!no_explosion) {
-				snd_play( gamesnd_get_game_sound(SND_SUBSYS_DIE_1), 0.0f );
+				snd_play( gamesnd_get_game_sound(GameSounds::SUBSYS_DIE_1), 0.0f );
 			}
 			if (strlen(psub->alt_dmg_sub_name))
 				HUD_printf(XSTR( "Your %s subsystem has been destroyed", 499), psub->alt_dmg_sub_name);
@@ -280,13 +280,13 @@ void do_subobj_destroyed_stuff( ship *ship_p, ship_subsys *subsys, vec3d* hitpos
 
 	if (notify && !no_explosion) {
 		// play sound effect when subsys gets blown up
-		int sound_index=-1;
+		gamesnd_id sound_index;
 		if ( Ship_info[ship_p->ship_info_index].is_huge_ship() ) {
-			sound_index=SND_CAPSHIP_SUBSYS_EXPLODE;
+			sound_index=GameSounds::CAPSHIP_SUBSYS_EXPLODE;
 		} else if ( Ship_info[ship_p->ship_info_index].is_big_ship() ) {
-			sound_index=SND_SUBSYS_EXPLODE;
+			sound_index=GameSounds::SUBSYS_EXPLODE;
 		}
-		if ( sound_index >= 0 ) {
+		if ( sound_index.isValid() ) {
 			snd_play_3d( gamesnd_get_game_sound(sound_index), &g_subobj_pos, &View_position );
 		}
 	}
@@ -308,7 +308,7 @@ void do_subobj_destroyed_stuff( ship *ship_p, ship_subsys *subsys, vec3d* hitpos
 		obj_snd_delete_type(ship_p->objnum, subsys->system_info->rotation_snd, subsys);
 		subsys->subsys_snd_flags.remove(Ship::Subsys_Sound_Flags::Rotate);
 	}
-	if((subsys->system_info->dead_snd != -1) && !(subsys->subsys_snd_flags[Ship::Subsys_Sound_Flags::Dead]))
+	if((subsys->system_info->dead_snd.isValid()) && !(subsys->subsys_snd_flags[Ship::Subsys_Sound_Flags::Dead]))
 	{
 		obj_snd_assign(ship_p->objnum, subsys->system_info->dead_snd, &subsys->system_info->pnt, 0, OS_SUBSYS_DEAD, subsys);
 		subsys->subsys_snd_flags.remove(Ship::Subsys_Sound_Flags::Dead);
@@ -319,7 +319,7 @@ void do_subobj_destroyed_stuff( ship *ship_p, ship_subsys *subsys, vec3d* hitpos
 // input:	damaging_objp		=>	object pointer responsible for damage
 //	exit:		-1		=>	no weapon type is associated with damage object
 //				>=0	=>	weapon type associated with damage object
-int shiphit_get_damage_weapon(object *damaging_objp)
+static int shiphit_get_damage_weapon(object *damaging_objp)
 {
 	int weapon_info_index = -1;
 
@@ -347,7 +347,7 @@ int shiphit_get_damage_weapon(object *damaging_objp)
 
 //	Return range at which this object can apply damage.
 //	Based on object type and subsystem type.
-float subsys_get_range(object *other_obj, ship_subsys *subsys)
+static float subsys_get_range(object *other_obj, ship_subsys *subsys)
 {
 	float	range;
 
@@ -368,7 +368,7 @@ float subsys_get_range(object *other_obj, ship_subsys *subsys)
 
 // Make some random debris particles.  Previous way was not very random.  Create debris 75% of the time.
 // Don't worry about multiplayer since this debris is the small stuff that cannot collide
-void create_subsys_debris(object *ship_objp, vec3d *hitpos)
+static void create_subsys_debris(object *ship_objp, vec3d *hitpos)
 {
 	float show_debris = frand();
 	
@@ -387,7 +387,7 @@ void create_subsys_debris(object *ship_objp, vec3d *hitpos)
 	}
 }
 
-void create_vaporize_debris(object *ship_objp, vec3d *hitpos)
+static void create_vaporize_debris(object *ship_objp, vec3d *hitpos)
 {
 	int ndebris;
 	float show_debris = frand();
@@ -451,7 +451,6 @@ float do_subobj_hit_stuff(object *ship_objp, object *other_obj, vec3d *hitpos, i
 	vec3d			g_subobj_pos;
 	float				damage_left, damage_if_hull;
 	int				weapon_info_index;
-	ship_subsys		*subsys;
 	ship				*ship_p;
 	sublist			subsys_list[MAX_SUBSYS_LIST];
 	int				subsys_hit_first = -1; // the subsys which should be hit first and take most of the damage; index into subsys_list
@@ -514,13 +513,17 @@ float do_subobj_hit_stuff(object *ship_objp, object *other_obj, vec3d *hitpos, i
 #endif
 
 	if (!global_damage) {
-		create_subsys_debris(ship_objp, hitpos);
+		auto subsys = ship_get_subsys_for_submodel(ship_p, submodel_num);
+
+		if (subsys == nullptr || !subsys->system_info->flags[Model::Subsystem_Flags::No_impact_debris]) {
+			create_subsys_debris(ship_objp, hitpos);
+		}
 	}
 
 	//	First, create a list of the N subsystems within range.
 	//	Then, one at a time, process them in order.
 	int	count = 0;
-	for ( subsys=GET_FIRST(&ship_p->subsys_list); subsys != END_OF_LIST(&ship_p->subsys_list); subsys = GET_NEXT(subsys) )
+	for ( auto subsys=GET_FIRST(&ship_p->subsys_list); subsys != END_OF_LIST(&ship_p->subsys_list); subsys = GET_NEXT(subsys) )
 	{
 		model_subsystem *mss = subsys->system_info;
 
@@ -779,7 +782,7 @@ float do_subobj_hit_stuff(object *ship_objp, object *other_obj, vec3d *hitpos, i
 }
 
 // Store who/what killed the player, so we can tell the player how he died
-void shiphit_record_player_killer(object *killer_objp, player *p)
+static void shiphit_record_player_killer(object *killer_objp, player *p)
 {
 	switch (killer_objp->type) {
 
@@ -911,7 +914,7 @@ void shiphit_record_player_killer(object *killer_objp, player *p)
 }
 
 //	Say dead stuff.
-void show_dead_message(object *ship_objp, object *other_obj)
+static void show_dead_message(object *ship_objp, object *other_obj)
 {
 	player *player_p;
 
@@ -974,7 +977,7 @@ float apply_damage_to_ship(object *objp, float damage)
 */
 
 //	Do music processing for a ship hit.
-void ship_hit_music(object *ship_objp, object *other_obj)
+static void ship_hit_music(object *ship_objp, object *other_obj)
 {
 	Assert(ship_objp);	// Goober5000
 	Assert(other_obj);	// Goober5000
@@ -1090,7 +1093,7 @@ int get_max_sparks(object* ship_objp)
 
 
 // helper function to std::sort, sorting spark pairs by distance
-int spark_compare(const spark_pair &pair1, const spark_pair &pair2)
+static int spark_compare(const spark_pair &pair1, const spark_pair &pair2)
 {
 	Assert(pair1.dist >= 0);
 	Assert(pair2.dist >= 0);
@@ -1099,7 +1102,7 @@ int spark_compare(const spark_pair &pair1, const spark_pair &pair2)
 }
 
 // for big ships, when all spark slots are filled, make intelligent choice of one to be recycled
-int choose_next_spark(object *ship_objp, vec3d *hitpos)
+static int choose_next_spark(object *ship_objp, vec3d *hitpos)
 {
 	int i, j, count, num_sparks, num_spark_pairs, spark_num;
 	vec3d world_hitpos[MAX_SHIP_HITS];
@@ -1193,7 +1196,7 @@ int choose_next_spark(object *ship_objp, vec3d *hitpos)
 
 
 //	Make sparks fly off a ship.
-void ship_hit_create_sparks(object *ship_objp, vec3d *hitpos, int submodel_num)
+static void ship_hit_create_sparks(object *ship_objp, vec3d *hitpos, int submodel_num)
 {
 	vec3d	tempv;
 	ship	*shipp = &Ships[ship_objp->instance];
@@ -1267,7 +1270,7 @@ void ship_hit_create_sparks(object *ship_objp, vec3d *hitpos, int submodel_num)
 }
 
 //	Called from ship_hit_kill() when we detect the player has been killed.
-void player_died_start(object *killer_objp)
+static void player_died_start(object *killer_objp)
 {
 	nprintf(("Network", "starting my player death\n"));
 	gameseq_post_event(GS_EVENT_DEATH_DIED);	
@@ -1359,7 +1362,7 @@ void player_died_start(object *killer_objp)
 #define	DEATHROLL_VELOCITY_STANDARD	70				// deathroll rotvel is scaled according to ship velocity
 #define	DEATHROLL_ROTVEL_SCALE			4				// constant determines how quickly deathroll rotvel is ramped up  (smaller is faster)
 
-void saturate_fabs(float *f, float max)
+static void saturate_fabs(float *f, float max)
 {
 	if ( fl_abs(*f) > max) {
 		if (*f > 0.0f)
@@ -1464,7 +1467,7 @@ void ship_generic_kill_stuff( object *objp, float percent_killed )
 	ai_deathroll_start(objp);
 
 	// play death roll begin sound
-	sp->death_roll_snd = snd_play_3d( gamesnd_get_game_sound(SND_DEATH_ROLL), &objp->pos, &View_position, objp->radius );
+	sp->death_roll_snd = snd_play_3d( gamesnd_get_game_sound(GameSounds::DEATH_ROLL), &objp->pos, &View_position, objp->radius );
 	if (objp == Player_obj)
 		joy_ff_deathroll();
 
@@ -1520,7 +1523,7 @@ void ship_generic_kill_stuff( object *objp, float percent_killed )
 }
 
 // called from ship_hit_kill if the ship is vaporized
-void ship_vaporize(ship *shipp)
+static void ship_vaporize(ship *shipp)
 {
 	object *ship_objp;
 
@@ -1553,7 +1556,7 @@ void ship_hit_kill(object *ship_objp, object *other_obj, float percent_killed, i
 	if(Script_system.IsConditionOverride(CHA_DEATH, ship_objp))
 	{
 		//WMC - Do scripting stuff
-		Script_system.RunCondition(CHA_DEATH, 0, NULL, ship_objp);
+		Script_system.RunCondition(CHA_DEATH, ship_objp);
 		Script_system.RemHookVars(2, "Self", "Killer");
 		return;
 	}
@@ -1690,7 +1693,7 @@ void ship_hit_kill(object *ship_objp, object *other_obj, float percent_killed, i
 		ship_maybe_lament();
 	}
 
-	Script_system.RunCondition(CHA_DEATH, 0, NULL, ship_objp);
+	Script_system.RunCondition(CHA_DEATH, ship_objp);
 	Script_system.RemHookVars(2, "Self", "Killer");
 }
 
@@ -1761,17 +1764,17 @@ void ship_apply_whack(vec3d *force, vec3d *hit_pos, object *objp)
 		// looks like the fighter is doing evasive maneuvers
 		if ((objp->type != OBJ_SHIP) || !(Ship_info[Ships[objp->instance].ship_info_index].is_fighter_bomber()))
 		{
-			vec3d world_hit_pos, world_center_pos;
+			vec3d world_hit_pos, world_center_of_mass;
 
 			// calc world hit pos of the hit ship
 			vm_vec_unrotate(&world_hit_pos, hit_pos, &objp->orient);
 			vm_vec_add2(&world_hit_pos, &objp->pos);
 
-			// calc overall world center of ships
-			dock_calc_docked_center(&world_center_pos, objp);
+			// calc overall world center-of-mass of all ships
+			dock_calc_docked_center_of_mass(&world_center_of_mass, objp);
 
-			// the new hitpos is the vector from world center to world hitpos
-			vm_vec_sub(hit_pos, &world_hit_pos, &world_center_pos);
+			// the new hitpos is the vector from world center-of-mass to world hitpos
+			vm_vec_sub(hit_pos, &world_hit_pos, &world_center_of_mass);
 		}
 
 		// whack it
@@ -1785,7 +1788,7 @@ void ship_apply_whack(vec3d *force, vec3d *hit_pos, object *objp)
 
 // If a ship is dying and it gets hit, shorten its deathroll.
 //	But, if it's a player, don't decrease below MIN_PLAYER_DEATHROLL_TIME
-void shiphit_hit_after_death(object *ship_objp, float damage)
+static void shiphit_hit_after_death(object *ship_objp, float damage)
 {
 	float	percent_killed;
 	int	delta_time, time_remaining;
@@ -1838,10 +1841,12 @@ void shiphit_hit_after_death(object *ship_objp, float damage)
 MONITOR( ShipHits )
 MONITOR( ShipNumDied )
 
-int maybe_shockwave_damage_adjust(object *ship_objp, object *other_obj, float *damage)
+static int maybe_shockwave_damage_adjust(object *ship_objp, object *other_obj, float *damage)
 {
 	ship_subsys *subsys;
 	ship *shipp;
+	weapon_info *wip;
+	ship_info *sip;
 	float dist, nearest_dist = FLT_MAX;
 	vec3d g_subobj_pos;
 	float max_damage;
@@ -1860,11 +1865,12 @@ int maybe_shockwave_damage_adjust(object *ship_objp, object *other_obj, float *d
 		return 0;
 	}
 
-	if (!(Ship_info[Ships[ship_objp->instance].ship_info_index].is_huge_ship())) {
+	shipp = &Ships[ship_objp->instance];
+	sip = &Ship_info[shipp->ship_info_index];
+
+	if (!sip->is_huge_ship()) {
 		return 0;
 	}
-
-	shipp = &Ships[ship_objp->instance];
 
 	// find closest subsystem distance to shockwave origin
 	for (subsys=GET_FIRST(&shipp->subsys_list); subsys != END_OF_LIST(&shipp->subsys_list); subsys = GET_NEXT(subsys) ) {
@@ -1880,6 +1886,39 @@ int maybe_shockwave_damage_adjust(object *ship_objp, object *other_obj, float *d
 	max_damage = shockwave_get_damage(other_obj->instance);
 	if (shockwave_get_flags(other_obj->instance) & SW_WEAPON_KILL) {
 		max_damage *= 4.0f;
+	}
+
+	// If the shockwave was caused by a weapon, then check if the weapon can deal lethal damage to the ship.
+	// If it cannot, then neither should the shockwave caused by the weapon be able to do the same.
+	// The code for this is copied from part of weapon_get_damage_scale.
+	int wp_index = shockwave_get_weapon_index(other_obj->instance);
+	if ((wp_index >= 0) && Weapon_shockwaves_respect_huge) {
+		wip = &Weapon_info[wp_index];
+
+		float hull_pct = get_hull_pct(ship_objp);
+
+		// First handle Supercap ships.
+		if ((sip->flags[Ship::Info_Flags::Supercap]) && !(wip->wi_flags[Weapon::Info_Flags::Supercap])) {
+			if (hull_pct <= 0.75f) {
+				*damage = 0.0f;
+				return 1;
+			} else {
+				// If hull isn't below 3/4, then allow damage to be applied just like in weapon_get_damage_scale.
+				// SUPERCAP_DAMAGE_SCALE is defined in weapon.h.
+				max_damage *= SUPERCAP_DAMAGE_SCALE;
+			}
+		}
+
+		// Next handle big damage ships.
+		bool is_big_damage_ship = (sip->flags[Ship::Info_Flags::Big_damage]);
+		if (is_big_damage_ship && !(wip->hurts_big_ships())) {
+			if (hull_pct > 0.1f) {
+				max_damage *= hull_pct;
+			} else {
+				*damage = 0.0f;
+				return 1;
+			}
+		}
 	}
 
 	outer_radius = shockwave_get_max_radius(other_obj->instance);
@@ -2383,7 +2422,7 @@ void ship_apply_local_damage(object *ship_objp, object *other_obj, vec3d *hitpos
 	// only want to check the following in single player or if I am the multiplayer game server
 	// Added OBJ_BEAM for traitor detection - FUBAR
 	if ( !MULTIPLAYER_CLIENT && ((other_obj->type == OBJ_SHIP) || (other_obj->type == OBJ_WEAPON) || (other_obj->type == OBJ_BEAM)) ) {
-		ai_ship_hit(ship_objp, other_obj, hitpos, quadrant, hit_normal);
+		ai_ship_hit(ship_objp, other_obj, hit_normal);
 	}
 
 	//	Cut damage done on the player by 4x in training missions, but do full accredidation
@@ -2455,6 +2494,15 @@ void ship_apply_local_damage(object *ship_objp, object *other_obj, vec3d *hitpos
 				Assert(wip != NULL);
 
 				if (wip->wi_flags[Weapon::Info_Flags::Training]) {
+					create_sparks = false;
+				}
+			}
+
+			if (create_sparks) {
+				auto subsys = ship_get_subsys_for_submodel(ship_p, submodel_num);
+
+				if (subsys != nullptr && subsys->system_info->flags[Model::Subsystem_Flags::No_sparks]) {
+					// Spark creation was explicitly disabled for this subsystem
 					create_sparks = false;
 				}
 			}

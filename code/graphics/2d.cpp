@@ -14,22 +14,22 @@
 #include <windowsx.h>
 #endif
 
-#include <limits.h>
+#include <climits>
 #include <algorithm>
 
 #include "cmdline/cmdline.h"
 #include "debugconsole/console.h"
-#include "gamesequence/gamesequence.h"	//WMC - for scripting hooks in gr_flip()
+#include "gamesequence/gamesequence.h" //WMC - for scripting hooks in gr_flip()
 #include "globalincs/systemvars.h"
 #include "graphics/2d.h"
-#include "graphics/matrix.h"
-#include "graphics/light.h"
 #include "graphics/font.h"
 #include "graphics/grbatch.h"
 #include "graphics/grinternal.h"
+#include "graphics/grstub.h"
+#include "graphics/light.h"
+#include "graphics/matrix.h"
 #include "graphics/opengl/gropengl.h"
 #include "graphics/opengl/gropengldraw.h"
-#include "graphics/grstub.h"
 #include "graphics/paths/PathRenderer.h"
 #include "graphics/util/GPUMemoryHeap.h"
 #include "graphics/util/UniformBuffer.h"
@@ -37,9 +37,10 @@
 #include "io/keycontrol.h" // m!m
 #include "io/timer.h"
 #include "osapi/osapi.h"
-#include "scripting/scripting.h"
 #include "parse/parselo.h"
+#include "popup/popup.h"
 #include "render/3d.h"
+#include "scripting/scripting.h"
 #include "tracing/tracing.h"
 #include "utils/boost/hash_combine.h"
 
@@ -693,7 +694,7 @@ DCF(clear_color, "set clear color r, g, b")
 	gr_set_clear_color(r, g, b);
 }
 
-void gr_set_palette_internal( const char *name, ubyte * palette, int restrict_font_to_128 )
+void gr_set_palette_internal( const char * /*name*/, ubyte * palette, int  /*restrict_font_to_128*/ )
 {
 	if ( palette == NULL ) {
 		// Create a default palette
@@ -898,6 +899,40 @@ static bool gr_init_sub(std::unique_ptr<os::GraphicsOperations>&& graphicsOps, i
 	return true;
 }
 
+static void init_window_icon() {
+	auto view = os::getMainViewport();
+
+	if (view == nullptr) {
+		// Graphics backend has no viewport
+		return;
+	}
+
+	auto sdl_wnd = view->toSDLWindow();
+
+	if (sdl_wnd == nullptr) {
+		// No support for changing the icon
+		return;
+	}
+
+	auto icon_handle = bm_load(Window_icon_path);
+	if (icon_handle < 0) {
+		Warning(LOCATION, "Failed to load window icon '%s'!", Window_icon_path.c_str());
+		return;
+	}
+
+	auto surface = bm_to_sdl_surface(icon_handle);
+	if (surface == nullptr) {
+		Warning(LOCATION, "Convert icon '%s' to a SDL surface!", Window_icon_path.c_str());
+		bm_release(icon_handle);
+		return;
+	}
+
+	SDL_SetWindowIcon(sdl_wnd, surface);
+
+	SDL_FreeSurface(surface);
+	bm_release(icon_handle);
+}
+
 bool gr_init(std::unique_ptr<os::GraphicsOperations>&& graphicsOps, int d_mode, int d_width, int d_height, int d_depth)
 {
 	int width = 1024, height = 768, depth = 32, mode = GR_OPENGL;
@@ -1078,6 +1113,9 @@ bool gr_init(std::unique_ptr<os::GraphicsOperations>&& graphicsOps, int d_mode, 
 	gr_set_palette_internal(Gr_current_palette_name, NULL, 0);
 
 	bm_init();
+
+	init_window_icon();
+
 	io::mouse::CursorManager::init();
 
 	mprintf(("Initializing path renderer...\n"));
@@ -1994,7 +2032,7 @@ void poly_list::make_index_buffer(SCP_vector<int> &vertex_list)
 	(*this) = buffer_list_internal;
 }
 
-poly_list& poly_list::operator = (poly_list &other_list)
+poly_list& poly_list::operator = (const poly_list &other_list)
 {
 	allocate(other_list.n_verts);
 
@@ -2115,8 +2153,7 @@ void gr_set_bitmap(int bitmap_num, int alphablend_mode, int bitblt_mode, float a
 void gr_flip(bool execute_scripting)
 {
 	// m!m avoid running CHA_ONFRAME when the "Quit mission" popup is shown. See mantis 2446 for reference
-	if (execute_scripting && !quit_mission_popup_shown)
-	{
+	if (execute_scripting && !popup_active()) {
 		TRACE_SCOPE(tracing::LuaOnFrame);
 
 		//WMC - Do conditional hooks. Yippee!
