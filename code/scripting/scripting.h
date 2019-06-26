@@ -104,6 +104,8 @@ extern bool script_hook_valid(script_hook *hook);
 #define CHA_CMISSIONACCEPT  41
 #define CHA_ONSHIPDEPART	42
 #define CHA_ONWEAPONCREATED	43
+#define CHA_ONWAYPOINTSDONE	44
+#define CHA_ONSUBSYSDEATH	45
 
 // management stuff
 void scripting_state_init();

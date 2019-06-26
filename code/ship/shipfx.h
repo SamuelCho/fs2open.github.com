@@ -34,14 +34,37 @@ void shipfx_emit_spark( int n, int sn );
 // Does the special effects to blow a subsystem off a ship
 extern void shipfx_blow_off_subsystem(object *ship_obj,ship *ship_p,ship_subsys *subsys, vec3d *exp_center, bool no_explosion = false);
 
-
 // Creates "ndebris" pieces of debris on random verts of the the "submodel" in the 
 // ship's model.
 extern void shipfx_blow_up_model(object *obj,int model, int submodel, int ndebris, vec3d *exp_center);
 
+
 // =================================================
 //          SHIP WARP IN EFFECT STUFF
 // =================================================
+
+// if we are specifying a Default warp with an index into fireball.tbl, use this flag
+#define WT_DEFAULT_WITH_FIREBALL	(1<<31)
+
+// if we have more than one flag defined above, this should mask all of them
+#define WT_FLAG_MASK				~(1<<31)
+
+// Warp type defines
+#define WT_DEFAULT					0
+#define WT_KNOSSOS					1
+#define WT_DEFAULT_THEN_KNOSSOS		2
+#define WT_IN_PLACE_ANIM			3
+#define WT_SWEEPER					4
+#define WT_HYPERSPACE				5
+
+extern const char *Warp_types[];
+extern int Num_warp_types;
+extern int warptype_match(const char *p);
+
+extern void ship_set_warp_effects(object *objp);
+
+enum class WarpDirection { NONE, WARP_IN, WARP_OUT };
+
 
 // When a ship warps in, this gets called to start the effect
 extern void shipfx_warpin_start( object *objp );
@@ -54,6 +77,42 @@ extern void shipfx_warpout_start( object *objp );
 
 // During a ship warp out, this gets called each frame to move the ship
 extern void shipfx_warpout_frame( object *objp, float frametime );
+
+
+// =================================================
+//				WARP PARAMS
+// =================================================
+
+// WarpParams allows per-ship customization of what was previously in ships.tbl
+class WarpParams
+{
+public:
+	WarpDirection	direction = WarpDirection::WARP_IN;
+
+	char		anim[MAX_FILENAME_LEN];
+	float		radius = 0.0f;
+	gamesnd_id	snd_start;
+	gamesnd_id	snd_end;
+	float		speed = 0.0f;
+	int			time = 0;					// in ms
+	float		accel_exp = 1.0f;
+	int			warp_type = WT_DEFAULT;
+
+	// only valid for warpout
+	int			warpout_engage_time = -1;	// in ms
+	float		warpout_player_speed = 0.0f;
+
+	WarpParams();
+	bool operator==(const WarpParams &other);
+	bool operator!=(const WarpParams &other);
+};
+
+extern SCP_vector<WarpParams> Warp_params;
+
+extern int find_or_add_warp_params(const WarpParams &params);
+
+extern float shipfx_calculate_warp_time(object *objp, WarpDirection warp_dir, float half_length, float warping_dist);
+
 
 // =================================================
 //          SHIP SHADOW EFFECT STUFF
@@ -112,9 +171,10 @@ void shipfx_do_damaged_arcs_frame( ship *shipp );
 
 
 // =================================================
-//				NEBULA LIGHTNING.
+//				NEBULA LIGHTNING
 // =================================================
 void shipfx_do_lightning_frame( ship *shipp );
+
 
 // engine wash level init
 void shipfx_engine_wash_level_init();
@@ -122,10 +182,6 @@ void shipfx_engine_wash_level_init();
 // pause engine wash sounds
 void shipfx_stop_engine_wash_sound();
 
-#define WD_NONE		0
-#define WD_WARP_IN	1
-#define WD_WARP_OUT	2
-float shipfx_calculate_warp_time(object *objp, ship_info *sip, int warp_dir, float half_length, float warping_dist);
 
 //********************-----CLASS: WarpEffect-----********************//
 class WarpEffect
@@ -133,14 +189,16 @@ class WarpEffect
 protected:
 	//core variables
 	object	*objp;
-	int		direction;
+	WarpDirection	direction;
 
 	//variables provided for expediency
 	ship *shipp;
 	ship_info *sip;
+	WarpParams *params;
+
 public:
 	WarpEffect();
-	WarpEffect(object *n_objp, int n_direction);
+	WarpEffect(object *n_objp, WarpDirection n_direction);
 	virtual ~WarpEffect() = default;
 
 	void clear();
@@ -193,7 +251,7 @@ private:
 	float	radius;
 
 public:
-	WE_Default(object *n_objp, int n_direction);
+	WE_Default(object *n_objp, WarpDirection n_direction);
 
 	int warpStart() override;
 	int warpFrame(float frametime) override;
@@ -246,7 +304,7 @@ private:
 	game_snd *snd_end_gs;
 
 public:
-	WE_BSG(object *n_objp, int n_direction);
+	WE_BSG(object *n_objp, WarpDirection n_direction);
 	~WE_BSG() override;
 
 	void pageIn() override;
@@ -297,7 +355,7 @@ private:
 	float	z_offset_min;
 	float	z_offset_max;
 public:
-	WE_Homeworld(object *n_objp, int n_direction);
+	WE_Homeworld(object *n_objp, WarpDirection n_direction);
 	~WE_Homeworld() override;
 
 	int warpStart() override;
@@ -318,8 +376,7 @@ private:
 	int total_time_start;
 	int total_duration;
 	int total_time_end;
-	float accel_exp;
-	float decel_exp;
+	float accel_or_decel_exp;
 	float initial_velocity;
 
 	//sweeper polygon and clip effect
@@ -334,7 +391,7 @@ private:
 	game_snd *snd_end_gs;	
 	
 public:
-	WE_Hyperspace(object *n_objp, int n_direction);
+	WE_Hyperspace(object *n_objp, WarpDirection n_direction);
 
 	int warpStart() override;
 	int warpFrame(float frametime) override;

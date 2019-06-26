@@ -129,7 +129,7 @@ int ship_ship_check_collision(collision_info_struct *ship_ship_hit_info, vec3d *
 	}
 
 	// Make ships that are warping in not get collision detection done
-	if ( heavy_shipp->flags[Ship::Ship_Flags::Arriving_stage_1] ) { 
+	if ( heavy_shipp->is_arriving(ship::warpstage::STAGE1, false) ) {
 		return 0;
 	}
 
@@ -381,8 +381,6 @@ int ship_ship_check_collision(collision_info_struct *ship_ship_hit_info, vec3d *
 
 		// SET PHYSICS PARAMETERS
 		// already have (hitpos - heavy) and light_cm_pos
-		// get heavy cm pos - already have light_cm_pos
-		ship_ship_hit_info->heavy_collision_cm_pos = zero;
 
 		// get r_heavy and r_light
 		ship_ship_hit_info->r_heavy = ship_ship_hit_info->hit_pos;
@@ -1137,12 +1135,15 @@ int collide_ship_ship( obj_pair * pair )
 
 		if ( hit )
 		{
-			Script_system.SetHookObjects(4, "Ship", A, "ShipB", B, "Self", A, "Object", B);
+			Script_system.SetHookObjects(4, "Self", A, "Object", B, "Ship", A, "ShipB", B);
 			bool a_override = Script_system.IsConditionOverride(CHA_COLLIDESHIP, A);
-			
-			//Yes this should be reversed.
-			Script_system.SetHookObjects(4, "Ship", B, "ShipB", A, "Self", B, "Object", A);
+			Script_system.RemHookVars(4, "Self", "Object", "Ship", "ShipB");
+
+			// Yes, this should be reversed.
+			Script_system.SetHookObjects(4, "Self", B, "Object", A, "Ship", B, "ShipB", A);
 			bool b_override = Script_system.IsConditionOverride(CHA_COLLIDESHIP, B);
+			Script_system.RemHookVars(4, "Self", "Object", "Ship", "ShipB");
+
 			if(!a_override && !b_override)
 			{
 				float		damage;
@@ -1247,17 +1248,18 @@ int collide_ship_ship( obj_pair * pair )
 
 			if(!(b_override && !a_override))
 			{
-				Script_system.SetHookObjects(4, "Ship", A, "ShipB", B, "Self", A, "Object", B);
+				Script_system.SetHookObjects(4, "Self", A, "Object", B, "Ship", A, "ShipB", B);
 				Script_system.RunCondition(CHA_COLLIDESHIP, A);
+				Script_system.RemHookVars(4, "Self", "Object", "Ship", "ShipB");
 			}
 			if((b_override && !a_override) || (!b_override && !a_override))
 			{
-				//Yes this should be reversed.
-				Script_system.SetHookObjects(4, "Ship", B, "ShipB", A, "Self", B, "Object", A);
+				// Yes, this should be reversed.
+				Script_system.SetHookObjects(4, "Self", B, "Object", A, "Ship", B, "ShipB", A);
 				Script_system.RunCondition(CHA_COLLIDESHIP, B);
+				Script_system.RemHookVars(4, "Self", "Object", "Ship", "ShipB");
 			}
 
-			Script_system.RemHookVars(4, "Ship", "ShipB", "Self", "Object");
 			return 0;
 		}					
     }
@@ -1268,8 +1270,8 @@ int collide_ship_ship( obj_pair * pair )
         // if ship is warping in, in stage 1, its velocity is 0, so make ship try to collide next frame
 
         // if ship is huge and warping in or out
-        if (((Ships[A->instance].flags[Ship::Ship_Flags::Arriving_stage_1]) && (Ship_info[Ships[A->instance].ship_info_index].is_huge_ship()))
-			|| ((Ships[B->instance].flags[Ship::Ship_Flags::Arriving_stage_1]) && (Ship_info[Ships[B->instance].ship_info_index].is_huge_ship())) ) {
+        if (((Ships[A->instance].is_arriving(ship::warpstage::STAGE1, false)) && (Ship_info[Ships[A->instance].ship_info_index].is_huge_ship()))
+			|| ((Ships[B->instance].is_arriving(ship::warpstage::STAGE1, false)) && (Ship_info[Ships[B->instance].ship_info_index].is_huge_ship())) ) {
 			pair->next_check_time = timestamp(0);	// check next time
 			return 0;
 		}

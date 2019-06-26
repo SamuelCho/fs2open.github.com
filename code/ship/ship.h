@@ -467,6 +467,9 @@ public:
 	WarpEffect *warpin_effect;
 	WarpEffect *warpout_effect;
 
+	int warpin_params_index;
+	int warpout_params_index;
+
 	int	next_fireball;
 
 	int	next_hit_spark;
@@ -707,14 +710,20 @@ public:
 
 	float autoaim_fov;
 
+	enum warpstage {
+		STAGE1 = 0,
+		STAGE2,
+		BOTH,
+	};
+
 	// reset to a completely blank ship
 	void clear();
 
     //Helper functions
-    inline bool is_arriving() { return flags[Ship::Ship_Flags::Arriving_stage_1, Ship::Ship_Flags::Arriving_stage_2]; }
-    inline bool is_departing() { return flags[Ship::Ship_Flags::Depart_warp, Ship::Ship_Flags::Depart_dockbay]; }
-    inline bool cannot_warp() { return flags[Ship::Ship_Flags::Warp_broken, Ship::Ship_Flags::Warp_never, Ship::Ship_Flags::Disabled]; }
-    inline bool is_dying_or_departing() { return is_departing() || flags[Ship::Ship_Flags::Dying]; }
+	bool is_arriving(ship::warpstage stage = ship::warpstage::BOTH, bool dock_leader_or_single = false);
+	inline bool is_departing() { return flags[Ship::Ship_Flags::Depart_warp, Ship::Ship_Flags::Depart_dockbay]; }
+	inline bool cannot_warp() { return flags[Ship::Ship_Flags::Warp_broken, Ship::Ship_Flags::Warp_never, Ship::Ship_Flags::Disabled]; }
+	inline bool is_dying_or_departing() { return is_departing() || flags[Ship::Ship_Flags::Dying]; }
 
 	bool has_display_name();
 	const char* get_display_string();
@@ -867,20 +876,6 @@ class man_thruster {
     }
 };
 
-// if we are specifying a Default warp with an index into fireball.tbl, use this flag
-#define WT_DEFAULT_WITH_FIREBALL	(1<<31)
-
-// if we have more than one flag defined above, this should mask all of them
-#define WT_FLAG_MASK				~(1<<31)
-
-//Warp type defines
-#define WT_DEFAULT					0
-#define WT_KNOSSOS					1
-#define WT_DEFAULT_THEN_KNOSSOS		2
-#define WT_IN_PLACE_ANIM			3
-#define WT_SWEEPER					4
-#define WT_HYPERSPACE				5
-
 // Holds variables for collision physics (Gets its own struct purely for clarity purposes)
 // Most of this only really applies properly to small ships
 typedef struct ship_collision_physics {
@@ -976,26 +971,8 @@ public:
 	float		slide_accel;
 	float		slide_decel;
 
-	char		warpin_anim[MAX_FILENAME_LEN];
-	float		warpin_radius;
-	gamesnd_id	warpin_snd_start;
-	gamesnd_id	warpin_snd_end;
-	float		warpin_speed;
-	int			warpin_time;	//in ms
-	float		warpin_decel_exp;
-	int			warpin_type;
-
-	char		warpout_anim[MAX_FILENAME_LEN];
-	float		warpout_radius;
-	gamesnd_id	warpout_snd_start;
-	gamesnd_id	warpout_snd_end;
-	int			warpout_engage_time;	//in ms
-	float		warpout_speed;
-	int			warpout_time;	//in ms
-	float		warpout_accel_exp;
-	int			warpout_type;
-
-	float		warpout_player_speed;
+	int warpin_params_index;
+	int warpout_params_index;
 
 	flagset<Ship::Info_Flags> flags;							//	See SIF_xxxx - changed to uint by Goober5000, changed back by Zacam, and changed to something entirely different by The E!
 	int		ai_class;							//	Index into Ai_classes[].  Defined in ai.tbl
@@ -1013,6 +990,9 @@ public:
 	float death_roll_r_mult;
 	float death_fx_r_mult;
 	float death_roll_time_mult;
+	float death_roll_xrotation_cap;         // max rotation around x-axis in radians-per-sec (aka pitch)
+	float death_roll_yrotation_cap;         // max rotation around y-axis in radians-per-sec (aka yaw)
+	float death_roll_zrotation_cap;         // max rotation around z-axis in radians-per-sec (aka roll)
 	int death_roll_base_time;
 	int death_fx_count;
 	int	shockwave_count;					// the # of total shockwaves
@@ -1126,6 +1106,9 @@ public:
 	float scan_range_normal;                // this ship can scan other normal/small ships at this range
 	float scan_range_capital;               // this ship can scan other capital/large ships at this range
 
+	float ask_help_shield_percent;
+	float ask_help_hull_percent;
+
 	// contrail info
 	trail_info ct_info[MAX_SHIP_CONTRAILS];	
 	int ct_count;
@@ -1191,6 +1174,7 @@ public:
 	float min_engine_vol;					// minimum volume modifier for engine sound when ship is stationary
 	gamesnd_id glide_start_snd;					// handle to sound to play at the beginning of a glide maneuver (default is 0 for regular throttle down sound)
 	gamesnd_id glide_end_snd;						// handle to sound to play at the end of a glide maneuver (default is 0 for regular throttle up sound)
+	gamesnd_id flyby_snd;					// handle to sound to play with ship flyby
 
 	SCP_map<GameSounds, gamesnd_id> ship_sounds;			// specifies ship-specific sound indexes
 
@@ -1243,8 +1227,9 @@ public:
     inline bool is_small_ship() const { return flags[Ship::Info_Flags::Fighter, Ship::Info_Flags::Bomber, Ship::Info_Flags::Support, Ship::Info_Flags::Escapepod]; }
     inline bool is_big_ship() const { return flags[Ship::Info_Flags::Cruiser, Ship::Info_Flags::Freighter, Ship::Info_Flags::Transport, Ship::Info_Flags::Corvette, Ship::Info_Flags::Gas_miner, Ship::Info_Flags::Awacs]; }
     inline bool is_huge_ship() const  { return flags[Ship::Info_Flags::Capital, Ship::Info_Flags::Supercap, Ship::Info_Flags::Drydock, Ship::Info_Flags::Knossos_device]; }
-    inline bool is_flyable() const { return !(flags[Ship::Info_Flags::Cargo, Ship::Info_Flags::Navbuoy, Ship::Info_Flags::Escapepod]); }
-    inline bool is_harmless() const { return !is_flyable(); }
+    inline bool is_flyable() const { return !(flags[Ship::Info_Flags::Cargo, Ship::Info_Flags::Navbuoy, Ship::Info_Flags::Sentrygun]); }	// AL 11-24-97: this useful to know for targeting reasons
+// note: code that previously used is_harmless() / SIF_HARMLESS now uses several flags defined in objecttypes.tbl
+//	inline bool is_harmless() const { return flags[Ship::Info_Flags::Cargo, Ship::Info_Flags::Navbuoy, Ship::Info_Flags::Escapepod]; }		// AL 12-3-97: ships that are not a threat
     inline bool is_fighter_bomber() const { return flags[Ship::Info_Flags::Fighter, Ship::Info_Flags::Bomber]; }
     inline bool is_big_or_huge() const { return is_big_ship() || is_huge_ship(); }
     inline bool avoids_shockwaves() const { return is_small_ship(); }

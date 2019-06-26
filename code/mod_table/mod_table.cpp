@@ -47,6 +47,13 @@ bool Enable_scripts_in_fred; // By default FRED does not initialize the scriptin
 SCP_string Window_icon_path;
 bool Disable_built_in_translations;
 bool Weapon_shockwaves_respect_huge;
+bool Using_in_game_options;
+std::tuple<ubyte, ubyte, ubyte> Arc_color_damage_p1;
+std::tuple<ubyte, ubyte, ubyte> Arc_color_damage_p2;
+std::tuple<ubyte, ubyte, ubyte> Arc_color_damage_s1;
+std::tuple<ubyte, ubyte, ubyte> Arc_color_emp_p1;
+std::tuple<ubyte, ubyte, ubyte> Arc_color_emp_p2;
+std::tuple<ubyte, ubyte, ubyte> Arc_color_emp_s1;
 
 void parse_mod_table(const char *filename)
 {
@@ -266,6 +273,72 @@ void parse_mod_table(const char *filename)
 			mprintf(("Game Settings Table: $BMPMAN Slot Limit is deprecated and should be removed. It is not needed anymore.\n"));
 		}
 
+		if (optional_string("$EMP Arc Color:")) {
+			if (optional_string("+Primary Color Option 1:")) {
+				int rgb[3];
+				stuff_int_list(rgb, 3);
+				if ((rgb[0] >= 0 && rgb[0] <= 255) && (rgb[1] >= 0 && rgb[1] <= 255) && (rgb[2] >= 0 && rgb[2] <= 255)) {
+					Arc_color_emp_p1 = std::make_tuple(static_cast<ubyte>(rgb[0]), static_cast<ubyte>(rgb[1]), static_cast<ubyte>(rgb[2]));
+				} else {
+					error_display(0, "$EMP Arc Color: +Primary Color Option 1 is %i, %i, %i. "
+						"One or more of these values is not within the range of 0-255. Assuming default color.", rgb[0], rgb[1], rgb[2]);
+				}
+			}
+			if (optional_string("+Primary Color Option 2:")) {
+				int rgb[3];
+				stuff_int_list(rgb, 3);
+				if ((rgb[0] >= 0 && rgb[0] <= 255) && (rgb[1] >= 0 && rgb[1] <= 255) && (rgb[2] >= 0 && rgb[2] <= 255)) {
+					Arc_color_emp_p2 = std::make_tuple(static_cast<ubyte>(rgb[0]), static_cast<ubyte>(rgb[1]), static_cast<ubyte>(rgb[2]));
+				} else {
+					error_display(0, "$EMP Arc Color: +Primary Color Option 2 is %i, %i, %i. "
+					    "One or more of these values is not within the range of 0-255. Assuming default color.", rgb[0], rgb[1], rgb[2]);
+				}
+			}
+			if (optional_string("+Secondary Color Option 1:")) {
+				int rgb[3];
+				stuff_int_list(rgb, 3);
+				if ((rgb[0] >= 0 && rgb[0] <= 255) && (rgb[1] >= 0 && rgb[1] <= 255) && (rgb[2] >= 0 && rgb[2] <= 255)) {
+					Arc_color_emp_s1 = std::make_tuple(static_cast<ubyte>(rgb[0]), static_cast<ubyte>(rgb[1]), static_cast<ubyte>(rgb[2]));
+			    } else {
+				    error_display(0,"$EMP Arc Color: +Secondary Color Option 1 is %i, %i, %i. "
+					    "One or more of these values is not within the range of 0-255. Assuming default color.", rgb[0], rgb[1], rgb[2]);
+			    }
+		    }
+		}
+
+		if (optional_string("$Damage Arc Color:")) {
+			if (optional_string("+Primary Color Option 1:")) {
+				int rgb[3];
+				stuff_int_list(rgb, 3);
+				if ((rgb[0] >= 0 && rgb[0] <= 255) && (rgb[1] >= 0 && rgb[1] <= 255) && (rgb[2] >= 0 && rgb[2] <= 255)) {
+					Arc_color_damage_p1 = std::make_tuple(static_cast<ubyte>(rgb[0]), static_cast<ubyte>(rgb[1]), static_cast<ubyte>(rgb[2]));
+		        } else {
+			        error_display(0, "Damage Arc Color: +Primary Color Option 1 is %i, %i, %i. "
+					    "One or more of these values is not within the range of 0-255. Assuming default color.", rgb[0], rgb[1], rgb[2]);
+		        }
+	        }
+			if (optional_string("+Primary Color Option 2:")) {
+				int rgb[3];
+				stuff_int_list(rgb, 3);
+				if ((rgb[0] >= 0 && rgb[0] <= 255) && (rgb[1] >= 0 && rgb[1] <= 255) && (rgb[2] >= 0 && rgb[2] <= 255)) {
+					Arc_color_damage_p2 = std::make_tuple(static_cast<ubyte>(rgb[0]), static_cast<ubyte>(rgb[1]), static_cast<ubyte>(rgb[2]));
+	            } else {
+		            error_display(0, "$Damage Arc Color: +Primary Color Option 2 is %i, %i, %i. "
+					    "One or more of these values is not within the range of 0-255. Assuming default color.", rgb[0], rgb[1], rgb[2]);
+	            }
+			}
+			if (optional_string("+Secondary Color Option 1:")) {
+				int rgb[3];
+				stuff_int_list(rgb, 3);
+				if ((rgb[0] >= 0 && rgb[0] <= 255) && (rgb[1] >= 0 && rgb[1] <= 255) && (rgb[2] >= 0 && rgb[2] <= 255)) {
+					Arc_color_damage_s1 = std::make_tuple(static_cast<ubyte>(rgb[0]), static_cast<ubyte>(rgb[1]), static_cast<ubyte>(rgb[2]));
+	            } else {
+		            error_display(0, "$Damage Arc Color: +Secondary Color Option 1 is %i, %i, %i. "
+					    "One or more of these values is not within the range of 0-255. Assuming default color.", rgb[0], rgb[1], rgb[2]);
+	            }
+			}
+		}
+
 		optional_string("#NETWORK SETTINGS");
 
 		if (optional_string("$FS2NetD port:")) {
@@ -414,6 +487,16 @@ void parse_mod_table(const char *filename)
 			stuff_float(&Minimum_player_warpout_time);
 		}
 
+		if (optional_string("$Enable in-game options:")) {
+			stuff_boolean(&Using_in_game_options);
+
+			if (Using_in_game_options) {
+				mprintf(("Game Settings Table: Using in-game options system.\n"));
+			} else {
+				mprintf(("Game Settings Table: Not using in-game options system.\n"));
+			}
+		}
+
 		required_string("#END");
 	}
 	catch (const parse::ParseException& e)
@@ -473,4 +556,11 @@ void mod_table_reset() {
 	Window_icon_path = "app_icon_sse";
 	Disable_built_in_translations = false;
 	Weapon_shockwaves_respect_huge = false;
+	Using_in_game_options = false;
+	Arc_color_damage_p1 = std::make_tuple(64, 64, 225);
+	Arc_color_damage_p2 = std::make_tuple(128, 128, 255);
+	Arc_color_damage_s1 = std::make_tuple(200, 200, 255);
+	Arc_color_emp_p1 = std::make_tuple(64, 64, 5);
+	Arc_color_emp_p2 = std::make_tuple(128, 128, 10);
+	Arc_color_emp_s1 = std::make_tuple(255, 255, 10);
 }

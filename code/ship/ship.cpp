@@ -734,29 +734,6 @@ static void parse_engine_wash(bool replace)
 	}
 }
 
-static const char *Warp_types[] = {
-	"Default",
-	"Knossos",
-	"Babylon5",
-	"Galactica",
-	"Homeworld",
-	"Hyperspace",
-};
-
-static int Num_warp_types = sizeof(Warp_types)/sizeof(char*);
-
-static int warptype_match(char *p)
-{
-	int i;
-	for(i = 0; i < Num_warp_types; i++)
-	{
-		if(!stricmp(Warp_types[i], p))
-			return i;
-	}
-
-	return -1;
-}
-
 static const char *Lightning_types[] = {
 	"None",
 	"Default",
@@ -779,6 +756,11 @@ static int lightningtype_match(char *p)
 // Kazan -- Volition had this set to 1500, Set it to 4K for WC Saga
 #define SHIP_MULTITEXT_LENGTH 4096
 #define DEFAULT_DELTA_BANK_CONST	0.5f
+
+const float DEFAULT_ASK_HELP_SHIELD_PERCENT = 0.1f; // percent shields at which ship will ask for help
+const float DEFAULT_ASK_HELP_HULL_PERCENT = 0.3f;   // percent hull at which ship will ask for help
+const float AWACS_HELP_HULL_HI = 0.75f;     // percent hull at which ship will ask for help
+const float AWACS_HELP_HULL_LOW = 0.25f;    // percent hull at which ship will ask for help
 
 #define CHECK_THEN_COPY(attribute) \
 do {\
@@ -837,26 +819,8 @@ void ship_info::clone(const ship_info& other)
 	slide_accel = other.slide_accel;
 	slide_decel = other.slide_decel;
 
-	strcpy_s(warpin_anim, other.warpin_anim);
-	warpin_radius = other.warpin_radius;
-	warpin_snd_start = other.warpin_snd_start;
-	warpin_snd_end = other.warpin_snd_end;
-	warpin_speed = other.warpin_speed;
-	warpin_time = other.warpin_time;
-	warpin_decel_exp = other.warpin_decel_exp;
-	warpin_type = other.warpin_type;
-
-	strcpy_s(warpout_anim, other.warpout_anim);
-	warpout_radius = other.warpout_radius;
-	warpout_snd_start = other.warpout_snd_start;
-	warpout_snd_end = other.warpout_snd_end;
-	warpout_engage_time = other.warpout_engage_time;
-	warpout_speed = other.warpout_speed;
-	warpout_time = other.warpout_time;
-	warpout_accel_exp = other.warpout_accel_exp;
-	warpout_type = other.warpout_type;
-
-	warpout_player_speed = other.warpout_player_speed;
+	warpin_params_index = other.warpin_params_index;
+	warpout_params_index = other.warpout_params_index;
 
 	flags = other.flags;
 	ai_class = other.ai_class;
@@ -874,6 +838,9 @@ void ship_info::clone(const ship_info& other)
 	death_roll_r_mult = other.death_roll_r_mult;
 	death_fx_r_mult = other.death_fx_r_mult;
 	death_roll_time_mult = other.death_roll_time_mult;
+	death_roll_xrotation_cap = other.death_roll_xrotation_cap;
+	death_roll_yrotation_cap = other.death_roll_yrotation_cap;
+	death_roll_zrotation_cap = other.death_roll_zrotation_cap;
 	death_roll_base_time = other.death_roll_base_time;
 	death_fx_count = other.death_fx_count;
 	shockwave_count = other.shockwave_count;
@@ -1003,6 +970,9 @@ void ship_info::clone(const ship_info& other)
 	scan_range_normal = other.scan_range_normal;
 	scan_range_capital = other.scan_range_capital;
 
+	ask_help_shield_percent = other.ask_help_shield_percent;
+	ask_help_hull_percent = other.ask_help_hull_percent;
+
 	memcpy(ct_info, other.ct_info, sizeof(trail_info) * MAX_SHIP_CONTRAILS);
 	ct_count = other.ct_count;
 
@@ -1062,6 +1032,7 @@ void ship_info::clone(const ship_info& other)
 	min_engine_vol = other.min_engine_vol;
 	glide_start_snd = other.glide_start_snd;
 	glide_end_snd = other.glide_end_snd;
+	flyby_snd = other.flyby_snd;
 
 	ship_sounds = other.ship_sounds;
 
@@ -1158,26 +1129,8 @@ void ship_info::move(ship_info&& other)
 	slide_accel = other.slide_accel;
 	slide_decel = other.slide_decel;
 
-	std::swap(warpin_anim, other.warpin_anim);
-	warpin_radius = other.warpin_radius;
-	warpin_snd_start = other.warpin_snd_start;
-	warpin_snd_end = other.warpin_snd_end;
-	warpin_speed = other.warpin_speed;
-	warpin_time = other.warpin_time;
-	warpin_decel_exp = other.warpin_decel_exp;
-	warpin_type = other.warpin_type;
-
-	std::swap(warpout_anim, other.warpout_anim);
-	warpout_radius = other.warpout_radius;
-	warpout_snd_start = other.warpout_snd_start;
-	warpout_snd_end = other.warpout_snd_end;
-	warpout_engage_time = other.warpout_engage_time;
-	warpout_speed = other.warpout_speed;
-	warpout_time = other.warpout_time;
-	warpout_accel_exp = other.warpout_accel_exp;
-	warpout_type = other.warpout_type;
-
-	warpout_player_speed = other.warpout_player_speed;
+	warpin_params_index = other.warpin_params_index;
+	warpout_params_index = other.warpout_params_index;
 
 	flags = other.flags;
 	ai_class = other.ai_class;
@@ -1195,6 +1148,9 @@ void ship_info::move(ship_info&& other)
 	death_roll_r_mult = other.death_roll_r_mult;
 	death_fx_r_mult = other.death_fx_r_mult;
 	death_roll_time_mult = other.death_roll_time_mult;
+	death_roll_xrotation_cap = other.death_roll_xrotation_cap;
+	death_roll_yrotation_cap = other.death_roll_yrotation_cap;
+	death_roll_zrotation_cap = other.death_roll_zrotation_cap;
 	death_roll_base_time = other.death_roll_base_time;
 	death_fx_count = other.death_fx_count;
 	shockwave_count = other.shockwave_count;
@@ -1296,6 +1252,9 @@ void ship_info::move(ship_info&& other)
 	scan_range_normal = other.scan_range_normal;
 	scan_range_capital = other.scan_range_capital;
 
+	ask_help_shield_percent = other.ask_help_shield_percent;
+	ask_help_hull_percent = other.ask_help_hull_percent;
+
 	std::swap(ct_info, other.ct_info);
 	ct_count = other.ct_count;
 
@@ -1355,6 +1314,7 @@ void ship_info::move(ship_info&& other)
 	min_engine_vol = other.min_engine_vol;
 	glide_start_snd = other.glide_start_snd;
 	glide_end_snd = other.glide_end_snd;
+	flyby_snd  = other.flyby_snd;
 
 	std::swap(ship_sounds, other.ship_sounds);
 
@@ -1485,26 +1445,8 @@ ship_info::ship_info()
 	slide_accel = 0.0f;
 	slide_decel = 0.0f;
 
-	warpin_anim[0] = '\0';
-	warpin_radius = 0.0f;
-	warpin_snd_start = gamesnd_id();
-	warpin_snd_end = gamesnd_id();
-	warpin_speed = 0.0f;
-	warpin_time = 0;
-	warpin_decel_exp = 1;
-	warpin_type = WT_DEFAULT;
-
-	warpout_anim[0] = '\0';
-	warpout_radius = 0.0f;
-	warpout_snd_start = gamesnd_id();
-	warpout_snd_end = gamesnd_id();
-	warpout_engage_time = -1;
-	warpout_speed = 0.0f;
-	warpout_time = 0;
-	warpout_accel_exp = 1;
-	warpout_type = WT_DEFAULT;
-
-	warpout_player_speed = 0.0f;
+	warpin_params_index = -1;
+	warpout_params_index = -1;
 
 	flags.reset();
 	ai_class = 0;
@@ -1529,6 +1471,9 @@ ship_info::ship_info()
 	death_roll_r_mult = 1.0f;
 	death_fx_r_mult = 1.0f;
 	death_roll_time_mult = 1.0f;
+	death_roll_xrotation_cap = 0.75f*DEATHROLL_ROTVEL_CAP;
+	death_roll_yrotation_cap = 0.75f*DEATHROLL_ROTVEL_CAP;
+	death_roll_zrotation_cap = 0.75f*DEATHROLL_ROTVEL_CAP;
 	death_roll_base_time = 3000;
 	death_fx_count = 6;
 	shockwave_count = 1;
@@ -1691,6 +1636,9 @@ ship_info::ship_info()
 	scan_range_normal = CARGO_REVEAL_MIN_DIST;
 	scan_range_capital = CAP_CARGO_REVEAL_MIN_DIST;
 
+	ask_help_shield_percent = DEFAULT_ASK_HELP_SHIELD_PERCENT;
+	ask_help_hull_percent = DEFAULT_ASK_HELP_HULL_PERCENT;
+
 	memset(&ct_info, 0, sizeof(trail_info) * MAX_SHIP_CONTRAILS);
 	ct_count = 0;
 
@@ -1760,6 +1708,7 @@ ship_info::ship_info()
 	min_engine_vol = -1.0f;
 	glide_start_snd = gamesnd_id();
 	glide_end_snd = gamesnd_id();
+	flyby_snd = gamesnd_id();
 
 	ship_sounds.clear();
 
@@ -2282,6 +2231,136 @@ static int parse_and_add_briefing_icon_info()
 }
 
 /**
+ * Determines the warp parameters for this ship class (or ship).
+ *
+ * If we are creating a ship, we want to inherit the parameters of the ship class, then override on a field-by-field basis.
+ */
+int parse_warp_params(const WarpParams *inherit_from, WarpDirection direction, const char *info_type_name, const char *info_name)
+{
+	Assert(info_type_name != nullptr);
+	Assert(info_name != nullptr);
+
+	// for parsing
+	const char *prefix = (direction == WarpDirection::WARP_IN) ? "$Warpin" : "$Warpout";
+	char str[NAME_LENGTH];
+
+	WarpParams params;
+	if (inherit_from != nullptr)
+		params = *inherit_from;
+	params.direction = direction;
+
+	sprintf(str, "%s type:", prefix);
+	if (optional_string(str))
+	{
+		char buf[NAME_LENGTH];
+
+		stuff_string(buf, F_NAME, NAME_LENGTH);
+		int j = warptype_match(buf);
+		if (j >= 0) {
+			params.warp_type = j;
+		}
+		else {
+			// try to match the warp type with one of our fireballs
+			j = fireball_info_lookup(buf);
+			if (j >= 0) {
+				params.warp_type = j | WT_DEFAULT_WITH_FIREBALL;
+			}
+			else {
+				Warning(LOCATION, "Invalid %s '%s' specified for %s '%s'", str, buf, info_type_name, info_name);
+				params.warp_type = WT_DEFAULT;
+			}
+		}
+	}
+
+	sprintf(str, "%s Start Sound:", prefix);
+	parse_game_sound(str, &params.snd_start);
+
+	sprintf(str, "%s End Sound:", prefix);
+	parse_game_sound(str, &params.snd_end);
+
+	if (direction == WarpDirection::WARP_OUT)
+	{
+		sprintf(str, "%s engage time:", prefix);
+		if (optional_string(str))
+		{
+			float t_time;
+			stuff_float(&t_time);
+			if (t_time > 0.0f)
+				params.warpout_engage_time = fl2i(t_time*1000.0f);
+			else
+				Warning(LOCATION, "%s specified as 0 or less on %s '%s'; value ignored", str, info_type_name, info_name);
+		}
+	}
+
+	sprintf(str, "%s speed:", prefix);
+	if (optional_string(str))
+	{
+		float speed;
+		stuff_float(&speed);
+		if (speed > 0.0f)
+			params.speed = speed;
+		else
+			Warning(LOCATION, "%s specified as 0 or less on %s '%s'; value ignored", str, info_type_name, info_name);
+	}
+
+	sprintf(str, "%s time:", prefix);
+	if (optional_string(str))
+	{
+		float t_time;
+		stuff_float(&t_time);
+		if (t_time > 0.0f)
+			params.time = fl2i(t_time*1000.0f);
+		else
+			Warning(LOCATION, "%s specified as 0 or less on %s '%s'; value ignored", str, info_type_name, info_name);
+	}
+
+	sprintf(str, "%s %s exp:", prefix, direction == WarpDirection::WARP_IN ? "decel" : "accel");
+	if (optional_string(str))
+	{
+		float accel_exp;
+		stuff_float(&accel_exp);
+		if (accel_exp >= 0.0f)
+			params.accel_exp = accel_exp;
+		else
+			Warning(LOCATION, "%s specified as less than 0 on %s '%s'; value ignored", str, info_type_name, info_name);
+	}
+
+	sprintf(str, "%s radius:", prefix);
+	if (optional_string(str))
+	{
+		float rad;
+		stuff_float(&rad);
+		if (rad > 0.0f)
+			params.radius = rad;
+		else
+			Warning(LOCATION, "%s specified as 0 or less on %s '%s'; value ignored", str, info_type_name, info_name);
+	}
+
+	sprintf(str, "%s animation:", prefix);
+	if (optional_string(str))
+	{
+		stuff_string(params.anim, F_NAME, MAX_FILENAME_LEN);
+	}
+
+	if (direction == WarpDirection::WARP_OUT)
+	{
+		sprintf(str, "$Player warpout speed:");
+		if (optional_string(str))
+		{
+			float speed;
+			stuff_float(&speed);
+			if (speed > 0.0f)
+				params.warpout_player_speed = speed;
+			else
+				Warning(LOCATION, "%s specified as 0 or less on %s '%s'; value ignored", str, info_type_name, info_name);
+		}
+	}
+
+	// get the index of these warp params, which may be a new index
+	return find_or_add_warp_params(params);
+}
+
+/**
  * Puts values into a ship_info.
  */
 static int parse_ship_values(ship_info* sip, const bool is_template, const bool first_time, const bool replace)
@@ -2384,7 +2463,6 @@ static int parse_ship_values(ship_info* sip, const bool is_template, const bool 
 	}
 
 	// Ship fadein effect, used when no ani is specified or ship_select_3d is active
-	sip->selection_effect = Default_ship_select_effect; //By default, use the FS2 effect
 	if(optional_string("$Selection Effect:")) {
 		char effect[NAME_LENGTH];
 		stuff_string(effect, F_NAME, NAME_LENGTH);
@@ -2939,142 +3017,11 @@ static int parse_ship_values(ship_info* sip, const bool is_template, const bool 
 		}
 	}
 
-	if(optional_string("$Warpin type:"))
-	{
-		stuff_string(buf, F_NAME, SHIP_MULTITEXT_LENGTH);
-		int j = warptype_match(buf);
-		if (j >= 0) {
-			sip->warpin_type = j;
-		} else {
-			// try to match the warp type with one of our fireballs
-			j = fireball_info_lookup(buf);
-			if (j >= 0) {
-				sip->warpin_type = j | WT_DEFAULT_WITH_FIREBALL;
-			} else {
-				Warning(LOCATION, "Invalid warpin type '%s' specified for %s '%s'", buf, info_type_name, sip->name);
-				sip->warpin_type = WT_DEFAULT;
-			}
-		}
-	}
-
-	parse_game_sound("$Warpin Start Sound:", &sip->warpin_snd_start);
-	parse_game_sound("$Warpin End Sound:", &sip->warpin_snd_end);
-
-	if(optional_string("$Warpin speed:"))
-	{
-		stuff_float(&sip->warpin_speed);
-	}
-
-	if(optional_string("$Warpin time:"))
-	{
-		float t_time;
-		stuff_float(&t_time);
-		sip->warpin_time = fl2i(t_time*1000.0f);
-		if(sip->warpin_time <= 0) {
-			Warning(LOCATION, "Warp-in time specified as 0 or less on %s '%s'; value ignored", info_type_name, sip->name);
-		}
-	}
-
-	if(optional_string("$Warpin decel exp:"))
-	{
-		stuff_float(&sip->warpin_decel_exp);
-		if (sip->warpin_decel_exp < 0.0f) {
-			Warning(LOCATION, "Warp-in deceleration exponent specified as less than 0 on %s '%s'; value ignored", info_type_name, sip->name);
-			sip->warpin_decel_exp = 1.0f;
-		}
-	}
-
-	if(optional_string("$Warpin radius:"))
-	{
-		stuff_float(&sip->warpin_radius);
-		if(sip->warpin_radius <= 0.0f) {
-			Warning(LOCATION, "Warp-in radius specified as 0 or less on %s '%s'; value ignored", info_type_name, sip->name);
-		}
-	}
-
-	if(optional_string("$Warpin animation:"))
-	{
-		stuff_string(sip->warpin_anim, F_NAME, MAX_FILENAME_LEN);
-	}
-
-	if(optional_string("$Warpout type:"))
-	{
-		stuff_string(buf, F_NAME, SHIP_MULTITEXT_LENGTH);
-		int j = warptype_match(buf);
-		if (j >= 0) {
-			sip->warpout_type = j;
-		} else {
-			// try to match the warp type with one of our fireballs
-			j = fireball_info_lookup(buf);
-			if (j >= 0) {
-				sip->warpout_type = j | WT_DEFAULT_WITH_FIREBALL;
-			} else {
-				Warning(LOCATION, "Invalid warpout type '%s' specified for %s '%s'", buf, info_type_name, sip->name);
-				sip->warpout_type = WT_DEFAULT;
-			}
-		}
-	}
-
-	parse_game_sound("$Warpout Start Sound:", &sip->warpout_snd_start);
-	parse_game_sound("$Warpout End Sound:", &sip->warpout_snd_end);
-
-	if(optional_string("$Warpout engage time:"))
-	{
-		float t_time;
-		stuff_float(&t_time);
-		if (t_time >= 0)
-			sip->warpout_engage_time = fl2i(t_time*1000.0f);
-		else
-			Warning(LOCATION, "Warp-out engage time specified as 0 or less on %s '%s'; value ignored", info_type_name, sip->name);
-	} else {
-		sip->warpout_engage_time = -1;
-	}
-
-	if(optional_string("$Warpout speed:"))
-	{
-		stuff_float(&sip->warpout_speed);
-	}
-
-	if(optional_string("$Warpout time:"))
-	{
-		float t_time;
-		stuff_float(&t_time);
-		sip->warpout_time = fl2i(t_time*1000.0f);
-		if(sip->warpout_time <= 0) {
-			Warning(LOCATION, "Warp-out time specified as 0 or less on %s '%s'; value ignored", info_type_name, sip->name);
-		}
-	}
-
-	if(optional_string("$Warpout accel exp:"))
-	{
-		stuff_float(&sip->warpout_accel_exp);
-		if (sip->warpout_accel_exp < 0.0f) {
-			Warning(LOCATION, "Warp-out acceleration exponent specified as less than 0 on %s '%s'; value ignored", info_type_name, sip->name);
-			sip->warpout_accel_exp = 1.0f;
-		}
-	}
-
-	if(optional_string("$Warpout radius:"))
-	{
-		stuff_float(&sip->warpout_radius);
-		if(sip->warpout_radius <= 0.0f) {
-			Warning(LOCATION, "Warp-out radius specified as 0 or less on %s '%s'; value ignored", info_type_name, sip->name);
-		}
-	}
-
-	if(optional_string("$Warpout animation:"))
-	{
-		stuff_string(sip->warpout_anim, F_NAME, MAX_FILENAME_LEN);
-	}
-
-
-	if(optional_string("$Player warpout speed:"))
-	{
-		stuff_float(&sip->warpout_player_speed);
-		if(sip->warpout_player_speed == 0.0f) {
-			Warning(LOCATION, "Player warp-out speed cannot be 0; value ignored.");
-		}
-	}
+	// get ship parameters for warpin and warpout
+	// Note: if the index is not -1, we must have already assigned warp parameters, probably because we are now
+	// parsing a TBM.  In that case, inherit from ourselves.
+	sip->warpin_params_index = parse_warp_params(sip->warpin_params_index >= 0 ? &Warp_params[sip->warpin_params_index] : nullptr, WarpDirection::WARP_IN, info_type_name, sip->name);
+	sip->warpout_params_index = parse_warp_params(sip->warpout_params_index >= 0 ? &Warp_params[sip->warpout_params_index] : nullptr, WarpDirection::WARP_OUT, info_type_name, sip->name);
 
 	// get ship explosion info
 	shockwave_create_info *sci = &sip->shockwave;
@@ -3139,6 +3086,24 @@ static int parse_ship_values(ship_info* sip, const bool is_template, const bool 
 		stuff_int(&sip->death_fx_count);
 		if (sip->death_fx_count < 0)
 			sip->death_fx_count = 0;
+	}
+
+	if(optional_string("$Death Roll X rotation Cap:")){
+		stuff_float(&sip->death_roll_xrotation_cap);
+		if (sip->death_roll_xrotation_cap < 0.0)
+			sip->death_roll_xrotation_cap = 0.0;
+	}
+
+	if(optional_string("$Death Roll Y rotation Cap:")){
+		stuff_float(&sip->death_roll_yrotation_cap);
+		if (sip->death_roll_yrotation_cap < 0.0)
+			sip->death_roll_yrotation_cap = 0.0;
+	}
+
+	if(optional_string("$Death Roll Z rotation Cap:")){
+		stuff_float(&sip->death_roll_zrotation_cap);
+		if (sip->death_roll_zrotation_cap < 0.0)
+			sip->death_roll_zrotation_cap = 0.0;
 	}
 
 	if(optional_string("$Ship Splitting Particles:"))
@@ -3610,6 +3575,28 @@ static int parse_ship_values(ship_info* sip, const bool is_template, const bool 
 	if(optional_string("$Scan range Capital:"))
 		stuff_float(&sip->scan_range_capital);
 
+	if (optional_string("$Ask Help Shield Percent:")) {
+		float help_shield_val;
+		stuff_float(&help_shield_val);
+		if (help_shield_val > 0.0f && help_shield_val <= 1.0f) {
+			sip->ask_help_shield_percent = help_shield_val;
+		} else {
+			error_display(0,"Ask Help Shield Percent for ship class %s is %f. This value is not within range of 0-1.0."
+			              "Assuming default value of %f.", sip->name, help_shield_val, DEFAULT_ASK_HELP_SHIELD_PERCENT);
+		}
+	}
+
+	if (optional_string("$Ask Help Hull Percent:")) {
+		float help_hull_val;
+		stuff_float(&help_hull_val);
+		if (help_hull_val > 0.0f && help_hull_val <= 1.0f) {
+			sip->ask_help_shield_percent = help_hull_val;
+		} else {
+			error_display(0,"Ask Help Hull Percent for ship class %s is %f. This value is not within range of 0-1.0."
+			              "Assuming default value of %f.", sip->name, help_hull_val, DEFAULT_ASK_HELP_HULL_PERCENT);
+		}
+	}
+
 	//Parse the engine sound
 	parse_game_sound("$EngineSnd:", &sip->engine_snd);
 
@@ -3621,6 +3608,9 @@ static int parse_ship_values(ship_info* sip, const bool is_template, const bool 
 
 	//Parse optional sound to be used for end of a glide
 	parse_game_sound("$GlideEndSnd:", &sip->glide_end_snd);
+
+	// Parse optional sound to be used for bfly-by sound
+	parse_game_sound("$Flyby Sound:", &sip->flyby_snd);
 
 	parse_ship_sounds(sip);
 	
@@ -5684,64 +5674,6 @@ vec3d get_submodel_offset(int model, int submodel){
 
 }
 
-static void ship_set_warp_effects(object *objp, ship_info *sip)
-{
-	ship *shipp = &Ships[objp->instance];
-	int warpin_type = sip->warpin_type;
-	int warpout_type = sip->warpout_type;
-
-	if (warpin_type & WT_DEFAULT_WITH_FIREBALL)
-		warpin_type = WT_DEFAULT;
-	if (warpout_type & WT_DEFAULT_WITH_FIREBALL)
-		warpout_type = WT_DEFAULT;
-
-	if (shipp->warpin_effect != nullptr)
-		delete shipp->warpin_effect;
-
-	switch (warpin_type)
-	{
-		case WT_DEFAULT:
-		case WT_KNOSSOS:
-		case WT_DEFAULT_THEN_KNOSSOS:
-			shipp->warpin_effect = new WE_Default(objp, WD_WARP_IN);
-			break;
-		case WT_IN_PLACE_ANIM:
-			shipp->warpin_effect = new WE_BSG(objp, WD_WARP_IN);
-			break;
-		case WT_SWEEPER:
-			shipp->warpin_effect = new WE_Homeworld(objp, WD_WARP_IN);
-			break;
-		case WT_HYPERSPACE:
-			shipp->warpin_effect = new WE_Hyperspace(objp, WD_WARP_IN);
-			break;
-		default:
-			shipp->warpin_effect = new WarpEffect();
-	}
-
-	if (shipp->warpout_effect != nullptr)
-		delete shipp->warpout_effect;
-
-	switch (warpout_type)
-	{
-		case WT_DEFAULT:
-		case WT_KNOSSOS:
-		case WT_DEFAULT_THEN_KNOSSOS:
-			shipp->warpout_effect = new WE_Default(objp, WD_WARP_OUT);
-			break;
-		case WT_IN_PLACE_ANIM:
-			shipp->warpout_effect = new WE_BSG(objp, WD_WARP_OUT);
-			break;
-		case WT_SWEEPER:
-			shipp->warpout_effect = new WE_Homeworld(objp, WD_WARP_OUT);
-			break;
-		case WT_HYPERSPACE:
-			shipp->warpout_effect = new WE_Hyperspace(objp, WD_WARP_OUT);
-			break;
-		default:
-			shipp->warpout_effect = new WarpEffect();
-	}
-}
-
 // Reset all ship values to empty/unused.
 void ship::clear()
 {
@@ -5779,12 +5711,15 @@ void ship::clear()
 	really_final_death_time = timestamp(-1);
 	deathroll_rotvel = vmd_zero_vector;
 
-	if (warpin_effect != NULL)
+	if (warpin_effect != nullptr)
 		delete warpin_effect;
-	if (warpout_effect != NULL)
+	if (warpout_effect != nullptr)
 		delete warpout_effect;
-	warpin_effect = NULL;
-	warpout_effect = NULL;
+	warpin_effect = nullptr;
+	warpout_effect = nullptr;
+
+	warpin_params_index = -1;
+	warpout_params_index = -1;
 
 	next_fireball = timestamp(-1);
 	next_hit_spark = timestamp(-1);
@@ -6150,10 +6085,6 @@ static void ship_set(int ship_index, int objnum, int ship_type)
 	ai_object_init(objp, shipp->ai_index);
 	physics_ship_init(objp);
 
-	if ( !Fred_running ) {
-		ship_set_warp_effects(objp, sip);
-	}
-
 	if (Fred_running){
 		shipp->ship_max_hull_strength = 100.0f;
 	} else {
@@ -6261,6 +6192,9 @@ static void ship_set(int ship_index, int objnum, int ship_type)
 	shipp->shield_armor_type_idx = sip->shield_armor_type_idx;
 	shipp->collision_damage_type_idx =  sip->collision_damage_type_idx;
 	shipp->debris_damage_type_idx = sip->debris_damage_type_idx;
+
+	shipp->warpin_params_index = sip->warpin_params_index;
+	shipp->warpout_params_index = sip->warpout_params_index;
 
 	if(pm != NULL && pm->n_view_positions > 0)
 		ship_set_eye(objp, 0);
@@ -6853,7 +6787,7 @@ static void ship_find_warping_ship_helper(object *objp, dock_function_info *info
 		return;
 
 	// am I arriving or departing by warp?
-	if (Ships[objp->instance].is_arriving() || Ships[objp->instance].flags[Ship_Flags::Depart_warp])
+	if (Ships[objp->instance].is_arriving(ship::warpstage::BOTH, true) || Ships[objp->instance].flags[Ship_Flags::Depart_warp])
 	{
 #ifndef NDEBUG
 		// in debug builds, make sure only one of the docked objects has these flags set
@@ -6924,9 +6858,12 @@ void ship_render_cockpit(object *objp)
 
 void ship_render_show_ship_cockpit(object *objp)
 {
+	if (objp->type != OBJ_SHIP || objp->instance < 0)
+		return;
+
 	vec3d cockpit_eye_pos;
 	matrix dummy;
-	ship_get_eye(&cockpit_eye_pos, &dummy, objp, true, true); //Get cockpit eye position
+	ship_get_eye(&cockpit_eye_pos, &dummy, objp, true, false); //Get cockpit eye position
 	
 	gr_end_view_matrix();
 	gr_end_proj_matrix();
@@ -6940,7 +6877,7 @@ void ship_render_show_ship_cockpit(object *objp)
 	render_info.set_object_number(OBJ_INDEX(objp));
 	render_info.set_detail_level_lock(0);
 
-	model_render_immediate(&render_info, Ship_info[Ships[objp->instance].ship_info_index].model_num, &objp->orient, &vmd_zero_vector); // Render ship model with fixed detail level 0 so its not switching LOD when moving away from origin
+	model_render_immediate(&render_info, Ship_info[Ships[objp->instance].ship_info_index].model_num, &objp->orient, &objp->pos); // Render ship model with fixed detail level 0 so its not switching LOD when moving away from origin
 	Glowpoint_override = false;
 
 	gr_end_view_matrix();
@@ -7862,7 +7799,7 @@ static void ship_dying_frame(object *objp, int ship_num)
 				if(fireball_type < 0) {
 					fireball_type = FIREBALL_EXPLOSION_LARGE1 + rand()%FIREBALL_NUM_LARGE_EXPLOSIONS;
 				}
-				fireball_create( &outpnt, fireball_type, FIREBALL_LARGE_EXPLOSION, OBJ_INDEX(objp), rad, 0, &objp->phys_info.vel );
+				fireball_create( &outpnt, fireball_type, FIREBALL_LARGE_EXPLOSION, OBJ_INDEX(objp), rad, false, &objp->phys_info.vel );
 				// start the next fireball up in the next 50 - 200 ms (2-3 per frame)
 				int min_time = 333;
 				int max_time = 500;
@@ -7897,7 +7834,7 @@ static void ship_dying_frame(object *objp, int ship_num)
 				if(fireball_type < 0) {
 					fireball_type = FIREBALL_EXPLOSION_LARGE1 + rand()%FIREBALL_NUM_LARGE_EXPLOSIONS;
 				}
-				fireball_create( &outpnt, fireball_type, FIREBALL_LARGE_EXPLOSION, OBJ_INDEX(objp), rad, 0, &objp->phys_info.vel );
+				fireball_create( &outpnt, fireball_type, FIREBALL_LARGE_EXPLOSION, OBJ_INDEX(objp), rad, false, &objp->phys_info.vel );
 				// start the next fireball up in the next 50 - 200 ms (2-3 per frame)
 				shipp->next_fireball = timestamp_rand(333,500);
 
@@ -7972,7 +7909,7 @@ static void ship_dying_frame(object *objp, int ship_num)
 				if(fireball_type < 0) {
 					fireball_type = FIREBALL_EXPLOSION_MEDIUM;
 				}
-				fireball_create( &outpnt, fireball_type, FIREBALL_MEDIUM_EXPLOSION, OBJ_INDEX(objp), rad, 0, &objp->phys_info.vel );
+				fireball_create( &outpnt, fireball_type, FIREBALL_MEDIUM_EXPLOSION, OBJ_INDEX(objp), rad, false, &objp->phys_info.vel );
 			}
 		}
 
@@ -8077,7 +8014,7 @@ static void ship_dying_frame(object *objp, int ship_num)
 				if(fireball_type < 0) {
 					fireball_type = default_fireball_type;
 				}
-				fireball_objnum = fireball_create( &objp->pos, fireball_type, FIREBALL_LARGE_EXPLOSION, OBJ_INDEX(objp), big_rad, 0, &objp->phys_info.vel );
+				fireball_objnum = fireball_create( &objp->pos, fireball_type, FIREBALL_LARGE_EXPLOSION, OBJ_INDEX(objp), big_rad, false, &objp->phys_info.vel );
 				if ( fireball_objnum >= 0 )	{
 					explosion_life = fireball_lifeleft(&Objects[fireball_objnum]);
 				} else {
@@ -8955,7 +8892,7 @@ void ship_process_post(object * obj, float frametime)
 		}
 	}
 	
-	if ( shipp->is_arriving() && Ai_info[shipp->ai_index].mode != AIM_BAY_EMERGE )	{
+	if ( shipp->is_arriving(ship::warpstage::BOTH, true) && Ai_info[shipp->ai_index].mode != AIM_BAY_EMERGE )	{
 		// JAS -- if the ship is warping in, just move it forward at a speed
 		// fast enough to move 2x its radius in SHIP_WARP_TIME seconds.
 		shipfx_warpin_frame( obj, frametime );
@@ -8969,7 +8906,7 @@ void ship_process_post(object * obj, float frametime)
 	ship_radar_process(obj, shipp, sip);
 
 	if ( (!(shipp->is_arriving()) || (Ai_info[shipp->ai_index].mode == AIM_BAY_EMERGE)
-		|| ((sip->warpin_type == WT_IN_PLACE_ANIM) && (shipp->flags[Ship_Flags::Arriving_stage_2])) )
+		|| ((Warp_params[shipp->warpin_params_index].warp_type == WT_IN_PLACE_ANIM) && (shipp->flags[Ship_Flags::Arriving_stage_2])) )
 		&&	!(shipp->flags[Ship_Flags::Depart_warp]))
 	{
 		//	Do AI.
@@ -9510,13 +9447,9 @@ int ship_create(matrix* orient, vec3d* pos, int ship_type, const char* ship_name
 		sip->flags.set(Ship::Info_Flags::Path_fixup);
 	}
 
-	// Add this ship to Ship_obj_list
-	shipp->ship_list_index = ship_obj_list_add(objnum);
-
-	// Set time when ship is created
-	shipp->create_time = timer_get_milliseconds();
-
-	ship_make_create_time_unique(shipp);
+	// this used to be done in parse_create_object_sub
+	if (!Fred_running)
+		ship_assign_sound(shipp);
 
 	// first try at ABtrails -Bobboau
 	ship_init_afterburners(shipp);
@@ -9527,6 +9460,14 @@ int ship_create(matrix* orient, vec3d* pos, int ship_type, const char* ship_name
 	model_anim_set_initial_states(shipp);
 
 	shipp->model_instance_num = model_create_instance(true, sip->model_num);
+
+	// Add this ship to Ship_obj_list
+	shipp->ship_list_index = ship_obj_list_add(objnum);
+
+	// Set time when ship is created
+	shipp->create_time = timer_get_milliseconds();
+
+	ship_make_create_time_unique(shipp);
 
 	shipp->time_created = Missiontime;
 
@@ -9878,9 +9819,17 @@ void change_ship_type(int n, int ship_type, int by_sexp)
 	ship_model_change(n, ship_type);
 	sp->ship_info_index = ship_type;
 
+	// if we have the same warp parameters as the ship class, we will need to update them to point to the new class
+	if (sp->warpin_params_index == sip_orig->warpin_params_index) {
+		sp->warpin_params_index = sip->warpin_params_index;
+	}
+	if (sp->warpout_params_index == sip_orig->warpout_params_index) {
+		sp->warpout_params_index = sip->warpout_params_index;
+	}
+
 	if (!Fred_running) {
 		//WMC - set warp effects
-		ship_set_warp_effects(objp, sip);
+		ship_set_warp_effects(objp);
 	}
 
 	// set the correct hull strength
@@ -10199,7 +10148,8 @@ void change_ship_type(int n, int ship_type, int by_sexp)
 	model_anim_set_initial_states(sp);
 
 	//Reassign sound stuff
-	ship_assign_sound(sp);
+	if (!Fred_running)
+		ship_assign_sound(sp);
 	
 	// create new model instance data
 	sp->model_instance_num = model_create_instance(true, sip->model_num);
@@ -11455,7 +11405,6 @@ int ship_fire_primary(object * obj, int stream_weapons, int force)
 
 		Script_system.SetHookObjects(2, "User", objp, "Target", target);
 		Script_system.RunCondition(CHA_ONWPFIRED, objp, 1);
-
 		Script_system.RunCondition(CHA_PRIMARYFIRE, objp);
 		Script_system.RemHookVars(2, "User", "Target");
 	}
@@ -12120,7 +12069,8 @@ done_secondary:
 		else
 			target = NULL;
 		if (objp == Player_obj && Player_ai->target_objnum != -1)
-			target = &Objects[Player_ai->target_objnum]; 
+			target = &Objects[Player_ai->target_objnum];
+
 		Script_system.SetHookObjects(2, "User", objp, "Target", target);
 		Script_system.RunCondition(CHA_ONWPFIRED, objp);
 		Script_system.RunCondition(CHA_SECONDARYFIRE, objp);
@@ -12379,12 +12329,13 @@ int ship_select_next_primary(object *objp, int direction)
 		else
 			target = NULL;
 		if (objp == Player_obj && Player_ai->target_objnum != -1)
-			target = &Objects[Player_ai->target_objnum]; 
+			target = &Objects[Player_ai->target_objnum];
+
 		Script_system.SetHookObjects(2, "User", objp, "Target", target);
 		Script_system.RunCondition(CHA_ONWPSELECTED, objp);
-		Script_system.SetHookObjects(2, "User", objp, "Target", target);
 		Script_system.RunCondition(CHA_ONWPDESELECTED, objp);
 		Script_system.RemHookVars(2, "User", "Target");
+
 		return 1;
 	}
 
@@ -12473,12 +12424,13 @@ int ship_select_next_secondary(object *objp)
 			else
 				target = NULL;
 			if (objp == Player_obj && Player_ai->target_objnum != -1)
-				target = &Objects[Player_ai->target_objnum]; 
+				target = &Objects[Player_ai->target_objnum];
+
 			Script_system.SetHookObjects(2, "User", objp, "Target", target);
 			Script_system.RunCondition(CHA_ONWPSELECTED, objp);
-			Script_system.SetHookObjects(2, "User", objp, "Target", target);
 			Script_system.RunCondition(CHA_ONWPDESELECTED, objp);
 			Script_system.RemHookVars(2, "User", "Target");
+
 			return 1;
 		}
 	} // end if
@@ -13371,29 +13323,27 @@ float ship_get_subsystem_strength( ship *shipp, int type )
  */
 void ship_set_subsystem_strength( ship *shipp, int type, float strength )
 {
-	float total_current_hits, diff;
 	ship_subsys *ssp;
 
 	Assert ( (type >= 0) && (type < SUBSYSTEM_MAX) );
-	if ( shipp->subsys_info[type].aggregate_max_hits <= 0.0f )
-		return;
+	CLAMP(strength, 0.0f, 1.0f);
 
-	total_current_hits = 0.0f;
 	ssp = GET_FIRST(&shipp->subsys_list);
 	while ( ssp != END_OF_LIST( &shipp->subsys_list ) ) {
 
 		if ( (ssp->system_info->type == type) && !(ssp->flags[Ship::Subsystem_Flags::No_aggregate]) ) {
 			ssp->current_hits = strength * ssp->max_hits;
-			total_current_hits += ssp->current_hits;
+
+			// maybe blow up subsys
+			if (ssp->current_hits <= 0) {
+				do_subobj_destroyed_stuff(shipp, ssp, nullptr);
+			}
 		}
 		ssp = GET_NEXT( ssp );
 	}
 
-	// update the objects integrity, needed since we've bashed the strength of a subsysem
-	diff = total_current_hits - shipp->subsys_info[type].aggregate_current_hits;
-	Objects[shipp->objnum].hull_strength += diff;
-	// fix up the shipp->subsys_info[type] aggregate_current_hits value
-	shipp->subsys_info[type].aggregate_current_hits = total_current_hits;
+	// fix up the overall ship subsys status
+	ship_recalc_subsys_strength(shipp);
 }
 
 
@@ -15489,11 +15439,6 @@ void ship_maybe_praise_self(ship *deader_sp, ship *killer_sp)
 	Player->praise_self_count++;			
 }
 
-#define ASK_HELP_SHIELD_PERCENT			0.1		// percent shields at which ship will ask for help
-#define ASK_HELP_HULL_PERCENT				0.3		// percent hull at which ship will ask for help
-#define AWACS_HELP_HULL_HI					0.75		// percent hull at which ship will ask for help
-#define AWACS_HELP_HULL_LOW				0.25		// percent hull at which ship will ask for help
-
 // -----------------------------------------------------------------------------
 static void awacs_maybe_ask_for_help(ship *sp, int multi_team_filter)
 {
@@ -15532,6 +15477,7 @@ void ship_maybe_ask_for_help(ship *sp)
 {
 	object *objp;
 	int multi_team_filter = -1;
+	ship_info* sip = &Ship_info[sp->ship_info_index];
 
 	// First check if the player has reached the maximum number of ask_help's for a mission
 	if ((Builtin_messages[MESSAGE_HELP].max_count > -1) && (Player->ask_help_count >= Builtin_messages[MESSAGE_HELP].max_count))
@@ -15567,14 +15513,14 @@ void ship_maybe_ask_for_help(ship *sp)
 		return;
 
 	// first check if hull is at a critical level
-	if (objp->hull_strength < ASK_HELP_HULL_PERCENT * sp->ship_max_hull_strength)
+	if (objp->hull_strength < sip->ask_help_hull_percent * sp->ship_max_hull_strength)
 		goto play_ask_help;
 
 	// check if shields are near critical level
 	if (objp->flags[Object::Object_Flags::No_shields])
 		return;	// no shields on ship, no don't check shield levels
 
-	if (shield_get_strength(objp) > (ASK_HELP_SHIELD_PERCENT * shield_get_max_strength(objp)))
+	if (shield_get_strength(objp) > (sip->ask_help_shield_percent * shield_get_max_strength(objp)))
 		return;
 
 play_ask_help:
@@ -17170,24 +17116,26 @@ float ship_get_warpout_speed(object *objp, ship_info *sip, float half_length, fl
 		}
 	}
 
+	WarpParams *params = &Warp_params[Ships[objp->instance].warpout_params_index];
+
 	//WMC - Any speed is good for in place anims (aka BSG FTL effect)
-	if(sip->warpout_type == WT_IN_PLACE_ANIM && sip->warpout_speed <= 0.0f)
+	if (params->warp_type == WT_IN_PLACE_ANIM && params->speed <= 0.0f)
 	{
 		return objp->phys_info.speed;
 	}
-	else if(sip->warpout_type == WT_SWEEPER || sip->warpout_type == WT_IN_PLACE_ANIM)
+	else if (params->warp_type == WT_SWEEPER || params->warp_type == WT_IN_PLACE_ANIM)
 	{
-		return sip->warpout_speed;
+		return params->speed;
 	}
-	else if(sip->warpout_type == WT_HYPERSPACE)
+	else if (params->warp_type == WT_HYPERSPACE)
 	{
-		if (objp->phys_info.speed > sip->warpout_speed)
+		if (objp->phys_info.speed > params->speed)
 			return objp->phys_info.speed;
 		else
-			return sip->warpout_speed;
+			return params->speed;
 	}
 
-	return warping_dist / shipfx_calculate_warp_time(objp, sip, WD_WARP_OUT, half_length, warping_dist);
+	return warping_dist / shipfx_calculate_warp_time(objp, WarpDirection::WARP_OUT, half_length, warping_dist);
 }
 
 /**
@@ -18894,7 +18842,7 @@ void ship_render(object* obj, model_draw_list* scene)
 		// This is a hack to make ships using the hyperspace warpin type to
 		// render even in stage 1, which is used for collision detection
 		// purposes -zookeeper
-		if ( Ship_info[warp_shipp->ship_info_index].warpin_type == WT_HYPERSPACE ) {
+		if ( Warp_params[warp_shipp->warpin_params_index].warp_type == WT_HYPERSPACE ) {
 			warp_shipp = NULL;
 			is_first_stage_arrival = false;
 		}
@@ -18905,7 +18853,7 @@ void ship_render(object* obj, model_draw_list* scene)
 		//WMC - based on Bobb's secondary thruster stuff
 		//which was in turn based on the beam code.
 		//I'm gonna need some serious acid to neutralize this base.
-		if(shipp->is_arriving()) {
+		if(shipp->is_arriving(ship::warpstage::BOTH, true)) {
 			shipp->warpin_effect->warpShipRender();
 		} else if(shipp->flags[Ship_Flags::Depart_warp]) {
 			shipp->warpout_effect->warpShipRender();
@@ -18941,7 +18889,7 @@ void ship_render(object* obj, model_draw_list* scene)
 		//WMC - based on Bobb's secondary thruster stuff
 		//which was in turn based on the beam code.
 		//I'm gonna need some serious acid to neutralize this base.
-		if(shipp->is_arriving()) {
+		if(shipp->is_arriving(ship::warpstage::BOTH, true)) {
 			shipp->warpin_effect->warpShipRender();
 		} else if(shipp->flags[Ship_Flags::Depart_warp]) {
 			shipp->warpout_effect->warpShipRender();
@@ -18967,7 +18915,7 @@ void ship_render(object* obj, model_draw_list* scene)
 	// Warp_shipp points to the ship that is going through a
 	// warp... either this ship or the ship it is docked with.
 	if ( warp_shipp != NULL ) {
-		if ( warp_shipp->is_arriving() ) {
+		if ( warp_shipp->is_arriving(ship::warpstage::BOTH, true) ) {
 			warp_shipp->warpin_effect->warpShipClip(&render_info);
 		} else if ( warp_shipp->flags[Ship_Flags::Depart_warp] ) {
 			warp_shipp->warpout_effect->warpShipClip(&render_info);
@@ -19064,7 +19012,7 @@ void ship_render(object* obj, model_draw_list* scene)
 	//WMC - based on Bobb's secondary thruster stuff
 	//which was in turn based on the beam code.
 	//I'm gonna need some serious acid to neutralize this base.
-	if(shipp->is_arriving()) {
+	if(shipp->is_arriving(ship::warpstage::BOTH, true)) {
 		shipp->warpin_effect->warpShipRender();
 	} else if(shipp->flags[Ship_Flags::Depart_warp]) {
 		shipp->warpout_effect->warpShipRender();
@@ -19078,6 +19026,7 @@ void set_default_ignore_list() {
 	Ignore_List.set(Ship::Ship_Flags::Depart_warp);
 	Ignore_List.set(Ship::Ship_Flags::Dying);
 	Ignore_List.set(Ship::Ship_Flags::Arriving_stage_1);
+	Ignore_List.set(Ship::Ship_Flags::Arriving_stage_1_dock_follower);
 	Ignore_List.set(Ship::Ship_Flags::Hidden_from_sensors);
 }
 
@@ -19104,4 +19053,49 @@ ship_subsys* ship_get_subsys_for_submodel(ship* shipp, int submodel)
 	}
 
 	return nullptr;
+}
+
+/**
+ * Is the requested type of ship arriving in the requested stage?
+ *
+ * Dock leaders (plus single ships) & dock followers need to be handled
+ * separately such that leaders+singles handle the warp process, but
+ * followers need to behave as though they are warping with respect to
+ * HUD targeting, drawing thrusters, radar, AI targeting, etc
+ *
+ * @param stage Check one of stage1, stage2 or both
+ * @param dock_leader_or_single check dock-leaders+singles, or dock-followers?
+ *
+ * @return is the ship arriving, bool
+ */
+bool ship::is_arriving(ship::warpstage stage, bool dock_leader_or_single)
+{
+	if (stage == ship::warpstage::BOTH) {
+		if (!dock_leader_or_single) {
+			return flags[Ship::Ship_Flags::Arriving_stage_1, Ship::Ship_Flags::Arriving_stage_1_dock_follower, Ship::Ship_Flags::Arriving_stage_2, Ship::Ship_Flags::Arriving_stage_2_dock_follower];
+		}
+		else {
+			return flags[Ship::Ship_Flags::Arriving_stage_1, Ship::Ship_Flags::Arriving_stage_2];
+		}
+	}
+	else if (stage == ship::warpstage::STAGE1) {
+		if (!dock_leader_or_single) {
+			return flags[Ship::Ship_Flags::Arriving_stage_1, Ship::Ship_Flags::Arriving_stage_1_dock_follower];
+		}
+		else {
+			return flags[Ship::Ship_Flags::Arriving_stage_1];
+		}
+	}
+	if (stage == ship::warpstage::STAGE2) {
+		if (!dock_leader_or_single) {
+			return flags[Ship::Ship_Flags::Arriving_stage_2, Ship::Ship_Flags::Arriving_stage_2_dock_follower];
+		}
+		else {
+			return flags[Ship::Ship_Flags::Arriving_stage_2];
+		}
+	}
+
+	// should never reach here
+	Assertion(false, "ship::is_arriving didn't handle all possible states; get a coder!");
+	return false;
 }

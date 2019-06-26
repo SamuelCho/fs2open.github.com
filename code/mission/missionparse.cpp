@@ -374,7 +374,7 @@ extern fix game_get_overall_frametime();	// for texture animation
 
 // local prototypes
 void parse_player_info2(mission *pm);
-void post_process_mission();
+bool post_process_mission();
 int allocate_subsys_status();
 void parse_common_object_data(p_object	*objp);
 void parse_asteroid_fields(mission *pm);
@@ -1905,7 +1905,6 @@ int parse_create_object_sub(p_object *p_objp)
 
 	shipp->group = p_objp->group;
 	shipp->team = p_objp->team;
-	strcpy_s(shipp->ship_name, p_objp->name);
 	shipp->display_name = p_objp->display_name;
 	shipp->escort_priority = p_objp->escort_priority;
 	shipp->use_special_explosion = p_objp->use_special_explosion;
@@ -1967,23 +1966,12 @@ int parse_create_object_sub(p_object *p_objp)
 		}
 	}
 
-	if (!Fred_running)
-	{
-		ship_assign_sound(&Ships[shipnum]);
-	}
-
-	aip = &(Ai_info[shipp->ai_index]);
-	aip->behavior = p_objp->behavior;
-	aip->mode = aip->behavior;
-
-	// make sure aim_safety has its submode defined
-	if (aip->mode == AIM_SAFETY) {
-		aip->submode = AISS_1;
-	}
-
 	// alternate stuff
 	shipp->alt_type_index = p_objp->alt_type_index;
 	shipp->callsign_index = p_objp->callsign_index;
+
+	// AI stuff.  Note a lot of the AI was already initialized in ship_create.
+	aip = &(Ai_info[shipp->ai_index]);
 
 	aip->ai_class = p_objp->ai_class;
 	shipp->weapons.ai_class = p_objp->ai_class;  // Fred uses this instead of above.
@@ -1991,13 +1979,12 @@ int parse_create_object_sub(p_object *p_objp)
 	if (The_mission.ai_profile->flags[AI::Profile_Flags::Fix_ai_class_bug])
 		ship_set_new_ai_class(shipnum, p_objp->ai_class);
 
-	// must reset the number of ai goals when the object is created
-	for (i = 0; i < MAX_AI_GOALS; i++)
-	{
-		aip->goals[i].ai_mode = AI_GOAL_NONE;
-		aip->goals[i].signature = -1;
-		aip->goals[i].priority = -1;
-		aip->goals[i].flags.reset();
+	aip->behavior = p_objp->behavior;
+	aip->mode = aip->behavior;
+
+	// make sure aim_safety has its submode defined
+	if (aip->mode == AIM_SAFETY) {
+		aip->submode = AISS_1;
 	}
 
 	shipp->cargo1 = p_objp->cargo1;
@@ -2020,6 +2007,16 @@ int parse_create_object_sub(p_object *p_objp)
 	shipp->persona_index = p_objp->persona_index;
 	if (Ship_info[shipp->ship_info_index].uses_team_colors && !p_objp->team_color_setting.empty())
 		shipp->team_name = p_objp->team_color_setting;
+
+	if (p_objp->warpin_params_index >= 0)
+		shipp->warpin_params_index = p_objp->warpin_params_index;
+	if (p_objp->warpout_params_index >= 0)
+		shipp->warpout_params_index = p_objp->warpout_params_index;
+
+	// now that we have our correct warpout params, set the warp effects
+	if (!Fred_running) {
+		ship_set_warp_effects(&Objects[objnum]);
+	}
 
 	// reset texture animations
 	shipp->base_texture_anim_frametime = game_get_overall_frametime();
@@ -2248,11 +2245,13 @@ int parse_create_object_sub(p_object *p_objp)
 				}
 			}
 
+			// skip the rest because the Pilot subsystem is special
 			continue;
 		}
 
-		ptr = GET_FIRST(&shipp->subsys_list);
-		while (ptr != END_OF_LIST(&shipp->subsys_list))
+		// find the subsystem in the ship list that corresponds to the parsed subsystem
+		ptr = ship_get_subsys(shipp, sssp->name);
+		if (ptr != nullptr)
 		{
 			// check the mission flag to possibly free all beam weapons - Goober5000, taken from SEXP.CPP
 			if (The_mission.flags[Mission::Mission_Flags::Beam_free_all_by_default])
@@ -2274,81 +2273,80 @@ int parse_create_object_sub(p_object *p_objp)
 				}
 			}
 
-			if (!subsystem_stricmp(ptr->system_info->subobj_name, sssp->name))
+			if (Fred_running)
 			{
-				if (Fred_running)
+				ptr->current_hits = sssp->percent;
+				ptr->max_hits = 100.0f;
+			}
+			else
+			{
+				ptr->max_hits = ptr->system_info->max_subsys_strength * (shipp->ship_max_hull_strength / sip->max_hull_strength);
+
+				float new_hits = ptr->max_hits * (100.0f - sssp->percent) / 100.f;
+				if (!(ptr->flags[Ship::Subsystem_Flags::No_aggregate])) {
+					shipp->subsys_info[ptr->system_info->type].aggregate_current_hits -= (ptr->max_hits - new_hits);
+				}
+
+				if ((100.0f - sssp->percent) < 0.5)
 				{
-					ptr->current_hits = sssp->percent;
-					ptr->max_hits = 100.0f;
+					ptr->current_hits = 0.0f;
+					ptr->submodel_info_1.blown_off = 1;
 				}
 				else
 				{
-					ptr->max_hits = ptr->system_info->max_subsys_strength * (shipp->ship_max_hull_strength / sip->max_hull_strength);
-
-					float new_hits = ptr->max_hits * (100.0f - sssp->percent) / 100.f;
-					if (!(ptr->flags[Ship::Subsystem_Flags::No_aggregate])) {
-						shipp->subsys_info[ptr->system_info->type].aggregate_current_hits -= (ptr->max_hits - new_hits);
-					}
-
-					if ((100.0f - sssp->percent) < 0.5)
-					{
-						ptr->current_hits = 0.0f;
-						ptr->submodel_info_1.blown_off = 1;
-					}
-					else
-					{
-						ptr->current_hits = new_hits;
-					}
+					ptr->current_hits = new_hits;
 				}
-
-				if (sssp->primary_banks[0] != SUBSYS_STATUS_NO_CHANGE)
-					for (j=0; j<MAX_SHIP_PRIMARY_BANKS; j++)
-						ptr->weapons.primary_bank_weapons[j] = sssp->primary_banks[j];
-
-				if (sssp->secondary_banks[0] != SUBSYS_STATUS_NO_CHANGE)
-					for (j=0; j<MAX_SHIP_SECONDARY_BANKS; j++)
-						ptr->weapons.secondary_bank_weapons[j] = sssp->secondary_banks[j];
-
-				// Goober5000
-				for (j = 0; j < ptr->weapons.num_primary_banks; j++)
-				{
-					if (Fred_running) {
-						ptr->weapons.primary_bank_ammo[j] = sssp->primary_ammo[j];
-					} else if (ptr->weapons.primary_bank_weapons[j] >= 0 && Weapon_info[ptr->weapons.primary_bank_weapons[j]].wi_flags[Weapon::Info_Flags::Ballistic]) {
-						Assertion(Weapon_info[ptr->weapons.primary_bank_weapons[j]].cargo_size > 0.0f,
-								"Primary weapon cargo size <= 0. Ship (%s) Subsystem (%s) Bank (%i) Weapon (%s)",
-								shipp->ship_name, sssp->name, j, Weapon_info[ptr->weapons.primary_bank_weapons[j]].name);
-
-						int capacity = (int)std::lround(sssp->primary_ammo[j]/100.0f * ptr->weapons.primary_bank_capacity[j]);
-						ptr->weapons.primary_bank_ammo[j] = (int)std::lround(capacity / Weapon_info[ptr->weapons.primary_bank_weapons[j]].cargo_size);
-					}
-				}
-
-				for (j = 0; j < ptr->weapons.num_secondary_banks; j++)
-				{
-					if (Fred_running) {
-						ptr->weapons.secondary_bank_ammo[j] = sssp->secondary_ammo[j];
-					} else if (ptr->weapons.secondary_bank_weapons[j] >= 0) {
-						Assertion(Weapon_info[ptr->weapons.secondary_bank_weapons[j]].cargo_size > 0.0f,
-								"Secondary weapon cargo size <= 0. Ship (%s) Subsystem (%s) Bank (%i) Weapon (%s)",
-								shipp->ship_name, sssp->name, j, Weapon_info[ptr->weapons.secondary_bank_weapons[j]].name);
-
-						int capacity = (int)std::lround(sssp->secondary_ammo[j]/100.0f * ptr->weapons.secondary_bank_capacity[j]);
-						ptr->weapons.secondary_bank_ammo[j] = (int)std::lround(capacity / Weapon_info[ptr->weapons.secondary_bank_weapons[j]].cargo_size);
-					}
-				}
-
-				ptr->subsys_cargo_name = sssp->subsys_cargo_name;
-
-				if (sssp->ai_class != SUBSYS_STATUS_NO_CHANGE)
-					ptr->weapons.ai_class = sssp->ai_class;
-
-				ptr->turret_best_weapon = -1;
-				ptr->turret_animation_position = MA_POS_NOT_SET;	// model animation position is not set
-				ptr->turret_animation_done_time = 0;
 			}
 
-			ptr = GET_NEXT(ptr);
+			if (sssp->primary_banks[0] != SUBSYS_STATUS_NO_CHANGE)
+				for (j=0; j<MAX_SHIP_PRIMARY_BANKS; j++)
+					ptr->weapons.primary_bank_weapons[j] = sssp->primary_banks[j];
+
+			if (sssp->secondary_banks[0] != SUBSYS_STATUS_NO_CHANGE)
+				for (j=0; j<MAX_SHIP_SECONDARY_BANKS; j++)
+					ptr->weapons.secondary_bank_weapons[j] = sssp->secondary_banks[j];
+
+			// Goober5000
+			for (j = 0; j < ptr->weapons.num_primary_banks; j++)
+			{
+				if (Fred_running) {
+					ptr->weapons.primary_bank_ammo[j] = sssp->primary_ammo[j];
+				} else if (ptr->weapons.primary_bank_weapons[j] >= 0 && Weapon_info[ptr->weapons.primary_bank_weapons[j]].wi_flags[Weapon::Info_Flags::Ballistic]) {
+					Assertion(Weapon_info[ptr->weapons.primary_bank_weapons[j]].cargo_size > 0.0f,
+							"Primary weapon cargo size <= 0. Ship (%s) Subsystem (%s) Bank (%i) Weapon (%s)",
+							shipp->ship_name, sssp->name, j, Weapon_info[ptr->weapons.primary_bank_weapons[j]].name);
+
+					int capacity = (int)std::lround(sssp->primary_ammo[j]/100.0f * ptr->weapons.primary_bank_capacity[j]);
+					ptr->weapons.primary_bank_ammo[j] = (int)std::lround(capacity / Weapon_info[ptr->weapons.primary_bank_weapons[j]].cargo_size);
+				}
+			}
+
+			for (j = 0; j < ptr->weapons.num_secondary_banks; j++)
+			{
+				if (Fred_running) {
+					ptr->weapons.secondary_bank_ammo[j] = sssp->secondary_ammo[j];
+				} else if (ptr->weapons.secondary_bank_weapons[j] >= 0) {
+					Assertion(Weapon_info[ptr->weapons.secondary_bank_weapons[j]].cargo_size > 0.0f,
+							"Secondary weapon cargo size <= 0. Ship (%s) Subsystem (%s) Bank (%i) Weapon (%s)",
+							shipp->ship_name, sssp->name, j, Weapon_info[ptr->weapons.secondary_bank_weapons[j]].name);
+
+					int capacity = (int)std::lround(sssp->secondary_ammo[j]/100.0f * ptr->weapons.secondary_bank_capacity[j]);
+					ptr->weapons.secondary_bank_ammo[j] = (int)std::lround(capacity / Weapon_info[ptr->weapons.secondary_bank_weapons[j]].cargo_size);
+				}
+			}
+
+			ptr->subsys_cargo_name = sssp->subsys_cargo_name;
+
+			if (sssp->ai_class != SUBSYS_STATUS_NO_CHANGE)
+				ptr->weapons.ai_class = sssp->ai_class;
+
+			ptr->turret_best_weapon = -1;
+			ptr->turret_animation_position = MA_POS_NOT_SET;	// model animation position is not set
+			ptr->turret_animation_done_time = 0;
+		}
+		else
+		{
+			Warning(LOCATION, "Unable to find '%s' in ship subsys_list!", sssp->name);
 		}
 	}
 	
@@ -2375,7 +2373,7 @@ int parse_create_object_sub(p_object *p_objp)
 		// initial velocities now do not apply to ships which warp in after mission starts
 		// WMC - Make it apply for ships with IN_PLACE_ANIM type
 		// zookeeper - Also make it apply for hyperspace warps
-		if (!(Game_mode & GM_IN_MISSION) || (sip->warpin_type == WT_IN_PLACE_ANIM || sip->warpin_type == WT_HYPERSPACE))
+		if (!(Game_mode & GM_IN_MISSION) || (Warp_params[shipp->warpin_params_index].warp_type == WT_IN_PLACE_ANIM || Warp_params[shipp->warpin_params_index].warp_type == WT_HYPERSPACE))
 		{
 			Objects[objnum].phys_info.speed = (float) p_objp->initial_velocity * sip->max_speed / 100.0f;
 			Objects[objnum].phys_info.vel.xyz.z = Objects[objnum].phys_info.speed;
@@ -2464,11 +2462,9 @@ int parse_create_object_sub(p_object *p_objp)
 	// If the ship is in a wing, this will be done in mission_set_wing_arrival_location() instead
 	// If the ship is in a wing, but the wing is docked then addition of bool brought_in_docked_wing accounts for that status --wookieejedi
 	if (Game_mode & GM_IN_MISSION && ((shipp->wingnum == -1) || (brought_in_docked_wing))) {
-		if (anchor_objnum >= 0)
-			Script_system.SetHookObjects(2, "Ship", &Objects[objnum], "Parent", &Objects[anchor_objnum]);
-		else
-			Script_system.SetHookObjects(2, "Ship", &Objects[objnum], "Parent", NULL);
+		object *anchor_objp = (anchor_objnum >= 0) ? &Objects[anchor_objnum] : nullptr;
 
+		Script_system.SetHookObjects(2, "Ship", &Objects[objnum], "Parent", anchor_objp);
 		Script_system.RunCondition(CHA_ONSHIPARRIVE, &Objects[objnum]);
 		Script_system.RemHookVars(2, "Ship", "Parent");
 	}
@@ -2775,6 +2771,8 @@ bool p_object::has_display_string() {
 	return !display_name.empty();
 }
 
+extern int parse_warp_params(const WarpParams *inherit_from, WarpDirection direction, const char *info_type_name, const char *sip_name);
+
 /**
  * Mp points at the text of an object, which begins with the "$Name:" field.
  * Snags all object information.  Creating the ship now only happens after everything has been parsed.
@@ -2788,6 +2786,7 @@ int parse_object(mission *pm, int  /*flag*/, p_object *p_objp)
 {
 	int	i, j, count, delay;
     char name[NAME_LENGTH];
+	ship_info *sip;
 
 	Assert(pm != NULL);
 
@@ -2818,6 +2817,7 @@ int parse_object(mission *pm, int  /*flag*/, p_object *p_objp)
 		p_objp->ship_class = 0;
 		Num_unknown_ship_classes++;
 	}
+	sip = &Ship_info[p_objp->ship_class];
 
 	// Karajorma - See if there are any alternate classes specified for this ship. 
 	p_objp->alt_classes.clear();
@@ -2873,7 +2873,7 @@ int parse_object(mission *pm, int  /*flag*/, p_object *p_objp)
 	}
 
 	// if this is a multiplayer dogfight mission, skip support ships
-	if(MULTI_DOGFIGHT && (Ship_info[p_objp->ship_class].flags[Ship::Info_Flags::Support]))
+	if(MULTI_DOGFIGHT && (sip->flags[Ship::Info_Flags::Support]))
 		return 0;
 
 	// optional alternate name type
@@ -2920,7 +2920,7 @@ int parse_object(mission *pm, int  /*flag*/, p_object *p_objp)
 
 		if (Team_Colors.find(p_objp->team_color_setting) == Team_Colors.end()) {
 			mprintf(("Invalid team color specified in mission file for ship %s, resetting to default\n", p_objp->name));
-			p_objp->team_color_setting = Ship_info[p_objp->ship_class].default_team_name;
+			p_objp->team_color_setting = sip->default_team_name;
 		}
 	}
 
@@ -2951,7 +2951,7 @@ int parse_object(mission *pm, int  /*flag*/, p_object *p_objp)
 	}
 	else
 	{
-		p_objp->ai_class = Ship_info[p_objp->ship_class].ai_class;
+		p_objp->ai_class = sip->ai_class;
 	}
 
 	if (optional_string("$AI Goals:"))
@@ -3074,6 +3074,10 @@ int parse_object(mission *pm, int  /*flag*/, p_object *p_objp)
 
 	required_string("$Departure Cue:");
 	p_objp->departure_cue = get_sexp_main();
+
+	// look for warp parameters
+	p_objp->warpin_params_index = parse_warp_params(&Warp_params[sip->warpin_params_index], WarpDirection::WARP_IN, "Ship", p_objp->name);
+	p_objp->warpout_params_index = parse_warp_params(&Warp_params[sip->warpout_params_index], WarpDirection::WARP_OUT, "Ship", p_objp->name);
 
 	if (optional_string("$Misc Properties:"))
 		stuff_string(p_objp->misc, F_NAME, NAME_LENGTH);
@@ -3228,7 +3232,7 @@ int parse_object(mission *pm, int  /*flag*/, p_object *p_objp)
 		p_objp->ship_max_shield_strength = (float) p_objp->special_shield; 
 	}
 	else {
-		p_objp->ship_max_shield_strength = Ship_info[p_objp->ship_class].max_shield_strength;
+		p_objp->ship_max_shield_strength = sip->max_shield_strength;
 	}
 	
 	// set custom hitpoint value
@@ -3236,11 +3240,11 @@ int parse_object(mission *pm, int  /*flag*/, p_object *p_objp)
 		p_objp->ship_max_hull_strength = (float) p_objp->special_hitpoints; 
 	}
 	else {
-		p_objp->ship_max_hull_strength = Ship_info[p_objp->ship_class].max_hull_strength;
+		p_objp->ship_max_hull_strength = sip->max_hull_strength;
 	}
 
 	Assert(p_objp->ship_max_hull_strength > 0.0f);	// Goober5000: div-0 check (not shield because we might not have one)
-	p_objp->max_shield_recharge = Ship_info[p_objp->ship_class].max_shield_recharge;
+	p_objp->max_shield_recharge = sip->max_shield_recharge;
 
 
 	// if the kamikaze flag is set, we should have the next flag
@@ -3337,7 +3341,7 @@ int parse_object(mission *pm, int  /*flag*/, p_object *p_objp)
 	}
 	
 	if (table_score) {
-		p_objp->score = Ship_info[p_objp->ship_class].score;
+		p_objp->score = sip->score;
 	}
 
 	if (optional_string("+Assist Score Percentage:")) {
@@ -3360,7 +3364,7 @@ int parse_object(mission *pm, int  /*flag*/, p_object *p_objp)
 		stuff_int(&p_objp->persona_index);
 
 	// texture replacement - Goober5000
-	p_objp->replacement_textures = Ship_info[p_objp->ship_class].replacement_textures;	// initialize our set with the ship class set, which may be empty
+	p_objp->replacement_textures = sip->replacement_textures;	// initialize our set with the ship class set, which may be empty
 	if (optional_string("$Texture Replace:") || optional_string("$Duplicate Model Texture Replace:"))
 	{
 		texture_replace tr;
@@ -5594,7 +5598,7 @@ void parse_variables()
 	}
 }
 
-int parse_mission(mission *pm, int flags)
+bool parse_mission(mission *pm, int flags)
 {
 	int saved_warning_count = Global_warning_count;
 	int saved_error_count = Global_error_count;
@@ -5635,7 +5639,7 @@ int parse_mission(mission *pm, int flags)
 	Current_file_checksum = netmisc_calc_checksum(pm,MISSION_CHECKSUM_SIZE);
 
 	if (flags & MPF_ONLY_MISSION_INFO)
-		return 0;
+		return true;
 
 	parse_plot_info(pm);
 	parse_variables();
@@ -5662,7 +5666,7 @@ int parse_mission(mission *pm, int flags)
 		// if running on standalone server, just print to the log
 		if (Game_mode & GM_STANDALONE_SERVER) {
 			mprintf(("Warning!  Could not load %d ship classes!", Num_unknown_ship_classes));
-			return -2;
+			return false;
 		}
 		// don't do this in FRED; we will display a separate popup
 		else if (!Fred_running) {
@@ -5704,12 +5708,14 @@ int parse_mission(mission *pm, int flags)
 			// now display the popup
 			int popup_rval = popup(PF_TITLE_BIG | PF_TITLE_RED, 2, POPUP_NO, POPUP_YES, text);
 			if (popup_rval == 0) {
-				return -2;
+				return false;
 			}
 		}
 	}
 
-	post_process_mission();
+	if (!post_process_mission()) {
+		return false;
+	}
 
 	if ((saved_warning_count - Global_warning_count) > 10 || (saved_error_count - Global_error_count) > 0) {
 		char text[512];
@@ -5720,10 +5726,10 @@ int parse_mission(mission *pm, int flags)
 	log_printf(LOGFILE_EVENT_LOG, "Mission %s loaded.\n", pm->name); 
 
 	// success
-	return 0;
+	return true;
 }
 
-void post_process_mission()
+bool post_process_mission()
 {
 	int			i;
 	int			indices[MAX_SHIPS], objnum;
@@ -5836,6 +5842,7 @@ void post_process_mission()
 
 			// entering this if statement will result in program termination!!!!!
 			// print out an error based on the return value from check_sexp_syntax()
+			// G5K: now entering this statement simply aborts the mission load
 			if ( result ) {
 				SCP_string sexp_str;
 				SCP_string error_msg;
@@ -5843,14 +5850,10 @@ void post_process_mission()
 				convert_sexp_to_string(sexp_str, i, SEXP_ERROR_CHECK_MODE);
 				truncate_message_lines(sexp_str, 30);
 				sprintf(error_msg, "%s.\n\nIn sexpression: %s\n(Error appears to be: %s)", sexp_error_message(result), sexp_str.c_str(), Sexp_nodes[bad_node].text);
+				Warning(LOCATION, "%s", error_msg.c_str());
 
-				if (!Fred_running) {
-					nprintf(("Error", "%s", error_msg.c_str()));
-					Error(LOCATION, "%s", error_msg.c_str());
-				} else {
-					nprintf(("Warning", "%s", error_msg.c_str()));
-					Warning(LOCATION, "%s", error_msg.c_str());
-				}
+				// syntax errors are unrecoverable, so abort
+				return false;
 			}
 		}
 	}
@@ -5954,6 +5957,9 @@ void post_process_mission()
 		mission_hotkey_reset_saved();
 	}
 	Last_file_checksum = Current_file_checksum;
+
+	// success
+	return true;
 }
 
 int get_mission_info(const char *filename, mission *mission_p, bool basic)
@@ -6019,12 +6025,13 @@ void parse_init(bool basic)
 		init_sexp();
 }
 
-// mai parse routine for parsing a mission.  The default parameter flags tells us which information
+// main parse routine for parsing a mission.  The default parameter flags tells us which information
 // to get when parsing the mission.  0 means get everything (default).  Other flags just gets us basic
 // info such as game type, number of players etc.
-int parse_main(const char *mission_name, int flags)
+bool parse_main(const char *mission_name, int flags)
 {
-	int rval, i;
+	int i;
+	bool rval;
 
 	// reset parse error stuff
 	Num_unknown_ship_classes = 0;
@@ -6053,7 +6060,7 @@ int parse_main(const char *mission_name, int flags)
 				Current_file_length = -1;
 				Current_file_checksum = 0;
 	
-				rval = -1;
+				rval = false;
 				break;
 			}
 
@@ -6079,7 +6086,7 @@ int parse_main(const char *mission_name, int flags)
 		catch (const parse::ParseException& e)
 		{
 			mprintf(("MISSIONS: Unable to parse '%s'!  Error message = %s.\n", mission_name, e.what()));
-			rval = 1;
+			rval = false;
 			break;
 		}
 	} while (0);
@@ -6160,12 +6167,9 @@ void mission_set_wing_arrival_location( wing *wingp, int num_to_set )
 	if (Game_mode & GM_IN_MISSION) {
 		for ( index = wingp->current_count - num_to_set; index < wingp->current_count; index ++ ) {
 			object *objp = &Objects[Ships[wingp->ship_index[index]].objnum];
+			object *anchor_objp = (anchor_objnum >= 0) ? &Objects[anchor_objnum] : nullptr;
 
-			if (anchor_objnum >= 0)
-				Script_system.SetHookObjects(2, "Ship", objp, "Parent", &Objects[anchor_objnum]);
-			else
-				Script_system.SetHookObjects(2, "Ship", objp, "Parent", NULL);
-
+			Script_system.SetHookObjects(2, "Ship", objp, "Parent", anchor_objp);
 			Script_system.RunCondition(CHA_ONSHIPARRIVE, objp);
 			Script_system.RemHookVars(2, "Ship", "Parent");
 
@@ -7781,6 +7785,9 @@ void mission_bring_in_support_ship( object *requester_objp )
 
 	pobj->departure_cue = Locked_sexp_false;
 	pobj->departure_delay = 0;
+
+	pobj->warpin_params_index = -1;
+	pobj->warpout_params_index = -1;
 
 	pobj->wingnum = -1;
 

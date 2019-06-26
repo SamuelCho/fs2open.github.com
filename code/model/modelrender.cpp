@@ -20,6 +20,7 @@
 #include "graphics/uniforms.h"
 #include "io/timer.h"
 #include "math/staticrand.h"
+#include "mod_table/mod_table.h"
 #include "model/modelrender.h"
 #include "nebula/neb.h"
 #include "particle/particle.h"
@@ -223,6 +224,10 @@ void model_render_params::set_replacement_textures(int *textures)
 void model_render_params::set_replacement_textures(int modelnum, SCP_vector<texture_replace>& replacement_textures)
 {
 	Replacement_textures = (int*)vm_malloc(MAX_REPLACEMENT_TEXTURES * sizeof(int));
+
+	for (int i = 0; i < MAX_REPLACEMENT_TEXTURES; i++)
+		Replacement_textures[i] = -1;
+
 	Manage_replacement_textures = true;
 
 	polymodel* pm = model_get(modelnum);
@@ -498,7 +503,7 @@ void model_draw_list::add_buffer_draw(model_material *render_material, indexed_v
 
 		draw_data.render_material.set_deferred_lighting(possibly_deferred ? Deferred_lighting : false);
 		draw_data.render_material.set_high_dynamic_range(High_dynamic_range);
-		draw_data.render_material.set_shadow_receiving(Cmdline_shadow_quality != 0);
+		draw_data.render_material.set_shadow_receiving(Shadow_quality != ShadowQuality::Disabled);
 	}
 
 	if (tmap_flags & TMAP_FLAG_BATCH_TRANSFORMS && buffer->flags & VB_FLAG_MODEL_ID) {
@@ -827,13 +832,6 @@ void model_render_add_lightning( model_draw_list *scene, model_render_params* in
 	float width = 0.9f;
 	color primary, secondary;
 
-	const int AR = 64;
-	const int AG = 64;
-	const int AB = 5;
-	const int AR2 = 128;
-	const int AG2 = 128;
-	const int AB2 = 10;
-
 	Assert( sm->num_arcs > 0 );
 
 	if ( interp->get_model_flags() & MR_SHOW_OUTLINE_PRESET ) {
@@ -860,23 +858,23 @@ void model_render_add_lightning( model_draw_list *scene, model_render_params* in
 			// "normal", FreeSpace 1 style arcs
 		case MARC_TYPE_NORMAL:
 			if ( (rand()>>4) & 1 )	{
-				gr_init_color(&primary, 64, 64, 255);
+				gr_init_color(&primary, std::get<0>(Arc_color_damage_p1), std::get<1>(Arc_color_damage_p1), std::get<2>(Arc_color_damage_p1));
 			} else {
-				gr_init_color(&primary, 128, 128, 255);
+				gr_init_color(&primary, std::get<0>(Arc_color_damage_p2), std::get<1>(Arc_color_damage_p2), std::get<2>(Arc_color_damage_p2));
 			}
 
-			gr_init_color(&secondary, 200, 200, 255);
+			gr_init_color(&primary, std::get<0>(Arc_color_damage_s1), std::get<1>(Arc_color_damage_s1), std::get<2>(Arc_color_damage_s1));
 			break;
 
 			// "EMP" style arcs
 		case MARC_TYPE_EMP:
 			if ( (rand()>>4) & 1 )	{
-				gr_init_color(&primary, AR, AG, AB);
+				gr_init_color(&primary, std::get<0>(Arc_color_emp_p1), std::get<1>(Arc_color_emp_p1), std::get<2>(Arc_color_emp_p1));
 			} else {
-				gr_init_color(&primary, AR2, AG2, AB2);
+				gr_init_color(&primary, std::get<0>(Arc_color_emp_p2), std::get<1>(Arc_color_emp_p2), std::get<2>(Arc_color_emp_p2));
 			}
 
-			gr_init_color(&secondary, 255, 255, 10);
+			gr_init_color(&primary, std::get<0>(Arc_color_emp_s1), std::get<1>(Arc_color_emp_s1), std::get<2>(Arc_color_emp_s1));
 			break;
 
 		default:
@@ -1457,6 +1455,9 @@ bool model_render_check_detail_box(vec3d *view_pos, polymodel *pm, int submodel_
 	bsp_info *model = &pm->submodel[submodel_num];
 
 	float box_scale = model_render_determine_box_scale();
+	if (model->do_not_scale_detail_distances) {
+		box_scale = 1.0f;
+	}
 
 	if ( !( flags & MR_FULL_DETAIL ) && model->use_render_box ) {
 		vec3d box_min, box_max, offset;
@@ -1673,7 +1674,7 @@ void model_render_glowpoint(int point_num, vec3d *pos, matrix *orient, glow_poin
 	vm_vec_unrotate(&world_norm, &loc_norm, orient);
 
 	if ( shipp != NULL ) {
-		if ( (shipp->is_arriving() ) && (shipp->warpin_effect) && Ship_info[shipp->ship_info_index].warpin_type != WT_HYPERSPACE) {
+		if ( (shipp->is_arriving() ) && (shipp->warpin_effect) && Warp_params[shipp->warpin_params_index].warp_type != WT_HYPERSPACE) {
 			vec3d warp_pnt, tmp;
 			matrix warp_orient;
 
@@ -1686,7 +1687,7 @@ void model_render_glowpoint(int point_num, vec3d *pos, matrix *orient, glow_poin
 			}
 		}
 
-		if ( (shipp->flags[Ship::Ship_Flags::Depart_warp] ) && (shipp->warpout_effect) && Ship_info[shipp->ship_info_index].warpout_type != WT_HYPERSPACE) {
+		if ( (shipp->flags[Ship::Ship_Flags::Depart_warp] ) && (shipp->warpout_effect) && Warp_params[shipp->warpout_params_index].warp_type != WT_HYPERSPACE) {
 			vec3d warp_pnt, tmp;
 			matrix warp_orient;
 
@@ -2120,7 +2121,7 @@ void model_queue_render_thrusters(model_render_params *interp, polymodel *pm, in
 
 			if (shipp) {
 				// if ship is warping out, check position of the engine glow to the warp plane
-				if ( (shipp->is_arriving() ) && (shipp->warpin_effect) && Ship_info[shipp->ship_info_index].warpin_type != WT_HYPERSPACE) {
+				if ( (shipp->is_arriving() ) && (shipp->warpin_effect) && Warp_params[shipp->warpin_params_index].warp_type != WT_HYPERSPACE) {
 					vec3d warp_pnt, tmp;
 					matrix warp_orient;
 
@@ -2133,7 +2134,7 @@ void model_queue_render_thrusters(model_render_params *interp, polymodel *pm, in
 					}
 				}
 
-				if ( (shipp->flags[Ship::Ship_Flags::Depart_warp] ) && (shipp->warpout_effect) && Ship_info[shipp->ship_info_index].warpout_type != WT_HYPERSPACE) {
+				if ( (shipp->flags[Ship::Ship_Flags::Depart_warp] ) && (shipp->warpout_effect) && Warp_params[shipp->warpout_params_index].warp_type != WT_HYPERSPACE) {
 					vec3d warp_pnt, tmp;
 					matrix warp_orient;
 
@@ -2250,7 +2251,8 @@ void model_queue_render_thrusters(model_render_params *interp, polymodel *pm, in
 
 					batching_add_beam(thruster_info.secondary_glow_bitmap, &pnt, &norm2, wVal*thruster_info.secondary_glow_rad_factor*0.5f, d);
 
-					if (Scene_framebuffer_in_frame && thruster_info.draw_distortion && Cmdline_fb_thrusters) {
+					if (Scene_framebuffer_in_frame && thruster_info.draw_distortion &&
+					    Gr_framebuffer_effects[FramebufferEffects::Thrusters]) {
 						vm_vec_scale_add(&norm2, &pnt, &fvec, wVal * 2 * thruster_info.distortion_length_factor);
 						int dist_bitmap;
 						if (thruster_info.distortion_bitmap > 0) {

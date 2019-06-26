@@ -509,6 +509,8 @@ add_file_folder("Hud"
 	hud/hudparse.h
 	hud/hudreticle.cpp
 	hud/hudreticle.h
+	hud/hudscripting.cpp
+	hud/hudscripting.h
 	hud/hudshield.cpp
 	hud/hudshield.h
 	hud/hudsquadmsg.cpp
@@ -848,6 +850,13 @@ add_file_folder("Observer"
 	observer/observer.h
 )
 
+add_file_folder("Options"
+	options/Option.cpp
+	options/Option.h
+	options/OptionsManager.cpp
+	options/OptionsManager.h
+)
+
 # OsApi files
 add_file_folder("OsApi"
 	osapi/DebugWindow.h
@@ -1044,6 +1053,8 @@ add_file_folder("Scripting\\\\Api\\\\Libs"
 	scripting/api/libs/hud.h
 	scripting/api/libs/mission.cpp
 	scripting/api/libs/mission.h
+	scripting/api/libs/options.cpp
+	scripting/api/libs/options.h
 	scripting/api/libs/parse.cpp
 	scripting/api/libs/parse.h
 	scripting/api/libs/tables.cpp
@@ -1103,6 +1114,8 @@ add_file_folder("Scripting\\\\Api\\\\Objs"
 	scripting/api/objs/movie_player.h
 	scripting/api/objs/object.cpp
 	scripting/api/objs/object.h
+	scripting/api/objs/option.cpp
+	scripting/api/objs/option.h
 	scripting/api/objs/order.cpp
 	scripting/api/objs/order.h
 	scripting/api/objs/particle.cpp
